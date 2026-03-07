@@ -1,0 +1,8 @@
+node_modules
+dist
+*.go
+*.sql
+*.yml
+*.yaml
+*.md
+.claude

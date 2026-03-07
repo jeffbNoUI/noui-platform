@@ -4,10 +4,13 @@
       "Bash(go build:*)",
       "Bash(go test:*)",
       "Bash(go run:*)",
+      "Bash(go vet:*)",
+      "Bash(golangci-lint:*)",
       "Bash(npm run:*)",
       "Bash(npm install:*)",
       "Bash(npm test:*)",
       "Bash(npm ci:*)",
+      "Bash(npx:*)",
       "Bash(docker compose:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
@@ -16,12 +19,38 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git stash:*)",
-      "Bash(git tag:*)"
+      "Bash(git tag:*)",
+      "Bash(git push:*)"
     ],
     "deny": [
       "Bash(rm -rf /*)",
       "Bash(git push --force:*)",
-      "Bash(git reset --hard:*)"
+      "Bash(git reset --hard:*)",
+      "Bash(git push origin --delete main:*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'FILE=\"$CLAUDE_FILE_PATH\"; if [[ \"$FILE\" == *.go ]]; then cd \"$(dirname \"$FILE\")\" && go vet ./... 2>&1 | head -20; elif [[ \"$FILE\" == *.ts || \"$FILE\" == *.tsx ]]; then cd \"$(git rev-parse --show-toplevel)/frontend\" && npx eslint --no-error-on-unmatched-pattern \"$FILE\" 2>&1 | head -20; fi'"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash(git push:*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'cd \"$(git rev-parse --show-toplevel)\" && echo \"Pre-push: verifying frontend build...\" && cd frontend && npm run build 2>&1 | tail -5'"
+          }
+        ]
+      }
     ]
   }
 }

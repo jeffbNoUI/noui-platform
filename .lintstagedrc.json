@@ -1,0 +1,11 @@
+{
+  "frontend/**/*.{ts,tsx}": [
+    "eslint --max-warnings 50"
+  ],
+  "frontend/**/*.{ts,tsx,js,jsx,css,json}": [
+    "prettier --write"
+  ],
+  "**/*.go": [
+    "gofmt -w"
+  ]
+}

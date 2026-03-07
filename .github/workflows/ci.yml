@@ -18,6 +18,9 @@ jobs:
       - name: Build
         working-directory: connector
         run: go build ./...
+      - name: Vet
+        working-directory: connector
+        run: go vet ./...
       - name: Test
         working-directory: connector
         run: go test ./... -v -count=1 -short
@@ -36,6 +39,9 @@ jobs:
       - name: Build
         working-directory: platform/${{ matrix.service }}
         run: go build ./...
+      - name: Vet
+        working-directory: platform/${{ matrix.service }}
+        run: go vet ./...
       - name: Test
         working-directory: platform/${{ matrix.service }}
         run: go test ./... -v -count=1
@@ -51,6 +57,9 @@ jobs:
       - name: Install
         working-directory: frontend
         run: npm ci
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
       - name: Build
         working-directory: frontend
         run: npm run build
