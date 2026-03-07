@@ -1,1 +1,24 @@
 npx lint-staged
+
+# Run Go tests in any modified Go module
+CHANGED_GO=$(git diff --cached --name-only -- '*.go' | head -1)
+if [ -n "$CHANGED_GO" ]; then
+  for dir in $(git diff --cached --name-only -- '*.go' | xargs -I{} dirname {} | sort -u); do
+    # Walk up to find go.mod
+    d="$dir"
+    while [ "$d" != "." ] && [ ! -f "$d/go.mod" ]; do
+      d=$(dirname "$d")
+    done
+    if [ -f "$d/go.mod" ]; then
+      echo "Running tests in $d..."
+      (cd "$d" && go test ./... -count=1 -short) || exit 1
+    fi
+  done
+fi
+
+# Run frontend tests if any TS/TSX files changed
+CHANGED_TS=$(git diff --cached --name-only -- 'frontend/*.ts' 'frontend/*.tsx' | head -1)
+if [ -n "$CHANGED_TS" ]; then
+  echo "Running frontend tests..."
+  (cd frontend && npm test -- --run) || exit 1
+fi

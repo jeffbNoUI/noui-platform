@@ -117,11 +117,44 @@ docker compose up --build
 - All tagging heuristics are human-reviewed before promotion to production
 - All benefit calculations must be verified against demo-case test fixtures
 
-## Session Startup Checklist
+## Session Discipline (Mandatory)
 
-1. Read this `CLAUDE.md`
-2. Read `BUILD_HISTORY.md` for current state
-3. Identify which layer you're working in (connector, platform, domains, frontend)
-4. Read the layer-specific `CLAUDE.md` if it exists
-5. Run `go build ./...` in the relevant Go module(s)
-6. Run `npm run build` if touching frontend
+### Session Start — Do This FIRST
+
+Before writing any code, Claude MUST:
+1. Read `BUILD_HISTORY.md` to understand the current state
+2. Ask the user to clarify which layer and component they're working on if not obvious
+3. Read the layer-specific `CLAUDE.md` (e.g., `connector/CLAUDE.md`, `platform/CLAUDE.md`)
+4. Verify the build passes in the relevant module(s): `go build ./...` or `npm run build`
+
+### Planning Rule
+
+**If a task will touch more than 2 files, Claude MUST plan before coding.**
+- Enter plan mode or present a plan in the conversation
+- The plan must identify: which files change, which layer(s) are affected, what tests are needed
+- Get user acknowledgment before writing code
+- Single-file changes (bug fixes, small tweaks) can skip planning
+
+### Testing Rule
+
+**Claude MUST run tests before every commit.** No exceptions.
+- Go: `go test ./... -v -count=1` in each modified service
+- Frontend: `npm test -- --run` if any `.ts/.tsx` files changed
+- Never commit with failing tests
+- Never say "it should work" — run the tests and show results
+
+### Session End — Do This LAST
+
+Before ending a session, Claude MUST:
+1. Show `git diff` or `git status` so the user can review changes
+2. Run tests in all modified modules
+3. If the session made significant changes, remind the user to update `BUILD_HISTORY.md`
+4. Do not leave uncommitted work without informing the user
+
+### What Claude Must Refuse
+
+- Writing code before understanding the current build state
+- Skipping tests to "save time"
+- Committing code that hasn't been tested
+- Putting code in the wrong layer (see Layer Boundary Rules above)
+- Making multi-file changes without a plan
