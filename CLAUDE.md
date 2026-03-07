@@ -117,6 +117,20 @@ docker compose up --build
 - All tagging heuristics are human-reviewed before promotion to production
 - All benefit calculations must be verified against demo-case test fixtures
 
+## Reference Documents
+
+When you need guidance beyond this file, read these:
+- `docs/DELIVERY_GUIDE.md` — Full delivery workflow, anti-patterns, troubleshooting, effective prompting patterns
+- `BUILD_HISTORY.md` — What's been built, current state (read at session start)
+- `docs/architecture/ARCHITECTURE_REFERENCE.md` — Detailed architecture decisions
+
+## Workflow Skills
+
+Three slash commands enforce the delivery workflow:
+- `/session-start` — Run at the beginning of every session (reads context, checks builds, establishes goal)
+- `/check-quality` — Run mid-session to verify nothing is broken (builds, tests, lint, layer boundaries)
+- `/session-end` — Run at the end of every session (tests, docs update, commit, push, CI verification)
+
 ## Session Discipline (Mandatory)
 
 ### Session Start — Do This FIRST
