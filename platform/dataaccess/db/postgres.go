@@ -1,0 +1,77 @@
+// Package db provides PostgreSQL database connectivity for the connector service.
+package db
+
+import (
+	"database/sql"
+	"fmt"
+	"log"
+	"os"
+	"time"
+
+	_ "github.com/lib/pq"
+)
+
+// Config holds database connection parameters.
+type Config struct {
+	Host     string
+	Port     string
+	User     string
+	Password string
+	DBName   string
+	SSLMode  string
+}
+
+// ConfigFromEnv creates a Config from environment variables with sensible defaults.
+func ConfigFromEnv() Config {
+	return Config{
+		Host:     getEnv("DB_HOST", "localhost"),
+		Port:     getEnv("DB_PORT", "5432"),
+		User:     getEnv("DB_USER", "derp"),
+		Password: getEnv("DB_PASSWORD", "derp"),
+		DBName:   getEnv("DB_NAME", "derp"),
+		SSLMode:  getEnv("DB_SSLMODE", "disable"),
+	}
+}
+
+// Connect establishes a database connection with retry logic.
+func Connect(cfg Config) (*sql.DB, error) {
+	connStr := fmt.Sprintf(
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.DBName, cfg.SSLMode,
+	)
+
+	var db *sql.DB
+	var err error
+
+	for attempt := 1; attempt <= 5; attempt++ {
+		db, err = sql.Open("postgres", connStr)
+		if err != nil {
+			log.Printf("attempt %d: failed to open db: %v", attempt, err)
+			time.Sleep(time.Duration(attempt) * time.Second)
+			continue
+		}
+
+		err = db.Ping()
+		if err != nil {
+			log.Printf("attempt %d: failed to ping db: %v", attempt, err)
+			time.Sleep(time.Duration(attempt) * time.Second)
+			continue
+		}
+
+		db.SetMaxOpenConns(25)
+		db.SetMaxIdleConns(5)
+		db.SetConnMaxLifetime(5 * time.Minute)
+
+		log.Printf("connected to database %s on %s:%s", cfg.DBName, cfg.Host, cfg.Port)
+		return db, nil
+	}
+
+	return nil, fmt.Errorf("failed to connect after 5 attempts: %w", err)
+}
+
+func getEnv(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}

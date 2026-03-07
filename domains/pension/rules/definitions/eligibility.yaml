@@ -1,0 +1,1109 @@
+# =============================================================================
+# DERP Eligibility Rules
+# =============================================================================
+# Domain: eligibility
+# Rules: RULE-VESTING, RULE-NORMAL-RET, RULE-RULE-OF-75, RULE-RULE-OF-85,
+#        RULE-EARLY-RET-T12, RULE-EARLY-RET-T3, RULE-EARLY-REDUCE-T12,
+#        RULE-EARLY-REDUCE-T3, RULE-DEFERRED, RULE-ELIG-HIERARCHY
+# Authority: DERP Restated Master Contract (RMC)
+# =============================================================================
+
+metadata:
+  domain: "eligibility"
+  version: "1.0.0"
+  effective_date: "2026-03-02"
+  authority: "DERP Restated Master Contract (RMC)"
+  description: >
+    Defines all eligibility rules including vesting, normal retirement,
+    Rule of 75/85, early retirement with statutory reduction tables,
+    deferred retirement, and the eligibility hierarchy.
+  governance:
+    owner: "DERP Rules Committee"
+    approved_by: "Plan Administrator"
+    approval_date: "2026-03-02"
+    review_cycle: "annual"
+    next_review_date: "2027-03-02"
+    audit_trail: true
+    change_log:
+      - version: "1.0.0"
+        date: "2026-03-02"
+        author: "Rules Committee"
+        description: "Initial eligibility rule definitions for DERP NoUI POC"
+
+rules:
+  # ===========================================================================
+  # RULE-VESTING: Vesting Requirement
+  # ===========================================================================
+  - id: "RULE-VESTING"
+    name: "Vesting Requirement"
+    description: >
+      All DERP members vest after 5 years of EARNED service credit.
+      Purchased service does NOT count toward vesting. Vesting is a
+      prerequisite for any retirement benefit.
+    source_reference:
+      document: "RMC"
+      section: "Section 5.01 - Vesting"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "earned_service_years"
+        type: "decimal"
+        required: true
+        description: "Years of EARNED service credit only (excludes purchased)"
+    logic:
+      type: "conditional"
+      conditions:
+        - condition: "earned_service_years >= 5.0"
+          result:
+            is_vested: true
+        - condition: "earned_service_years < 5.0"
+          result:
+            is_vested: false
+      critical_note: "Use earned_service_years ONLY. Purchased service excluded."
+    output:
+      name: "vesting_status"
+      type: "object"
+      fields:
+        - name: "is_vested"
+          type: "boolean"
+        - name: "years_to_vest"
+          type: "decimal"
+          description: "Remaining years needed if not yet vested"
+    dependencies: ["RULE-SVC-EARNED"]
+    tags: ["eligibility", "vesting", "prerequisite"]
+    test_cases:
+      - name: "Happy path - Robert Martinez well over vesting"
+        type: "happy_path"
+        demo_case_ref: "Case 1: Robert Martinez - Tier 1"
+        description: "27.5 years earned service is clearly vested"
+        inputs:
+          earned_service_years: 27.5
+        expected:
+          is_vested: true
+          years_to_vest: 0.0
+      - name: "Boundary - exactly 5 years"
+        type: "boundary"
+        description: "Member with exactly 5.0 earned years meets vesting"
+        inputs:
+          earned_service_years: 5.0
+        expected:
+          is_vested: true
+          years_to_vest: 0.0
+      - name: "Below boundary - 4.99 years"
+        type: "below_boundary"
+        description: "Member with 4.99 earned years does NOT meet vesting"
+        inputs:
+          earned_service_years: 4.99
+        expected:
+          is_vested: false
+          years_to_vest: 0.01
+      - name: "Negative - purchased service should not count"
+        type: "negative"
+        description: >
+          Member has 3 earned + 4 purchased = 7 total, but only 3 earned.
+          Must NOT be vested since purchased service is excluded.
+        inputs:
+          earned_service_years: 3.0
+        expected:
+          is_vested: false
+          years_to_vest: 2.0
+        notes: "purchased_service_years=4.0 exists but is irrelevant for vesting"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-NORMAL-RET: Normal Retirement Eligibility
+  # ===========================================================================
+  - id: "RULE-NORMAL-RET"
+    name: "Normal Retirement Eligibility"
+    description: >
+      A member is eligible for normal (unreduced) retirement at age 65 with
+      at least 5 years of earned service credit. This applies uniformly
+      to all tiers.
+    source_reference:
+      document: "RMC"
+      section: "Section 5.02 - Normal Retirement"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "age_at_retirement"
+        type: "decimal"
+        required: true
+        description: "Member's age at retirement date"
+      - name: "earned_service_years"
+        type: "decimal"
+        required: true
+        description: "Years of earned service credit"
+    logic:
+      type: "conditional"
+      conditions:
+        - condition: "age_at_retirement >= 65 AND earned_service_years >= 5.0"
+          result:
+            eligible_for_normal_retirement: true
+            reduction_factor: 1.00
+      default:
+        eligible_for_normal_retirement: false
+    output:
+      name: "normal_retirement_eligibility"
+      type: "object"
+      fields:
+        - name: "eligible_for_normal_retirement"
+          type: "boolean"
+        - name: "reduction_factor"
+          type: "decimal"
+    dependencies: ["RULE-VESTING"]
+    tags: ["eligibility", "normal-retirement"]
+    test_cases:
+      - name: "Happy path - age 65 with 20 years service"
+        type: "happy_path"
+        description: "Standard normal retirement scenario"
+        inputs:
+          age_at_retirement: 65
+          earned_service_years: 20.0
+        expected:
+          eligible_for_normal_retirement: true
+          reduction_factor: 1.00
+      - name: "Boundary - exactly age 65 with exactly 5 years"
+        type: "boundary"
+        description: "Minimum thresholds for normal retirement"
+        inputs:
+          age_at_retirement: 65
+          earned_service_years: 5.0
+        expected:
+          eligible_for_normal_retirement: true
+          reduction_factor: 1.00
+      - name: "Below boundary - age 64"
+        type: "below_boundary"
+        description: "One year short of normal retirement age"
+        inputs:
+          age_at_retirement: 64
+          earned_service_years: 20.0
+        expected:
+          eligible_for_normal_retirement: false
+      - name: "Negative - age 65 but only 4 years service"
+        type: "negative"
+        description: "Meets age but not service requirement"
+        inputs:
+          age_at_retirement: 65
+          earned_service_years: 4.0
+        expected:
+          eligible_for_normal_retirement: false
+          reason: "Does not meet 5-year service requirement"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-RULE-OF-75: Rule of 75 (Tiers 1 & 2)
+  # ===========================================================================
+  - id: "RULE-RULE-OF-75"
+    name: "Rule of 75 Eligibility"
+    description: >
+      Tier 1 and Tier 2 members may retire with an unreduced benefit if
+      age + EARNED service years >= 75, with a minimum age of 55.
+      CRITICAL: Only EARNED service counts. Purchased service is EXCLUDED.
+    source_reference:
+      document: "RMC"
+      section: "Section 5.03(a) - Rule of 75"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "tier"
+        type: "enum"
+        required: true
+        constraints:
+          enum_values: ["tier_1", "tier_2"]
+      - name: "age_at_retirement"
+        type: "decimal"
+        required: true
+      - name: "earned_service_years"
+        type: "decimal"
+        required: true
+        description: "EARNED service years only (excludes purchased)"
+    logic:
+      type: "conditional"
+      conditions:
+        - condition: >
+            tier IN ('tier_1', 'tier_2')
+            AND age_at_retirement >= 55
+            AND (age_at_retirement + earned_service_years) >= 75
+          result:
+            eligible_for_rule_of_75: true
+            reduction_factor: 1.00
+            sum_age_plus_service: "age_at_retirement + earned_service_years"
+      default:
+        eligible_for_rule_of_75: false
+      critical_note: >
+        PURCHASED SERVICE MUST BE EXCLUDED from the age + service sum.
+        Only earned_service_years is used in the Rule of 75 calculation.
+    output:
+      name: "rule_of_75_eligibility"
+      type: "object"
+      fields:
+        - name: "eligible_for_rule_of_75"
+          type: "boolean"
+        - name: "sum_age_plus_service"
+          type: "decimal"
+        - name: "reduction_factor"
+          type: "decimal"
+    dependencies: ["RULE-SVC-EARNED", "RULE-SVC-PURCHASED"]
+    tags: ["eligibility", "rule-of-75", "unreduced"]
+    test_cases:
+      - name: "Happy path - Robert Martinez Rule of 75"
+        type: "happy_path"
+        demo_case_ref: "Case 1: Robert Martinez - Tier 1"
+        description: "Age 62 + 27.5 earned service = 89.5 >= 75, age >= 55"
+        inputs:
+          tier: "tier_1"
+          age_at_retirement: 62
+          earned_service_years: 27.5
+        expected:
+          eligible_for_rule_of_75: true
+          sum_age_plus_service: 89.5
+          reduction_factor: 1.00
+      - name: "Boundary - exactly age + service = 75"
+        type: "boundary"
+        description: "Age 55 + 20 earned service = 75, minimum met"
+        inputs:
+          tier: "tier_2"
+          age_at_retirement: 55
+          earned_service_years: 20.0
+        expected:
+          eligible_for_rule_of_75: true
+          sum_age_plus_service: 75.0
+          reduction_factor: 1.00
+      - name: "Below boundary - sum is 74.9"
+        type: "below_boundary"
+        description: "Age 55 + 19.9 earned service = 74.9, just under"
+        inputs:
+          tier: "tier_1"
+          age_at_retirement: 55
+          earned_service_years: 19.9
+        expected:
+          eligible_for_rule_of_75: false
+          sum_age_plus_service: 74.9
+      - name: "Negative - purchased service must not count"
+        type: "negative"
+        description: >
+          Jennifer Kim: age 55 + 20 earned = 75, BUT if someone incorrectly
+          added purchased service, they might get 78. This test ensures
+          only earned service is used.
+        demo_case_ref: "Case 2: Jennifer Kim - Tier 2"
+        inputs:
+          tier: "tier_2"
+          age_at_retirement: 55
+          earned_service_years: 20.0
+        expected:
+          eligible_for_rule_of_75: true
+          sum_age_plus_service: 75.0
+          reduction_factor: 1.00
+        notes: >
+          Jennifer has 3 years purchased service. If incorrectly included,
+          sum would be 78. The rule must use ONLY earned_service_years=20.
+      - name: "Negative - Tier 3 member cannot use Rule of 75"
+        type: "negative"
+        description: "Rule of 75 does not apply to Tier 3"
+        inputs:
+          tier: "tier_3"
+          age_at_retirement: 60
+          earned_service_years: 20.0
+        expected:
+          error: "RULE_NOT_APPLICABLE"
+          message: "Rule of 75 only applies to Tier 1 and Tier 2 members"
+      - name: "Negative - age under 55 even if sum >= 75"
+        type: "negative"
+        description: "Age 50 + 26 = 76 but minimum age not met"
+        inputs:
+          tier: "tier_1"
+          age_at_retirement: 50
+          earned_service_years: 26.0
+        expected:
+          eligible_for_rule_of_75: false
+          reason: "Minimum age of 55 not met"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-RULE-OF-85: Rule of 85 (Tier 3)
+  # ===========================================================================
+  - id: "RULE-RULE-OF-85"
+    name: "Rule of 85 Eligibility"
+    description: >
+      Tier 3 members may retire with an unreduced benefit if
+      age + EARNED service years >= 85, with a minimum age of 60.
+      CRITICAL: Only EARNED service counts. Purchased service is EXCLUDED.
+    source_reference:
+      document: "RMC"
+      section: "Section 5.03(b) - Rule of 85"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_3"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "tier"
+        type: "enum"
+        required: true
+        constraints:
+          enum_values: ["tier_3"]
+      - name: "age_at_retirement"
+        type: "decimal"
+        required: true
+      - name: "earned_service_years"
+        type: "decimal"
+        required: true
+        description: "EARNED service years only (excludes purchased)"
+    logic:
+      type: "conditional"
+      conditions:
+        - condition: >
+            tier = 'tier_3'
+            AND age_at_retirement >= 60
+            AND (age_at_retirement + earned_service_years) >= 85
+          result:
+            eligible_for_rule_of_85: true
+            reduction_factor: 1.00
+            sum_age_plus_service: "age_at_retirement + earned_service_years"
+      default:
+        eligible_for_rule_of_85: false
+      critical_note: >
+        PURCHASED SERVICE MUST BE EXCLUDED. Only earned_service_years applies.
+    output:
+      name: "rule_of_85_eligibility"
+      type: "object"
+      fields:
+        - name: "eligible_for_rule_of_85"
+          type: "boolean"
+        - name: "sum_age_plus_service"
+          type: "decimal"
+        - name: "reduction_factor"
+          type: "decimal"
+    dependencies: ["RULE-SVC-EARNED"]
+    tags: ["eligibility", "rule-of-85", "unreduced"]
+    test_cases:
+      - name: "Happy path - Tier 3 member meets Rule of 85"
+        type: "happy_path"
+        description: "Age 60 + 25 earned = 85"
+        inputs:
+          tier: "tier_3"
+          age_at_retirement: 60
+          earned_service_years: 25.0
+        expected:
+          eligible_for_rule_of_85: true
+          sum_age_plus_service: 85.0
+          reduction_factor: 1.00
+      - name: "Boundary - exactly at threshold"
+        type: "boundary"
+        description: "Age 60 + 25 = 85, minimum age met"
+        inputs:
+          tier: "tier_3"
+          age_at_retirement: 60
+          earned_service_years: 25.0
+        expected:
+          eligible_for_rule_of_85: true
+          sum_age_plus_service: 85.0
+      - name: "Below boundary - David Washington does not meet Rule of 85"
+        type: "below_boundary"
+        demo_case_ref: "Case 3: David Washington - Tier 3"
+        description: "Age 62 + 11 earned = 73, well under 85"
+        inputs:
+          tier: "tier_3"
+          age_at_retirement: 62
+          earned_service_years: 11.0
+        expected:
+          eligible_for_rule_of_85: false
+          sum_age_plus_service: 73.0
+      - name: "Negative - under minimum age even if sum >= 85"
+        type: "negative"
+        description: "Age 55 + 31 = 86 but minimum age 60 not met"
+        inputs:
+          tier: "tier_3"
+          age_at_retirement: 55
+          earned_service_years: 31.0
+        expected:
+          eligible_for_rule_of_85: false
+          reason: "Minimum age of 60 not met for Rule of 85"
+      - name: "Negative - Tier 1 member cannot use Rule of 85"
+        type: "negative"
+        description: "Rule of 85 only applies to Tier 3"
+        inputs:
+          tier: "tier_1"
+          age_at_retirement: 62
+          earned_service_years: 27.5
+        expected:
+          error: "RULE_NOT_APPLICABLE"
+          message: "Rule of 85 only applies to Tier 3 members"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-EARLY-RET-T12: Early Retirement Eligibility (Tiers 1 & 2)
+  # ===========================================================================
+  - id: "RULE-EARLY-RET-T12"
+    name: "Early Retirement Eligibility - Tiers 1 and 2"
+    description: >
+      Tier 1 and Tier 2 members may take early retirement at age 55 or older
+      with at least 5 years of earned service, if they do not qualify for
+      normal retirement or Rule of 75. Benefit is subject to reduction.
+    source_reference:
+      document: "RMC"
+      section: "Section 5.04(a) - Early Retirement, Tiers 1 and 2"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "tier"
+        type: "enum"
+        required: true
+        constraints:
+          enum_values: ["tier_1", "tier_2"]
+      - name: "age_at_retirement"
+        type: "decimal"
+        required: true
+      - name: "earned_service_years"
+        type: "decimal"
+        required: true
+    logic:
+      type: "conditional"
+      conditions:
+        - condition: >
+            tier IN ('tier_1', 'tier_2')
+            AND age_at_retirement >= 55
+            AND age_at_retirement < 65
+            AND earned_service_years >= 5.0
+          result:
+            eligible_for_early_retirement: true
+            subject_to_reduction: true
+            reduction_rule: "RULE-EARLY-REDUCE-T12"
+      default:
+        eligible_for_early_retirement: false
+    output:
+      name: "early_retirement_eligibility_t12"
+      type: "object"
+      fields:
+        - name: "eligible_for_early_retirement"
+          type: "boolean"
+        - name: "subject_to_reduction"
+          type: "boolean"
+    dependencies: ["RULE-VESTING", "RULE-NORMAL-RET", "RULE-RULE-OF-75"]
+    tags: ["eligibility", "early-retirement", "tier-1", "tier-2"]
+    test_cases:
+      - name: "Happy path - Jennifer Kim early retirement at 55"
+        type: "happy_path"
+        demo_case_ref: "Case 2: Jennifer Kim - Tier 2"
+        description: "Tier 2 member age 55, 20 years earned, eligible for early"
+        inputs:
+          tier: "tier_2"
+          age_at_retirement: 55
+          earned_service_years: 20.0
+        expected:
+          eligible_for_early_retirement: true
+          subject_to_reduction: true
+        notes: >
+          Jennifer qualifies for Rule of 75 (55+20=75), so early retirement
+          reduction would not actually apply. The eligibility hierarchy
+          (RULE-ELIG-HIERARCHY) resolves this.
+      - name: "Boundary - minimum age 55 with exactly 5 years"
+        type: "boundary"
+        description: "Youngest possible early retiree with minimum service"
+        inputs:
+          tier: "tier_1"
+          age_at_retirement: 55
+          earned_service_years: 5.0
+        expected:
+          eligible_for_early_retirement: true
+          subject_to_reduction: true
+      - name: "Below boundary - age 54"
+        type: "below_boundary"
+        description: "One year too young for early retirement"
+        inputs:
+          tier: "tier_2"
+          age_at_retirement: 54
+          earned_service_years: 20.0
+        expected:
+          eligible_for_early_retirement: false
+      - name: "Negative - not enough service"
+        type: "negative"
+        description: "Age eligible but only 4 years service"
+        inputs:
+          tier: "tier_1"
+          age_at_retirement: 58
+          earned_service_years: 4.0
+        expected:
+          eligible_for_early_retirement: false
+          reason: "Does not meet 5-year service requirement"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-EARLY-RET-T3: Early Retirement Eligibility (Tier 3)
+  # ===========================================================================
+  - id: "RULE-EARLY-RET-T3"
+    name: "Early Retirement Eligibility - Tier 3"
+    description: >
+      Tier 3 members may take early retirement at age 60 or older
+      with at least 5 years of earned service, if they do not qualify
+      for normal retirement or Rule of 85. Benefit is subject to reduction.
+    source_reference:
+      document: "RMC"
+      section: "Section 5.04(b) - Early Retirement, Tier 3"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_3"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "tier"
+        type: "enum"
+        required: true
+        constraints:
+          enum_values: ["tier_3"]
+      - name: "age_at_retirement"
+        type: "decimal"
+        required: true
+      - name: "earned_service_years"
+        type: "decimal"
+        required: true
+    logic:
+      type: "conditional"
+      conditions:
+        - condition: >
+            tier = 'tier_3'
+            AND age_at_retirement >= 60
+            AND age_at_retirement < 65
+            AND earned_service_years >= 5.0
+          result:
+            eligible_for_early_retirement: true
+            subject_to_reduction: true
+            reduction_rule: "RULE-EARLY-REDUCE-T3"
+      default:
+        eligible_for_early_retirement: false
+    output:
+      name: "early_retirement_eligibility_t3"
+      type: "object"
+      fields:
+        - name: "eligible_for_early_retirement"
+          type: "boolean"
+        - name: "subject_to_reduction"
+          type: "boolean"
+    dependencies: ["RULE-VESTING", "RULE-NORMAL-RET", "RULE-RULE-OF-85"]
+    tags: ["eligibility", "early-retirement", "tier-3"]
+    test_cases:
+      - name: "Happy path - David Washington early retirement at 62"
+        type: "happy_path"
+        demo_case_ref: "Case 3: David Washington - Tier 3"
+        description: "Tier 3 member age 62, 11 years earned, eligible for early"
+        inputs:
+          tier: "tier_3"
+          age_at_retirement: 62
+          earned_service_years: 11.0
+        expected:
+          eligible_for_early_retirement: true
+          subject_to_reduction: true
+      - name: "Boundary - minimum age 60 with 5 years"
+        type: "boundary"
+        description: "Youngest possible Tier 3 early retiree"
+        inputs:
+          tier: "tier_3"
+          age_at_retirement: 60
+          earned_service_years: 5.0
+        expected:
+          eligible_for_early_retirement: true
+          subject_to_reduction: true
+      - name: "Below boundary - age 59"
+        type: "below_boundary"
+        description: "Tier 3 early retirement starts at 60, not 59"
+        inputs:
+          tier: "tier_3"
+          age_at_retirement: 59
+          earned_service_years: 20.0
+        expected:
+          eligible_for_early_retirement: false
+      - name: "Negative - Tier 1 member cannot use Tier 3 early retirement"
+        type: "negative"
+        description: "Wrong tier"
+        inputs:
+          tier: "tier_1"
+          age_at_retirement: 62
+          earned_service_years: 27.5
+        expected:
+          error: "RULE_NOT_APPLICABLE"
+          message: "Tier 3 early retirement rule does not apply to Tier 1"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-EARLY-REDUCE-T12: Early Retirement Reduction (Tiers 1 & 2)
+  # ===========================================================================
+  - id: "RULE-EARLY-REDUCE-T12"
+    name: "Early Retirement Reduction Factor - Tiers 1 and 2"
+    description: >
+      Statutory lookup table for early retirement reduction factors for
+      Tier 1 and Tier 2 members. Reduction is 3% per year under age 65
+      (NOT 6%). MUST use this table, NOT a formula.
+    source_reference:
+      document: "RMC"
+      section: "Section 5.05(a) - Early Retirement Reduction Table, Tiers 1 and 2"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "age_at_retirement"
+        type: "integer"
+        required: true
+        description: "Member's age at retirement (whole years)"
+        constraints:
+          min: 55
+          max: 65
+    logic:
+      type: "lookup_table"
+      description: >
+        STATUTORY TABLE - 3% per year under 65 for Tiers 1 and 2.
+        DO NOT replace with a formula. Use this table directly.
+      table:
+        - age: 55
+          factor: 0.70
+          reduction_pct: 0.30
+        - age: 56
+          factor: 0.73
+          reduction_pct: 0.27
+        - age: 57
+          factor: 0.76
+          reduction_pct: 0.24
+        - age: 58
+          factor: 0.79
+          reduction_pct: 0.21
+        - age: 59
+          factor: 0.82
+          reduction_pct: 0.18
+        - age: 60
+          factor: 0.85
+          reduction_pct: 0.15
+        - age: 61
+          factor: 0.88
+          reduction_pct: 0.12
+        - age: 62
+          factor: 0.91
+          reduction_pct: 0.09
+        - age: 63
+          factor: 0.94
+          reduction_pct: 0.06
+        - age: 64
+          factor: 0.97
+          reduction_pct: 0.03
+        - age: 65
+          factor: 1.00
+          reduction_pct: 0.00
+      key_field: "age"
+      value_field: "factor"
+    output:
+      name: "reduction_factor"
+      type: "decimal"
+      precision: 2
+    tags: ["eligibility", "reduction", "statutory-table", "tier-1", "tier-2"]
+    notes: >
+      CRITICAL: The reduction is 3% per year for Tiers 1 and 2, NOT 6%.
+      Tier 3 uses 6% per year (see RULE-EARLY-REDUCE-T3).
+    test_cases:
+      - name: "Happy path - Jennifer Kim age 55 reduction"
+        type: "happy_path"
+        demo_case_ref: "Case 2: Jennifer Kim - Tier 2"
+        description: "Tier 2, age 55, gets 30% reduction (factor 0.70)"
+        inputs:
+          age_at_retirement: 55
+        expected:
+          factor: 0.70
+          reduction_pct: 0.30
+      - name: "Boundary - age 65 (no reduction)"
+        type: "boundary"
+        description: "At normal retirement age, no reduction"
+        inputs:
+          age_at_retirement: 65
+        expected:
+          factor: 1.00
+          reduction_pct: 0.00
+      - name: "Below boundary - age 55 (maximum reduction)"
+        type: "below_boundary"
+        description: "Youngest early retirement age has maximum reduction"
+        inputs:
+          age_at_retirement: 55
+        expected:
+          factor: 0.70
+          reduction_pct: 0.30
+      - name: "Negative - age below minimum"
+        type: "negative"
+        description: "Age 54 is not in the table (below early retirement age)"
+        inputs:
+          age_at_retirement: 54
+        expected:
+          error: "AGE_OUT_OF_RANGE"
+          message: "Age must be between 55 and 65 for Tiers 1 and 2 reduction table"
+      - name: "Happy path - age 62 mid-table lookup"
+        type: "happy_path"
+        description: "Mid-range table lookup, 9% reduction"
+        inputs:
+          age_at_retirement: 62
+        expected:
+          factor: 0.91
+          reduction_pct: 0.09
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-EARLY-REDUCE-T3: Early Retirement Reduction (Tier 3)
+  # ===========================================================================
+  - id: "RULE-EARLY-REDUCE-T3"
+    name: "Early Retirement Reduction Factor - Tier 3"
+    description: >
+      Statutory lookup table for early retirement reduction factors for
+      Tier 3 members. Reduction is 6% per year under age 65.
+      MUST use this table, NOT a formula.
+    source_reference:
+      document: "RMC"
+      section: "Section 5.05(b) - Early Retirement Reduction Table, Tier 3"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_3"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "age_at_retirement"
+        type: "integer"
+        required: true
+        description: "Member's age at retirement (whole years)"
+        constraints:
+          min: 60
+          max: 65
+    logic:
+      type: "lookup_table"
+      description: >
+        STATUTORY TABLE - 6% per year under 65 for Tier 3.
+        DO NOT replace with a formula. Use this table directly.
+      table:
+        - age: 60
+          factor: 0.70
+          reduction_pct: 0.30
+        - age: 61
+          factor: 0.76
+          reduction_pct: 0.24
+        - age: 62
+          factor: 0.82
+          reduction_pct: 0.18
+        - age: 63
+          factor: 0.88
+          reduction_pct: 0.12
+        - age: 64
+          factor: 0.94
+          reduction_pct: 0.06
+        - age: 65
+          factor: 1.00
+          reduction_pct: 0.00
+      key_field: "age"
+      value_field: "factor"
+    output:
+      name: "reduction_factor"
+      type: "decimal"
+      precision: 2
+    tags: ["eligibility", "reduction", "statutory-table", "tier-3"]
+    notes: >
+      CRITICAL: Tier 3 reduction is 6% per year, NOT 3%. Tiers 1 and 2 use 3%.
+    test_cases:
+      - name: "Happy path - David Washington age 62 reduction"
+        type: "happy_path"
+        demo_case_ref: "Case 3: David Washington - Tier 3"
+        description: "Tier 3, age 62, gets 18% reduction (factor 0.82)"
+        inputs:
+          age_at_retirement: 62
+        expected:
+          factor: 0.82
+          reduction_pct: 0.18
+      - name: "Boundary - age 65 (no reduction)"
+        type: "boundary"
+        description: "At normal retirement age, no reduction"
+        inputs:
+          age_at_retirement: 65
+        expected:
+          factor: 1.00
+          reduction_pct: 0.00
+      - name: "Below boundary - age 60 (maximum Tier 3 reduction)"
+        type: "below_boundary"
+        description: "Youngest Tier 3 early retirement age has maximum reduction"
+        inputs:
+          age_at_retirement: 60
+        expected:
+          factor: 0.70
+          reduction_pct: 0.30
+      - name: "Negative - age below Tier 3 minimum"
+        type: "negative"
+        description: "Age 59 is not in the Tier 3 table"
+        inputs:
+          age_at_retirement: 59
+        expected:
+          error: "AGE_OUT_OF_RANGE"
+          message: "Age must be between 60 and 65 for Tier 3 reduction table"
+      - name: "Negative - do not confuse with Tier 1/2 table"
+        type: "negative"
+        description: >
+          At age 62, Tier 3 factor is 0.82 (6%/yr), NOT 0.91 (3%/yr).
+          This test catches tier table misapplication.
+        inputs:
+          age_at_retirement: 62
+        expected:
+          factor: 0.82
+          reduction_pct: 0.18
+        notes: "Tier 1/2 at age 62 would be 0.91. Tier 3 is 0.82. Do NOT mix."
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-DEFERRED: Deferred Retirement Eligibility
+  # ===========================================================================
+  - id: "RULE-DEFERRED"
+    name: "Deferred Retirement Eligibility"
+    description: >
+      A vested member who separates from service before meeting early or
+      normal retirement eligibility may defer their benefit to a future date
+      when they meet age requirements.
+    source_reference:
+      document: "RMC"
+      section: "Section 5.06 - Deferred Retirement"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["terminated"]
+    inputs:
+      - name: "is_vested"
+        type: "boolean"
+        required: true
+      - name: "is_separated"
+        type: "boolean"
+        required: true
+      - name: "eligible_for_immediate_retirement"
+        type: "boolean"
+        required: true
+        description: "Whether member qualifies for normal, Rule of 75/85, or early"
+    logic:
+      type: "conditional"
+      conditions:
+        - condition: >
+            is_vested = true
+            AND is_separated = true
+            AND eligible_for_immediate_retirement = false
+          result:
+            eligible_for_deferred: true
+            earliest_commencement: "Age 55 for Tiers 1/2, Age 60 for Tier 3"
+      default:
+        eligible_for_deferred: false
+    output:
+      name: "deferred_eligibility"
+      type: "object"
+      fields:
+        - name: "eligible_for_deferred"
+          type: "boolean"
+        - name: "earliest_commencement"
+          type: "string"
+    dependencies: ["RULE-VESTING"]
+    tags: ["eligibility", "deferred"]
+    test_cases:
+      - name: "Happy path - vested terminated member"
+        type: "happy_path"
+        description: "Vested, separated, not yet eligible for immediate retirement"
+        inputs:
+          is_vested: true
+          is_separated: true
+          eligible_for_immediate_retirement: false
+        expected:
+          eligible_for_deferred: true
+      - name: "Boundary - already eligible for immediate retirement"
+        type: "boundary"
+        description: "If already eligible for immediate, deferred does not apply"
+        inputs:
+          is_vested: true
+          is_separated: true
+          eligible_for_immediate_retirement: true
+        expected:
+          eligible_for_deferred: false
+      - name: "Below boundary - not vested"
+        type: "below_boundary"
+        description: "Cannot defer if not vested"
+        inputs:
+          is_vested: false
+          is_separated: true
+          eligible_for_immediate_retirement: false
+        expected:
+          eligible_for_deferred: false
+      - name: "Negative - still active (not separated)"
+        type: "negative"
+        description: "Deferred only applies to separated members"
+        inputs:
+          is_vested: true
+          is_separated: false
+          eligible_for_immediate_retirement: false
+        expected:
+          eligible_for_deferred: false
+          reason: "Member is still active; deferred applies only to separated members"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-ELIG-HIERARCHY: Eligibility Determination Hierarchy
+  # ===========================================================================
+  - id: "RULE-ELIG-HIERARCHY"
+    name: "Eligibility Determination Hierarchy"
+    description: >
+      Determines the member's retirement type by evaluating eligibility rules
+      in priority order: Normal Retirement > Rule of 75/85 > Early Retirement > Deferred.
+      The FIRST matching eligibility determines the retirement type and reduction.
+    source_reference:
+      document: "RMC"
+      section: "Section 5.07 - Eligibility Determination Order"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "tier"
+        type: "enum"
+        required: true
+      - name: "age_at_retirement"
+        type: "decimal"
+        required: true
+      - name: "earned_service_years"
+        type: "decimal"
+        required: true
+      - name: "is_vested"
+        type: "boolean"
+        required: true
+      - name: "is_separated"
+        type: "boolean"
+        required: false
+        default: false
+    logic:
+      type: "procedural"
+      steps:
+        - step: 1
+          action: "Check RULE-NORMAL-RET (age >= 65, service >= 5)"
+          if_true: "retirement_type = 'normal', reduction_factor = 1.00"
+        - step: 2
+          action: "Check RULE-RULE-OF-75 (Tiers 1/2) or RULE-RULE-OF-85 (Tier 3)"
+          if_true: "retirement_type = 'rule_of_n', reduction_factor = 1.00"
+        - step: 3
+          action: "Check RULE-EARLY-RET-T12 (Tiers 1/2) or RULE-EARLY-RET-T3 (Tier 3)"
+          if_true: "retirement_type = 'early', reduction_factor = from statutory table"
+        - step: 4
+          action: "Check RULE-DEFERRED (vested, separated, not yet eligible)"
+          if_true: "retirement_type = 'deferred', reduction_factor = TBD at commencement"
+        - step: 5
+          action: "If none matched, member is NOT eligible for any retirement"
+          result: "retirement_type = 'not_eligible'"
+    dependencies:
+      - "RULE-NORMAL-RET"
+      - "RULE-RULE-OF-75"
+      - "RULE-RULE-OF-85"
+      - "RULE-EARLY-RET-T12"
+      - "RULE-EARLY-RET-T3"
+      - "RULE-EARLY-REDUCE-T12"
+      - "RULE-EARLY-REDUCE-T3"
+      - "RULE-DEFERRED"
+    output:
+      name: "eligibility_determination"
+      type: "object"
+      fields:
+        - name: "retirement_type"
+          type: "enum"
+          values: ["normal", "rule_of_n", "early", "deferred", "not_eligible"]
+        - name: "reduction_factor"
+          type: "decimal"
+        - name: "matched_rule"
+          type: "string"
+    priority: 1
+    tags: ["eligibility", "hierarchy", "orchestration"]
+    test_cases:
+      - name: "Happy path - Robert Martinez gets Rule of 75"
+        type: "happy_path"
+        demo_case_ref: "Case 1: Robert Martinez - Tier 1"
+        description: "Tier 1, age 62, 27.5 earned. Not 65 yet, but 62+27.5=89.5>=75"
+        inputs:
+          tier: "tier_1"
+          age_at_retirement: 62
+          earned_service_years: 27.5
+          is_vested: true
+        expected:
+          retirement_type: "rule_of_n"
+          reduction_factor: 1.00
+          matched_rule: "RULE-RULE-OF-75"
+      - name: "Boundary - Jennifer Kim Rule of 75 vs early"
+        type: "boundary"
+        demo_case_ref: "Case 2: Jennifer Kim - Tier 2"
+        description: >
+          Tier 2, age 55, 20 earned. 55+20=75 meets Rule of 75.
+          Should get unreduced, NOT early retirement reduction.
+        inputs:
+          tier: "tier_2"
+          age_at_retirement: 55
+          earned_service_years: 20.0
+          is_vested: true
+        expected:
+          retirement_type: "rule_of_n"
+          reduction_factor: 1.00
+          matched_rule: "RULE-RULE-OF-75"
+      - name: "Below boundary - David Washington gets early retirement"
+        type: "below_boundary"
+        demo_case_ref: "Case 3: David Washington - Tier 3"
+        description: "Tier 3, age 62, 11 earned. 62+11=73 < 85. Falls to early."
+        inputs:
+          tier: "tier_3"
+          age_at_retirement: 62
+          earned_service_years: 11.0
+          is_vested: true
+        expected:
+          retirement_type: "early"
+          reduction_factor: 0.82
+          matched_rule: "RULE-EARLY-RET-T3"
+      - name: "Negative - not vested, not eligible for anything"
+        type: "negative"
+        description: "3 years service, not vested, cannot retire"
+        inputs:
+          tier: "tier_2"
+          age_at_retirement: 60
+          earned_service_years: 3.0
+          is_vested: false
+        expected:
+          retirement_type: "not_eligible"
+          reason: "Not vested - requires 5 years earned service"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"

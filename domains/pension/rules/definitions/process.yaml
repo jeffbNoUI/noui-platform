@@ -1,0 +1,607 @@
+# =============================================================================
+# DERP Process & Administrative Rules
+# =============================================================================
+# Domain: process
+# Rules: RULE-APP-DEADLINE, RULE-NOTARIZATION, RULE-PAYMENT-CUTOFF,
+#        RULE-EFFECTIVE-DATE, RULE-IRREVOCABILITY, RULE-COLA
+# Authority: DERP Restated Master Contract (RMC)
+# =============================================================================
+
+metadata:
+  domain: "process"
+  version: "1.0.0"
+  effective_date: "2026-03-02"
+  authority: "DERP Restated Master Contract (RMC)"
+  description: >
+    Defines administrative and process rules including application deadlines,
+    notarization requirements, payment cutoff dates, benefit effective dates,
+    irrevocability of elections, and COLA provisions.
+  governance:
+    owner: "DERP Rules Committee"
+    approved_by: "Plan Administrator"
+    approval_date: "2026-03-02"
+    review_cycle: "annual"
+    next_review_date: "2027-03-02"
+    audit_trail: true
+    change_log:
+      - version: "1.0.0"
+        date: "2026-03-02"
+        author: "Rules Committee"
+        description: "Initial process rule definitions for DERP NoUI POC"
+
+rules:
+  # ===========================================================================
+  # RULE-APP-DEADLINE: Application Deadline
+  # ===========================================================================
+  - id: "RULE-APP-DEADLINE"
+    name: "Retirement Application Deadline"
+    description: >
+      A retirement application must be filed at least 30 days before the
+      requested effective date of retirement. Applications received less
+      than 30 days before the effective date will have the effective date
+      pushed to the first of the following month.
+    source_reference:
+      document: "RMC"
+      section: "Section 11.01 - Application Filing Deadline"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "application_date"
+        type: "date"
+        required: true
+        description: "Date the application was received"
+      - name: "requested_effective_date"
+        type: "date"
+        required: true
+        description: "Member's requested retirement effective date"
+    logic:
+      type: "conditional"
+      conditions:
+        - condition: "days_between(application_date, requested_effective_date) >= 30"
+          result:
+            application_timely: true
+            actual_effective_date: "requested_effective_date"
+        - condition: "days_between(application_date, requested_effective_date) < 30"
+          result:
+            application_timely: false
+            actual_effective_date: "first_of_next_month(application_date + 30 days)"
+    output:
+      name: "application_status"
+      type: "object"
+      fields:
+        - name: "application_timely"
+          type: "boolean"
+        - name: "actual_effective_date"
+          type: "date"
+    tags: ["process", "deadline", "application"]
+    test_cases:
+      - name: "Happy path - timely application"
+        type: "happy_path"
+        demo_case_ref: "Case 1: Robert Martinez - Tier 1"
+        description: "Application filed 45 days before requested date"
+        inputs:
+          application_date: "2025-11-01"
+          requested_effective_date: "2025-12-15"
+        expected:
+          application_timely: true
+          actual_effective_date: "2025-12-15"
+      - name: "Boundary - exactly 30 days"
+        type: "boundary"
+        description: "Filed exactly 30 days before, still timely"
+        inputs:
+          application_date: "2025-11-15"
+          requested_effective_date: "2025-12-15"
+        expected:
+          application_timely: true
+          actual_effective_date: "2025-12-15"
+      - name: "Below boundary - 29 days"
+        type: "below_boundary"
+        description: "One day late, effective date pushed"
+        inputs:
+          application_date: "2025-11-16"
+          requested_effective_date: "2025-12-15"
+        expected:
+          application_timely: false
+          actual_effective_date: "2026-01-01"
+          notes: "App date + 30 = Dec 16. First of next month = Jan 1, 2026."
+      - name: "Negative - application date after effective date"
+        type: "negative"
+        description: "Cannot apply for retirement in the past"
+        inputs:
+          application_date: "2026-01-15"
+          requested_effective_date: "2025-12-01"
+        expected:
+          error: "RETROACTIVE_APPLICATION"
+          message: "requested_effective_date cannot be before application_date"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-NOTARIZATION: Notarization Requirement
+  # ===========================================================================
+  - id: "RULE-NOTARIZATION"
+    name: "Notarization Requirement"
+    description: >
+      The retirement application and payment option election must be
+      notarized. If the member is married and electing Maximum or naming
+      a non-spouse beneficiary, spousal consent must also be notarized.
+    source_reference:
+      document: "RMC"
+      section: "Section 11.02 - Notarization"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "application_notarized"
+        type: "boolean"
+        required: true
+      - name: "election_notarized"
+        type: "boolean"
+        required: true
+      - name: "spousal_consent_required"
+        type: "boolean"
+        required: false
+        default: false
+      - name: "spousal_consent_notarized"
+        type: "boolean"
+        required: false
+    logic:
+      type: "procedural"
+      steps:
+        - step: 1
+          action: "Verify application_notarized = true"
+        - step: 2
+          action: "Verify election_notarized = true"
+        - step: 3
+          condition: "spousal_consent_required = true"
+          action: "Verify spousal_consent_notarized = true"
+        - step: 4
+          action: "If all required notarizations present, forms_valid = true"
+    output:
+      name: "notarization_status"
+      type: "object"
+      fields:
+        - name: "forms_valid"
+          type: "boolean"
+        - name: "missing_notarizations"
+          type: "list"
+    tags: ["process", "notarization", "compliance"]
+    test_cases:
+      - name: "Happy path - all notarized, no spousal consent needed"
+        type: "happy_path"
+        demo_case_ref: "Case 1: Robert Martinez - Tier 1"
+        description: "Unmarried member, application and election notarized"
+        inputs:
+          application_notarized: true
+          election_notarized: true
+          spousal_consent_required: false
+        expected:
+          forms_valid: true
+          missing_notarizations: []
+      - name: "Boundary - married with all notarizations"
+        type: "boundary"
+        description: "Married member, all three notarizations present"
+        inputs:
+          application_notarized: true
+          election_notarized: true
+          spousal_consent_required: true
+          spousal_consent_notarized: true
+        expected:
+          forms_valid: true
+          missing_notarizations: []
+      - name: "Below boundary - missing election notarization"
+        type: "below_boundary"
+        description: "Application notarized but election is not"
+        inputs:
+          application_notarized: true
+          election_notarized: false
+          spousal_consent_required: false
+        expected:
+          forms_valid: false
+          missing_notarizations: ["election"]
+      - name: "Negative - married, spousal consent not notarized"
+        type: "negative"
+        description: "All forms present but spousal consent lacks notarization"
+        inputs:
+          application_notarized: true
+          election_notarized: true
+          spousal_consent_required: true
+          spousal_consent_notarized: false
+        expected:
+          forms_valid: false
+          missing_notarizations: ["spousal_consent"]
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-PAYMENT-CUTOFF: Payment Processing Cutoff
+  # ===========================================================================
+  - id: "RULE-PAYMENT-CUTOFF"
+    name: "Payment Processing Cutoff Date"
+    description: >
+      Monthly retirement payments are processed on the first business day
+      of each month. To be included in a month's payment run, all
+      documentation must be complete by the 15th of the prior month.
+    source_reference:
+      document: "RMC"
+      section: "Section 11.03 - Payment Processing"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["retired"]
+    inputs:
+      - name: "documentation_complete_date"
+        type: "date"
+        required: true
+      - name: "target_payment_month"
+        type: "string"
+        required: true
+        description: "Target month for first payment (YYYY-MM format)"
+    logic:
+      type: "conditional"
+      conditions:
+        - condition: "documentation_complete_date <= 15th of month before target_payment_month"
+          result:
+            included_in_target: true
+            first_payment_date: "1st business day of target_payment_month"
+        - condition: "documentation_complete_date > 15th of month before target_payment_month"
+          result:
+            included_in_target: false
+            first_payment_date: "1st business day of month after target_payment_month"
+    output:
+      name: "payment_scheduling"
+      type: "object"
+      fields:
+        - name: "included_in_target"
+          type: "boolean"
+        - name: "first_payment_date"
+          type: "date"
+    tags: ["process", "payment", "cutoff"]
+    test_cases:
+      - name: "Happy path - documentation complete well before cutoff"
+        type: "happy_path"
+        demo_case_ref: "Case 1: Robert Martinez - Tier 1"
+        description: "Docs complete Nov 10 for Dec payment"
+        inputs:
+          documentation_complete_date: "2025-11-10"
+          target_payment_month: "2025-12"
+        expected:
+          included_in_target: true
+          first_payment_date: "2025-12-01"
+      - name: "Boundary - exactly on cutoff (15th)"
+        type: "boundary"
+        description: "Docs complete on the 15th, still included"
+        inputs:
+          documentation_complete_date: "2025-11-15"
+          target_payment_month: "2025-12"
+        expected:
+          included_in_target: true
+          first_payment_date: "2025-12-01"
+      - name: "Below boundary - one day after cutoff"
+        type: "below_boundary"
+        description: "Docs complete Nov 16, misses Dec payment"
+        inputs:
+          documentation_complete_date: "2025-11-16"
+          target_payment_month: "2025-12"
+        expected:
+          included_in_target: false
+          first_payment_date: "2026-01-02"
+          notes: "Jan 1 is a holiday, first business day is Jan 2"
+      - name: "Negative - documentation date in the future"
+        type: "negative"
+        description: "Cannot schedule based on incomplete documentation"
+        inputs:
+          documentation_complete_date: null
+          target_payment_month: "2025-12"
+        expected:
+          error: "INCOMPLETE_DOCUMENTATION"
+          message: "documentation_complete_date is required for payment scheduling"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-EFFECTIVE-DATE: Benefit Effective Date
+  # ===========================================================================
+  - id: "RULE-EFFECTIVE-DATE"
+    name: "Benefit Effective Date Determination"
+    description: >
+      The effective date of retirement benefit is the first day of the month
+      following the member's last day of employment, unless the member
+      requests a later date. The effective date cannot be earlier than the
+      day after the last day of employment.
+    source_reference:
+      document: "RMC"
+      section: "Section 11.04 - Effective Date of Benefits"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "last_day_of_employment"
+        type: "date"
+        required: true
+      - name: "requested_effective_date"
+        type: "date"
+        required: false
+        description: "Member's requested effective date, if different from default"
+    logic:
+      type: "conditional"
+      conditions:
+        - condition: "requested_effective_date IS NULL OR requested_effective_date <= first_of_next_month(last_day_of_employment)"
+          result:
+            effective_date: "first_of_next_month(last_day_of_employment)"
+        - condition: "requested_effective_date > first_of_next_month(last_day_of_employment)"
+          result:
+            effective_date: "requested_effective_date"
+    output:
+      name: "benefit_effective_date"
+      type: "object"
+      fields:
+        - name: "effective_date"
+          type: "date"
+    tags: ["process", "effective-date"]
+    test_cases:
+      - name: "Happy path - standard effective date"
+        type: "happy_path"
+        demo_case_ref: "Case 1: Robert Martinez - Tier 1"
+        description: "Last day Dec 15, effective date Jan 1"
+        inputs:
+          last_day_of_employment: "2025-12-15"
+          requested_effective_date: null
+        expected:
+          effective_date: "2026-01-01"
+      - name: "Boundary - last day is last of month"
+        type: "boundary"
+        description: "Last day Dec 31, effective date Jan 1"
+        inputs:
+          last_day_of_employment: "2025-12-31"
+          requested_effective_date: null
+        expected:
+          effective_date: "2026-01-01"
+      - name: "Below boundary - deferred start requested"
+        type: "below_boundary"
+        description: "Member requests later effective date"
+        inputs:
+          last_day_of_employment: "2025-12-15"
+          requested_effective_date: "2026-03-01"
+        expected:
+          effective_date: "2026-03-01"
+      - name: "Negative - requested date before separation"
+        type: "negative"
+        description: "Cannot start benefits before leaving employment"
+        inputs:
+          last_day_of_employment: "2025-12-15"
+          requested_effective_date: "2025-12-01"
+        expected:
+          error: "INVALID_EFFECTIVE_DATE"
+          message: "effective_date cannot be before last_day_of_employment"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-IRREVOCABILITY: Irrevocability of Elections
+  # ===========================================================================
+  - id: "RULE-IRREVOCABILITY"
+    name: "Irrevocability of Payment Option Election"
+    description: >
+      Once the first retirement payment is issued, the payment option
+      election is IRREVOCABLE. The member cannot change their selected
+      payment option after the first payment. Elections may be changed
+      up until the first payment is processed.
+    source_reference:
+      document: "RMC"
+      section: "Section 11.05 - Irrevocability"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["active", "terminated", "retired"]
+    inputs:
+      - name: "first_payment_issued"
+        type: "boolean"
+        required: true
+      - name: "change_requested"
+        type: "boolean"
+        required: true
+      - name: "current_election"
+        type: "enum"
+        required: true
+        constraints:
+          enum_values: ["Maximum", "JS-100", "JS-75", "JS-50"]
+    logic:
+      type: "conditional"
+      conditions:
+        - condition: "first_payment_issued = true AND change_requested = true"
+          result:
+            change_allowed: false
+            reason: "Election is irrevocable after first payment"
+        - condition: "first_payment_issued = false AND change_requested = true"
+          result:
+            change_allowed: true
+    output:
+      name: "irrevocability_status"
+      type: "object"
+      fields:
+        - name: "change_allowed"
+          type: "boolean"
+        - name: "reason"
+          type: "string"
+    tags: ["process", "irrevocability", "election"]
+    test_cases:
+      - name: "Happy path - change before first payment"
+        type: "happy_path"
+        description: "Member wants to change election before first payment"
+        inputs:
+          first_payment_issued: false
+          change_requested: true
+          current_election: "JS-50"
+        expected:
+          change_allowed: true
+      - name: "Boundary - first payment just issued"
+        type: "boundary"
+        description: "First payment was just processed, now locked"
+        inputs:
+          first_payment_issued: true
+          change_requested: true
+          current_election: "JS-50"
+        expected:
+          change_allowed: false
+          reason: "Election is irrevocable after first payment"
+      - name: "Below boundary - no change requested"
+        type: "below_boundary"
+        description: "Member does not want to change"
+        inputs:
+          first_payment_issued: true
+          change_requested: false
+          current_election: "Maximum"
+        expected:
+          change_allowed: false
+          notes: "No change requested, irrevocability is moot"
+      - name: "Negative - attempt to change after payment"
+        type: "negative"
+        description: "Member insists on changing after first payment"
+        inputs:
+          first_payment_issued: true
+          change_requested: true
+          current_election: "Maximum"
+        expected:
+          change_allowed: false
+          reason: "Election is irrevocable after first payment"
+          error: "IRREVOCABLE_ELECTION"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-COLA: Cost of Living Adjustment
+  # ===========================================================================
+  - id: "RULE-COLA"
+    name: "Cost of Living Adjustment (COLA)"
+    description: >
+      Retired members may receive an annual Cost of Living Adjustment (COLA)
+      to their monthly benefit. The COLA is applied as a percentage increase
+      to the current monthly benefit amount. The COLA rate and eligibility
+      are determined annually by the Plan Board.
+    source_reference:
+      document: "RMC"
+      section: "Section 11.06 - Cost of Living Adjustment"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["retired"]
+    inputs:
+      - name: "current_monthly_benefit"
+        type: "decimal"
+        required: true
+      - name: "cola_rate"
+        type: "decimal"
+        required: true
+        description: "Annual COLA rate as a decimal (e.g., 0.03 for 3%)"
+        constraints:
+          min: 0.0
+      - name: "years_since_retirement"
+        type: "integer"
+        required: true
+        description: "Number of complete years since retirement"
+      - name: "cola_eligible"
+        type: "boolean"
+        required: true
+        description: "Whether the retiree is eligible for COLA this year"
+    logic:
+      type: "conditional"
+      conditions:
+        - condition: "cola_eligible = true AND years_since_retirement >= 1"
+          result:
+            cola_applied: true
+            cola_amount: "current_monthly_benefit * cola_rate"
+            new_monthly_benefit: "current_monthly_benefit * (1 + cola_rate)"
+        - condition: "cola_eligible = false OR years_since_retirement < 1"
+          result:
+            cola_applied: false
+            cola_amount: 0.0
+            new_monthly_benefit: "current_monthly_benefit"
+    output:
+      name: "cola_result"
+      type: "object"
+      fields:
+        - name: "cola_applied"
+          type: "boolean"
+        - name: "cola_amount"
+          type: "decimal"
+          precision: 2
+        - name: "new_monthly_benefit"
+          type: "decimal"
+          precision: 2
+    tags: ["process", "cola", "annual-adjustment"]
+    test_cases:
+      - name: "Happy path - 3% COLA applied"
+        type: "happy_path"
+        demo_case_ref: "Case 1: Robert Martinez - Tier 1"
+        description: "Retiree eligible for 3% COLA after 1+ years"
+        inputs:
+          current_monthly_benefit: 4354.17
+          cola_rate: 0.03
+          years_since_retirement: 2
+          cola_eligible: true
+        expected:
+          cola_applied: true
+          cola_amount: 130.63
+          new_monthly_benefit: 4484.80
+          notes: "$4,354.17 * 0.03 = $130.63; new = $4,484.80"
+      - name: "Boundary - first year, not yet eligible"
+        type: "boundary"
+        description: "Must complete 1 full year before COLA"
+        inputs:
+          current_monthly_benefit: 4354.17
+          cola_rate: 0.03
+          years_since_retirement: 0
+          cola_eligible: true
+        expected:
+          cola_applied: false
+          cola_amount: 0.0
+          new_monthly_benefit: 4354.17
+      - name: "Below boundary - very small COLA"
+        type: "below_boundary"
+        description: "1% COLA on a small benefit"
+        inputs:
+          current_monthly_benefit: 500.00
+          cola_rate: 0.01
+          years_since_retirement: 3
+          cola_eligible: true
+        expected:
+          cola_applied: true
+          cola_amount: 5.00
+          new_monthly_benefit: 505.00
+      - name: "Negative - not eligible for COLA"
+        type: "negative"
+        description: "Board determines no COLA this year"
+        inputs:
+          current_monthly_benefit: 4354.17
+          cola_rate: 0.03
+          years_since_retirement: 5
+          cola_eligible: false
+        expected:
+          cola_applied: false
+          cola_amount: 0.0
+          new_monthly_benefit: 4354.17
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"

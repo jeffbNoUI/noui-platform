@@ -1,0 +1,216 @@
+**NoUI Platform**
+
+Architecture Decisions & Governing Principles
+
+*DERP Proof of Concept*
+
+Version 1.0 - February 2026
+
+*Status: Active - Governing Document*
+
+1\. Core Governing Principles
+
+These principles are non-negotiable. They govern all architectural
+decisions, development practices, and product positioning for the NoUI
+platform. They are listed in priority order.
+
+1.1 The Separation of Concerns Principle
+
+**AI and deterministic computation serve fundamentally different roles
+in the NoUI platform.** Business rules, benefit calculations,
+eligibility determinations, and any function that produces a number, a
+yes/no decision, or a dollar amount must be implemented as
+deterministic, auditable, version-controlled code executing certified
+rule configurations. AI must never execute business rules, perform
+benefit calculations, or make eligibility determinations.
+
+The three distinct roles of AI in NoUI are:
+
+**1. Rules Configuration Accelerator:** AI reads governing documents
+(statutes, board policies, actuarial valuations) and drafts rule
+configurations for human review and certification. AI makes the
+configuration process faster. AI does not own the configuration.
+
+**2. Orchestration and Presentation:** AI learns from database
+transactions and workflow patterns to understand how tasks are
+performed. AI orchestrates task execution and composes context-sensitive
+workspaces. AI decides what information to show and in what order. The
+data displayed always comes from the deterministic rules engine.
+
+**3. Learning and Migration:** AI analyzes legacy data structures,
+transaction patterns, and operational workflows to accelerate migration
+from legacy systems to the modern data model. AI proposes mappings and
+transformations for human approval.
+
+1.2 The Trust Progression Principle
+
+The system earns trust through transparency, not automation. Every
+output is verifiable by a human. No calculation, correction, or decision
+is made without human visibility. Automation of approvals is a future
+capability that requires demonstrated accuracy over time - it is never a
+starting assumption.
+
+The trust progression follows four phases:
+
+**Phase 1 - Transparent:** The system shows its work. Every calculation
+displays the formula, every input, every intermediate step. A pension
+analyst can verify it matches what they would do by hand.
+
+**Phase 2 - Verified:** After sufficient cycles where the system\'s
+output matches human review, confidence builds through data. The human
+is still approving every output.
+
+**Phase 3 - Supervised Automation:** For routine cases matching verified
+patterns, the system may proceed with reduced friction, but exceptions
+still require explicit approval.
+
+**Phase 4 - Autonomous for Routine:** Only after extensive verification
+history, and only for well-defined routine cases, might the system
+operate with post-hoc review rather than pre-approval.
+
+1.3 The Rules Governance Principle
+
+All rule changes follow a full software development lifecycle. AI may
+draft, but humans certify. The lifecycle is: AI reads source document
+and identifies affected rules, AI drafts proposed changes, human SMEs
+review against actual source document language, system generates
+regression tests from reviewed definitions, full regression suite
+executes with failures treated as defects, human certifies the complete
+package, and approved changes deploy on their effective date with prior
+rules preserved.
+
+1.4 The Source of Truth Principle
+
+Business rules come from governing documents only. The governing
+documents for pension rules are statutes, board policies, and actuarial
+valuations. Legacy system behavior is NOT a source of business rules.
+Historical transactions are a validation oracle, not a rule source. If
+the legacy system does something that contradicts the governing
+documents, the legacy system is wrong.
+
+1.5 The Auditability Principle
+
+Every calculation must be traceable from result to rule to source
+document. Every rule must reference its governing document provision.
+Every change must be logged with who, when, what, and why. The system
+must be able to reproduce any historical calculation exactly as it was
+performed.
+
+2\. Architecture Decision Records
+
+ADR-001: AI Does Not Execute Business Rules
+
+**Date:** February 18, 2026
+
+**Status:** Accepted
+
+**Decision:** All business rules, benefit calculations, eligibility
+determinations, and financial computations are implemented as
+deterministic code executing version-controlled, human-certified rule
+configurations. AI is architecturally prohibited from the calculation
+path.
+
+**Rationale:** Pension calculations must be legally defensible,
+auditable, and reproducible. Probabilistic AI outputs cannot meet these
+requirements. If AI is unavailable, every calculation still works.
+
+ADR-002: Rules Governance SDLC Required
+
+**Date:** February 18, 2026
+
+**Status:** Accepted
+
+**Decision:** All rule changes follow a full SDLC: AI drafts, human
+reviews, system generates tests, tests execute, human certifies,
+controlled deployment. No rule reaches production without human
+approval.
+
+ADR-003: AI Learns Orchestration, Not Rules
+
+**Date:** February 18, 2026
+
+**Status:** Accepted
+
+**Decision:** AI learns from transaction history how work gets done
+(task patterns, data access sequences, workflow flows). AI does not
+derive business rules from transaction patterns. Rules come from
+governing documents only.
+
+ADR-004: Controlled Terminology
+
+**Date:** February 18, 2026
+
+**Status:** Accepted
+
+**Decision:** Replace all references to \'self-healing tests\' with
+\'AI-accelerated change management.\' Test failures are defects to
+investigate, never auto-resolve. The system prepares complete change
+packages for human review.
+
+ADR-005: Data Quality Findings Require Human Resolution
+
+**Date:** February 18, 2026
+
+**Status:** Accepted
+
+**Decision:** In Phase 1, no data quality issue is auto-resolved. All
+findings are surfaced and presented for human resolution. Resolution
+categories: proposed correction (awaiting review), requires research,
+requires agency decision.
+
+ADR-006: POC Is Exclusively Phase 1 (Transparent)
+
+**Date:** February 19, 2026
+
+**Status:** Accepted
+
+**Decision:** The POC operates exclusively in Phase 1 (Transparent).
+Every output is presented for human verification. The demo narrative
+emphasizes \'here is exactly what the system did, check its work\'
+rather than \'the system handles this automatically.\' Future phases are
+described as a roadmap, not as current capability.
+
+3\. System Boundary Definitions
+
+This section precisely defines what AI does and does not do in each
+layer of the NoUI architecture. These boundaries are enforced
+architecturally, not by convention.
+
+  -------------- ---------------------------- ----------------------------
+  **Layer**      **AI Role**                  **AI Prohibition**
+
+  Data Connector Proposes schema mappings     Does NOT execute queries,
+                 (human approves)             transform data, or perform
+                                              calculations
+
+  Business       Drafts rule configurations;  Does NOT evaluate rules,
+  Intelligence   generates test cases from    execute formulas, or
+                 certified rules              calculate benefits
+
+  Relevance      Learns task patterns;        Does NOT derive business
+  Engine         prioritizes information by   rules from transactions
+                 context                      
+
+  Dynamic        Composes context-sensitive   Does NOT generate displayed
+  Workspace      UI; determines which         data (all values from rules
+                 components to show           engine)
+  -------------- ---------------------------- ----------------------------
+
+4\. Controlled Terminology
+
+To prevent miscommunication with pension agency stakeholders, the
+following terms are either required or prohibited in all NoUI
+documentation, demos, and communications.
+
+4.1 Prohibited Terms
+
+**Do NOT use:** \'Self-healing\', \'Auto-resolved\', \'AI calculated the
+benefit\', \'The system automatically\...\' (for rules/calculations),
+\'The AI knows your rules\'
+
+4.2 Required Terms
+
+**DO use:** \'AI-accelerated change management\', \'Proposed correction
+(awaiting review)\', \'The rules engine calculated the benefit\', \'The
+system identifies and presents\...\', \'The rules engine is configured
+with your plan provisions\'

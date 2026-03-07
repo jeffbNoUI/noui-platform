@@ -1,0 +1,622 @@
+NoUI Training Document Series
+
+**Public Pension Domain Knowledge**
+
+Document 12: Actuarial Concepts
+
+Version 1.0 \| February 2026
+
+*Fundamental actuarial principles for pension funding, valuation, and
+financial reporting*
+
+Executive Summary
+
+Actuarial science underpins pension plan funding, financial reporting,
+and long-term sustainability. Actuaries use demographic and economic
+assumptions to project future benefit obligations and determine the
+contributions needed to fund those obligations over time.
+
+This document introduces key actuarial concepts that pension
+administrators should understand: liability measurement, funding
+methods, key assumptions, experience studies, and the relationship
+between actuarial valuations and financial reporting. While NoUI does
+not perform actuarial calculations, understanding these concepts is
+essential for interpreting valuation results and supporting plan
+governance.
+
+1\. The Role of the Actuary
+
+1.1 What Actuaries Do
+
+Pension actuaries perform several critical functions:
+
+-   Calculate present value of future benefit obligations
+
+-   Determine contribution requirements to fund benefits
+
+-   Project plan financial status under various scenarios
+
+-   Recommend appropriate actuarial assumptions
+
+-   Prepare valuations for financial reporting (GASB)
+
+-   Analyze experience vs. assumptions
+
+-   Advise on benefit design and funding policy
+
+1.2 Professional Standards
+
+Actuaries are bound by professional standards:
+
+**Actuarial Standards of Practice (ASOPs):** Technical standards issued
+by the Actuarial Standards Board governing how actuarial work is
+performed.
+
+**Code of Professional Conduct:** Ethical standards requiring integrity,
+competence, and objectivity.
+
+**Qualification Standards:** Requirements for education, experience, and
+continuing education to sign actuarial statements.
+
+1.3 Key ASOPs for Pension Actuaries
+
+  ------------- ---------------------------------------------------------
+  **ASOP**      **Subject**
+
+  No. 4         Measuring Pension Obligations and Determining Plan Costs
+
+  No. 27        Selection of Economic Assumptions
+
+  No. 35        Selection of Demographic Assumptions
+
+  No. 41        Actuarial Communications
+
+  No. 44        Selection and Use of Asset Valuation Methods
+
+  No. 51        Assessment and Disclosure of Risk
+  ------------- ---------------------------------------------------------
+
+2\. Present Value Concepts
+
+2.1 Time Value of Money
+
+A fundamental actuarial concept is that money has time value---a dollar
+today is worth more than a dollar in the future because today\'s dollar
+can be invested to earn returns.
+
+Present value calculations answer: How much money do we need today to
+pay a future obligation?
+
+2.2 Discount Rate
+
+The discount rate is the interest rate used to convert future values to
+present values:
+
+-   Higher discount rate = lower present value
+
+-   Lower discount rate = higher present value
+
+-   For pension plans, typically reflects expected investment return
+
+-   GASB requires blended rate if assets insufficient
+
+2.3 Present Value Example
+
+To pay \$1,000 in 10 years, how much is needed today?
+
+  ----------------------- ----------------------- -----------------------
+  **Discount Rate**       **Present Value**       **Calculation**
+
+  5%                      \$614                   \$1,000 ÷ (1.05)\^10
+
+  7%                      \$508                   \$1,000 ÷ (1.07)\^10
+
+  8%                      \$463                   \$1,000 ÷ (1.08)\^10
+  ----------------------- ----------------------- -----------------------
+
+This demonstrates why discount rate selection is so important---a 3%
+difference in rate creates a 33% difference in present value.
+
+2.4 Annuity Present Values
+
+Pension benefits are annuities---streams of payments over time. The
+present value of an annuity depends on:
+
+-   Payment amount
+
+-   Payment frequency
+
+-   Expected duration (life expectancy for life annuities)
+
+-   Discount rate
+
+-   Timing of payments (beginning vs. end of period)
+
+3\. Pension Liabilities
+
+3.1 Types of Liabilities
+
+Actuaries calculate several liability measures:
+
+**Actuarial Accrued Liability (AAL):** Present value of benefits earned
+to date, calculated using the plan\'s actuarial cost method. This is the
+primary liability measure for funding purposes.
+
+**Total Pension Liability (TPL):** GASB measure of benefits earned to
+date. Similar to AAL but using GASB-specific methods and assumptions.
+
+**Present Value of Future Benefits (PVFB):** Total present value of all
+benefits expected to be paid, including those not yet earned.
+
+3.2 Liability Components
+
+The actuarial liability comprises:
+
+Active Members
+
+-   Benefits earned to date
+
+-   Projected using assumptions about future service and salary
+
+-   Discounted to present value
+
+-   Includes probability of termination, death, disability, retirement
+
+Terminated Vested Members
+
+-   Deferred benefits earned before termination
+
+-   Benefits commence at eligibility age
+
+-   Discounted to present value
+
+Retired Members and Beneficiaries
+
+-   Present value of remaining expected payments
+
+-   Based on current benefit amounts
+
+-   Life expectancy assumptions
+
+-   Includes survivor benefits
+
+3.3 Unfunded Liability
+
+The unfunded actuarial accrued liability (UAAL) represents the shortfall
+between liabilities and assets:
+
+-   UAAL = Actuarial Accrued Liability − Actuarial Value of Assets
+
+-   Positive UAAL means plan is underfunded
+
+-   UAAL is amortized over time through contributions
+
+-   Most public plans have some UAAL
+
+4\. Pension Funding
+
+4.1 Funding Objective
+
+The goal of pension funding is to accumulate assets sufficient to pay
+all promised benefits when due. This requires:
+
+-   Contributions during members\' working years
+
+-   Investment returns on accumulated assets
+
+-   Sound actuarial assumptions
+
+-   Disciplined adherence to funding policy
+
+4.2 Actuarial Cost Methods
+
+Cost methods allocate the present value of benefits across time periods:
+
+**Entry Age Normal (EAN):** Allocates cost as level percentage of pay
+from entry to retirement. Most common method for public plans. Produces
+stable contribution patterns.
+
+**Projected Unit Credit (PUC):** Cost allocated based on service earned
+each year. Required for GASB reporting. Costs increase as members age.
+
+4.3 Contribution Components
+
+Actuarially determined contributions typically include:
+
+Normal Cost
+
+-   Cost of benefits earned during the current year
+
+-   Ongoing cost assuming plan was always fully funded
+
+-   Expressed as percentage of payroll or dollar amount
+
+Amortization of UAAL
+
+-   Payment toward unfunded liability
+
+-   Spread over amortization period (commonly 15-30 years)
+
+-   May be level dollar or level percent of payroll
+
+-   Open vs. closed amortization periods
+
+4.4 Funded Ratio
+
+The funded ratio measures plan funding status:
+
+-   Funded Ratio = Actuarial Value of Assets ÷ Actuarial Accrued
+    Liability
+
+-   100% = fully funded
+
+-   National average for public plans: approximately 80%
+
+-   Below 60% generally considered severely underfunded
+
+5\. Actuarial Assumptions
+
+Actuarial calculations require assumptions about uncertain future
+events. Assumptions must be reasonable based on plan experience and
+professional judgment.
+
+5.1 Economic Assumptions
+
+Investment Return / Discount Rate
+
+-   Expected long-term return on plan assets
+
+-   Most significant single assumption
+
+-   Public plans commonly assume 6.5-7.5%
+
+-   Lower rates = higher liabilities and contributions
+
+Inflation
+
+-   Expected long-term price inflation
+
+-   Affects salary growth and COLA assumptions
+
+-   Currently commonly 2.25-2.75%
+
+Salary Growth
+
+-   Expected rate of salary increases
+
+-   Includes inflation plus real wage growth and merit/promotion
+
+-   Critical for projecting final average salary
+
+-   May vary by age, service, or employee group
+
+5.2 Demographic Assumptions
+
+Mortality
+
+-   Probability of death at each age
+
+-   Based on mortality tables (e.g., Pub-2010 for public plans)
+
+-   Includes improvement scales for increasing longevity
+
+-   Longer life expectancy = higher liability
+
+Retirement
+
+-   Probability of retirement at each eligible age
+
+-   Based on plan experience
+
+-   Patterns vary by eligibility rules and tier
+
+Termination
+
+-   Probability of leaving employment before retirement
+
+-   Higher for younger employees, decreases with service
+
+-   Affects projected service and benefit amounts
+
+Disability
+
+-   Probability of becoming disabled
+
+-   Varies by occupation and age
+
+-   May differ for duty vs. non-duty disability
+
+5.3 Assumption Selection
+
+Actuaries must select assumptions that are:
+
+-   Reasonable: Within range of professional acceptability
+
+-   Appropriate: Reflective of plan-specific experience
+
+-   Consistent: Internally coherent across assumptions
+
+-   Explicit: Clearly disclosed in valuation report
+
+5.4 Impact of Assumptions
+
+Assumption changes can significantly affect valuations:
+
+  ----------------------------------- -----------------------------------
+  **Assumption Change**               **Typical Impact on Liability**
+
+  1% decrease in discount rate        10-15% increase in liability
+
+  1 year increase in life expectancy  3-4% increase in liability
+
+  1% increase in salary growth        5-8% increase in liability
+
+  Earlier retirement assumptions      Increase in liability
+  ----------------------------------- -----------------------------------
+
+6\. Experience Studies
+
+6.1 Purpose of Experience Studies
+
+Experience studies compare actual plan experience to assumptions,
+helping determine whether assumptions should be adjusted:
+
+-   Conducted every 3-5 years
+
+-   Analyze multiple years of data
+
+-   Compare actual vs. expected for each assumption
+
+-   Recommend assumption changes if warranted
+
+6.2 Areas Analyzed
+
+Experience studies typically examine:
+
+-   Mortality: Are retirees living longer/shorter than assumed?
+
+-   Retirement rates: When are members actually retiring?
+
+-   Termination rates: Are members leaving as expected?
+
+-   Disability incidence: How many disabilities occur?
+
+-   Salary increases: Do actual raises match assumptions?
+
+6.3 Impact of Experience Studies
+
+When assumptions are changed based on experience studies:
+
+-   Liability is recalculated under new assumptions
+
+-   Difference appears as actuarial gain or loss
+
+-   Contribution requirements may change
+
+-   Changes are typically prospective
+
+6.4 Example: Mortality Improvement
+
+A common finding is that life expectancy is increasing faster than
+assumed:
+
+-   Retirees living longer means more payments expected
+
+-   Liability increases
+
+-   Mortality improvement scales (like MP-2021) project future gains
+
+-   Plans must anticipate continued longevity improvement
+
+7\. Actuarial Gains and Losses
+
+7.1 Sources of Gains and Losses
+
+Each year, differences between actual experience and assumptions create
+gains or losses:
+
+**Investment Experience:** Actual investment return vs. assumed return.
+Most volatile component.
+
+**Demographic Experience:** Actual mortality, retirement, termination
+vs. assumptions.
+
+**Salary Experience:** Actual salary increases vs. assumed increases.
+
+**Assumption Changes:** Changes to future assumptions create immediate
+gain/loss.
+
+7.2 Treatment of Gains and Losses
+
+Gains and losses are typically:
+
+-   Recognized through asset smoothing (for investment gains/losses)
+
+-   Amortized over future periods
+
+-   Added to or subtracted from unfunded liability
+
+-   Reflected in future contribution requirements
+
+7.3 Asset Smoothing
+
+To reduce contribution volatility, plans smooth investment gains and
+losses:
+
+-   Recognize over 3-5 year period
+
+-   Actuarial value of assets differs from market value
+
+-   Deferred gains/losses gradually recognized
+
+-   Corridor may limit divergence from market value
+
+7.4 Example
+
+Plan assumes 7% return but earns 15%:
+
+-   Market gain: 8% above expected
+
+-   With 5-year smoothing: Recognize 8% ÷ 5 = 1.6% per year
+
+-   Actuarial value increases gradually over 5 years
+
+-   Reduces contribution volatility
+
+8\. GASB Actuarial Requirements
+
+8.1 GASB 67 and 68
+
+GASB standards dictate pension accounting for governments:
+
+GASB 67 (Plan Reporting)
+
+-   Financial reporting for pension plans
+
+-   Requires disclosure of net pension liability
+
+-   10-year schedules of changes in liability
+
+-   Single blended discount rate
+
+GASB 68 (Employer Reporting)
+
+-   Employers recognize pension liability on balance sheet
+
+-   Proportionate share of net pension liability
+
+-   Pension expense recognition
+
+-   Deferred inflows/outflows for gains/losses
+
+8.2 GASB Discount Rate
+
+GASB requires a blended discount rate:
+
+-   Use expected return on assets for funded portion
+
+-   Use municipal bond rate for unfunded portion
+
+-   Creates single blended rate
+
+-   May differ from funding valuation rate
+
+8.3 Net Pension Liability
+
+GASB net pension liability (NPL):
+
+-   NPL = Total Pension Liability − Plan Fiduciary Net Position
+
+-   Represents unfunded obligation on GASB basis
+
+-   May differ from funding UAAL
+
+-   Reported on employer financial statements
+
+9\. Risk Assessment
+
+9.1 ASOP 51 Requirements
+
+ASOP 51 requires actuaries to identify and assess risks:
+
+-   Investment risk: Volatility of asset returns
+
+-   Longevity risk: Members living longer than expected
+
+-   Interest rate risk: Sensitivity to discount rate changes
+
+-   Contribution risk: Ability to make required contributions
+
+-   Demographic risk: Changes in workforce patterns
+
+9.2 Stress Testing
+
+Stress testing shows plan response to adverse scenarios:
+
+-   Investment losses (e.g., 20% market decline)
+
+-   Lower long-term returns than assumed
+
+-   Increased life expectancy
+
+-   Contribution shortfalls
+
+9.3 Risk Metrics
+
+Common risk measures include:
+
+-   Funded ratio volatility
+
+-   Contribution rate volatility
+
+-   Probability of funded ratio falling below thresholds
+
+-   Expected range of outcomes
+
+10\. Implications for NoUI Development
+
+10.1 Data for Valuations
+
+Actuarial valuations require accurate data:
+
+-   Census data for all member categories
+
+-   Benefit amounts for retirees
+
+-   Salary history for actives
+
+-   Service credit details
+
+-   Date of birth and other demographics
+
+10.2 Data Quality Impact
+
+Data quality directly affects valuation accuracy:
+
+-   Missing or incorrect dates affect age/service calculations
+
+-   Salary errors affect projected benefits
+
+-   Status errors affect liability categorization
+
+-   Actuaries may need to make adjustments for data issues
+
+10.3 Supporting Valuation Process
+
+-   Generate actuarial census extracts
+
+-   Provide reconciliation to prior year
+
+-   Document any data corrections
+
+-   Support auditor data verification
+
+-   Track data quality metrics
+
+10.4 Interpreting Results
+
+Administrators should understand:
+
+-   What assumptions drive results
+
+-   How gains/losses affect contributions
+
+-   Impact of plan changes
+
+-   Difference between funding and GASB results
+
+Conclusion
+
+Actuarial concepts are fundamental to pension plan governance and
+sustainability. While administrators do not perform actuarial
+calculations, understanding these concepts enables informed
+decision-making about funding policy, benefit design, and plan
+management.
+
+NoUI supports actuarial processes by maintaining accurate member data,
+generating census extracts for valuations, and tracking the data quality
+that affects valuation accuracy. As plans navigate funding challenges
+and regulatory requirements, the connection between administrative data
+quality and actuarial results becomes increasingly important.
+
+*--- End of Document 12 ---*

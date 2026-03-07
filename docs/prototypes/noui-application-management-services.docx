@@ -1,0 +1,844 @@
+NoUI Platform
+
+**Application Management Services**
+
+Architecture Analysis & Build vs. Buy Recommendations
+
+*Version 1.0 --- February 2026*
+
+**1. Executive Summary**
+
+NoUI's four-layer architecture (Data Connector → Business Intelligence →
+Relevance Engine → Dynamic Workspace) addresses the **pension domain**
+problem: turning complex governing documents into transparent, auditable
+benefit administration. But beneath those four layers sits a platform
+services layer that every enterprise application requires---workflow
+orchestration, case management, reporting, document management,
+security, and more.
+
+This document inventories every application management service NoUI
+requires, evaluates whether each should be built natively, purchased
+from a third party, or implemented as a hybrid integration, and explains
+how these services relate to NoUI's competitive positioning and
+architectural principles.
+
+The central finding is that NoUI should build natively where a service
+is **tightly coupled to workspace composition, pension domain
+intelligence, or the split architecture's PII boundary**. It should buy
+or integrate where a service is commodity infrastructure that agencies
+likely already have (identity management, document storage, backup). A
+hybrid approach works where NoUI provides the intelligence (when to send
+a notification, which documents are required) while third-party tools
+provide the delivery mechanism (email transport, document imaging).
+
+**1.1 Recommendation Summary**
+
+  -------------------- ----------- -----------------------------------------
+  **Recommendation**   **Count**   **Rationale**
+
+  **BUILD Natively**   **22**      Core to value proposition, tightly
+                                   coupled to composition engine, pension
+                                   domain-specific, or required for PII
+                                   boundary
+
+  **HYBRID             **7**       NoUI provides the intelligence layer;
+  Integration**                    third-party tools provide commodity
+                                   delivery or storage
+
+  **BUY / Integrate**  **4**       Commodity infrastructure that agencies
+                                   already have or that is better served by
+                                   purpose-built tools
+  -------------------- ----------- -----------------------------------------
+
+**2. Decision Framework**
+
+Four criteria determine the build vs. buy recommendation for each
+service:
+
+  ---------------- ------------------------------------------------------
+  **Criterion**    **Decision Rule**
+
+  **Composition    Does the service's output directly affect workspace
+  Coupling**       composition? If yes, it must be native. The
+                   composition engine cannot depend on external service
+                   availability for its core rendering loop.
+
+  **PII Boundary** Does the service handle Restricted or Confidential
+                   data (per the AI Data Governance Policy)? If yes, it
+                   must operate within the Data Connector's security
+                   perimeter. Third-party cloud services cannot access
+                   this data.
+
+  **Domain         Is the service's logic specific to pension
+  Specificity**    administration? Generic workflow engines, document
+                   managers, and reporting tools struggle with pension
+                   complexity. Domain-specific services justify native
+                   build investment.
+
+  **Competitive    Does the service contribute to NoUI's three
+  Moat**           compounding moats (pattern knowledge base, correction
+                   corpus, disagreement registry)? If yes, the data and
+                   intelligence must be NoUI-owned.
+  ---------------- ------------------------------------------------------
+
+A service that scores positive on **any** criterion defaults to BUILD. A
+service that scores positive on zero criteria defaults to BUY. Services
+in between are HYBRID.
+
+**3. The Guided Mode as Digital Adoption Platform**
+
+A critical insight from this analysis is that NoUI's Guided workspace
+variant should serve a dual purpose: it is both the **most efficient
+workflow experience for new or occasional users** and the platform's
+**native digital adoption platform (DAP)**. This eliminates the need for
+third-party DAP tools like WalkMe, Pendo, or Whatfix.
+
+**3.1 Why Third-Party DAPs Are a Poor Fit**
+
+Traditional DAPs work by overlaying tooltips and walkthroughs on top of
+a static UI. They assume the UI is fixed and the training layer is added
+after the fact. NoUI's dynamic workspace composition makes this approach
+fundamentally incompatible:
+
+**The UI changes based on member situation.** A DAP tooltip anchored to
+a specific screen element would break when the workspace composes
+differently for a Tier 3 member vs. a Tier 1 member, or when a DRO panel
+appears that wasn't in the training flow.
+
+**The guidance IS the composition.** In Guided mode, the system already
+knows which stage the user is on, what data is relevant, and what the
+next action should be. A DAP overlay would be redundant---providing less
+context than the native workspace already provides.
+
+**Training content must reference pension rules.** When a user is on the
+Eligibility stage and sees a 30% reduction, the contextual explanation
+must cite RMC §18-408 and explain the 3%-per-year formula. This requires
+integration with the Knowledge Base, not generic tooltip content.
+
+**3.2 The Guided → Expert Progression**
+
+NoUI implements digital adoption as a proficiency continuum:
+
+  -------------- ------------------- ------------------- -------------------
+  **Mode**       **User Profile**    **Guidance Level**  **System Behavior**
+
+  **Guided**     New hires,          Full: sequential    Enforces stage
+                 occasional users,   stages, contextual  order, validates
+                 cross-training      help, next-action   before advancing,
+                                     prompts, rule       surfaces all
+                                     citations           warnings
+
+  **Assisted**   Intermediate users  Moderate: stages    Allows non-linear
+                 building confidence accessible in any   navigation, reduces
+                                     order, help         tooltip frequency,
+                                     available on        highlights only
+                                     demand, alerts for  exceptions
+                                     complex situations  
+
+  **Expert**     Experienced         Minimal: all data   Zero-scroll
+                 analysts, power     visible             dashboard,
+                 users               simultaneously,     free-form
+                                     keyboard-driven,    navigation,
+                                     help only when      confidence
+                                     requested           indicators only for
+                                                         exceptions
+  -------------- ------------------- ------------------- -------------------
+
+The system tracks user interaction patterns to detect proficiency. When
+an analyst consistently completes stages without expanding contextual
+help, processes cases within expected timeframes, and rarely triggers
+validation warnings, the system suggests graduation to the next mode.
+*Supervisors can also assign modes per user.*
+
+**4. Complete Service Inventory**
+
+The following sections detail every application management service,
+organized by functional category. Each service includes a description,
+build/buy recommendation, and rationale tied to the decision framework
+criteria.
+
+**4.1 Workflow & Process Management**
+
+  ---------------- ---------------------- ----------- -------------------------
+  **Service**      **Description**        **Rec.**    **Rationale**
+
+  **Process        Define stages with     **BUILD**   Core to NoUI's value
+  Orchestrator**   entry/exit criteria,               proposition. The Process
+                   route cases through                Orchestrator is Layer 2
+                   lifecycle, enforce                 of NoUI's architecture.
+                   required steps, handle             Pension workflows are
+                   exceptions                         domain-specific with
+                                                      complex branching that
+                                                      generic BPMN engines
+                                                      handle poorly. NoUI's
+                                                      composition engine must
+                                                      be tightly coupled to
+                                                      workflow state to
+                                                      dynamically compose
+                                                      workspaces per stage.
+
+  **Work Queue     Case assignment,       **BUILD**   Inseparable from
+  Management**     priority/deadline                  workspace composition.
+                   mgmt, status tracking,             The work queue IS the
+                   workload balancing,                analyst's entry point.
+                   supervisor oversight               Queue ordering feeds
+                                                      directly into AI-driven
+                                                      predictive work routing.
+                                                      Building natively allows
+                                                      deep integration with the
+                                                      Relevance Engine for
+                                                      intelligent
+                                                      prioritization and the
+                                                      Dynamic Workspace for
+                                                      role-appropriate queue
+                                                      views.
+
+  **Task           Deadline calculation,  **BUILD**   Tightly coupled to
+  Scheduling &     reminder triggers,                 pension-specific
+  SLA**            escalation rules, SLA              deadlines (30-day
+                   tracking per process               application window,
+                   type                               15th-of-month cutoff,
+                                                      board meeting cycles).
+                                                      Generic scheduling tools
+                                                      lack pension calendar
+                                                      awareness. These
+                                                      deadlines drive workspace
+                                                      urgency signals and CSR
+                                                      predicted-need
+                                                      calculations.
+
+  **Business Rules Evaluate conditions,   **BUILD**   Foundational principle:
+  Engine**         execute formulas,                  AI does not execute
+                   apply reductions,                  business rules. The rules
+                   manage effective                   engine is the
+                   dating, version rules              deterministic calculation
+                                                      core. It must be fully
+                                                      owned, auditable, and
+                                                      traceable to governing
+                                                      documents. No third-party
+                                                      dependency acceptable for
+                                                      fiduciary calculations.
+  ---------------- ---------------------- ----------- -------------------------
+
+**4.2 Case Management**
+
+  --------------- --------------------------------- ----------- -------------------------
+  **Service**     **Description**                   **Rec.**    **Rationale**
+
+  **Case          Create cases, track through       **BUILD**   A case in NoUI is the
+  Lifecycle       stages, associate                             fundamental unit of work.
+  Tracking**      documents/notes/communications,               Case state drives
+                  maintain state across sessions                workspace composition.
+                                                                Save-and-resume requires
+                                                                NoUI-owned state
+                                                                persistence. Case
+                                                                complexity flags (DRO,
+                                                                purchased service, early
+                                                                retirement) feed directly
+                                                                into Tier 2 composition
+                                                                rules.
+
+  **Multi-party   Track multiple parties per case   **BUILD**   Pension-specific: DRO
+  Case            (member, spouse, alternate payee,             cases involve member +
+  Management**    employer), manage relationships               alternate payee + court.
+                  and consent requirements                      Survivor cases involve
+                                                                deceased + multiple
+                                                                survivors. Party
+                                                                relationships drive
+                                                                document requirements and
+                                                                workspace composition. No
+                                                                generic case tool models
+                                                                pension party
+                                                                relationships correctly.
+
+  **Case Notes &  Structured and freeform notes     **BUILD**   Simple to implement. Must
+  Annotations**   attached to cases, searchable,                integrate tightly with
+                  linked to specific process stages             audit trail. Notes are
+                                                                part of the workspace and
+                                                                must follow data
+                                                                classification rules
+                                                                (notes may contain
+                                                                confidential member info
+                                                                that cannot leave the
+                                                                Data Connector boundary).
+  --------------- --------------------------------- ----------- -------------------------
+
+**4.3 Document Management**
+
+  --------------- ---------------------- ------------ --------------------------
+  **Service**     **Description**        **Rec.**     **Rationale**
+
+  **Document      Receive, scan, OCR     **HYBRID**   Document storage and
+  Intake &        documents; associate                imaging are commodity
+  Imaging**       with member/case;                   capabilities---integrate
+                  track required vs                   with the agency's existing
+                  received                            DMS (Hyland, Laserfiche,
+                                                      etc.) or cloud storage.
+                                                      However, the document
+                                                      requirements logic (which
+                                                      docs are needed based on
+                                                      member situation) is
+                                                      NoUI-native intelligence
+                                                      that lives in the rules
+                                                      engine. NoUI provides the
+                                                      integration adapter; the
+                                                      agency provides storage.
+
+  **Document      Generate letters,      **HYBRID**   Template management and
+  Generation**    notices, forms,                     merge operations suit
+                  benefit statements                  third-party tools (e.g.,
+                  from templates with                 Windmill, DocuSign CLM).
+                  member data                         But template triggering
+                                                      logic is NoUI-native---the
+                                                      Process Orchestrator knows
+                                                      when a notice is needed.
+                                                      AI can draft
+                                                      correspondence;
+                                                      deterministic systems fill
+                                                      in the numbers.
+
+  **Document      Retention schedules,   **BUY**      Regulated retention is a
+  Retention &     legal holds,                        solved problem. Agencies
+  Compliance**    disposition, audit of               likely already have
+                  access                              retention policies and
+                                                      tools. NoUI should honor
+                                                      these by integrating with
+                                                      existing systems rather
+                                                      than building a records
+                                                      management capability from
+                                                      scratch.
+  --------------- ---------------------- ------------ --------------------------
+
+**4.4 Communication & Notifications**
+
+  ---------------- ---------------------- ------------ -------------------------
+  **Service**      **Description**        **Rec.**     **Rationale**
+
+  **Member         Bidirectional          **BUILD**    Already architected in
+  Messaging**      messaging between                   the Member Portal
+                   staff and members,                  (APPLICATION_MESSAGES
+                   scoped to                           table). Messages are part
+                   cases/applications,                 of the case record and
+                   delivery tracking                   must follow data
+                                                       classification rules.
+                                                       Message state
+                                                       (read/unread) drives CSR
+                                                       Hub intelligence.
+                                                       Third-party messaging
+                                                       tools cannot access PII
+                                                       within the Data Connector
+                                                       boundary.
+
+  **Notification   Event-driven           **BUILD**    Notification triggers are
+  Engine**         notifications to staff              tightly coupled to
+                   and members via email,              process state changes and
+                   SMS, portal alerts;                 deadlines. The logic of
+                   configurable triggers               'when to notify' is NoUI
+                                                       intelligence; the
+                                                       delivery mechanism
+                                                       (email/SMS) uses
+                                                       third-party transactional
+                                                       providers (SendGrid,
+                                                       Twilio) via simple API
+                                                       integration.
+
+  **Call Logging** Record call details,   **HYBRID**   If the agency has a phone
+                   associate with member,              system with CTI (computer
+                   track follow-ups,                   telephony integration),
+                   integrate with phone                NoUI should receive call
+                   system                              events. If not, NoUI
+                                                       provides a simple call
+                                                       log within the CSR Hub.
+                                                       Either way, the CSR Hub
+                                                       'Log Call' action creates
+                                                       a structured record that
+                                                       feeds case history and
+                                                       predicted-need
+                                                       intelligence.
+  ---------------- ---------------------- ------------ -------------------------
+
+**4.5 Reporting & Analytics**
+
+  --------------- ---------------------- ------------ -------------------------
+  **Service**     **Description**        **Rec.**     **Rationale**
+
+  **Operational   Caseload reports,      **BUILD**    NoUI's process data is
+  Reporting**     processing times,                   the source of truth for
+                  completion rates,                   operational metrics.
+                  aging analysis, staff               Building reporting
+                  productivity                        natively ensures
+                                                      real-time accuracy and
+                                                      eliminates ETL lag.
+                                                      Supervisor and Executive
+                                                      workspace variants are
+                                                      essentially specialized
+                                                      report views---they
+                                                      consume the same
+                                                      composition engine. AI
+                                                      pattern analysis
+                                                      (compounding knowledge
+                                                      base) requires NoUI-owned
+                                                      data.
+
+  **Regulatory &  GASB compliance        **HYBRID**   NoUI generates the
+  Board           reports, actuarial                  underlying data;
+  Reporting**     data extracts,                      presentation formatting
+                  board-ready                         may use third-party BI
+                  presentation data                   tools (Tableau, Power BI)
+                                                      or export capabilities.
+                                                      Some agencies will want
+                                                      NoUI data fed into their
+                                                      existing reporting
+                                                      infrastructure. The
+                                                      Executive Dashboard
+                                                      workspace variant handles
+                                                      common views; complex
+                                                      regulatory reports are
+                                                      better served by
+                                                      specialized tools.
+
+  **Ad-hoc        User-defined queries,  **HYBRID**   Provide API-based data
+  Analytics &     cross-case analysis,                export and standard
+  Data Export**   data extraction for                 report templates
+                  external analysis                   natively. For complex
+                                                      ad-hoc analysis,
+                                                      integrate with BI tools.
+                                                      PII boundary rules apply:
+                                                      exports from the Data
+                                                      Connector must be
+                                                      anonymized or stay within
+                                                      the agency's security
+                                                      perimeter.
+  --------------- ---------------------- ------------ -------------------------
+
+**4.6 Audit, Compliance & Quality**
+
+  ---------------- ---------------------- ----------- ----------------------------
+  **Service**      **Description**        **Rec.**    **Rationale**
+
+  **Audit Trail**  Immutable log of every **BUILD**   Non-negotiable. Every
+                   action: user,                      calculation must be
+                   timestamp,                         traceable. Every decision
+                   before/after values,               must be attributable. This
+                   reason codes,                      is the foundation of
+                   calculation                        fiduciary accountability.
+                   inputs/outputs                     The audit trail is also the
+                                                      training data for AI pattern
+                                                      learning (Tier 3
+                                                      composition). Must be
+                                                      architecturally incapable of
+                                                      modification---append-only
+                                                      with cryptographic
+                                                      integrity.
+
+  **Calculation    Independent            **BUILD**   Core to NoUI's competitive
+  Verification**   re-calculation,                    moat. The Calculation
+                   comparison against                 Verification offering is
+                   expected values,                   already a revenue stream
+                   discrepancy flagging,              (\$50--150K standalone).
+                   sample-based audit                 This capability proves
+                                                      NoUI's accuracy and is the
+                                                      foot-in-the-door for full
+                                                      platform sales. The
+                                                      QA/Compliance workspace
+                                                      variant is essentially a
+                                                      calculation verification
+                                                      interface.
+
+  **Compliance     Rule change tracking,  **BUILD**   AI-accelerated change
+  Monitoring**     regulatory deadline                management is a core NoUI
+                   alerts, policy drift               capability. When statutes
+                   detection                          change, the system
+                                                      identifies affected rules,
+                                                      drafts updates, generates
+                                                      new tests, and flags cases
+                                                      that may be impacted. This
+                                                      is one of the three defined
+                                                      AI roles.
+
+  **Quality        Configurable review    **BUILD**   Quality gates are part of
+  Checkpoints**    gates,                             the Process Orchestrator's
+                   dual-verification                  stage configuration.
+                   requirements, random               Approval routing drives work
+                   sampling, supervisor               queue composition. QA
+                   approval routing                   sampling feeds the Audit
+                                                      workspace variant. These are
+                                                      pension-specific quality
+                                                      patterns, not generic
+                                                      approval workflows.
+  ---------------- ---------------------- ----------- ----------------------------
+
+**4.7 Identity & Access Management**
+
+  -------------------- ---------------------- ----------- -------------------------
+  **Service**          **Description**        **Rec.**    **Rationale**
+
+  **Authentication**   User login, MFA, SSO   **BUY**     Never build auth.
+                       integration, session               Integrate with the
+                       management                         agency's identity
+                                                          provider (Azure AD, Okta,
+                                                          etc.) via OIDC/SAML. For
+                                                          the Member Portal,
+                                                          integrate with Login.gov
+                                                          or agency-provided member
+                                                          authentication. NoUI
+                                                          consumes identity tokens;
+                                                          it does not manage
+                                                          credentials.
+
+  **Authorization      Role-based and         **BUILD**   NoUI's workspace
+  (RBAC/ABAC)**        attribute-based access             composition IS
+                       control, data scope                authorization. What you
+                       enforcement, feature               see is what you're
+                       gating per role                    authorized to access.
+                                                          RBAC defines which
+                                                          workspace variant loads.
+                                                          ABAC controls data scope
+                                                          (analysts see assigned
+                                                          cases only; CSRs see all
+                                                          members). Authorization
+                                                          logic must be native to
+                                                          the composition engine.
+
+  **User               Onboard/offboard       **BUY**     Integrate with agency
+  Provisioning**       users, manage role                 directory (LDAP/AD). Role
+                       assignments, sync with             mappings sync from the
+                       HR directory                       directory. NoUI does not
+                                                          maintain user accounts
+                                                          independently---it maps
+                                                          external identities to
+                                                          NoUI roles.
+  -------------------- ---------------------- ----------- -------------------------
+
+**4.8 Data Management & Integration**
+
+  ----------------- ---------------------- ------------ -------------------------
+  **Service**       **Description**        **Rec.**     **Rationale**
+
+  **Data Connector  Abstract legacy        **BUILD**    Layer 1 of NoUI's
+  / Legacy          database into clean                 architecture. This is the
+  Adapter**         domain model,                       on-premises appliance
+                    progressive schema                  that makes the split
+                    mapping, bidirectional              architecture possible.
+                    sync                                The competitive claim
+                                                        'PII never leaves your
+                                                        building' depends
+                                                        entirely on this being
+                                                        NoUI-owned. No
+                                                        third-party ETL tool can
+                                                        provide the same
+                                                        architectural guarantee.
+
+  **Data Quality    Detect embedded data   **BUILD**    Core POC demo capability.
+  Engine**          problems, flag                      The data quality engine
+                    inconsistencies,                    demonstrates AI
+                    suggest corrections,                intelligence by finding
+                    track resolution                    problems the agency
+                                                        didn't know existed. This
+                                                        is a key trust-building
+                                                        moment in the sales
+                                                        cycle. Quality findings
+                                                        feed the compounding
+                                                        knowledge base.
+
+  **Data Migration  Migrate from legacy    **BUILD**    This is the NoUI
+  / Progressive     schema to modern                    'promise': within 12--18
+  Modernization**   PostgreSQL model over               months, you get a modern
+                    12--18 months without               database without a
+                    disruption                          conversion project. The
+                                                        progressive migration
+                                                        engine monitors data
+                                                        patterns, builds the
+                                                        target schema, validates
+                                                        continuously, and
+                                                        executes the cutover when
+                                                        confidence is sufficient.
+                                                        No third-party migration
+                                                        tool handles this
+                                                        iterative, AI-supervised
+                                                        approach.
+
+  **External System Payroll feeds,         **HYBRID**   NoUI provides integration
+  Integration**     actuarial system data               adapters for common
+                    exchange, banking/ACH               pension system
+                    interfaces                          interfaces. Actual
+                                                        connectivity may require
+                                                        middleware (MuleSoft,
+                                                        Dell Boomi) depending on
+                                                        agency complexity. For
+                                                        the POC, direct adapters
+                                                        suffice. At scale, an
+                                                        integration platform may
+                                                        be warranted.
+  ----------------- ---------------------- ------------ -------------------------
+
+**4.9 Digital Adoption & Training**
+
+  --------------- ---------------------- ----------- -------------------------
+  **Service**     **Description**        **Rec.**    **Rationale**
+
+  **Guided Mode   Sequential task        **BUILD**   The Guided workspace
+  (DAP)**         guidance with                      variant IS the digital
+                  contextual help,                   adoption platform. Rather
+                  embedded training,                 than overlaying a
+                  progressive skill                  third-party DAP (WalkMe,
+                  development, process               Pendo) on top of the UI,
+                  compliance assurance               the guidance is native to
+                                                     workspace composition.
+                                                     The system knows which
+                                                     stage the user is on,
+                                                     what data is relevant,
+                                                     and what the next step
+                                                     should be. As users gain
+                                                     proficiency, they
+                                                     graduate to Expert mode.
+                                                     This is architecturally
+                                                     superior to bolt-on DAPs.
+
+  **Contextual    Inline explanations of **BUILD**   NoUI's Knowledge Base
+  Help &          pension concepts, rule             (Layer 2) already
+  Knowledge**     references, regulatory             contains plan
+                  citations linked to                definitions, glossary,
+                  current context                    and policy documentation.
+                                                     Surfacing contextual help
+                                                     means linking the current
+                                                     workspace stage to the
+                                                     relevant knowledge entry.
+                                                     The AI can answer 'why is
+                                                     this member's reduction
+                                                     30%?' with a citation to
+                                                     RMC §18-408.
+
+  **Proficiency   Track user progression **BUILD**   User interaction patterns
+  Tracking**      from Guided to Expert              feed AI learning (Tier
+                  mode, identify                     3). The system detects
+                  training gaps, suggest             when a user consistently
+                  practice scenarios                 completes stages without
+                                                     needing expanded guidance
+                                                     and can suggest mode
+                                                     graduation. Training gap
+                                                     identification feeds
+                                                     supervisor dashboards.
+                                                     Simple to build; high
+                                                     value for agencies
+                                                     managing staff turnover.
+  --------------- ---------------------- ----------- -------------------------
+
+**4.10 Infrastructure & Operations**
+
+  ----------------- ---------------------- ------------ -------------------------
+  **Service**       **Description**        **Rec.**     **Rationale**
+
+  **Health          Service health checks, **HYBRID**   The six-level degradation
+  Monitoring &      cascading status (per               hierarchy (ADR-007) is
+  Alerting**        ADR-007), performance               NoUI-defined. Health
+                    monitoring, alert                   check endpoints are
+                    routing                             NoUI-built. But alerting,
+                                                        dashboarding, and log
+                                                        aggregation should use
+                                                        industry-standard tools
+                                                        (Prometheus/Grafana,
+                                                        Datadog, or cloud-native
+                                                        equivalents). NoUI
+                                                        exposes health metrics;
+                                                        operations tooling
+                                                        consumes them.
+
+  **Configuration   Environment            **BUILD**    NoUI is a multi-tenant
+  Management**      configuration, feature              platform. Tenant
+                    flags, tenant                       configuration (which plan
+                    settings, deployment                rules are loaded, which
+                    parameters                          processes are enabled,
+                                                        which workspace variants
+                                                        are available) is core to
+                                                        the platform. Feature
+                                                        flags control progressive
+                                                        trust phase advancement.
+                                                        This must be NoUI-owned.
+
+  **Backup &        Data backup,           **BUY**      Use cloud provider
+  Disaster          cross-region                        capabilities (AWS RDS
+  Recovery**        replication, RTO/RPO                automated backups,
+                    targets, recovery                   cross-region
+                    procedures                          replication). For the
+                                                        on-premises Data
+                                                        Connector appliance,
+                                                        provide backup scripts
+                                                        and documentation. DR is
+                                                        an infrastructure
+                                                        concern, not an
+                                                        application concern.
+  ----------------- ---------------------- ------------ -------------------------
+
+**5. Services Requiring Design**
+
+Several services identified in this inventory are referenced in existing
+architecture documents but have not yet been designed or prototyped. The
+following represent the highest-priority design gaps:
+
+  ----------------- -------------------------------------------- --------------
+  **Service Gap**   **Design Needed**                            **Priority**
+
+  **Workflow        The work queue management service needs a    **HIGH**
+  Management        dedicated supervisor view: real-time         
+  Dashboard**       caseload distribution, aging analysis,       
+                    bottleneck detection, and manual             
+                    reassignment. The Supervisor workspace       
+                    variant (from the Roles & Workspace          
+                    Architecture) has been identified but not    
+                    designed. This is required for production    
+                    operations.                                  
+
+  **Predictive Work Beyond basic queue ordering, NoUI should     **MEDIUM**
+  Routing**         predict which analyst should receive which   
+                    case based on expertise, current load, and   
+                    case complexity. This is a Tier 3 AI         
+                    capability that learns from historical       
+                    processing patterns. Not required for POC    
+                    but essential for production.                
+
+  **Operational     While the Executive Dashboard workspace      **HIGH**
+  Reporting         variant is identified, the underlying        
+  Engine**          reporting data model and query engine have   
+                    not been designed. Need to define standard   
+                    report templates, KPI calculations, and the  
+                    supervisor/executive data access patterns.   
+
+  **Call            The CSR Hub's 'Log Call' action is currently **MEDIUM**
+  Integration       a placeholder. Need to define how call       
+  Architecture**    logging works (manual entry vs. CTI          
+                    integration), how call records associate     
+                    with member records, and how call patterns   
+                    feed predicted-need intelligence.            
+
+  **Proficiency     The Guided → Expert progression needs a      **LOW**
+  Tracking Model**  formal proficiency model: what signals       
+                    indicate readiness for mode graduation, what 
+                    metrics supervisors see, how the system      
+                    handles regression (user starts making more  
+                    errors after graduating).                    
+  ----------------- -------------------------------------------- --------------
+
+**6. Architectural Implications**
+
+**6.1 Service Layer in the Four-Layer Architecture**
+
+The application management services do not constitute a new
+architectural layer. Instead, they are **cross-cutting capabilities that
+span all four existing layers**:
+
+**Layer 1 (Data Connector):** Data quality engine, legacy adapter,
+external integrations, backup/recovery
+
+**Layer 2 (Business Intelligence):** Rules engine, process orchestrator,
+knowledge base, compliance monitoring, calculation verification
+
+**Layer 3 (Relevance Engine):** Work queue prioritization, predictive
+routing, proficiency tracking, predicted-need intelligence
+
+**Layer 4 (Dynamic Workspace):** Guided/Expert mode composition,
+notification delivery, document requirements UI, case notes, call
+logging
+
+**Cross-cutting:** Audit trail (every layer logs),
+authentication/authorization (every request validated), health
+monitoring (every service reports)
+
+**6.2 Integration Architecture Pattern**
+
+For HYBRID and BUY services, NoUI defines a consistent integration
+pattern:
+
+**Adapter Interface:** Each external service is accessed through a
+NoUI-defined adapter interface. The adapter abstracts the third-party
+API so the core platform never has a direct dependency on a specific
+vendor.
+
+**Event-Driven Coupling:** NoUI publishes domain events (case created,
+stage advanced, document received). External services subscribe to
+relevant events. This loose coupling means swapping an email provider
+requires only a new adapter, not platform changes.
+
+**PII Firewall:** No adapter may transmit Restricted or Confidential
+data to a cloud service. Adapters running within the Data Connector
+boundary may access PII; cloud-side adapters receive only anonymized or
+tokenized references.
+
+**7. POC Scope Mapping**
+
+Not all services are required for the DERP POC. The following maps each
+service to its POC status:
+
+  --------------------- --------------- ---------------------------------------
+  **Service**           **POC Status**  **Scope Notes**
+
+  **Process             **IN SCOPE**    Stage-based service retirement workflow
+  Orchestrator**                        
+
+  **Work Queue          **IN SCOPE**    Analyst entry point, case assignment
+  Management**                          
+
+  **Business Rules      **IN SCOPE**    Core calculation engine, all four demo
+  Engine**                              cases
+
+  **Case Lifecycle      **IN SCOPE**    Case state drives workspace composition
+  Tracking**                            
+
+  **Audit Trail**       **IN SCOPE**    Calculation transparency, demo Act 3
+
+  **Data Quality        **IN SCOPE**    Embedded data problems, demo Act 3
+  Engine**                              
+
+  **Data Connector**    **IN SCOPE**    Legacy database abstraction
+
+  **Guided Mode (DAP)** **IN SCOPE**    Analyst Guided workspace variant
+
+  **Contextual Help**   **IN SCOPE**    Rule citations in workspace stages
+
+  **Member Messaging**  **PROTOTYPE**   Member Portal status display
+
+  **Authorization       **PROTOTYPE**   Role-based workspace variant selection
+  (RBAC)**                              
+
+  **Notification        **DEFERRED**    Post-POC: email/SMS delivery
+  Engine**                              
+
+  **Document Intake**   **DEFERRED**    Post-POC: agency DMS integration
+
+  **Operational         **DEFERRED**    Post-POC: supervisor/executive
+  Reporting**                           dashboards
+
+  **Authentication**    **DEFERRED**    Post-POC: agency IdP integration
+
+  **Predictive          **DEFERRED**    Post-POC: requires production volume
+  Routing**                             
+  --------------------- --------------- ---------------------------------------
+
+**8. Next Steps**
+
+This analysis establishes the complete inventory and initial
+recommendations. The following actions are proposed:
+
+**1.** Design the Workflow Management Dashboard (supervisor view) as the
+highest-priority service gap. This is required for any production
+deployment.
+
+**2.** Formalize the Guided → Assisted → Expert proficiency model,
+including the interaction signals that trigger graduation suggestions
+and the supervisor controls for mode assignment.
+
+**3.** Define the integration adapter pattern as a formal ADR,
+establishing the standard for how HYBRID and BUY services connect to the
+platform.
+
+**4.** Evaluate specific third-party products for BUY recommendations
+(identity provider, document storage, monitoring tools) based on DERP's
+existing infrastructure.
+
+**5.** Continue iterating the four workspace prototypes (Guided, Expert,
+CSR Hub, Member Portal) with these platform services in
+mind---particularly ensuring that the Guided mode's training
+capabilities are visible in the demo narrative.
+
+*This document is a Tier 1 Governing Document per the Knowledge
+Governance Framework.*

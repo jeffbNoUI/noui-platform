@@ -1,0 +1,650 @@
+NoUI Platform
+
+**Unified Defect Taxonomy**
+
+**& Metrics Reference**
+
+Layer 5 of 5: Defect Management System
+
+DERP Proof of Concept
+
+Version 1.0 --- February 2026
+
+Document Status: Draft for Review
+
+1\. Purpose
+
+This document is the single authoritative reference for the defect
+classification vocabulary and metrics definitions used across the entire
+five-layer defect management system. Every defect record, dashboard
+display, alert, report, and metric in Layers 1 through 4 draws its
+terminology and definitions from this document.
+
+Maintaining a single taxonomy prevents the drift that occurs when
+different teams or documents invent their own severity labels, category
+names, or metric definitions. In pension administration, where a "High"
+severity defect has specific fiduciary implications, consistent language
+is not a convenience---it is a compliance requirement.
+
+1.1 How to Use This Document
+
+-   **When classifying a new defect:** Use the Category definitions
+    (Section 2), Severity definitions (Section 3), and Scope definitions
+    (Section 4), then derive Priority from the matrix (Section 5).
+
+-   **When reading a dashboard or report:** Reference this document for
+    the precise meaning of any classification term or metric.
+
+-   **When a defect doesn't fit:** Follow the Taxonomy Evolution process
+    (Section 8) to propose a new category or modification.
+
+-   **When onboarding a new team member or agency:** This document
+    serves as the training reference for the defect management
+    vocabulary.
+
+2\. Defect Categories
+
+Every defect is assigned exactly one category. The category identifies
+what is wrong and drives the resolution path (Layer 4, Section 3). The
+eight categories cover all architectural layers of the NoUI platform.
+
+  ------------------ ------------------- ------------------- -------------------
+  **Category**       **Definition**      **Example**         **Resolution Path**
+
+  **CAL              NoUI produces a     Tier 1 benefit      Fix code. Unit test
+  Calculation**      numeric result that formula uses 1.5%   for the specific
+                     does not match the  multiplier instead  rule. Full
+                     governing document  of 2.0%. The YAML   regression. Layer 4
+                     formula when        rule says 2.0%, the expedited path for
+                     applied to the same code says 1.5%.     P0/P1.
+                     inputs. The rule                        
+                     definition is                           
+                     correct; the                            
+                     implementation is                       
+                     wrong.                                  
+
+  **RUL Rule         The implementation  Rule definition     Return to Layer 1
+  Interpretation**   correctly executes  says purchased      Stage 2 (Rule
+                     the rule as         service counts      Derivation).
+                     defined, but the    toward Rule of 75.  Re-derive from
+                     rule definition     Statute says it     statute. Full SDLC
+                     itself              does not. Code      with human
+                     misinterprets the   faithfully          certification.
+                     governing document. implements the      
+                     The design is       wrong rule.         
+                     wrong.                                  
+
+  **LEG Legacy       NoUI's result is    Legacy system       Document finding.
+  Defect**           correct per         calculated Kim's    Deliver Legacy
+                     statute. The legacy reduction at 24%    Defect Report to
+                     system's result is  (4% × 6 years).     agency. No code
+                     wrong. This is not  Statute says 30%    change. Value-add.
+                     a NoUI defect---it  (3% × 10 years).    
+                     is a legacy defect  NoUI is correct.    
+                     discovered by NoUI.                     
+
+  **DQ Data          Source data in the  Member's hire date  Surface finding
+  Quality**          legacy database is  is 2015-13-01       with evidence.
+                     incorrect,          (month 13 doesn't   Agency corrects
+                     inconsistent, or    exist). Or salary   source data. NoUI
+                     missing. NoUI's     record shows \$0    recalculates. Per
+                     rules and           for an active       ADR-005.
+                     calculations are    employment period.  
+                     correct, but inputs                     
+                     are wrong.                              
+
+  **AMB Ambiguous    The governing       Statute says        Escalate to plan
+  Interpretation**   document language   "consecutive        counsel or board.
+                     supports multiple   months" for AMS     Implement
+                     defensible          calculation. Does a conservative
+                     interpretations. No month of unpaid     interpretation
+                     implementation can  leave break         interim. Full SDLC
+                     be proven correct   consecutiveness?    after
+                     without an          Two interpretations determination.
+                     authoritative       are defensible.     
+                     determination.                          
+
+  **UXC UX /         The workspace       Tier 3 member's     Fix composition
+  Composition**      displays wrong      workspace shows the rules or
+                     components, wrong   leave payout panel  conditional logic.
+                     data fields, or     (Tier 3 is not      Verify correct AND
+                     wrong contextual    eligible). Or DRO   incorrect
+                     information for the panel appears for a components. Layer 1
+                     member's situation. member with no DRO. composition
+                     Calculations may be                     checklist.
+                     correct but the                         
+                     presentation is                         
+                     wrong.                                  
+
+  **INT              Data flows          Connector returns   Fix API contract.
+  Integration**      incorrectly between salary in cents but Update both
+                     architectural       Intelligence        producer and
+                     layers. Individual  expects dollars.    consumer.
+                     components may be   86542 (cents)       Integration tests
+                     correct in          becomes \$86,542    at the boundary.
+                     isolation but       instead of          
+                     produce wrong       \$865.42.           
+                     results when                            
+                     connected.                              
+
+  **RND Rounding     A minor numeric     Expected            If ±\$0.01:
+  Variance**         difference          \$4,899.34, actual  document rounding
+                     attributable to     \$4,899.35.         strategy choice. If
+                     rounding strategy   One-penny           outside tolerance
+                     rather than formula difference from     or affects many
+                     error. Within       rounding an         members:
+                     defined tolerance   intermediate value. investigate and
+                     unless the variance                     align with
+                     propagates.                             Q-CALC-01.
+  ------------------ ------------------- ------------------- -------------------
+
+2.1 Category Decision Tree
+
+When classifying a defect, follow this decision sequence:
+
+1.  **Is the source data wrong?** If the input data is incorrect,
+    inconsistent, or missing → DQ (Data Quality).
+
+2.  **Is the variance ±\$0.01 or less?** If the only difference is a
+    penny attributable to rounding → RND (Rounding Variance).
+
+3.  **Is the NoUI result correct per statute?** If NoUI matches statute
+    but legacy disagrees → LEG (Legacy Defect).
+
+4.  **Is the statute ambiguous?** If multiple interpretations are
+    defensible and no authoritative determination exists → AMB
+    (Ambiguous Interpretation).
+
+5.  **Is the rule definition correct per statute?** If the
+    YAML/definition misinterprets the statute → RUL (Rule
+    Interpretation).
+
+6.  **Is the calculation code wrong?** If the rule is correctly defined
+    but the code implements it incorrectly → CAL (Calculation).
+
+7.  **Is the data flowing incorrectly between services?** If individual
+    services are correct but produce wrong results when connected → INT
+    (Integration).
+
+8.  **Is the workspace displaying wrong content?** If calculations are
+    correct but the presentation is wrong → UXC (UX/Composition).
+
+> *Walk the decision tree in order. The first matching category is the
+> correct one. A data quality issue should be classified as DQ even if
+> it also causes a calculation discrepancy---fix the data, then verify
+> the calculation.*
+
+3\. Severity Classification
+
+Severity measures the technical impact of the defect---how wrong is the
+output? Severity is independent of how many members are affected (that
+is scope, Section 4). The combination of severity and scope determines
+priority (Section 5).
+
+  -------------- ------------------- --------------------- -------------------
+  **Severity**   **Definition**      **Examples**          **Implies**
+
+  **CRITICAL**   A benefit amount,   Wrong multiplier      Immediate
+                 eligibility         (2.0% vs 1.5% = 25%   investigation. If
+                 determination, or   benefit error). Wrong in production:
+                 payment option      eligibility           processing halt for
+                 calculation is      determination (member affected types.
+                 wrong by a material denied Rule of 75     Expedited
+                 amount. A member    when eligible). Wrong resolution path.
+                 could receive       AMS window (36 vs 60  
+                 substantially       months).              
+                 incorrect benefits.                       
+
+  **HIGH**       A calculation       J&S factor off by     Prompt
+                 component is wrong  0.5% (moderate dollar investigation. May
+                 but the error       impact). Leave payout affect member
+                 magnitude is        included when member  decisions if
+                 moderate, or a      is ineligible. Death  presented before
+                 required data       benefit calculated    correction.
+                 element is          for normal when       
+                 missing/displayed   member is early       
+                 incorrectly in a    retirement.           
+                 way that could lead                       
+                 to wrong decisions.                       
+
+  **MEDIUM**     A non-calculation   Wrong workspace       Scheduled
+                 element is          component displayed   resolution. Does
+                 incorrect, or a     (non-harmful). Date   not affect benefit
+                 calculation         formatting            amounts materially
+                 variance exists     inconsistency. A      but may erode
+                 that is small in    \$2/month rounding    confidence.
+                 magnitude but       difference that       
+                 systemic (affects a applies to all        
+                 formula             members of a tier.    
+                 consistently).                            
+
+  **LOW**        Cosmetic,           Tooltip text is       Backlog. Addressed
+                 informational, or   outdated. Dashboard   when capacity
+                 process efficiency  chart label           permits.
+                 issue. No impact on truncated.            
+                 benefit             Non-member-facing log 
+                 calculations or     formatting.           
+                 member-facing data  Performance below     
+                 accuracy.           target but            
+                                     functional.           
+  -------------- ------------------- --------------------- -------------------
+
+3.1 Severity Determination Rules
+
+-   **When in doubt, classify higher.** Downgrading a severity is a
+    documented decision requiring justification. Upgrading never
+    requires justification.
+
+-   **Any demo case failure is automatically CRITICAL.** The demo cases
+    are hand-calculated from statute. If one fails, a fundamental rule
+    or calculation is wrong.
+
+-   **Any eligibility determination error is CRITICAL.** Telling a
+    member they are or aren't eligible for retirement is a life-altering
+    communication. Getting it wrong is not a "High."
+
+-   **Severity is about the defect, not the fix.** A one-line code
+    change can fix a CRITICAL defect. The ease of the fix does not
+    affect the severity of the defect.
+
+4\. Member Impact Scope
+
+Scope measures how many members are potentially affected by the defect.
+Combined with severity, scope determines priority.
+
+  ---------------- ---------------------- ------------------ ----------------
+  **Scope**        **Definition**         **Examples**       **Estimated
+                                                             Population**
+
+  **PLAN_WIDE**    Affects all members or Vesting rule is    \~28,800 members
+                   a fundamental rule     wrong.             (full DERP
+                   that applies across    Contribution rate  population)
+                   all tiers.             is wrong.          
+                                          Application        
+                                          deadline logic is  
+                                          wrong.             
+
+  **COHORT**       Affects a specific     Tier 1 multiplier  Hundreds to
+                   tier, eligibility      wrong (affects     thousands
+                   category, or subset of Tier 1 only). Rule depending on
+                   members sharing a      of 85 wrong (Tier  cohort
+                   common attribute.      3 only). Leave     
+                                          payout wrong       
+                                          (pre-2010 hires    
+                                          only).             
+
+  **INDIVIDUAL**   Affects a specific     One member's       1 member
+                   member due to unique   salary history has 
+                   data or circumstance.  a corrupted        
+                   Not a systemic issue.  record. DRO        
+                                          calculation for a  
+                                          specific case uses 
+                                          wrong marriage     
+                                          date.              
+  ---------------- ---------------------- ------------------ ----------------
+
+Scope is initially assessed based on the rule affected. It may be
+revised during investigation if the impact is broader or narrower than
+initially classified. For cascading defects (Layer 4, Section 6.3),
+scope is reassessed after the full impact trace.
+
+5\. Priority Matrix
+
+Priority is derived mechanically from severity and scope. The matrix
+produces five priority levels that drive SLAs, dashboard status, and
+alert triggers across Layers 3 and 4.
+
+  ----------------- ----------------- ----------------- -----------------
+  **Severity \\     **Plan-Wide**     **Cohort**        **Individual**
+  Scope**                                               
+
+  **CRITICAL**      **P0 --- STOP**   **P0 --- STOP**   **P1 ---
+                                                        Immediate**
+
+  **HIGH**          **P0 --- STOP**   **P1 ---          **P2 --- Urgent**
+                                      Immediate**       
+
+  **MEDIUM**        **P2 --- Urgent** **P3 ---          **P3 ---
+                                      Standard**        Standard**
+
+  **LOW**           **P3 ---          **P4 ---          **P4 ---
+                    Standard**        Backlog**         Backlog**
+  ----------------- ----------------- ----------------- -----------------
+
+5.1 Priority Definitions
+
+  -------------- ------------------------ ------------------ ----------------
+  **Priority**   **Meaning**              **Response SLA**   **Resolution
+                                                             SLA**
+
+  **P0 ---       Processing of affected   Immediate          Same business
+  STOP**         case types halts                            day
+                 immediately. This defect                    
+                 could cause members to                      
+                 receive materially wrong                    
+                 benefits. No cases of                       
+                 the affected type may be                    
+                 processed until the                         
+                 defect is resolved and                      
+                 verified.                                   
+
+  **P1 ---       The defect is serious    \< 2 hours         24 hours
+  Immediate**    but does not require a                      
+                 processing halt.                            
+                 Investigation begins                        
+                 immediately. Affected                       
+                 cases are flagged for                       
+                 hold if currently in                        
+                 progress.                                   
+
+  **P2 ---       The defect needs         \< 4 hours         Current sprint
+  Urgent**       resolution in the                           
+                 current sprint. It                          
+                 affects system                              
+                 confidence or affects a                     
+                 moderate population, but                    
+                 benefits are not                            
+                 materially wrong.                           
+
+  **P3 ---       The defect is real but   \< 1 business day  Next 2 sprints
+  Standard**     does not affect benefit                     
+                 accuracy or                                 
+                 member-facing data.                         
+                 Scheduled for resolution                    
+                 within the next two                         
+                 sprints.                                    
+
+  **P4 ---       Cosmetic, performance,   N/A                No SLA
+  Backlog**      or low-impact issue. No                     
+                 SLA. Addressed when                         
+                 capacity permits.                           
+                 Reviewed quarterly;                         
+                 stale items (\> 90 days)                    
+                 evaluated for closure or                    
+                 promotion.                                  
+  -------------- ------------------------ ------------------ ----------------
+
+6\. Consolidated Metrics Catalog
+
+This section is the single source of truth for every metric used across
+the five layers. Each metric has a unique identifier, a precise
+definition, a source layer, a collection method, and a target or healthy
+range. Metrics are grouped by the question they answer.
+
+6.1 System Correctness Metrics
+
+These metrics answer: is the system producing correct benefits right
+now?
+
+  ---------- ------------- ------------------ ------------- ------------- ------------
+  **ID**     **Metric**    **Definition**     **Source**    **Cadence**   **Target**
+
+  **M-01**   Demo Case     Count of 4         Layer 2 test  Every build   4/4 always
+             Status        acceptance tests   pipeline                    
+                           currently passing                              
+
+  **M-02**   Build Pass    Percentage of      Layer 2 test  Rolling 7-day ≥ 95%
+             Rate          builds where all   pipeline                    
+                           stages pass                                    
+                           (compile through                               
+                           acceptance)                                    
+
+  **M-03**   Rule Coverage Rules with ≥ 4     Layer 2       Every build   52/52 (100%)
+                           test cases / total coverage                    
+                           rules in inventory report                      
+
+  **M-04**   Historical    Percentage of      Layer 2       Weekly        Trending →
+             Comparison    sampled legacy     periodic                    100%
+             Agreement     transactions where batch                       
+                           NoUI matches or is                             
+                           provably correct                               
+
+  **M-05**   Open          Count of open      Layer 3       Real-time     0
+             Calculation   defects with       dashboard                   
+             Defects       category CAL or                                
+                           RUL                                            
+  ---------- ------------- ------------------ ------------- ------------- ------------
+
+6.2 Defect Inventory Metrics
+
+These metrics answer: how many defects exist and how critical are they?
+
+  ---------- ------------- ------------------------ ------------- ------------- ------------
+  **ID**     **Metric**    **Definition**           **Source**    **Cadence**   **Target**
+
+  **M-06**   Open Defect   Number of defects in     Layer 3       Real-time     P0: 0, P1:
+             Count by      OPEN or IN_PROGRESS      dashboard                   0, P2: \<5
+             Priority      status, broken out by                                
+                           P0--P4                                               
+
+  **M-07**   Defect        New defects per build,   Layer 2 +     Weekly        Stable or
+             Injection     averaged over the        Layer 3                     declining
+             Rate          reporting week                                       
+
+  **M-08**   Defect Escape Defects found at         Layer 2 test  Weekly        Declining to
+             Rate          integration/acceptance   pipeline                    0
+                           tier that unit tests                                 
+                           should have caught                                   
+
+  **M-09**   Open Defect   Total open defects over  Layer 3       Weekly        Flat or
+             Inventory     time, stacked by         trends view                 declining
+             Trend         priority                                             
+  ---------- ------------- ------------------------ ------------- ------------- ------------
+
+6.3 Resolution Effectiveness Metrics
+
+These metrics answer: are we resolving defects fast enough and
+effectively?
+
+  ---------- -------------- ------------------ ------------- ------------- ------------
+  **ID**     **Metric**     **Definition**     **Source**    **Cadence**   **Target**
+
+  **M-10**   Mean Time to   Average elapsed    Layer 4       Weekly        P0: \<8h,
+             Resolution     time from OPEN to  backlog                     P1: \<24h
+                            VERIFIED, by                                   
+                            priority level                                 
+
+  **M-11**   SLA Compliance Percentage of      Layer 4       Weekly        ≥ 95%
+             Rate           defects resolved   backlog                     
+                            within their SLA                               
+                            window                                         
+
+  **M-12**   Fix Failure    Percentage of      Layer 4       Weekly        \< 10%
+             Rate           fixes that fail    resolution                  
+                            verification after                             
+                            implementation                                 
+
+  **M-13**   Regression     New defects        Layer 2 +     Per           0
+             Introduction   introduced by      Layer 4       deployment    
+             Rate           fixes (detected in                             
+                            regression or                                  
+                            monitoring window)                             
+
+  **M-14**   Recurrence     Defects that recur Layer 4       Monthly       0
+             Rate           after VERIFIED     backlog                     
+                            status (linked as                              
+                            regression of                                  
+                            original)                                      
+
+  **M-15**   Backlog        Defects resolved   Layer 3 +     Weekly        ≥ 1.0
+             Velocity       per week / defects Layer 4                     
+                            opened per week                                
+  ---------- -------------- ------------------ ------------- ------------- ------------
+
+6.4 Prevention Effectiveness Metrics
+
+These metrics answer: are our prevention practices working?
+
+  ---------- ------------- ------------------ ------------- ------------- ------------
+  **ID**     **Metric**    **Definition**     **Source**    **Cadence**   **Target**
+
+  **M-16**   Oracle        Number of times    Layer 2       Monthly       Low and
+             Correction    test oracles       oracle mgmt                 declining
+             Rate          (expected values)                              
+                           were corrected                                 
+                           rather than the                                
+                           code                                           
+
+  **M-17**   Data Quality  DQ findings        Layer 3       Weekly        Resolution ≥
+             Resolution    resolved per week  dashboard                   discovery
+             Rate          vs. new DQ                                     
+                           findings                                       
+                           discovered per                                 
+                           week                                           
+
+  **M-18**   Agency        Average time DQ    Layer 4       Monthly       Declining
+             Dependency    defects spend      backlog                     
+             Wait Time     awaiting agency                                
+                           action                                         
+
+  **M-19**   Design Review Defects caught     Layer 1 +     Quarterly     Increasing
+             Defect Catch  during Layer 1     Layer 2                     toward 80%+
+             Rate          design review /                                
+                           total defects                                  
+                           (review-caught +                               
+                           escaped)                                       
+  ---------- ------------- ------------------ ------------- ------------- ------------
+
+7\. Reporting Templates
+
+Metrics are assembled into three standard reports. Each report serves a
+specific audience and decision cycle.
+
+  --------------- -------------- ------------------ ------------- -------------
+  **Report**      **Audience**   **Metrics          **Cadence**   **Format**
+                                 Included**                       
+
+  **Build         Technical      M-01, M-02, M-03,  Every build   Dashboard +
+  Health**        Director,      M-07, M-08         (automated)   structured
+                  developers                                      log
+
+  **Operational   Supervisor, QA M-01 through M-15  Weekly        Dashboard
+  Quality**       Lead,                                           Trends View +
+                  Technical                                       exportable
+                  Director                                        summary
+
+  **Board /       Executive      M-01, M-04, M-05,  Monthly or    One-page
+  Fiduciary**     Director,      M-06, M-11, M-17   on-demand     exportable
+                  Board of       (translated to                   PDF (Layer 3,
+                  Trustees,      plain language)                  Section 7)
+                  auditors                                        
+  --------------- -------------- ------------------ ------------- -------------
+
+8\. Taxonomy Evolution
+
+The taxonomy is a living artifact. Pension administration reveals edge
+cases that no upfront analysis can anticipate. When a defect does not
+fit the existing categories, the taxonomy must evolve rather than
+forcing a misclassification.
+
+8.1 Taxonomy Change Process
+
+9.  **Identification:** A defect is encountered that does not clearly
+    fit any existing category. The classifier assigns the closest
+    category and flags it as "category fit: poor" in the defect record.
+
+10. **Accumulation:** When three or more defects are flagged with poor
+    category fit in the same pattern, a taxonomy revision is proposed.
+
+11. **Proposal:** The proposal defines: the new category name and
+    3-letter code, its precise definition, at least two examples, the
+    resolution path, and the relationship to existing categories (is it
+    a split of an existing category, or genuinely new?).
+
+12. **Review:** Technical Director reviews and approves. The taxonomy
+    change is treated as a documentation change with version increment.
+
+13. **Propagation:** All five layer documents are updated to reference
+    the new category. The dashboard is updated to display it. Any
+    misclassified defects are reclassified.
+
+8.2 Taxonomy Versioning
+
+The taxonomy carries a version number (currently v1.0). Every change to
+categories, severity definitions, scope definitions, priority matrix, or
+metric definitions increments the version. Defect records store the
+taxonomy version under which they were classified. If the taxonomy
+changes, previously classified defects are not retroactively
+reclassified unless the change specifically addresses a known
+misclassification pattern.
+
+9\. Complete Document Map
+
+The five-layer defect management system is now complete. This section
+maps every artifact to its owner, purpose, and cross-references.
+
+  ----------- ------------------ ------------------------ -----------------------
+  **Layer**   **Document**       **Purpose**              **Key
+                                                          Cross-References**
+
+  **1**       Prevention &       Prevent defects through  ADR-001--006, business
+              Design Review      review gates, change     rules inventory,
+              Framework          impact assessment, and   architecture decisions
+                                 controlled deployment.   
+
+  **2**       Verification &     Detect defects through   YAML rule definitions,
+              Test Execution     systematic testing at    test fixtures, demo
+              Framework          three tiers with         case calculations
+                                 hand-calculated oracles. 
+
+  **3**       Defect Monitoring  Surface defects through  All Layer 2 metrics,
+              Dashboard          a real-time dashboard    Layer 4 SLAs, Layer 5
+              Specification      with three views and     taxonomy
+                                 role-based access.       
+
+  **4**       Defect Resolution  Eliminate defects        Layer 1 deployment
+              & Prioritized      through prioritized      process, Layer 2
+              Backlog Process    resolution with verified verification, Layer 3
+                                 closure.                 SLAs, Layer 5 lifecycle
+
+  **5**       Unified Defect     Consolidate the          Referenced by all
+              Taxonomy & Metrics classification           layers. Authoritative
+              Reference          vocabulary and metrics   for terminology.
+                                 definitions used by all  
+                                 layers.                  
+  ----------- ------------------ ------------------------ -----------------------
+
+> *The five layers form a closed loop: Prevention reduces defects.
+> Testing catches what prevention misses. The dashboard makes defects
+> visible. Resolution eliminates them. The taxonomy ensures everyone is
+> speaking the same language. Each defect resolved feeds back into
+> prevention through root cause analysis, regression tests, and process
+> improvement.*
+
+9.1 Related Governing Documents
+
+  -------------------------------------------- -------------------------------------------
+  **Document**                                 **Relationship**
+
+  **noui-architecture-decisions.docx**         ADR-001 through ADR-006: governing
+                                               principles referenced throughout all five
+                                               layers. AI boundaries, rules governance,
+                                               terminology, data quality, transparency.
+
+  **ADR-007-Graceful-Degradation.docx**        Six-level degradation hierarchy. Referenced
+                                               in Layer 1 integration change reviews and
+                                               Layer 3 system health reporting.
+
+  **derp-business-rules-inventory.docx**       52 rules across 8 categories. The
+                                               completeness baseline for Layer 2 rule
+                                               coverage (M-03). Source for test
+                                               generation.
+
+  **progressive-migration-architecture.md**    Historical comparison methodology. Feeds
+                                               Layer 2 periodic testing and Layer 3
+                                               convergence metric (M-04).
+
+  **noui-roles-workspace-architecture.docx**   Role-workspace matrix. Drives Layer 3
+                                               role-based dashboard access and Layer 1
+                                               composition change reviews.
+
+  **ARCHITECTURE_REFERENCE.md**                AI-accelerated change management workflow.
+                                               System-wide architecture context.
+
+  **BACKLOG.md**                               Operational backlog during POC. Aligns with
+                                               Layer 4 priority definitions and category
+                                               tags.
+
+  **BUILD_HISTORY.md**                         Audit trail for decisions and resolutions
+                                               during POC development.
+  -------------------------------------------- -------------------------------------------

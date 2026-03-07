@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+
+# Build output
+frontend/dist/
+*.exe
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+.eggs/
+
+# compose-sim output
+tools/compose-sim/results/
+tools/compose-sim/reports/
+tools/compose-sim/cache/
+tools/compose-sim/prompt_versions/
+
+# Environment
+.env
+.venv/
+venv/
+
+# Docker volumes
+pgdata/
+.docker-data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code
+.claude/worktrees/
+.claude/plans/
+.claude/memory/
+
+# Generated monitoring artifacts
+monitor-report.json
+monitor-history/
+
+# Schema manifests (generated output, not source)
+targets/*/schema-manifest/

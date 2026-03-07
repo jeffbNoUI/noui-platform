@@ -1,0 +1,97 @@
+{
+  "case_id": "case2-jennifer-kim",
+  "description": "Tier 2, early retirement with 30% reduction, purchased service",
+  "member": {
+    "member_id": 10002,
+    "first_name": "Jennifer",
+    "last_name": "Kim",
+    "dob": "1970-06-22",
+    "hire_date": "2008-03-01",
+    "tier": 2,
+    "marital_status": "S",
+    "status_code": "A"
+  },
+  "retirement_date": "2026-05-01",
+  "inputs": {
+    "age_at_retirement": { "years": 55, "months": 10 },
+    "age_completed_years": 55,
+    "earned_service_years": 18.17,
+    "purchased_service_years": 3.00,
+    "total_service_for_benefit": 21.17,
+    "total_service_for_eligibility": 18.17,
+    "ams_window_months": 36,
+    "ams_amount": 7347.62,
+    "leave_payout_eligible": true,
+    "leave_payout_note": "Hired before 2010, may have leave payout"
+  },
+  "expected_eligibility": {
+    "vested": true,
+    "rule_of_75_sum": 73.17,
+    "rule_of_75_met": false,
+    "best_eligible_type": "EARLY",
+    "reduction_pct": 30.0,
+    "reduction_factor": 0.70,
+    "note": "3% per year × 10 years under 65 = 30% reduction (NOT 6%! See CRITICAL-001)"
+  },
+  "expected_benefit": {
+    "multiplier": 0.015,
+    "unreduced_benefit": 2332.96,
+    "formula": "$7,347.62 × 1.5% × 21.17 yr = $2,332.96",
+    "reduction_applies": true,
+    "rate_per_year": 3.0,
+    "years_under_65": 10,
+    "total_reduction_pct": 30.0,
+    "reduction_factor": 0.70,
+    "reduced_benefit": 1633.07,
+    "maximum_monthly": 1633.07,
+    "death_benefit_amount": 2500.00,
+    "death_benefit_installment_50": 50.00,
+    "death_benefit_installment_100": 25.00,
+    "source": "RMC §18-409(b) — Statutory table: age 55 → factor 0.70"
+  },
+  "expected_ipr": {
+    "earned_service_years": 18.17,
+    "non_medicare_monthly": 227.13,
+    "medicare_monthly": 113.56,
+    "note": "CRITICAL: IPR uses 18.17 EARNED years, NOT 21.17 total"
+  },
+  "purchased_service_demonstration": {
+    "earned_service": 18.17,
+    "purchased_service": 3.00,
+    "benefit_calculation_uses": 21.17,
+    "rule_of_75_uses": 18.17,
+    "ipr_uses": 18.17,
+    "note": "Purchased service counts for benefit formula but excluded from Rule of 75 and IPR"
+  },
+  "scenario_comparison": {
+    "retire_now_2026": {
+      "age": 55, "total_service": 21.17, "rule_of_75": "73.17 - NOT MET",
+      "reduction": "30%", "monthly_benefit": 1633.07
+    },
+    "wait_1_year_2027": {
+      "age": 56, "total_service": 22.17, "rule_of_75": "75.17 - MET",
+      "reduction": "0%", "monthly_benefit_approx": 2518
+    },
+    "wait_2_years_2028": {
+      "age": 57, "total_service": 23.17, "rule_of_75": "77.17 - MET",
+      "reduction": "0%", "monthly_benefit_approx": 2711
+    }
+  },
+  "timeline": {
+    "last_day_worked": "2026-04-30",
+    "application_received": "2026-04-08",
+    "effective_date": "2026-05-01",
+    "first_payment": "2026-05-01"
+  },
+  "test_points": [
+    "Tier correctly determined as 2 (hired Sep 1, 2004 - Jun 30, 2011)",
+    "Rule of 75 NOT met: 55 + 18.17 = 73.17 < 75",
+    "Purchased service (3yr) excluded from Rule of 75 sum",
+    "Purchased service (3yr) included in benefit formula (21.17 yr total)",
+    "Early retirement reduction: 30% (3% × 10 years, NOT 6%)",
+    "Statutory table lookup: age 55 → factor 0.70",
+    "IPR uses earned service only (18.17 yr, NOT 21.17)",
+    "Death benefit: $2,500 (early retirement age 55, T1/2 table)",
+    "Scenario modeler shows Rule of 75 reachable in ~11 months"
+  ]
+}

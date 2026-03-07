@@ -1,0 +1,591 @@
+NoUI Training Document Series
+
+**Public Pension Domain Knowledge**
+
+Document 4: Retirement Eligibility Rules
+
+Version 1.0 \| February 2026
+
+*Understanding when members become eligible for retirement benefits and
+how eligibility affects benefit amounts*
+
+Executive Summary
+
+Retirement eligibility rules determine when a member can begin receiving
+pension benefits and whether those benefits are reduced for early
+commencement. These rules combine age requirements, service
+requirements, and special provisions like \'rule of years\' that allow
+unreduced benefits before normal retirement age.
+
+Eligibility determination is one of the most complex aspects of pension
+administration because it involves multiple interacting conditions,
+tier-specific variations, and distinctions between different types of
+service credit. This document examines the categories of retirement
+eligibility, how eligibility is determined, and the implications of
+eligibility status for benefit calculations.
+
+1\. Categories of Retirement Eligibility
+
+Public pension plans typically define several categories of retirement
+eligibility, each with different requirements and benefit implications:
+
+1.1 Normal Retirement
+
+Normal retirement represents the baseline eligibility threshold where
+members can retire with full, unreduced benefits. Normal retirement
+eligibility is typically defined by both age and service requirements
+that must be satisfied simultaneously.
+
+For DERP, normal retirement requires:
+
+-   Age 65 or older, AND
+
+-   At least 5 years of credited service
+
+Members meeting normal retirement requirements receive their full
+calculated benefit without any reduction. Normal retirement serves as
+the reference point against which early retirement reductions are
+calculated.
+
+1.2 Early Retirement
+
+Early retirement allows members to begin receiving benefits before
+meeting normal retirement requirements, but with permanently reduced
+benefit amounts. The reduction compensates the plan for the longer
+expected payment period.
+
+DERP early retirement requirements vary by tier:
+
+  ----------------- ----------------- ----------------- -----------------
+  **Tier**          **Minimum Age**   **Minimum         **Reduction
+                                      Service**         Rate**
+
+  Tier 1            55                5 years           3% per year under
+                                                        65
+
+  Tier 2            55                5 years           3% per year under
+                                                        65
+
+  Tier 3            60                5 years           6% per year under
+                                                        65
+  ----------------- ----------------- ----------------- -----------------
+
+Early retirement reductions are typically permanent---they apply for the
+member\'s lifetime and are not eliminated when the member reaches normal
+retirement age.
+
+1.3 Rule of Years (Unreduced Early Retirement)
+
+Many public plans include special provisions allowing unreduced
+retirement before normal retirement age when age plus service equals or
+exceeds a specified threshold. These are commonly called \'Rule of 75,\'
+\'Rule of 80,\' \'Rule of 85,\' etc.
+
+DERP rule of years provisions:
+
+  ----------------- ----------------- ----------------- -----------------
+  **Tier**          **Rule            **Minimum Age**   **Benefit
+                    Threshold**                         Impact**
+
+  Tier 1            Rule of 75        55                No reduction
+
+  Tier 2            Rule of 75        55                No reduction
+
+  Tier 3            Rule of 85        60                No reduction
+  ----------------- ----------------- ----------------- -----------------
+
+Rule of years eligibility eliminates early retirement reductions
+entirely. A Tier 1 member age 60 with 20 years of service (60 + 20 = 80)
+meets Rule of 75 and receives an unreduced benefit despite being under
+normal retirement age.
+
+1.4 Deferred Retirement
+
+Deferred retirement applies to vested members who terminate employment
+before reaching retirement eligibility. These members have earned a
+right to future benefits but cannot begin receiving payments until they
+reach the plan\'s deferred retirement age.
+
+Deferred vested members typically:
+
+-   Left their contributions in the plan rather than taking a refund
+
+-   Have at least 5 years of vesting service
+
+-   Will receive benefits calculated based on service and salary at
+    termination
+
+-   Must wait until reaching eligibility age to begin payments
+
+2\. Service Credit and Eligibility
+
+Service credit is fundamental to retirement eligibility, but not all
+service counts equally for all purposes. Understanding these
+distinctions is critical for accurate eligibility determination.
+
+2.1 Types of Service Credit
+
+**Earned Service:** Service accumulated through actual employment with a
+covered employer. This is the primary form of service credit and
+typically counts for all purposes including vesting, eligibility, and
+benefit calculation.
+
+**Purchased Service:** Service credit acquired through payment rather
+than employment. May include military service buybacks, prior public
+employment, or other categories defined by plan provisions. Purchased
+service often has restricted applicability.
+
+**Transferred Service:** Service credit transferred from another public
+retirement system, either through reciprocity agreements or portability
+provisions.
+
+2.2 Service Credit Restrictions
+
+A critical eligibility concept is that purchased service may not count
+for all purposes. In DERP, purchased service:
+
+-   DOES count toward benefit calculation (higher monthly benefit)
+
+-   Does NOT count toward Rule of 75/85 determination
+
+-   Does NOT count toward vesting
+
+-   Does NOT count toward IPR (Insurance Premium Reimbursement) years
+
+This distinction creates important scenarios. Consider Jennifer Kim
+(Demo Case 2):
+
+-   Earned service: 18 years, 2 months
+
+-   Purchased service: 3 years
+
+-   Total service for benefit calculation: 21 years, 2 months
+
+-   Service for Rule of 75: 18 years, 2 months only
+
+-   At age 55: 55 + 18.17 = 73.17, does NOT meet Rule of 75
+
+-   Result: Early retirement with 30% reduction despite having 21+ years
+    total service
+
+2.3 Service Credit Precision
+
+Accurate service credit calculation requires precision in tracking:
+
+-   Start and end dates of employment periods
+
+-   Breaks in service and their treatment
+
+-   Part-time service proration
+
+-   Leave periods and their creditability
+
+-   Service purchase effective dates and amounts
+
+3\. Age Requirements and Calculations
+
+Age requirements establish when members can begin receiving benefits.
+Accurate age calculation at the retirement date is essential for
+eligibility determination.
+
+3.1 Age Calculation Methods
+
+Plans may calculate age in different ways:
+
+**Exact Age:** Age calculated to the day based on date of birth and
+retirement date. Most precise method.
+
+**Age at Last Birthday:** Age as of most recent birthday. Simpler but
+less precise.
+
+**Age at Nearest Birthday:** Rounds to nearest birthday. May benefit
+some members and disadvantage others.
+
+DERP uses exact age calculations, determining age in years and months
+(or fractions) at the retirement effective date.
+
+3.2 Age Plus Service Calculations
+
+For rule of years determinations, systems must calculate the sum of age
+and service at the retirement date. Both components require consistent
+precision:
+
+Example (Robert Martinez - Demo Case 1):
+
+-   Date of Birth: March 8, 1963
+
+-   Retirement Date: April 1, 2026
+
+-   Age at retirement: 63 years (and approximately 24 days)
+
+-   Hire Date: June 15, 1997
+
+-   Service: 28 years, 9 months, 17 days
+
+-   For Rule of 75: 63 + 28.75 = 91.75
+
+-   Result: Exceeds 75 threshold, meets minimum age 55, qualifies for
+    unreduced benefit
+
+3.3 Minimum Age Requirements
+
+Even when rule of years is satisfied, minimum age requirements must be
+met. This prevents very young employees with long service from retiring
+with unreduced benefits at inappropriately early ages.
+
+DERP minimum ages:
+
+-   Tiers 1 and 2: Minimum age 55 for Rule of 75
+
+-   Tier 3: Minimum age 60 for Rule of 85
+
+-   All tiers: Minimum age 65 for normal retirement
+
+4\. Eligibility Determination Logic
+
+Eligibility determination follows a structured decision process
+evaluating multiple conditions. The order of evaluation matters because
+different eligibility categories have different benefit implications.
+
+4.1 Decision Hierarchy
+
+A typical eligibility evaluation proceeds through these steps:
+
+**Step 1: Determine member\'s tier based on hire date**
+
+The tier determines which eligibility rules apply. A member hired June
+15, 1997 is Tier 1; hired March 1, 2008 is Tier 2; hired September 1,
+2012 is Tier 3.
+
+**Step 2: Calculate age at retirement date**
+
+Precise age calculation using date of birth and intended retirement
+date.
+
+**Step 3: Calculate service credit (separating earned from purchased)**
+
+Total service for benefit calculation and earned-only service for
+eligibility.
+
+**Step 4: Check vesting status**
+
+Member must have at least 5 years of vesting service to be eligible for
+any benefit.
+
+**Step 5: Evaluate normal retirement eligibility**
+
+Age 65+ AND 5+ years service = normal retirement, no reduction.
+
+**Step 6: Evaluate rule of years eligibility (if not normal
+retirement)**
+
+Check if age + earned service meets tier-specific threshold AND minimum
+age is met.
+
+**Step 7: Evaluate early retirement eligibility (if not rule of years)**
+
+Check if tier-specific minimum age and service requirements are met.
+Calculate reduction.
+
+4.2 Eligibility Results
+
+The evaluation produces one of several outcomes:
+
+-   Normal Retirement: Full unreduced benefit
+
+-   Rule of Years: Full unreduced benefit (early but no reduction)
+
+-   Early Retirement: Reduced benefit based on years under 65
+
+-   Not Yet Eligible: Cannot retire; may elect deferred status or refund
+
+5\. Early Retirement Reductions
+
+When members retire early without meeting rule of years, their benefits
+are permanently reduced. Understanding reduction calculations is
+essential for accurate benefit determination.
+
+5.1 Reduction Methodology
+
+DERP calculates early retirement reductions based on years under age 65
+at retirement:
+
+  ----------------------- ----------------------- -----------------------
+  **Tier**                **Reduction Rate**      **Maximum Reduction**
+
+  Tier 1                  3% per year under 65    30% (at age 55)
+
+  Tier 2                  3% per year under 65    30% (at age 55)
+
+  Tier 3                  6% per year under 65    30% (at age 60)
+  ----------------------- ----------------------- -----------------------
+
+5.2 Reduction Calculation Examples
+
+**Example 1 - Jennifer Kim (Tier 2, Age 55):** Years under 65 = 10
+years. Reduction = 10 × 3% = 30%. Unreduced benefit \$2,332.96 becomes
+\$1,633.07 after 30% reduction.
+
+**Example 2 - David Washington (Tier 3, Age 63):** Years under 65 = 2
+years. Reduction = 2 × 6% = 12%. Unreduced benefit reduced by 12%.
+
+**Example 3 - Hypothetical Tier 1, Age 60:** Years under 65 = 5 years.
+Reduction = 5 × 3% = 15%.
+
+5.3 Partial Year Treatment
+
+Plans vary in how they treat partial years for reduction calculations:
+
+-   Some plans prorate reductions by months (e.g., 0.25% per month for a
+    3% annual rate)
+
+-   Other plans use only completed years under 65
+
+-   Some round to nearest year or use age at last/nearest birthday
+
+DERP\'s specific rules should be verified against governing documents
+for partial year treatment.
+
+5.4 Reduction Permanence
+
+Early retirement reductions are permanent. Once a member begins
+receiving a reduced benefit, the reduction continues for life. The
+benefit does not increase to the unreduced amount when the member
+reaches age 65. This permanence makes the timing decision critical for
+members approaching eligibility thresholds.
+
+6\. Threshold Proximity and Scenario Analysis
+
+Members often approach retirement near eligibility thresholds where
+small differences in timing can significantly affect benefits.
+Identifying threshold proximity enables valuable scenario analysis.
+
+6.1 Critical Thresholds
+
+Key thresholds to monitor include:
+
+-   Age 55 or 60: Minimum early retirement age (tier-dependent)
+
+-   Age 65: Normal retirement age; no reduction regardless of rule
+    status
+
+-   Rule of 75 or 85: Age + service threshold for unreduced benefits
+
+-   5 years service: Vesting threshold
+
+6.2 Threshold Proximity Detection
+
+Systems should identify when members are close to thresholds and alert
+staff to scenario modeling opportunities. Consider Jennifer Kim:
+
+-   At retirement (age 55): 55 + 18.17 = 73.17 (1.83 points short of
+    Rule of 75)
+
+-   Waiting 1 year to age 56: 56 + 19.17 = 75.17 (exceeds Rule of 75)
+
+-   Benefit impact: \$1,633/month → approximately \$2,518/month (54%
+    increase)
+
+This analysis can dramatically affect member decisions and should be
+surfaced proactively.
+
+6.3 Scenario Modeling
+
+Effective eligibility analysis includes scenario modeling capabilities:
+
+-   Project future eligibility dates based on current trajectory
+
+-   Show benefit impact of retiring now vs. waiting
+
+-   Identify optimal retirement windows
+
+-   Account for salary increases in projections
+
+-   Consider rule of years timing when earned service approaches
+    thresholds
+
+6.4 Member Communication
+
+Threshold proximity information should be communicated clearly to
+members:
+
+-   Retirement estimates should show multiple scenarios
+
+-   Near-threshold situations should be highlighted
+
+-   Dollar impact of timing decisions should be quantified
+
+-   Counseling appointments should address timing optimization
+
+7\. Special Eligibility Situations
+
+7.1 Disability Retirement
+
+Disability retirement provides benefits to members who become unable to
+work before reaching normal retirement eligibility. Disability
+eligibility typically requires:
+
+-   Minimum service (often less than normal retirement requirement)
+
+-   Medical certification of disability
+
+-   Disability occurring while actively employed
+
+Disability benefits may be calculated differently than service
+retirement, often with more generous provisions for duty-related
+disabilities. Disability retirement is covered in detail in Document 9.
+
+7.2 Survivor Benefits
+
+When a member dies before retirement, survivors may be eligible for
+benefits:
+
+-   Vested member death: Survivors may receive survivor annuity or lump
+    sum
+
+-   Non-vested death: Typically limited to contribution refund
+
+-   Active member death: May have enhanced provisions compared to
+    deferred death
+
+Survivor benefits and payment options are covered in Document 6.
+
+7.3 Rehired Members
+
+Members who return to covered employment after termination present
+special eligibility considerations:
+
+-   Prior service may or may not be reinstated
+
+-   Tier determination may differ for different employment periods
+
+-   Vesting status from prior service may affect current eligibility
+
+-   Refund repayment requirements may apply to restore prior service
+
+7.4 Reciprocity and Portability
+
+Some public retirement systems have reciprocal agreements allowing
+service with multiple systems to count toward eligibility:
+
+-   Service remains in original system but counts toward eligibility in
+    current system
+
+-   Final benefit may be calculated by each system independently
+
+-   Coordination rules determine how combined service affects benefits
+
+8\. DERP Eligibility Summary
+
+The following table summarizes DERP eligibility requirements across all
+tiers:
+
+8.1 Complete Eligibility Matrix
+
+  --------------- ------------------ ------------------ ------------------
+  **Eligibility   **Tier 1**         **Tier 2**         **Tier 3**
+  Type**                                                
+
+  Normal          Age 65 + 5 yrs     Age 65 + 5 yrs     Age 65 + 5 yrs
+  Retirement                                            
+
+  Rule of Years   Age + Svc ≥ 75,    Age + Svc ≥ 75,    Age + Svc ≥ 85,
+                  min 55             min 55             min 60
+
+  Early           Age 55 + 5 yrs     Age 55 + 5 yrs     Age 60 + 5 yrs
+  Retirement                                            
+
+  Early Reduction 3%/yr under 65     3%/yr under 65     6%/yr under 65
+
+  Vesting         5 years earned     5 years earned     5 years earned
+
+  Purchased Svc   No                 No                 No
+  for Rule                                              
+  --------------- ------------------ ------------------ ------------------
+
+8.2 Demo Case Eligibility Analysis
+
+Applying these rules to the four demo cases:
+
+**Case 1 - Robert Martinez (Tier 1):** Age 63, earned service 28.75
+years. Rule of 75: 63 + 28.75 = 91.75 ≥ 75. Minimum age 55 met. Result:
+Unreduced benefit.
+
+**Case 2 - Jennifer Kim (Tier 2):** Age 55, earned service 18.17 years
+(3 years purchased). Rule of 75: 55 + 18.17 = 73.17 \< 75. Early
+retirement: 30% reduction.
+
+**Case 3 - David Washington (Tier 3):** Age 63, earned service 13.58
+years. Rule of 85: 63 + 13.58 = 76.58 \< 85. Early retirement: 12%
+reduction (2 years × 6%).
+
+**Case 4 - Robert Martinez with DRO:** Same eligibility as Case 1. DRO
+affects benefit distribution, not eligibility.
+
+9\. Implications for NoUI Development
+
+9.1 Eligibility Engine Requirements
+
+-   Accurate tier determination from hire dates
+
+-   Precise age calculation at any specified date
+
+-   Service credit separation (earned vs. purchased vs. transferred)
+
+-   Multi-condition eligibility evaluation
+
+-   Reduction calculation with correct rates per tier
+
+9.2 Data Requirements
+
+-   Date of birth (validated and complete)
+
+-   Hire date for tier determination
+
+-   All employment periods with start/end dates
+
+-   Service purchase records with types and amounts
+
+-   Leave records affecting service credit
+
+9.3 Scenario Modeling Capabilities
+
+-   Future eligibility date projection
+
+-   Benefit comparison across retirement dates
+
+-   Threshold proximity alerts
+
+-   Optimal retirement window identification
+
+-   What-if analysis for service purchases
+
+9.4 Transparency Requirements
+
+-   Show all eligibility conditions and which are met
+
+-   Display service credit breakdown by type
+
+-   Explain why purchased service excluded from rule calculation
+
+-   Quantify benefit impact of timing decisions
+
+-   Reference governing document sections for all rules
+
+Conclusion
+
+Retirement eligibility rules form the gateway to pension benefits.
+Accurate eligibility determination requires precise calculations of age
+and service, correct application of tier-specific rules, and
+understanding of service credit restrictions. The distinction between
+service for benefit calculation and service for eligibility
+determination is particularly critical.
+
+NoUI\'s rules engine must implement these eligibility provisions exactly
+as specified in governing documents while providing the transparency
+that allows staff and members to understand how eligibility was
+determined. The scenario modeling capabilities that identify threshold
+proximity and quantify timing decisions add significant value to member
+service interactions.
+
+*--- End of Document 4 ---*

@@ -1,0 +1,599 @@
+NoUI Platform
+
+**Defect Monitoring**
+
+**Dashboard Specification**
+
+Layer 3 of 5: Defect Management System
+
+DERP Proof of Concept
+
+Version 1.0 --- February 2026
+
+Document Status: Draft for Review
+
+1\. Purpose
+
+The Defect Monitoring Dashboard is the single pane of glass for system
+quality. It unifies three data streams---automated test results (Layer
+2), data quality findings (Data Quality Engine), and manually reported
+issues---into a real-time view that answers one question at every level
+of the organization: is the system producing correct benefits right now?
+
+The dashboard does not replace investigation tools or backlog
+management. It is the detection and alerting surface---the instrument
+panel that tells you when something is wrong, how bad it is, and where
+to look. Resolution happens in Layer 4 (Prioritized Backlog). Root cause
+analysis happens in the specific service or rule that contains the
+defect. The dashboard's job is to make problems impossible to miss.
+
+1.1 Design Principles
+
+-   **Severity drives visibility.** Critical and P0 items dominate the
+    screen. Low-severity items are available but not prominent. The
+    dashboard's visual hierarchy matches the priority matrix from Layer
+    1.
+
+-   **No hidden state.** Every known defect is visible somewhere on the
+    dashboard. There is no concept of "acknowledged and suppressed." If
+    it's open, it's visible.
+
+-   **Time is the enemy.** Aging is prominently displayed. A
+    Medium-severity defect that has been open for 30 days is more
+    alarming than a High-severity defect opened today, because the
+    Medium defect represents a process failure.
+
+-   **Trust through transparency.** The dashboard is accessible to all
+    authorized roles, not just QA. When DERP leadership asks "how do you
+    know the system is correct?" the answer is this dashboard.
+
+2\. Data Sources
+
+The dashboard consumes data from four distinct sources. Each source has
+a defined schema, refresh cadence, and ownership.
+
+  -------------- ------------------ -------------- -------------- ---------------
+  **Source**     **What It          **Refresh**    **Owner**      **Volume**
+                 Produces**                                       
+
+  **Test         Build pass/fail,   Every build    CI/CD system   \~208+ unit +
+  Execution      test-level         (continuous)                  integration + 4
+  Pipeline**     results, coverage                                acceptance per
+                 metrics, failure                                 build
+                 reports (Layer 2                                 
+                 Section 6.2                                      
+                 format)                                          
+
+  **Data Quality Structural,        Daily scan +   Intelligence   Variable;
+  Engine**       consistency,       on-demand      service        initial scan of
+                 calculation                                      10K members may
+                 verification, and                                produce
+                 pattern detection                                hundreds of
+                 findings                                         findings
+                 classified by                                    
+                 severity                                         
+
+  **Historical   Legacy-vs-NoUI     Weekly batch   Validation     Proportional to
+  Comparison**   differences                       pipeline       sample size
+                 categorized per                                  (target:
+                 Layer 1 taxonomy                                 500--2,000
+                 (Calculation                                     transactions)
+                 Defect, Legacy                                   
+                 Defect, etc.)                                    
+
+  **Manual       Issues reported by As reported    Human entry    Low volume;
+  Reports**      QA sampling, user                                high signal
+                 observation, or                                  
+                 external audit                                   
+  -------------- ------------------ -------------- -------------- ---------------
+
+All four sources produce defects classified using the unified taxonomy
+from Layer 1: category (8 types), severity (4 levels), and member impact
+scope (3 levels). The dashboard does not re-classify---it displays the
+classification assigned at the source.
+
+3\. Dashboard Views
+
+The dashboard is structured as three views, each designed for a specific
+audience and decision type. All three views operate on the same
+underlying data; they differ in aggregation level and what they
+emphasize.
+
+3.1 Command View (Primary)
+
+The Command View is the default landing screen. It provides an instant
+health assessment that any authorized user can read in under five
+seconds. This view answers: "Is the system healthy right now, and if
+not, what's the most critical issue?"
+
+Status Banner
+
+A full-width banner at the top of the screen with three possible states:
+
+  ----------- ------------- ------------------------ ----------------------
+  **State**   **Color**     **Meaning**              **Trigger Condition**
+
+  **GREEN**   Green         All systems nominal. All Zero P0/P1 defects AND
+              background,   tests passing. No        last build passed AND
+              white text    Critical or High open    data quality scan \<
+                            defects. Data quality    24 hours old
+                            scan current.            
+
+  **AMBER**   Amber         Issues exist that        Any P2 defect \> 0 OR
+              background,   require attention but    data quality scan \>
+              dark text     are not blocking member  48 hours OR coverage
+                            benefit processing.      regression detected
+
+  **RED**     Red           Critical issue. Benefit  Any P0 or P1 defect
+              background,   processing may be        open OR any demo case
+              white text    affected. Immediate      failing OR any
+                            investigation required.  acceptance test
+                                                     failing
+  ----------- ------------- ------------------------ ----------------------
+
+When the banner is RED, it includes a one-line summary of the most
+critical open defect, directly actionable: e.g., "P0: Tier 1 benefit
+calculation uses 1.5% multiplier instead of 2.0% --- affects all Tier 1
+members --- opened 2 hours ago."
+
+Four Canary Cards
+
+Below the banner, four cards represent the four demo cases. Each card
+shows:
+
+-   **Member name and case description** (e.g., "Martinez --- Tier 1,
+    Rule of 75")
+
+-   **Status indicator:** green checkmark (last acceptance test passed)
+    or red X (failed)
+
+-   **Last verified:** timestamp of the most recent passing acceptance
+    test
+
+-   **Key verification points:** the two or three most critical values
+    from the hand calculation (e.g., "AMS: \$8,542.33 ✓ \| Benefit:
+    \$4,899.34 ✓ \| 75% J&S: \$4,482.85 ✓")
+
+These four cards are the most important thing on the dashboard. If all
+four are green, the system's core calculations are correct. If any is
+red, something fundamental is broken.
+
+Defect Summary Counters
+
+A row of counters showing the current defect inventory by priority:
+
+  -------------- -------------- -------------- -------------- --------------
+  **P0 ---       **P1 ---       **P2 ---       **P3 ---       **P4 ---
+  STOP**         Immediate**    Urgent**       Standard**     Backlog**
+
+  Target: 0      Target: 0      Target: \< 5   Target: \< 15  No limit
+  -------------- -------------- -------------- -------------- --------------
+
+Each counter is clickable, drilling into the filtered defect list for
+that priority level.
+
+3.2 Investigation View (Drill-Down)
+
+The Investigation View is the working surface for QA analysts, benefits
+supervisors, and anyone diagnosing a specific defect. It provides the
+full defect list with powerful filtering and sorting.
+
+Filter Dimensions
+
+  --------------- --------------------------- ---------------------------
+  **Filter**      **Options**                 **Use Case**
+
+  **Priority**    P0, P1, P2, P3, P4          Focus on what needs
+                                              attention now
+
+  **Category**    All 8 categories from Layer Isolate calculation defects
+                  1 taxonomy                  from UX defects from data
+                                              quality issues
+
+  **Source**      Test pipeline, Data Quality Understand where defects
+                  Engine, Historical          are being discovered
+                  Comparison, Manual          
+
+  **Tier**        Tier 1, Tier 2, Tier 3, All Assess quality per member
+                  Tiers                       population
+
+  **Age**         \< 24 hours, 1--7 days,     Find aging defects that may
+                  8--30 days, \> 30 days      indicate process failure
+
+  **Resolution    Open, In Progress, Awaiting Track defect lifecycle
+  Status**        Review, Resolved, Verified  
+
+  **Member        Plan-Wide, Cohort,          Assess breadth of exposure
+  Impact**        Individual                  
+  --------------- --------------------------- ---------------------------
+
+Defect Detail Panel
+
+Clicking any defect opens a detail panel showing the complete failure
+report (Layer 2, Section 6.2 format) plus resolution history. For test
+failures, this includes the exact inputs, expected value with oracle
+citation, actual value, and variance. For data quality findings, this
+includes the affected member(s), the evidence, and the proposed
+correction. Every defect links to its Change Impact Assessment if one
+exists, and to the relevant rule in the business rules inventory.
+
+3.3 Trends View (Strategic)
+
+The Trends View serves supervisors, QA leadership, and executives. It
+answers: "Is system quality improving or degrading over time? Are our
+prevention practices working?"
+
+Trend Charts
+
+Six time-series charts, each displaying weekly data points:
+
+  ------------------ -------------------------- --------------------------
+  **Chart**          **What It Shows**          **What to Watch For**
+
+  **Defect Injection New defects per build,     Rising trend = design
+  Rate**             averaged weekly. Broken    review gaps (Layer 1
+                     out by source.             feedback loop).
+
+  **Defect Escape    Defects found at           Rising trend = unit test
+  Rate**             integration/acceptance     coverage gaps or oracle
+                     tier that should have been quality issues.
+                     caught at unit tier.       
+
+  **Mean Time to     Average days from defect   Increasing MTTR = backlog
+  Resolution**       opened to                  congestion or growing
+                     verified-resolved, by      complexity.
+                     severity.                  
+
+  **Open Defect      Total open defects over    Growing inventory =
+  Inventory**        time, stacked by priority. resolution not keeping
+                                                pace with discovery.
+
+  **Historical       Percentage of legacy       Should trend toward 100%.
+  Comparison         transactions where NoUI    Plateaus reveal systematic
+  Convergence**      matches or is provably     gaps.
+                     correct.                   
+
+  **Data Quality     Findings resolved per week Resolution should exceed
+  Resolution Rate**  vs. new findings           discovery. If discovery
+                     discovered per week.       persistently exceeds
+                                                resolution, data quality
+                                                is degrading.
+  ------------------ -------------------------- --------------------------
+
+4\. Role-Based Access
+
+The dashboard is accessible to all roles but emphasizes different
+information for each. This aligns with the role-workspace architecture
+where each role has a distinct entry point and information hierarchy.
+
+  --------------- ------------------ ------------------ -------------------
+  **Role**        **Default View**   **Primary Use**    **Special Access**
+
+  **Benefits      Investigation      Check for defects  Can report new
+  Analyst**       View, filtered to  affecting cases    defects via manual
+                  assigned cases     currently being    entry
+                                     processed          
+
+  **Benefits      Command View       Team-level quality Can assign defects
+  Supervisor**                       oversight, defect  to team members,
+                                     aging review       set priority
+                                                        overrides
+
+  **QA /          Investigation      Cross-case         Full filter access,
+  Compliance      View, unfiltered   analysis,          export capability,
+  Analyst**                          sampling, root     audit trail
+                                     cause              deep-dive
+                                     investigation      
+
+  **Executive     Command View +     Operational health Read-only.
+  Director**      Trends View        assessment, board  Exportable for
+                                     report preparation board
+                                                        presentations.
+
+  **Technical     All views          System-wide        Full access
+  Director                           quality            including
+  (Jeff)**                           management,        configuration and
+                                     architecture       alert management
+                                     decisions          
+
+  **CSR /         Command View       Awareness of any   Read-only summary.
+  Counselor**     (status banner     system-wide issues Cannot see defect
+                  only)              before advising    details.
+                                     members            
+  --------------- ------------------ ------------------ -------------------
+
+5\. Alerting Rules
+
+The dashboard generates alerts for conditions that require human
+attention. Alerts are not notifications for every defect---they are
+escalations for conditions that indicate systemic risk or SLA
+violations.
+
+5.1 Alert Definitions
+
+  ---------------- --------------------- ---------------- ----------------
+  **Alert**        **Trigger Condition** **Recipients**   **Escalation**
+
+  **P0 STOP**      Any P0 defect opened. Technical        Immediate.
+                   Critical severity +   Director,        Processing of
+                   any scope, OR High    Benefits         affected case
+                   severity + Plan-Wide  Supervisor, QA   types halts.
+                   scope.                Lead             
+
+  **Demo Case      Any of the four       Technical        Immediate. Build
+  Failure**        acceptance tests      Director         is blocked. P0
+                   fails.                                 defect
+                                                          auto-created.
+
+  **SLA Breach     Any defect reaches    Assigned         Priority review.
+  Warning**        75% of its SLA window resolver +       Reassign or
+                   without resolution.   Supervisor       escalate if
+                   (e.g., P1 at 18 hours                  needed.
+                   of its 24-hour SLA.)                   
+
+  **SLA Breach**   Any defect exceeds    Technical        Mandatory status
+                   its SLA window.       Director,        update. Root
+                                         Benefits         cause of delay
+                                         Supervisor       documented.
+
+  **Coverage       Rule coverage drops   Technical        Block next
+  Regression**     below 100% or test    Director         deployment until
+                   count decreases                        coverage
+                   without documented                     restored.
+                   justification.                         
+
+  **Data Quality   Data quality scan has Technical        Investigate scan
+  Scan Stale**     not run in \> 48      Director         pipeline. Status
+                   hours.                                 banner goes
+                                                          AMBER.
+
+  **Injection Rate Defect injection rate Technical        Review recent
+  Spike**          exceeds 2× the 4-week Director         changes for
+                   rolling average.                       design review
+                                                          gaps. Layer 1
+                                                          feedback.
+  ---------------- --------------------- ---------------- ----------------
+
+5.2 Alert Channels
+
+Alerts are delivered through multiple channels to ensure they are not
+missed:
+
+-   **Dashboard:** Alert banner persists at top of all views until
+    acknowledged. P0 alerts use red pulsing indicator.
+
+-   **Email:** All P0 and SLA Breach alerts generate immediate email to
+    recipients.
+
+-   **Structured log:** All alerts are logged with timestamp, trigger
+    condition, and recipients for audit trail.
+
+> *Alerts are not acknowledgeable without action. Acknowledging a P0
+> alert requires entering a status note (even if it's "investigating").
+> This prevents the anti-pattern of acknowledging alerts to clear the
+> screen without investigating.*
+
+6\. Dashboard Data Model
+
+All dashboard data flows through a unified defect record that
+standardizes information from all four sources. This is the data
+contract between the sources and the dashboard.
+
+6.1 Unified Defect Record Schema
+
+  --------------------------- ------------- ----------------------------------------
+  **Field**                   **Type**      **Description**
+
+  **defect_id**               string        Unique identifier (e.g., DEF-2026-0001).
+                                            Auto-generated.
+
+  **source**                  enum          TEST_PIPELINE \| DATA_QUALITY \|
+                                            HISTORICAL_COMPARISON \| MANUAL
+
+  **category**                enum          Per Layer 1 taxonomy: CALCULATION \|
+                                            RULE_INTERPRETATION \| LEGACY \|
+                                            DATA_QUALITY \| AMBIGUOUS \|
+                                            UX_COMPOSITION \| INTEGRATION \|
+                                            ROUNDING
+
+  **severity**                enum          CRITICAL \| HIGH \| MEDIUM \| LOW
+
+  **member_impact_scope**     enum          PLAN_WIDE \| COHORT \| INDIVIDUAL
+
+  **priority**                enum          P0 \| P1 \| P2 \| P3 \| P4 (derived from
+                                            severity × scope matrix)
+
+  **title**                   string        One-line human-readable summary
+
+  **description**             text          Full description including evidence,
+                                            expected vs. actual, oracle citation
+
+  **affected_tiers**          array         Which tiers are affected: \[1\], \[2\],
+                                            \[3\], \[1,2,3\], etc.
+
+  **affected_rules**          array         Rule IDs from business rules inventory
+                                            (e.g., \[RULE-BENEFIT-T1\])
+
+  **affected_demo_cases**     array         Which demo cases exercise this rule:
+                                            \[1\], \[2,4\], etc.
+
+  **affected_member_count**   integer       Estimated number of affected members
+                                            (null if unknown)
+
+  **opened_at**               timestamp     When the defect was first detected
+
+  **opened_by**               string        Source system or human reporter
+
+  **status**                  enum          OPEN \| IN_PROGRESS \| AWAITING_REVIEW
+                                            \| RESOLVED \| VERIFIED
+
+  **assigned_to**             string        Person responsible for resolution (null
+                                            if unassigned)
+
+  **sla_deadline**            timestamp     Calculated from priority and SLA table
+
+  **resolved_at**             timestamp     When resolution was applied (null if
+                                            open)
+
+  **verified_at**             timestamp     When fix was verified by re-running
+                                            tests (null if unverified)
+
+  **resolution_notes**        text          Description of how the defect was
+                                            resolved
+
+  **cia_reference**           string        Link to Change Impact Assessment if
+                                            applicable
+
+  **related_defects**         array         IDs of related defects (e.g., same root
+                                            cause)
+  --------------------------- ------------- ----------------------------------------
+
+6.2 SLA Table
+
+Each priority level has a defined SLA window. These SLAs govern the
+alert triggers and aging calculations.
+
+  -------------- -------------- -------------- -------------- --------------
+  **Priority**   **Response     **Resolution   **75%          **Breach
+                 SLA**          SLA**          Warning**      Escalation**
+
+  **P0 ---       Immediate      Same business  4 hours        Technical
+  STOP**                        day                           Director
+
+  **P1 ---       \< 2 hours     24 hours       18 hours       Technical
+  Immediate**                                                 Director
+
+  **P2 ---       \< 4 hours     Current sprint Sprint         Benefits
+  Urgent**                                     midpoint       Supervisor
+
+  **P3 ---       \< 1 business  Next 2 sprints N/A            N/A
+  Standard**     day                                          
+
+  **P4 ---       N/A            No SLA         N/A            N/A
+  Backlog**                                                   
+  -------------- -------------- -------------- -------------- --------------
+
+> *SLA timers are assumptions based on a small-team operational model.
+> Actual SLAs should be calibrated after the first month of operation
+> based on observed defect volume and resolution capacity.*
+
+7\. Board Reporting Integration
+
+DERP's board of trustees requires periodic reporting on system health.
+The dashboard is designed to support this with exportable summaries that
+translate technical metrics into fiduciary language.
+
+7.1 Board Summary Report
+
+A one-page exportable report generated monthly (or on-demand) that
+includes:
+
+-   **System accuracy statement:** "All four benchmark calculations
+    verified correct as of \[date\]. \[N\] rules tested with 100% pass
+    rate."
+
+-   **Defect summary:** \[N\] issues identified this period, \[N\]
+    resolved, \[N\] remaining. Breakdown by category.
+
+-   **Data quality summary:** \[N\] data quality findings, \[N\]
+    resolved, \[N\] pending agency review.
+
+-   **Legacy comparison findings:** \[N\] transactions compared, \[N\]%
+    agreement. \[N\] legacy defects discovered (value to DERP).
+
+-   **System availability:** Uptime percentage, degradation events if
+    any.
+
+The board report uses plain language and avoids technical jargon. It is
+designed to answer the board's core fiduciary question: "Are benefits
+being calculated correctly and can we demonstrate that to our auditors?"
+
+7.2 Audit Support
+
+For annual financial audits and actuarial audits, the dashboard provides
+a comprehensive audit trail export that includes every defect opened and
+closed during the audit period, the resolution for each, the test
+execution history, and the rule coverage report. This package
+demonstrates due diligence in system quality management---a critical
+element of the fiduciary demonstration.
+
+8\. Implementation Notes
+
+8.1 POC Implementation
+
+For the POC, the dashboard is implemented as a React component within
+the NoUI frontend, consuming the same workspace composition
+architecture. It is a specialized workspace variant---the "Quality
+Dashboard" workspace---composed from reusable components:
+
+-   **StatusBanner:** Full-width component with GREEN/AMBER/RED state,
+    sourced from aggregated defect data
+
+-   **DemoCaseCard:** Card component repeated 4×, each consuming
+    acceptance test results for its case
+
+-   **DefectCounter:** Counter component repeated per priority level,
+    clickable to filter
+
+-   **DefectTable:** Sortable, filterable table component for the
+    Investigation View
+
+-   **TrendChart:** Time-series chart component (reused for all six
+    trend charts)
+
+The POC dashboard demonstrates the concept with real data from the test
+pipeline and embedded data quality findings. Historical comparison data
+is simulated with representative examples. Manual reporting is supported
+through a simple form.
+
+8.2 Technology Alignment
+
+The dashboard follows NoUI's technology conventions: React 18+ with
+TypeScript strict mode, Tailwind CSS for styling, and shadcn/ui
+primitives for components. Charts use a lightweight library (Recharts or
+equivalent) rather than a full BI platform. All dashboard data is served
+through the Workspace API, maintaining the architectural principle that
+no component accesses the database directly.
+
+For production deployments beyond the POC, the application management
+services architecture identifies operational reporting as BUILD (native
+to NoUI) and regulatory reporting as HYBRID (NoUI data feeding external
+BI tools like Tableau or Power BI when complex formatting is required).
+The dashboard is the native component; export APIs enable the hybrid
+path.
+
+9\. Framework Governance
+
+9.1 Document Series
+
+1.  **Prevention & Design Review Framework (Layer 1)** --- completed
+
+2.  **Verification & Test Execution Framework (Layer 2)** --- completed
+
+3.  **Defect Monitoring Dashboard Specification (Layer 3)** --- this
+    document
+
+4.  **Defect Resolution & Prioritized Backlog Process (Layer 4)** ---
+    next
+
+5.  **Unified Defect Taxonomy & Metrics (Layer 5)**
+
+9.2 Feedback Loops
+
+The dashboard creates feedback loops to the upstream layers:
+
+-   **Dashboard → Layer 1 (Prevention):** Rising defect injection rate
+    triggers design review process audit. The dashboard answers: is
+    prevention working?
+
+-   **Dashboard → Layer 2 (Testing):** Rising escape rate triggers test
+    coverage review. The dashboard answers: are tests catching defects
+    at the right tier?
+
+-   **Dashboard → Layer 4 (Resolution):** SLA breach alerts trigger
+    backlog review. The dashboard answers: are we resolving defects fast
+    enough?
+
+-   **Dashboard → Layer 5 (Taxonomy):** Defects that don't fit existing
+    categories trigger taxonomy expansion. The dashboard answers: is our
+    classification system complete?

@@ -1,0 +1,35 @@
+replicaCount: 1
+
+image:
+  repository: noui/derp-intelligence
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8082
+
+env:
+  CONNECTOR_URL: "http://derp-connector:8081"
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 8082
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: 8082
+  initialDelaySeconds: 3
+  periodSeconds: 5

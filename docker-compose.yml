@@ -1,0 +1,153 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: derp
+      POSTGRES_USER: derp
+      POSTGRES_PASSWORD: derp
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./domains/pension/schema/001_legacy_schema.sql:/docker-entrypoint-initdb.d/001_legacy_schema.sql
+      - ./domains/pension/schema/002_crm_schema.sql:/docker-entrypoint-initdb.d/002_crm_schema.sql
+      - ./domains/pension/seed/002_legacy_seed.sql:/docker-entrypoint-initdb.d/003_legacy_seed.sql
+      - ./domains/pension/seed/003_crm_seed.sql:/docker-entrypoint-initdb.d/004_crm_seed.sql
+      - ./domains/pension/schema/003_knowledgebase_schema.sql:/docker-entrypoint-initdb.d/005_knowledgebase_schema.sql
+      - ./domains/pension/schema/004_dataquality_schema.sql:/docker-entrypoint-initdb.d/006_dataquality_schema.sql
+      - ./domains/pension/schema/005_correspondence_schema.sql:/docker-entrypoint-initdb.d/007_correspondence_schema.sql
+      - ./domains/pension/seed/004_knowledgebase_seed.sql:/docker-entrypoint-initdb.d/008_knowledgebase_seed.sql
+      - ./domains/pension/seed/005_dataquality_seed.sql:/docker-entrypoint-initdb.d/009_dataquality_seed.sql
+      - ./domains/pension/seed/006_correspondence_seed.sql:/docker-entrypoint-initdb.d/010_correspondence_seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U derp"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  dataaccess:
+    build:
+      context: ./platform/dataaccess
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      PORT: "8081"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: derp
+      DB_PASSWORD: derp
+      DB_NAME: derp
+      DB_SSLMODE: disable
+      CORS_ORIGIN: "http://localhost:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  intelligence:
+    build:
+      context: ./platform/intelligence
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8082"
+    environment:
+      PORT: "8082"
+      CONNECTOR_URL: "http://dataaccess:8081"
+      CORS_ORIGIN: "http://localhost:3000"
+    depends_on:
+      - dataaccess
+
+  crm:
+    build:
+      context: ./platform/crm
+      dockerfile: Dockerfile
+    ports:
+      - "8084:8083"
+    environment:
+      PORT: "8083"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: derp
+      DB_PASSWORD: derp
+      DB_NAME: derp
+      DB_SSLMODE: disable
+      CORS_ORIGIN: "http://localhost:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  knowledgebase:
+    build:
+      context: ./platform/knowledgebase
+      dockerfile: Dockerfile
+    ports:
+      - "8087:8087"
+    environment:
+      PORT: "8087"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: derp
+      DB_PASSWORD: derp
+      DB_NAME: derp
+      DB_SSLMODE: disable
+      CORS_ORIGIN: "http://localhost:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  dataquality:
+    build:
+      context: ./platform/dataquality
+      dockerfile: Dockerfile
+    ports:
+      - "8086:8086"
+    environment:
+      PORT: "8086"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: derp
+      DB_PASSWORD: derp
+      DB_NAME: derp
+      DB_SSLMODE: disable
+      CORS_ORIGIN: "http://localhost:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  correspondence:
+    build:
+      context: ./platform/correspondence
+      dockerfile: Dockerfile
+    ports:
+      - "8085:8085"
+    environment:
+      PORT: "8085"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: derp
+      DB_PASSWORD: derp
+      DB_NAME: derp
+      DB_SSLMODE: disable
+      CORS_ORIGIN: "http://localhost:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - dataaccess
+      - intelligence
+      - crm
+      - knowledgebase
+      - dataquality
+      - correspondence
+
+volumes:
+  pgdata:

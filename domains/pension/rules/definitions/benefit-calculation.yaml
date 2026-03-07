@@ -1,0 +1,813 @@
+# =============================================================================
+# DERP Benefit Calculation Rules
+# =============================================================================
+# Domain: benefit-calculation
+# Rules: RULE-AMS-WINDOW, RULE-AMS-CALC, RULE-LEAVE-PAYOUT, RULE-FURLOUGH,
+#        RULE-BENEFIT-T1, RULE-BENEFIT-T2, RULE-BENEFIT-T3,
+#        RULE-REDUCTION-APPLY, RULE-ROUNDING
+# Authority: DERP Restated Master Contract (RMC)
+# =============================================================================
+
+metadata:
+  domain: "benefit-calculation"
+  version: "1.0.0"
+  effective_date: "2026-03-02"
+  authority: "DERP Restated Master Contract (RMC)"
+  description: >
+    Defines benefit calculation rules including Average Monthly Salary (AMS),
+    leave payout, furlough adjustments, tier-specific benefit formulas,
+    reduction application, and rounding.
+  governance:
+    owner: "DERP Rules Committee"
+    approved_by: "Plan Administrator"
+    approval_date: "2026-03-02"
+    review_cycle: "annual"
+    next_review_date: "2027-03-02"
+    audit_trail: true
+    change_log:
+      - version: "1.0.0"
+        date: "2026-03-02"
+        author: "Rules Committee"
+        description: "Initial benefit calculation rule definitions for DERP NoUI POC"
+
+rules:
+  # ===========================================================================
+  # RULE-AMS-WINDOW: Average Monthly Salary Window
+  # ===========================================================================
+  - id: "RULE-AMS-WINDOW"
+    name: "Average Monthly Salary Window Determination"
+    description: >
+      Determines the AMS calculation window based on tier:
+      - Tiers 1 and 2: highest 36 consecutive months
+      - Tier 3: highest 60 consecutive months
+    source_reference:
+      document: "RMC"
+      section: "Section 6.01 - Average Monthly Salary Definition"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "tier"
+        type: "enum"
+        required: true
+        constraints:
+          enum_values: ["tier_1", "tier_2", "tier_3"]
+    logic:
+      type: "conditional"
+      conditions:
+        - condition: "tier IN ('tier_1', 'tier_2')"
+          result:
+            ams_window_months: 36
+            ams_window_years: 3
+        - condition: "tier = 'tier_3'"
+          result:
+            ams_window_months: 60
+            ams_window_years: 5
+    output:
+      name: "ams_window"
+      type: "object"
+      fields:
+        - name: "ams_window_months"
+          type: "integer"
+        - name: "ams_window_years"
+          type: "integer"
+    tags: ["benefit", "ams", "window"]
+    test_cases:
+      - name: "Happy path - Tier 1 gets 36-month window"
+        type: "happy_path"
+        demo_case_ref: "Case 1: Robert Martinez - Tier 1"
+        inputs:
+          tier: "tier_1"
+        expected:
+          ams_window_months: 36
+          ams_window_years: 3
+      - name: "Boundary - Tier 2 also gets 36-month window"
+        type: "boundary"
+        demo_case_ref: "Case 2: Jennifer Kim - Tier 2"
+        inputs:
+          tier: "tier_2"
+        expected:
+          ams_window_months: 36
+          ams_window_years: 3
+      - name: "Below boundary - Tier 3 gets 60-month window"
+        type: "below_boundary"
+        demo_case_ref: "Case 3: David Washington - Tier 3"
+        description: "Tier 3 has a longer AMS window"
+        inputs:
+          tier: "tier_3"
+        expected:
+          ams_window_months: 60
+          ams_window_years: 5
+      - name: "Negative - invalid tier"
+        type: "negative"
+        inputs:
+          tier: "tier_4"
+        expected:
+          error: "INVALID_TIER"
+          message: "tier must be one of: tier_1, tier_2, tier_3"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-AMS-CALC: Average Monthly Salary Calculation
+  # ===========================================================================
+  - id: "RULE-AMS-CALC"
+    name: "Average Monthly Salary Calculation"
+    description: >
+      Calculates the Average Monthly Salary (AMS) as the total pensionable
+      salary over the highest consecutive N months (36 or 60 per tier)
+      divided by N. Includes leave payout if eligible.
+    source_reference:
+      document: "RMC"
+      section: "Section 6.02 - AMS Calculation"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "monthly_salary_history"
+        type: "list"
+        required: true
+        description: "Array of monthly salary records sorted by date"
+      - name: "ams_window_months"
+        type: "integer"
+        required: true
+        description: "Number of months in the AMS window (36 or 60)"
+      - name: "leave_payout_amount"
+        type: "decimal"
+        required: false
+        default: 0.0
+        description: "Leave payout to be added to final period salary"
+    logic:
+      type: "procedural"
+      steps:
+        - step: 1
+          action: "Add leave_payout_amount to the last month of salary history if applicable"
+        - step: 2
+          action: "Find the highest consecutive ams_window_months period"
+        - step: 3
+          action: "Sum all salaries in that window"
+        - step: 4
+          action: "Divide by ams_window_months to get AMS"
+        - step: 5
+          action: "Round to 2 decimal places"
+    dependencies: ["RULE-AMS-WINDOW", "RULE-LEAVE-PAYOUT"]
+    output:
+      name: "ams"
+      type: "decimal"
+      precision: 2
+      description: "Average Monthly Salary"
+    tags: ["benefit", "ams", "calculation"]
+    test_cases:
+      - name: "Happy path - Robert Martinez AMS with leave payout"
+        type: "happy_path"
+        demo_case_ref: "Case 1: Robert Martinez - Tier 1"
+        description: "36-month window, steady salary with leave payout boost"
+        inputs:
+          monthly_salary_history: "36 months at $7,500/month"
+          ams_window_months: 36
+          leave_payout_amount: 15000.00
+        expected:
+          ams: 7916.67
+          notes: "($7,500 * 36 + $15,000) / 36 = $7,916.67"
+      - name: "Boundary - exactly enough salary history"
+        type: "boundary"
+        description: "Member with exactly 36 months of history"
+        inputs:
+          monthly_salary_history: "36 months at $5,000/month"
+          ams_window_months: 36
+          leave_payout_amount: 0.0
+        expected:
+          ams: 5000.00
+      - name: "Below boundary - Tier 3 with 60-month window"
+        type: "below_boundary"
+        demo_case_ref: "Case 3: David Washington - Tier 3"
+        description: "60-month window smooths salary variations more"
+        inputs:
+          monthly_salary_history: "60 months at $5,500/month"
+          ams_window_months: 60
+          leave_payout_amount: 0.0
+        expected:
+          ams: 5500.00
+      - name: "Negative - insufficient salary history"
+        type: "negative"
+        description: "Less than required months of history"
+        inputs:
+          monthly_salary_history: "24 months at $6,000/month"
+          ams_window_months: 36
+          leave_payout_amount: 0.0
+        expected:
+          error: "INSUFFICIENT_HISTORY"
+          message: "Salary history has 24 months but AMS window requires 36"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-LEAVE-PAYOUT: Leave Payout Eligibility
+  # ===========================================================================
+  - id: "RULE-LEAVE-PAYOUT"
+    name: "Leave Payout Eligibility and Calculation"
+    description: >
+      Members hired BEFORE January 1, 2010 are eligible to have their
+      accumulated sick and vacation leave payout added to their final
+      salary for AMS calculation. Members hired on or after Jan 1, 2010
+      are NOT eligible for leave payout.
+    source_reference:
+      document: "RMC"
+      section: "Section 6.03 - Leave Payout"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["active"]
+    inputs:
+      - name: "hire_date"
+        type: "date"
+        required: true
+      - name: "accumulated_sick_leave_hours"
+        type: "decimal"
+        required: false
+        default: 0.0
+      - name: "accumulated_vacation_hours"
+        type: "decimal"
+        required: false
+        default: 0.0
+      - name: "hourly_rate"
+        type: "decimal"
+        required: false
+        description: "Hourly rate for leave payout calculation"
+    logic:
+      type: "conditional"
+      conditions:
+        - condition: "hire_date < '2010-01-01'"
+          result:
+            leave_payout_eligible: true
+            leave_payout_amount: "(accumulated_sick_leave_hours + accumulated_vacation_hours) * hourly_rate"
+        - condition: "hire_date >= '2010-01-01'"
+          result:
+            leave_payout_eligible: false
+            leave_payout_amount: 0.0
+    output:
+      name: "leave_payout"
+      type: "object"
+      fields:
+        - name: "leave_payout_eligible"
+          type: "boolean"
+        - name: "leave_payout_amount"
+          type: "decimal"
+          precision: 2
+    tags: ["benefit", "leave-payout"]
+    test_cases:
+      - name: "Happy path - Robert Martinez leave payout eligible"
+        type: "happy_path"
+        demo_case_ref: "Case 1: Robert Martinez - Tier 1"
+        description: "Hired 1998, eligible for leave payout"
+        inputs:
+          hire_date: "1998-06-15"
+          accumulated_sick_leave_hours: 480.0
+          accumulated_vacation_hours: 200.0
+          hourly_rate: 43.27
+        expected:
+          leave_payout_eligible: true
+          leave_payout_amount: 29423.60
+          notes: "(480 + 200) * $43.27 = $29,423.60"
+      - name: "Boundary - hired Dec 31, 2009 (last eligible date)"
+        type: "boundary"
+        description: "Last day before the cutoff"
+        inputs:
+          hire_date: "2009-12-31"
+          accumulated_sick_leave_hours: 100.0
+          accumulated_vacation_hours: 50.0
+          hourly_rate: 30.00
+        expected:
+          leave_payout_eligible: true
+          leave_payout_amount: 4500.00
+      - name: "Below boundary - hired Jan 1, 2010 (not eligible)"
+        type: "below_boundary"
+        description: "Hired on the cutoff date - NOT eligible"
+        inputs:
+          hire_date: "2010-01-01"
+          accumulated_sick_leave_hours: 500.0
+          accumulated_vacation_hours: 200.0
+          hourly_rate: 40.00
+        expected:
+          leave_payout_eligible: false
+          leave_payout_amount: 0.0
+      - name: "Negative - David Washington not eligible (hired 2015)"
+        type: "negative"
+        demo_case_ref: "Case 3: David Washington - Tier 3"
+        description: "Tier 3 member hired after 2010, no leave payout"
+        inputs:
+          hire_date: "2015-01-10"
+          accumulated_sick_leave_hours: 300.0
+          accumulated_vacation_hours: 100.0
+          hourly_rate: 35.00
+        expected:
+          leave_payout_eligible: false
+          leave_payout_amount: 0.0
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-FURLOUGH: Furlough Salary Adjustment
+  # ===========================================================================
+  - id: "RULE-FURLOUGH"
+    name: "Furlough Salary Adjustment"
+    description: >
+      If a member experienced furlough days during their AMS window,
+      the affected months are adjusted to reflect what the salary would
+      have been without the furlough reduction.
+    source_reference:
+      document: "RMC"
+      section: "Section 6.04 - Furlough Adjustment"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "monthly_salary"
+        type: "decimal"
+        required: true
+        description: "Actual monthly salary received (reduced by furlough)"
+      - name: "furlough_days_in_month"
+        type: "integer"
+        required: true
+        description: "Number of furlough days in the month"
+      - name: "working_days_in_month"
+        type: "integer"
+        required: true
+        description: "Total working days in the month (before furlough)"
+    logic:
+      type: "formula"
+      expression: >
+        adjusted_salary = monthly_salary * (working_days_in_month / (working_days_in_month - furlough_days_in_month))
+      description: "Gross up the salary to remove furlough impact"
+    output:
+      name: "adjusted_salary"
+      type: "decimal"
+      precision: 2
+    tags: ["benefit", "furlough", "adjustment"]
+    test_cases:
+      - name: "Happy path - 2 furlough days in 22-day month"
+        type: "happy_path"
+        description: "Standard furlough adjustment"
+        inputs:
+          monthly_salary: 6818.18
+          furlough_days_in_month: 2
+          working_days_in_month: 22
+        expected:
+          adjusted_salary: 7500.00
+          notes: "$6,818.18 * (22 / 20) = $7,500.00"
+      - name: "Boundary - 0 furlough days"
+        type: "boundary"
+        description: "No adjustment needed when no furlough"
+        inputs:
+          monthly_salary: 7500.00
+          furlough_days_in_month: 0
+          working_days_in_month: 22
+        expected:
+          adjusted_salary: 7500.00
+      - name: "Below boundary - 1 furlough day"
+        type: "below_boundary"
+        description: "Minimal furlough adjustment"
+        inputs:
+          monthly_salary: 7159.09
+          furlough_days_in_month: 1
+          working_days_in_month: 22
+        expected:
+          adjusted_salary: 7500.00
+          notes: "$7,159.09 * (22 / 21) = ~$7,500.00"
+      - name: "Negative - furlough days exceed working days"
+        type: "negative"
+        description: "Invalid - cannot furlough more days than working days"
+        inputs:
+          monthly_salary: 1000.00
+          furlough_days_in_month: 25
+          working_days_in_month: 22
+        expected:
+          error: "INVALID_FURLOUGH"
+          message: "furlough_days_in_month cannot exceed working_days_in_month"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-BENEFIT-T1: Tier 1 Benefit Formula
+  # ===========================================================================
+  - id: "RULE-BENEFIT-T1"
+    name: "Tier 1 Benefit Formula"
+    description: >
+      Tier 1 monthly benefit = AMS * 2.0% * total_service_for_benefit.
+      Total service for benefit includes both earned and purchased service.
+      The 2.0% multiplier is UNIQUE to Tier 1.
+    source_reference:
+      document: "RMC"
+      section: "Section 7.01(a) - Tier 1 Benefit Formula"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "ams"
+        type: "decimal"
+        required: true
+        description: "Average Monthly Salary"
+      - name: "total_service_for_benefit"
+        type: "decimal"
+        required: true
+        description: "Earned + purchased service years (for benefit calculation)"
+      - name: "tier"
+        type: "enum"
+        required: true
+        constraints:
+          enum_values: ["tier_1"]
+    logic:
+      type: "formula"
+      expression: "monthly_benefit = ams * 0.020 * total_service_for_benefit"
+      variables:
+        multiplier: 0.020
+    output:
+      name: "unreduced_monthly_benefit"
+      type: "decimal"
+      precision: 2
+    dependencies: ["RULE-AMS-CALC", "RULE-SVC-SEPARATION"]
+    tags: ["benefit", "formula", "tier-1"]
+    test_cases:
+      - name: "Happy path - Robert Martinez Tier 1 benefit"
+        type: "happy_path"
+        demo_case_ref: "Case 1: Robert Martinez - Tier 1"
+        description: "AMS $7,916.67, 27.5 years service, 2.0% multiplier"
+        inputs:
+          ams: 7916.67
+          total_service_for_benefit: 27.5
+          tier: "tier_1"
+        expected:
+          unreduced_monthly_benefit: 4354.17
+          notes: "$7,916.67 * 0.020 * 27.5 = $4,354.17"
+      - name: "Boundary - minimum service (5 years)"
+        type: "boundary"
+        description: "Tier 1 with minimum vesting service"
+        inputs:
+          ams: 5000.00
+          total_service_for_benefit: 5.0
+          tier: "tier_1"
+        expected:
+          unreduced_monthly_benefit: 500.00
+          notes: "$5,000 * 0.020 * 5.0 = $500.00"
+      - name: "Below boundary - very short service"
+        type: "below_boundary"
+        description: "Small benefit with short service"
+        inputs:
+          ams: 4000.00
+          total_service_for_benefit: 5.5
+          tier: "tier_1"
+        expected:
+          unreduced_monthly_benefit: 440.00
+      - name: "Negative - wrong tier"
+        type: "negative"
+        description: "Tier 2 member should not use Tier 1 formula"
+        inputs:
+          ams: 6000.00
+          total_service_for_benefit: 20.0
+          tier: "tier_2"
+        expected:
+          error: "WRONG_TIER"
+          message: "RULE-BENEFIT-T1 only applies to Tier 1 members"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-BENEFIT-T2: Tier 2 Benefit Formula
+  # ===========================================================================
+  - id: "RULE-BENEFIT-T2"
+    name: "Tier 2 Benefit Formula"
+    description: >
+      Tier 2 monthly benefit = AMS * 1.5% * total_service_for_benefit.
+      Total service for benefit includes both earned and purchased service.
+    source_reference:
+      document: "RMC"
+      section: "Section 7.01(b) - Tier 2 Benefit Formula"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_2"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "ams"
+        type: "decimal"
+        required: true
+      - name: "total_service_for_benefit"
+        type: "decimal"
+        required: true
+        description: "Earned + purchased service years"
+      - name: "tier"
+        type: "enum"
+        required: true
+        constraints:
+          enum_values: ["tier_2"]
+    logic:
+      type: "formula"
+      expression: "monthly_benefit = ams * 0.015 * total_service_for_benefit"
+      variables:
+        multiplier: 0.015
+    output:
+      name: "unreduced_monthly_benefit"
+      type: "decimal"
+      precision: 2
+    dependencies: ["RULE-AMS-CALC", "RULE-SVC-SEPARATION"]
+    tags: ["benefit", "formula", "tier-2"]
+    test_cases:
+      - name: "Happy path - Jennifer Kim Tier 2 benefit"
+        type: "happy_path"
+        demo_case_ref: "Case 2: Jennifer Kim - Tier 2"
+        description: "AMS $6,000, 23 years total service (20 earned + 3 purchased), 1.5%"
+        inputs:
+          ams: 6000.00
+          total_service_for_benefit: 23.0
+          tier: "tier_2"
+        expected:
+          unreduced_monthly_benefit: 2070.00
+          notes: "$6,000 * 0.015 * 23.0 = $2,070.00"
+      - name: "Boundary - Tier 2 with only earned service"
+        type: "boundary"
+        description: "No purchased service, 20 years earned only"
+        inputs:
+          ams: 6000.00
+          total_service_for_benefit: 20.0
+          tier: "tier_2"
+        expected:
+          unreduced_monthly_benefit: 1800.00
+          notes: "$6,000 * 0.015 * 20.0 = $1,800.00"
+      - name: "Below boundary - minimum service"
+        type: "below_boundary"
+        description: "Tier 2 with exactly 5 years"
+        inputs:
+          ams: 4500.00
+          total_service_for_benefit: 5.0
+          tier: "tier_2"
+        expected:
+          unreduced_monthly_benefit: 337.50
+      - name: "Negative - do not use 2.0% multiplier"
+        type: "negative"
+        description: "Ensures Tier 2 uses 1.5%, not Tier 1's 2.0%"
+        inputs:
+          ams: 6000.00
+          total_service_for_benefit: 23.0
+          tier: "tier_2"
+        expected:
+          unreduced_monthly_benefit: 2070.00
+          must_not_equal: 2760.00
+        notes: >
+          If incorrectly using 2.0% multiplier: $6,000 * 0.020 * 23 = $2,760.
+          Correct with 1.5%: $6,000 * 0.015 * 23 = $2,070.
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-BENEFIT-T3: Tier 3 Benefit Formula
+  # ===========================================================================
+  - id: "RULE-BENEFIT-T3"
+    name: "Tier 3 Benefit Formula"
+    description: >
+      Tier 3 monthly benefit = AMS * 1.5% * total_service_for_benefit.
+      Same multiplier as Tier 2 but with 60-month AMS window.
+    source_reference:
+      document: "RMC"
+      section: "Section 7.01(c) - Tier 3 Benefit Formula"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_3"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "ams"
+        type: "decimal"
+        required: true
+      - name: "total_service_for_benefit"
+        type: "decimal"
+        required: true
+      - name: "tier"
+        type: "enum"
+        required: true
+        constraints:
+          enum_values: ["tier_3"]
+    logic:
+      type: "formula"
+      expression: "monthly_benefit = ams * 0.015 * total_service_for_benefit"
+      variables:
+        multiplier: 0.015
+    output:
+      name: "unreduced_monthly_benefit"
+      type: "decimal"
+      precision: 2
+    dependencies: ["RULE-AMS-CALC", "RULE-SVC-SEPARATION"]
+    tags: ["benefit", "formula", "tier-3"]
+    test_cases:
+      - name: "Happy path - David Washington Tier 3 benefit"
+        type: "happy_path"
+        demo_case_ref: "Case 3: David Washington - Tier 3"
+        description: "AMS $5,500, 11 years service, 1.5%"
+        inputs:
+          ams: 5500.00
+          total_service_for_benefit: 11.0
+          tier: "tier_3"
+        expected:
+          unreduced_monthly_benefit: 907.50
+          notes: "$5,500 * 0.015 * 11.0 = $907.50"
+      - name: "Boundary - Tier 3 with purchased service included"
+        type: "boundary"
+        description: "Purchased service counts for benefit formula"
+        inputs:
+          ams: 5500.00
+          total_service_for_benefit: 15.0
+          tier: "tier_3"
+        expected:
+          unreduced_monthly_benefit: 1237.50
+      - name: "Below boundary - minimum service"
+        type: "below_boundary"
+        inputs:
+          ams: 4000.00
+          total_service_for_benefit: 5.0
+          tier: "tier_3"
+        expected:
+          unreduced_monthly_benefit: 300.00
+      - name: "Negative - wrong tier for this formula"
+        type: "negative"
+        inputs:
+          ams: 5500.00
+          total_service_for_benefit: 11.0
+          tier: "tier_1"
+        expected:
+          error: "WRONG_TIER"
+          message: "RULE-BENEFIT-T3 only applies to Tier 3 members"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-REDUCTION-APPLY: Apply Early Retirement Reduction
+  # ===========================================================================
+  - id: "RULE-REDUCTION-APPLY"
+    name: "Apply Early Retirement Reduction to Benefit"
+    description: >
+      Applies the statutory early retirement reduction factor to the
+      unreduced monthly benefit. The factor comes from the appropriate
+      tier lookup table (RULE-EARLY-REDUCE-T12 or RULE-EARLY-REDUCE-T3).
+      If the member qualifies for normal retirement or Rule of 75/85,
+      the reduction factor is 1.00 (no reduction).
+    source_reference:
+      document: "RMC"
+      section: "Section 7.02 - Application of Reduction Factors"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "unreduced_monthly_benefit"
+        type: "decimal"
+        required: true
+      - name: "reduction_factor"
+        type: "decimal"
+        required: true
+        description: "From statutory lookup table (0.70 to 1.00)"
+        constraints:
+          min: 0.70
+          max: 1.00
+    logic:
+      type: "formula"
+      expression: "reduced_monthly_benefit = unreduced_monthly_benefit * reduction_factor"
+    output:
+      name: "reduced_monthly_benefit"
+      type: "decimal"
+      precision: 2
+    dependencies: ["RULE-EARLY-REDUCE-T12", "RULE-EARLY-REDUCE-T3", "RULE-ELIG-HIERARCHY"]
+    tags: ["benefit", "reduction", "application"]
+    test_cases:
+      - name: "Happy path - Robert Martinez no reduction (Rule of 75)"
+        type: "happy_path"
+        demo_case_ref: "Case 1: Robert Martinez - Tier 1"
+        description: "Rule of 75 qualifier gets factor 1.00"
+        inputs:
+          unreduced_monthly_benefit: 4354.17
+          reduction_factor: 1.00
+        expected:
+          reduced_monthly_benefit: 4354.17
+      - name: "Boundary - Jennifer Kim 30% reduction at age 55"
+        type: "boundary"
+        demo_case_ref: "Case 2: Jennifer Kim - Tier 2"
+        description: >
+          NOTE: Jennifer actually qualifies for Rule of 75 (55+20=75), so
+          her reduction would be 1.00. This test shows what would happen
+          IF she were subject to early reduction.
+        inputs:
+          unreduced_monthly_benefit: 2070.00
+          reduction_factor: 0.70
+        expected:
+          reduced_monthly_benefit: 1449.00
+          notes: "$2,070.00 * 0.70 = $1,449.00 (30% reduction)"
+      - name: "Below boundary - David Washington 18% reduction"
+        type: "below_boundary"
+        demo_case_ref: "Case 3: David Washington - Tier 3"
+        description: "Tier 3, age 62, factor 0.82 from statutory table"
+        inputs:
+          unreduced_monthly_benefit: 907.50
+          reduction_factor: 0.82
+        expected:
+          reduced_monthly_benefit: 744.15
+          notes: "$907.50 * 0.82 = $744.15"
+      - name: "Negative - reduction factor out of range"
+        type: "negative"
+        description: "Factor below 0.70 is not in any statutory table"
+        inputs:
+          unreduced_monthly_benefit: 3000.00
+          reduction_factor: 0.50
+        expected:
+          error: "INVALID_FACTOR"
+          message: "reduction_factor must be between 0.70 and 1.00"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-ROUNDING: Benefit Rounding
+  # ===========================================================================
+  - id: "RULE-ROUNDING"
+    name: "Benefit Amount Rounding"
+    description: >
+      All benefit amounts are rounded to 2 decimal places (nearest cent)
+      using standard rounding (round half up). This applies to intermediate
+      and final calculations.
+    source_reference:
+      document: "RMC"
+      section: "Section 7.10 - Rounding"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["active", "terminated", "retired"]
+    inputs:
+      - name: "raw_amount"
+        type: "decimal"
+        required: true
+        description: "Unrounded monetary amount"
+    logic:
+      type: "formula"
+      expression: "rounded_amount = ROUND(raw_amount, 2)"
+      rounding_method: "half_up"
+    output:
+      name: "rounded_amount"
+      type: "decimal"
+      precision: 2
+    tags: ["benefit", "rounding", "utility"]
+    test_cases:
+      - name: "Happy path - standard rounding"
+        type: "happy_path"
+        inputs:
+          raw_amount: 4354.1684
+        expected:
+          rounded_amount: 4354.17
+      - name: "Boundary - round half up"
+        type: "boundary"
+        description: "Exactly 0.005 rounds up"
+        inputs:
+          raw_amount: 1000.005
+        expected:
+          rounded_amount: 1000.01
+      - name: "Below boundary - round down"
+        type: "below_boundary"
+        description: "Just below half rounds down"
+        inputs:
+          raw_amount: 1000.004
+        expected:
+          rounded_amount: 1000.00
+      - name: "Negative - negative amount"
+        type: "negative"
+        description: "Benefit amounts should never be negative"
+        inputs:
+          raw_amount: -500.123
+        expected:
+          error: "NEGATIVE_BENEFIT"
+          message: "Benefit amount cannot be negative"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"

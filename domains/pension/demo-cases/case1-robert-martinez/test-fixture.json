@@ -1,0 +1,62 @@
+{
+  "case_id": "case1-robert-martinez",
+  "description": "Tier 1, Rule of 75, leave payout included in AMS",
+  "member": {
+    "member_id": 10001,
+    "first_name": "Robert",
+    "last_name": "Martinez",
+    "dob": "1963-03-08",
+    "hire_date": "1997-06-15",
+    "tier": 1,
+    "marital_status": "M",
+    "status_code": "A"
+  },
+  "retirement_date": "2026-04-01",
+  "inputs": {
+    "age_at_retirement": { "years": 63, "months": 0 },
+    "earned_service_years": 28.75,
+    "purchased_service_years": 0,
+    "total_service_for_benefit": 28.75,
+    "total_service_for_eligibility": 28.75,
+    "ams_window_months": 36,
+    "leave_payout_amount": 52000.00,
+    "leave_payout_eligible": true
+  },
+  "expected_eligibility": {
+    "vested": true,
+    "rule_of_75_sum": 91.75,
+    "rule_of_75_met": true,
+    "best_eligible_type": "RULE_OF_75",
+    "reduction_pct": 0,
+    "reduction_factor": 1.0
+  },
+  "expected_benefit": {
+    "multiplier": 0.020,
+    "formula": "AMS × 2.0% × 28.75 yr",
+    "reduction_applies": false,
+    "death_benefit_amount": 5000.00,
+    "death_benefit_installment_50": 100.00,
+    "death_benefit_installment_100": 50.00
+  },
+  "expected_ipr": {
+    "earned_service_years": 28.75,
+    "non_medicare_monthly": 359.38,
+    "medicare_monthly": 179.69,
+    "note": "IPR uses earned service only — no purchased service for Case 1"
+  },
+  "timeline": {
+    "last_day_worked": "2026-03-31",
+    "application_received": "2026-03-10",
+    "effective_date": "2026-04-01",
+    "first_payment": "2026-04-01"
+  },
+  "test_points": [
+    "Tier correctly determined as 1 (hired before Sep 1, 2004)",
+    "Rule of 75 met: 63 + 28.75 = 91.75 >= 75",
+    "No early retirement reduction applied",
+    "Leave payout included in AMS (hired before 2010)",
+    "Death benefit = $5,000 (normal/Rule of 75 retirement)",
+    "Purchased service exclusion not applicable (no purchased service)",
+    "Application within 30-day deadline"
+  ]
+}

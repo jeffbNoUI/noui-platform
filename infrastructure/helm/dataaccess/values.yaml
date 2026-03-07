@@ -1,0 +1,39 @@
+replicaCount: 1
+
+image:
+  repository: noui/derp-dataaccess
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8081
+
+env:
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_USER: derp
+  DB_NAME: derp
+  DB_SSLMODE: disable
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 8081
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: 8081
+  initialDelaySeconds: 3
+  periodSeconds: 5

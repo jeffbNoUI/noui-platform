@@ -1,0 +1,78 @@
+{
+  "case_id": "case3-david-washington",
+  "description": "Tier 3, early retirement with 12% reduction",
+  "member": {
+    "member_id": 10003,
+    "first_name": "David",
+    "last_name": "Washington",
+    "dob": "1963-02-14",
+    "hire_date": "2012-09-01",
+    "tier": 3,
+    "marital_status": "S",
+    "status_code": "A"
+  },
+  "retirement_date": "2026-04-01",
+  "inputs": {
+    "age_at_retirement": { "years": 63, "months": 1 },
+    "age_completed_years": 63,
+    "earned_service_years": 13.58,
+    "purchased_service_years": 0,
+    "total_service_for_benefit": 13.58,
+    "total_service_for_eligibility": 13.58,
+    "ams_window_months": 60,
+    "leave_payout_eligible": false,
+    "leave_payout_note": "Hired after 2010 — not eligible for leave payout"
+  },
+  "expected_eligibility": {
+    "vested": true,
+    "rule_of_85_sum": 76.58,
+    "rule_of_85_met": false,
+    "best_eligible_type": "EARLY",
+    "reduction_pct": 12.0,
+    "reduction_factor": 0.88,
+    "note": "6% per year × 2 years under 65 = 12% reduction (Tier 3 uses 6%)"
+  },
+  "expected_benefit": {
+    "multiplier": 0.015,
+    "formula": "AMS × 1.5% × 13.58 yr",
+    "reduction_applies": true,
+    "rate_per_year": 6.0,
+    "years_under_65": 2,
+    "total_reduction_pct": 12.0,
+    "reduction_factor": 0.88,
+    "source": "RMC §18-409(b) — Statutory table: age 63 → factor 0.88",
+    "death_benefit_amount": 4000.00,
+    "death_benefit_installment_50": 80.00,
+    "death_benefit_installment_100": 40.00,
+    "death_benefit_note": "Tier 3 table: $5,000 - ($500 × 2 years under 65) = $4,000"
+  },
+  "expected_ipr": {
+    "earned_service_years": 13.58,
+    "non_medicare_monthly": 169.75,
+    "medicare_monthly": 84.88
+  },
+  "tier_3_distinctions": [
+    "AMS window is 60 months (vs 36 for Tiers 1&2)",
+    "Rule of 85 threshold (vs Rule of 75 for Tiers 1&2)",
+    "Minimum early retirement age 60 (vs 55 for Tiers 1&2)",
+    "Early retirement reduction 6%/year (vs 3%/year for Tiers 1&2)",
+    "Death benefit reduction $500/year under 65 (vs $250 for Tiers 1&2)",
+    "Leave payout not eligible (hired after 2010)"
+  ],
+  "timeline": {
+    "last_day_worked": "2026-03-31",
+    "application_received": "2026-03-12",
+    "effective_date": "2026-04-01",
+    "first_payment": "2026-04-01"
+  },
+  "test_points": [
+    "Tier correctly determined as 3 (hired on/after Jul 1, 2011)",
+    "Rule of 85 NOT met: 63 + 13.58 = 76.58 < 85",
+    "Early retirement eligible: age 63 >= 60 (Tier 3 minimum)",
+    "Reduction: 12% (6% × 2 years under 65)",
+    "Statutory table lookup: age 63 → factor 0.88",
+    "AMS uses 60-month window (Tier 3 provision)",
+    "Leave payout NOT included (hired after 2010)",
+    "Death benefit: $4,000 (Tier 3 table, early retirement age 63)"
+  ]
+}

@@ -1,0 +1,598 @@
+NoUI Platform
+
+**Defect Resolution &**
+
+**Prioritized Backlog Process**
+
+Layer 4 of 5: Defect Management System
+
+DERP Proof of Concept
+
+Version 1.0 --- February 2026
+
+Document Status: Draft for Review
+
+1\. Purpose
+
+Layers 1 through 3 of the Defect Management System prevent, detect, and
+surface defects. This document---Layer 4---defines how defects are
+resolved: from the moment a defect enters the backlog through
+investigation, fix implementation, verification, and closure. The goal
+is to maintain a near-zero defect inventory for Critical and High
+severity items while systematically driving the total count down over
+time.
+
+In pension administration, the resolution process must be as rigorous as
+the detection process. A hasty fix that introduces a new defect is worse
+than the original problem---it erodes trust and may affect a different
+(and possibly larger) member population. Every fix goes through the same
+controlled deployment process defined in Layer 1, Section 7. There are
+no shortcuts.
+
+1.1 Resolution Principles
+
+-   **Fix the root cause, not the symptom.** If a test fails because the
+    Tier 1 multiplier is 1.5% instead of 2.0%, the fix is in the rule
+    definition---not in the test expected value, and not in a
+    special-case override.
+
+-   **One defect, one fix, one verification.** Do not bundle unrelated
+    fixes. Each defect is resolved by a single, traceable change that
+    can be independently verified and independently rolled back.
+
+-   **Verify with the oracle, not with the developer's judgment.** A fix
+    is verified when the test passes against the hand-calculated oracle,
+    not when the developer believes the code is correct.
+
+-   **Fixes must be applied in a test environment first.** No fix goes
+    directly to production. The controlled deployment process (Layer 1,
+    Section 7) is mandatory for every fix, regardless of urgency.
+
+-   **Every fix creates positive test coverage.** The defect that was
+    found becomes a permanent test case. The system can never regress to
+    the same defect without the test catching it.
+
+2\. Defect Lifecycle
+
+Every defect follows a defined lifecycle with five states. Transitions
+between states are explicit, auditable, and require specific conditions
+to be met.
+
+  --------------------- ------------------------ ------------------ ------------------
+  **Status**            **Definition**           **Entry            **Exit Condition**
+                                                 Condition**        
+
+  **OPEN**              Defect has been detected Defect record      Assigned to a
+                        and classified but no    created by any     resolver. Status
+                        one has begun            Layer 2 source or  moves to
+                        investigating. SLA timer manual report.     IN_PROGRESS.
+                        is running.                                 
+
+  **IN_PROGRESS**       A resolver is actively   Resolver assigned  Fix implemented in
+                        investigating or         and has            test environment
+                        implementing a fix. Root acknowledged.      and all affected
+                        cause identified or                         tests pass. Status
+                        being investigated.                         moves to
+                                                                    AWAITING_REVIEW.
+
+  **AWAITING_REVIEW**   Fix is implemented and   All affected tests Human reviewer
+                        passing tests in the     pass in test       approves. Status
+                        test environment.        environment.       moves to RESOLVED
+                        Awaiting human review of Change package     after deployment
+                        the complete change      assembled.         to production.
+                        package before                              
+                        promotion.                                  
+
+  **RESOLVED**          Fix has been deployed to Fix deployed       Post-deployment
+                        production.              through controlled tests pass in
+                        Post-deployment          deployment process production. Status
+                        verification is pending  (Layer 1, Section  moves to VERIFIED.
+                        or in progress.          7).                
+
+  **VERIFIED**          Fix is confirmed working Post-deployment    Terminal state.
+                        in production. The       verification       Defect cannot
+                        defect is closed. A      passes. Monitoring reopen---a
+                        permanent regression     window clean.      recurrence creates
+                        test exists.                                a new defect
+                                                                    linked to this
+                                                                    one.
+  --------------------- ------------------------ ------------------ ------------------
+
+> *A defect that recurs after VERIFIED status is a new defect, not a
+> reopened one. The new defect links to the original with a "regression
+> of DEF-XXXX" reference. This preserves clean metrics and signals that
+> the original fix was insufficient.*
+
+2.1 Rejected Transitions
+
+Certain lifecycle transitions are explicitly forbidden:
+
+-   **OPEN → RESOLVED:** A defect cannot be resolved without being
+    investigated. Every resolution requires evidence that a fix was
+    implemented and verified in a test environment.
+
+-   **OPEN → VERIFIED:** Same as above, with the additional violation of
+    skipping deployment verification.
+
+-   **IN_PROGRESS → VERIFIED:** A fix cannot be verified without first
+    being reviewed and deployed through the controlled process.
+
+-   **Any state → Deleted:** Defects are never deleted. If a defect was
+    created in error (e.g., infrastructure failure misclassified as a
+    calculation defect), it is resolved with a resolution note of "Not a
+    defect---\[reason\]" and verified. The audit trail is preserved.
+
+3\. Resolution Paths by Defect Category
+
+Each defect category from the Layer 1 taxonomy has a defined resolution
+path. The path specifies who investigates, what artifacts are produced,
+what review gate applies, and how verification works.
+
+  ------------------ ------------------ -------------------- ---------------- ------------------
+  **Category**       **Investigator**   **Resolution         **Review Gate**  **Verification**
+                                        Artifact**                            
+
+  **Calculation      Technical Director Code fix + updated   Full SDLC if     Affected demo case
+  Defect**           or delegated       test case +          rule change;     passes. All unit
+                     engineer           regression results   standard code    tests for affected
+                                                             review otherwise rule pass.
+
+  **Rule             Technical Director Updated rule         Full Rule Change Recalculated hand
+  Interpretation     with governing     derivation +         SDLC (Layer 1,   values match. All
+  Defect**           document analysis  corrected rule       Section 3.2).    demo cases
+                                        definition + new     Human            re-verified.
+                                        test cases +         certification    
+                                        hand-recalculation   mandatory.       
+
+  **Legacy Defect**  Technical Director Legacy Defect Report No code change.  No fix needed.
+                     (confirms NoUI is  documenting the      Report reviewed  Defect resolved
+                     correct)           discrepancy, both    and delivered to with "Legacy
+                                        calculations traced  agency as a      defect
+                                        to statute,          finding.         documented." Moves
+                                        statutory citation                    to VERIFIED.
+                                        proving NoUI is                       
+                                        correct                               
+
+  **Data Quality     Data Quality       Finding with         Agency approval  After agency
+  Defect**           Engine             evidence + proposed  required         applies
+                     (discovery) +      correction + impact  (ADR-005). NoUI  correction,
+                     agency staff       assessment           proposes; agency recalculation
+                     (correction                             decides.         produces correct
+                     authority)                                               results.
+
+  **Ambiguous        Technical          Two or more          Escalation to    After
+  Interpretation**   Director + plan    candidate            plan counsel or  determination,
+                     counsel or board   interpretations +    board for        rule updated
+                                        recommendation +     authoritative    through full SDLC
+                                        board resolution     determination.   with the
+                                                                              authoritative
+                                                                              interpretation.
+
+  **UX / Composition Frontend developer Component fix +      Composition      Correct component
+  Defect**           or workspace       positive and         change checklist appears for
+                     composition        negative composition (Layer 1,        affected cases.
+                     engineer           tests                Section 4.3).    Incorrect
+                                                                              component does NOT
+                                                                              appear.
+
+  **Integration      Service owner      API contract fix +   Integration      Full API chain
+  Defect**           (Connector,        boundary test        change checklist integration tests
+                     Intelligence, or   update + contract    (Layer 1,        pass. Affected
+                     Workspace)         verification on both Section 4.4).    demo cases pass
+                                        sides                                 end-to-end.
+
+  **Rounding         Calculation        Rounding strategy    If ±\$0.01:      Calculation
+  Variance**         engineer           documentation +      document and     matches oracle to
+                                        updated rounding     resolve. If      defined precision.
+                                        logic if outside     outside          
+                                        tolerance            tolerance:       
+                                                             standard code    
+                                                             review.          
+  ------------------ ------------------ -------------------- ---------------- ------------------
+
+Note that Legacy Defects and Ambiguous Interpretations have resolution
+paths that don't involve code changes to NoUI. Legacy defects are
+resolved by documenting the finding---they are a value-add delivery to
+the agency. Ambiguous interpretations are escalated to the authority
+that can make the determination (plan counsel or board). In both cases,
+the defect lifecycle still applies: the defect moves through OPEN →
+IN_PROGRESS → AWAITING_REVIEW → RESOLVED → VERIFIED even though the
+resolution is a document rather than a code change.
+
+4\. Prioritized Backlog
+
+All open defects exist in a single prioritized queue. There is no
+separate "known issues" list, no hidden backlog, and no informal
+tracking. If a defect exists, it is in this queue, it has a priority,
+and it is visible on the Layer 3 dashboard.
+
+4.1 Priority Assignment
+
+Priority is automatically derived from the severity × member impact
+scope matrix defined in Layer 1, Section 2.4. Manual priority overrides
+are permitted only by the Technical Director or Benefits Supervisor, and
+require a documented justification. A downgrade from the matrix-derived
+priority must explain why the defect is less urgent than its
+classification suggests. An upgrade is always permitted without
+justification.
+
+4.2 Queue Ordering
+
+Within each priority level, defects are ordered by three tiebreaker
+criteria applied in sequence:
+
+1.  **Age (oldest first).** Defects that have been open longest are
+    worked first. This prevents the anti-pattern where new, interesting
+    defects push older items further down the queue.
+
+2.  **Member impact count (highest first).** A defect affecting 5,000
+    Tier 1 members takes precedence over one affecting 200 Tier 3
+    members at the same priority level.
+
+3.  **Demo case association (associated first).** Defects that affect
+    rules exercised by the four demo cases are prioritized because they
+    are the most visible proof points.
+
+4.3 Backlog Health Targets
+
+  -------------- -------------- -------------- -------------- --------------
+  **Priority**   **Target       **SLA (from    **Escalation   **Health
+                 Count**        Layer 3)**     If Exceeded**  Indicator**
+
+  **P0 ---       0 (always)     Same business  All processing Any P0 open =
+  STOP**                        day            halted for     RED
+                                               affected       
+                                               types. Board   
+                                               notification   
+                                               if \> 24       
+                                               hours.         
+
+  **P1 ---       0              24 hours       Technical      Any P1 open =
+  Immediate**                                  Director       RED
+                                               review at 18   
+                                               hours.         
+                                               Reassign or    
+                                               add resources. 
+
+  **P2 ---       \< 5           Current sprint Sprint         \> 5 open =
+  Urgent**                                     planning       AMBER
+                                               review if      
+                                               count exceeds  
+                                               5.             
+
+  **P3 ---       \< 15          Next 2 sprints Backlog review \> 15 open =
+  Standard**                                   if count       AMBER
+                                               exceeds 15.    
+
+  **P4 ---       No limit       No SLA         Quarterly      No impact
+  Backlog**                                    review. Stale  
+                                               items (\> 90   
+                                               days) reviewed 
+                                               for closure or 
+                                               promotion.     
+  -------------- -------------- -------------- -------------- --------------
+
+> *The backlog health targets are assumptions for a small-team
+> operational model. They should be recalibrated after the first quarter
+> of production operations based on observed defect volume and team
+> capacity.*
+
+5\. Resolution Workflow
+
+This section defines the step-by-step workflow for resolving a defect,
+from discovery through verified closure. The workflow integrates with
+the controlled deployment process from Layer 1 and the test execution
+pipeline from Layer 2.
+
+5.1 Expedited Path (P0 and P1)
+
+Critical and immediate-priority defects follow an expedited path that
+compresses the standard workflow without skipping any verification step:
+
+4.  **Detection:** Defect is detected by test pipeline, data quality
+    engine, or manual report. Classified as P0 or P1. Dashboard goes
+    RED. Alert sent immediately.
+
+5.  **Triage (\< 30 minutes):** Technical Director confirms
+    classification. For P0: identifies affected case types and issues
+    processing halt order. For P1: confirms no active benefits are
+    affected.
+
+6.  **Root cause analysis:** Trace the defect to its origin using the
+    failure report (Layer 2, Section 6.2). Identify the exact rule,
+    calculation, data, or integration point that is wrong. Document the
+    root cause.
+
+7.  **Fix implementation (test environment):** Implement the fix in the
+    test environment. Run all affected tests plus full regression. For
+    P0: regression must complete cleanly with zero failures.
+
+8.  **Change package assembly:** Package includes: code diff, root cause
+    analysis, affected test results, full regression results, rollback
+    procedure.
+
+9.  **Human review:** Technical Director reviews the complete package.
+    For rule changes, this is the certification step from the SDLC. The
+    review confirms the fix addresses the root cause (not just the
+    symptom) and introduces no new risk.
+
+10. **Staged deployment:** Deploy to staging. Four demo cases run
+    against staging. All pass.
+
+11. **Production deployment:** Deploy to production. Affected tests run
+    against production. Post-deployment verification confirms the fix.
+
+12. **Monitoring window:** Enhanced Data Quality Engine scan focused on
+    the affected rules/data for 24--48 hours.
+
+13. **Closure:** If monitoring window is clean, defect moves to
+    VERIFIED. Dashboard updates. For P0: processing halt lifted for
+    affected case types.
+
+The entire expedited path for a P0 defect targets same-business-day
+resolution. Elapsed time is tracked and reported as a quality metric.
+
+5.2 Standard Path (P2 through P4)
+
+Lower-priority defects follow the same logical sequence but are
+scheduled within sprint capacity rather than treated as emergencies:
+
+14. **Backlog entry:** Defect enters the prioritized queue at its
+    derived position. SLA timer begins.
+
+15. **Sprint planning:** Defects are pulled into the active sprint based
+    on priority and capacity. P2 defects are pulled first, then P3. P4
+    items are pulled when capacity permits.
+
+16. **Investigation and fix:** Same root cause analysis and fix
+    implementation as the expedited path, but within the sprint
+    timeline.
+
+17. **Review and deployment:** Same controlled deployment process. No
+    corners cut---the verification requirements are identical regardless
+    of priority.
+
+18. **Verification and closure:** Post-deployment verification.
+    Monitoring window. Defect moves to VERIFIED.
+
+> *The difference between expedited and standard paths is scheduling,
+> not rigor. A P4 defect receives the same test coverage, review gate,
+> and deployment verification as a P0. The only difference is when the
+> work happens.*
+
+6\. Special Resolution Procedures
+
+Certain defect categories require specialized handling beyond the
+standard workflow.
+
+6.1 Data Quality Defects
+
+Data quality defects are unique because NoUI does not have authority to
+correct the data. Per ADR-005, all data corrections require human agency
+approval. The resolution workflow is:
+
+19. **Discovery:** Data Quality Engine identifies the finding and
+    classifies it by severity.
+
+20. **Evidence assembly:** The system prepares a finding package: the
+    affected member(s), the evidence of the data issue, the proposed
+    correction, and the impact assessment (what calculations would
+    change if the data is corrected).
+
+21. **Agency review:** The finding is presented to agency staff through
+    the workspace. Resolution categories: proposed correction (awaiting
+    review), requires research, requires agency decision.
+
+22. **Agency action:** Agency applies the correction in the source
+    system (or declines). NoUI does not modify the data.
+
+23. **Verification:** After agency correction, NoUI re-runs the affected
+    calculations to confirm the data quality issue is resolved.
+
+Data quality defects may have long resolution times because they depend
+on agency action. The SLA timer reflects this: the timer pauses when the
+defect is in "awaiting agency review" status, resuming when the agency
+responds. However, aging is still tracked and visible on the
+dashboard---a data quality finding that has been waiting 60 days for
+agency review is flagged for follow-up.
+
+6.2 Ambiguous Interpretations
+
+When a governing document provision is unclear and multiple
+interpretations are defensible, the defect requires escalation to an
+authority that can provide a definitive interpretation: plan counsel,
+actuarial consultant, or the board of trustees. The resolution workflow
+is:
+
+24. **Documentation:** Prepare an interpretation memo that presents the
+    ambiguous language, two or more candidate interpretations, the
+    mathematical impact of each interpretation (using demo case members
+    as examples), and a recommendation.
+
+25. **Escalation:** Submit the memo to the appropriate authority. For
+    statutory ambiguity: plan counsel. For policy ambiguity: Executive
+    Director or board.
+
+26. **Interim handling:** While awaiting the authoritative
+    determination, the system implements the most conservative
+    interpretation (the one that results in the lower benefit amount,
+    protecting the trust fund). This is documented as an assumption with
+    a Q-CALC reference.
+
+27. **Resolution:** When the authority responds, the rule is updated
+    through the full SDLC. If the interim interpretation was correct, no
+    code change is needed---just a status change from ASSUMED to
+    CONFIRMED. If it was incorrect, the rule change follows the standard
+    SDLC path.
+
+6.3 Cascading Defects
+
+A defect in one rule can cascade to affect other rules that depend on
+it. For example, a defect in the AMS calculation affects every benefit
+formula that uses AMS as an input. Cascading defects require:
+
+-   **Impact mapping:** Trace all downstream rules that consume the
+    affected output using the cross-rule interaction matrix (Layer 2,
+    Section 4.2).
+
+-   **Scope assessment:** Re-evaluate the member impact scope. A defect
+    originally classified as Cohort may be Plan-Wide once cascading
+    effects are traced.
+
+-   **Priority re-evaluation:** The cascading scope may elevate the
+    priority from the original matrix-derived level.
+
+-   **Batch verification:** After the root cause fix, all downstream
+    calculations are re-verified, not just the primary rule.
+
+7\. Fix Verification Protocol
+
+Verification is the most critical step in the resolution workflow. A fix
+that is declared "done" without rigorous verification is not a fix---it
+is a hope. The verification protocol defines what must be true before a
+defect can move to VERIFIED status.
+
+7.1 Verification Checklist
+
+  -------- ---------------------------------------- -------------------------
+  **\#**   **Verification Item**                    **Evidence**
+
+  1        The original failing test now passes     Test execution log
+           against the hand-calculated oracle       showing pass with oracle
+                                                    citation
+
+  2        A new regression test exists that        Test case in the
+           specifically targets the defect scenario repository with the
+                                                    defect ID in the comment
+
+  3        Full regression suite passes with zero   Regression report
+           failures                                 attached to the change
+                                                    package
+
+  4        All four demo cases pass in the test     Acceptance test log
+           environment                              
+
+  5        The fix has been deployed to staging and Staging deployment log +
+           all tests pass in staging                staging test results
+
+  6        The fix has been deployed to production  Production deployment log
+
+  7        Post-deployment verification passes in   Production test execution
+           production                               log
+
+  8        24--48 hour monitoring window shows no   Data Quality Engine scan
+           anomalies                                results for the
+                                                    monitoring window
+
+  9        No related defects were introduced       Cross-rule impact
+           (check for cascading impact)             analysis from the change
+                                                    package
+
+  10       The defect record is updated with        Defect record in the
+           resolution notes, root cause, and fix    backlog system
+           description                              
+  -------- ---------------------------------------- -------------------------
+
+> *Every item on this checklist must be satisfied. Partial
+> verification---"unit tests pass but we haven't done regression
+> yet"---is not verification. The defect remains IN_PROGRESS until all
+> items are complete.*
+
+8\. Resolution Metrics
+
+Layer 4 produces metrics that feed the Layer 3 Trends View and provide
+operational visibility into resolution effectiveness.
+
+  ------------------ -------------------------- --------------------------
+  **Metric**         **Definition**             **Target / What It
+                                                Reveals**
+
+  **Mean Time to     Average elapsed time from  P0: \< 8 hours. P1: \< 24
+  Resolution         OPEN to VERIFIED, by       hours. P2: within sprint.
+  (MTTR)**           priority level.            Increasing MTTR signals
+                                                capacity or complexity
+                                                issues.
+
+  **SLA Compliance   Percentage of defects      Target: 95%+. Below 90%
+  Rate**             resolved within their SLA  triggers process review.
+                     window.                    
+
+  **Fix Failure      Percentage of fixes that   Target: \< 10%. High rate
+  Rate**             fail verification (test    signals insufficient root
+                     fails after fix applied).  cause analysis.
+
+  **Regression       New defects introduced by  Target: 0. Any \> 0
+  Introduction       fixes (detected in         triggers review of the fix
+  Rate**             regression or monitoring   process and the Change
+                     window).                   Impact Assessment quality.
+
+  **Recurrence       Defects that recur after   Target: 0. Any recurrence
+  Rate**             being VERIFIED (linked as  means the original fix was
+                     "regression of DEF-XXXX"). insufficient and the
+                                                regression test was
+                                                incomplete.
+
+  **Backlog          Defects resolved per week  Velocity ratio should be ≥
+  Velocity**         vs. defects opened per     1.0. Sustained ratio \<
+                     week.                      1.0 means backlog is
+                                                growing.
+
+  **Agency           Average time data quality  Identifies bottlenecks in
+  Dependency Wait    defects spend awaiting     agency responsiveness.
+  Time**             agency action.             Used for operational
+                                                reporting, not blame.
+  ------------------ -------------------------- --------------------------
+
+9\. Framework Governance
+
+9.1 Integration with Existing Processes
+
+This Layer 4 process integrates with the following existing artifacts:
+
+-   **BACKLOG.md:** The project backlog (BACKLOG.md) is the current
+    operational implementation of this process during POC development.
+    At production deployment, defects are managed in the unified defect
+    record system described in Layer 3, Section 6. During POC, the
+    priority definitions (P0--P4) and category tags from BACKLOG.md
+    align with this framework.
+
+-   **BUILD_HISTORY.md:** Every defect resolution during POC is
+    documented in BUILD_HISTORY.md as a decision record, providing the
+    audit trail required by this framework.
+
+-   **SYNC_LOG.md:** Defects that originate from discrepancies between
+    the analysis environment and the build environment are tracked
+    through SYNC_LOG.md, then formalized as defect records once
+    classified.
+
+9.2 Document Series
+
+1.  **Prevention & Design Review Framework (Layer 1)** --- completed
+
+2.  **Verification & Test Execution Framework (Layer 2)** --- completed
+
+3.  **Defect Monitoring Dashboard Specification (Layer 3)** ---
+    completed
+
+4.  **Defect Resolution & Prioritized Backlog Process (Layer 4)** ---
+    this document
+
+5.  **Unified Defect Taxonomy & Metrics (Layer 5)** --- consolidation
+    document
+
+9.3 Continuous Improvement
+
+The resolution process itself is subject to improvement. Quarterly
+retrospectives review resolution metrics and identify process
+bottlenecks. Common improvement areas include: SLA recalibration based
+on observed capacity, checklist refinement when new defect patterns
+emerge, and automation of routine verification steps as the system
+matures through trust phases (ADR-001).
+
+> *The five-layer defect management system is designed as a closed loop.
+> Prevention (Layer 1) reduces defects. Testing (Layer 2) catches what
+> prevention misses. The dashboard (Layer 3) makes defects visible.
+> Resolution (Layer 4) eliminates them. Each defect resolved feeds back
+> into prevention---the root cause analysis informs design review
+> improvements, the regression test prevents recurrence, and the metrics
+> reveal systemic patterns that drive process change.*

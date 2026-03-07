@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go build:*)",
+      "Bash(go test:*)",
+      "Bash(go run:*)",
+      "Bash(npm run:*)",
+      "Bash(npm install:*)",
+      "Bash(npm test:*)",
+      "Bash(npm ci:*)",
+      "Bash(docker compose:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git branch:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git stash:*)",
+      "Bash(git tag:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf /*)",
+      "Bash(git push --force:*)",
+      "Bash(git reset --hard:*)"
+    ]
+  }
+}

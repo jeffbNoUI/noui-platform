@@ -1,0 +1,722 @@
+# =============================================================================
+# DERP Domestic Relations Order (DRO) Rules
+# =============================================================================
+# Domain: dro
+# Rules: RULE-DRO-MARITAL-SHARE, RULE-DRO-SEQUENCE, RULE-DRO-METHODS,
+#        RULE-DRO-NO-IPR, RULE-DRO-NO-HEALTH, RULE-DRO-COLA
+# Authority: DERP Restated Master Contract (RMC)
+# =============================================================================
+
+metadata:
+  domain: "dro"
+  version: "1.0.0"
+  effective_date: "2026-03-02"
+  authority: "DERP Restated Master Contract (RMC)"
+  description: >
+    Defines rules governing Domestic Relations Orders including marital
+    share calculation, processing sequence, division methods, and
+    exclusions for IPR and health benefits.
+  governance:
+    owner: "DERP Rules Committee"
+    approved_by: "Plan Administrator"
+    approval_date: "2026-03-02"
+    review_cycle: "annual"
+    next_review_date: "2027-03-02"
+    audit_trail: true
+    change_log:
+      - version: "1.0.0"
+        date: "2026-03-02"
+        author: "Rules Committee"
+        description: "Initial DRO rule definitions for DERP NoUI POC"
+
+rules:
+  # ===========================================================================
+  # RULE-DRO-MARITAL-SHARE: Marital Share Calculation
+  # ===========================================================================
+  - id: "RULE-DRO-MARITAL-SHARE"
+    name: "DRO Marital Share Calculation"
+    description: >
+      The marital share is calculated as:
+        marital_share = (service_during_marriage / total_service) * benefit
+      where service_during_marriage is the period of overlap between the
+      marriage and the member's employment. The marital share is then
+      divided per the DRO terms (typically 50% to alternate payee).
+      CRITICAL: The marital share split occurs BEFORE payment option
+      application (J&S factors).
+    source_reference:
+      document: "RMC"
+      section: "Section 9.01 - DRO Marital Share"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["active", "terminated", "retired"]
+    inputs:
+      - name: "marriage_start_date"
+        type: "date"
+        required: true
+        description: "Date of marriage"
+      - name: "marriage_end_date"
+        type: "date"
+        required: true
+        description: "Date of divorce/separation"
+      - name: "hire_date"
+        type: "date"
+        required: true
+      - name: "retirement_date"
+        type: "date"
+        required: true
+        description: "Actual or projected retirement date"
+      - name: "total_service_years"
+        type: "decimal"
+        required: true
+        description: "Total service years for benefit calculation"
+      - name: "unreduced_monthly_benefit"
+        type: "decimal"
+        required: true
+        description: "Unreduced monthly benefit BEFORE payment option"
+      - name: "alternate_payee_share_pct"
+        type: "decimal"
+        required: false
+        default: 0.50
+        description: "Alternate payee's share of the marital portion (typically 50%)"
+    logic:
+      type: "procedural"
+      steps:
+        - step: 1
+          action: >
+            Calculate overlap period:
+            overlap_start = MAX(marriage_start_date, hire_date)
+            overlap_end = MIN(marriage_end_date, retirement_date)
+        - step: 2
+          action: >
+            service_during_marriage = months_between(overlap_start, overlap_end) / 12.0
+        - step: 3
+          action: >
+            marital_fraction = service_during_marriage / total_service_years
+        - step: 4
+          action: >
+            marital_share_benefit = unreduced_monthly_benefit * marital_fraction
+        - step: 5
+          action: >
+            alternate_payee_amount = marital_share_benefit * alternate_payee_share_pct
+            member_retained_amount = unreduced_monthly_benefit - alternate_payee_amount
+      critical_note: >
+        The marital share MUST be split BEFORE applying any payment option
+        (J&S factors). The member's retained amount is then subject to the
+        member's payment option election. The alternate payee's amount is
+        paid as a single-life annuity to the alternate payee.
+    output:
+      name: "dro_marital_share"
+      type: "object"
+      fields:
+        - name: "service_during_marriage"
+          type: "decimal"
+        - name: "marital_fraction"
+          type: "decimal"
+        - name: "marital_share_benefit"
+          type: "decimal"
+        - name: "alternate_payee_amount"
+          type: "decimal"
+        - name: "member_retained_amount"
+          type: "decimal"
+    dependencies: ["RULE-SVC-SEPARATION"]
+    tags: ["dro", "marital-share", "critical-sequence"]
+    test_cases:
+      - name: "Happy path - Robert Martinez DRO variant"
+        type: "happy_path"
+        demo_case_ref: "Case 4: Robert Martinez DRO"
+        description: >
+          Marriage 2000-01-15 to 2015-06-30, hired 1998-06-15, retiring 2025-12-15.
+          Service during marriage: ~15.46 years. Total service: 27.5 years.
+          Marital fraction: 15.46 / 27.5 = 0.5622.
+          Benefit: $4,354.17. Marital share: $4,354.17 * 0.5622 = $2,447.50.
+          AP gets 50%: $1,223.75. Member retains: $4,354.17 - $1,223.75 = $3,130.42.
+        inputs:
+          marriage_start_date: "2000-01-15"
+          marriage_end_date: "2015-06-30"
+          hire_date: "1998-06-15"
+          retirement_date: "2025-12-15"
+          total_service_years: 27.5
+          unreduced_monthly_benefit: 4354.17
+          alternate_payee_share_pct: 0.50
+        expected:
+          service_during_marriage: 15.46
+          marital_fraction: 0.5622
+          marital_share_benefit: 2447.50
+          alternate_payee_amount: 1223.75
+          member_retained_amount: 3130.42
+      - name: "Boundary - marriage covers entire employment"
+        type: "boundary"
+        description: "Married before hire, divorced after retirement"
+        inputs:
+          marriage_start_date: "1990-01-01"
+          marriage_end_date: "2030-01-01"
+          hire_date: "1998-06-15"
+          retirement_date: "2025-12-15"
+          total_service_years: 27.5
+          unreduced_monthly_benefit: 4354.17
+          alternate_payee_share_pct: 0.50
+        expected:
+          service_during_marriage: 27.5
+          marital_fraction: 1.0
+          marital_share_benefit: 4354.17
+          alternate_payee_amount: 2177.09
+          member_retained_amount: 2177.08
+      - name: "Below boundary - very short marriage overlap"
+        type: "below_boundary"
+        description: "Marriage overlaps only 1 year of employment"
+        inputs:
+          marriage_start_date: "2020-01-01"
+          marriage_end_date: "2021-01-01"
+          hire_date: "1998-06-15"
+          retirement_date: "2025-12-15"
+          total_service_years: 27.5
+          unreduced_monthly_benefit: 4354.17
+          alternate_payee_share_pct: 0.50
+        expected:
+          service_during_marriage: 1.0
+          marital_fraction: 0.0364
+          marital_share_benefit: 158.49
+          alternate_payee_amount: 79.25
+          member_retained_amount: 4274.92
+      - name: "Negative - marriage dates before employment"
+        type: "negative"
+        description: "Marriage ended before member was hired; no overlap"
+        inputs:
+          marriage_start_date: "1990-01-01"
+          marriage_end_date: "1995-01-01"
+          hire_date: "1998-06-15"
+          retirement_date: "2025-12-15"
+          total_service_years: 27.5
+          unreduced_monthly_benefit: 4354.17
+          alternate_payee_share_pct: 0.50
+        expected:
+          service_during_marriage: 0.0
+          marital_fraction: 0.0
+          alternate_payee_amount: 0.0
+          member_retained_amount: 4354.17
+          notes: "No overlap between marriage and employment"
+      - name: "Negative - marriage end before marriage start"
+        type: "negative"
+        description: "Invalid date range"
+        inputs:
+          marriage_start_date: "2015-06-30"
+          marriage_end_date: "2000-01-15"
+          hire_date: "1998-06-15"
+          retirement_date: "2025-12-15"
+          total_service_years: 27.5
+          unreduced_monthly_benefit: 4354.17
+          alternate_payee_share_pct: 0.50
+        expected:
+          error: "INVALID_DATE_RANGE"
+          message: "marriage_end_date must be after marriage_start_date"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-DRO-SEQUENCE: DRO Processing Sequence
+  # ===========================================================================
+  - id: "RULE-DRO-SEQUENCE"
+    name: "DRO Processing Sequence"
+    description: >
+      Defines the mandatory order of operations when a DRO is in effect:
+      1. Calculate unreduced benefit
+      2. Apply early retirement reduction (if applicable)
+      3. Calculate and split marital share (DRO split)
+      4. Apply payment option to member's retained share
+      The DRO split MUST occur BEFORE the payment option is applied.
+    source_reference:
+      document: "RMC"
+      section: "Section 9.02 - DRO Processing Order"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["active", "terminated", "retired"]
+    inputs:
+      - name: "unreduced_monthly_benefit"
+        type: "decimal"
+        required: true
+      - name: "reduction_factor"
+        type: "decimal"
+        required: true
+      - name: "dro_active"
+        type: "boolean"
+        required: true
+      - name: "marital_fraction"
+        type: "decimal"
+        required: false
+      - name: "alternate_payee_share_pct"
+        type: "decimal"
+        required: false
+        default: 0.50
+      - name: "payment_option_factor"
+        type: "decimal"
+        required: true
+        description: "J&S factor or 1.0 for Maximum"
+    logic:
+      type: "procedural"
+      steps:
+        - step: 1
+          action: "reduced_benefit = unreduced_monthly_benefit * reduction_factor"
+        - step: 2
+          condition: "dro_active = true"
+          action: >
+            marital_share = reduced_benefit * marital_fraction;
+            alternate_payee_amount = marital_share * alternate_payee_share_pct;
+            member_pre_option = reduced_benefit - alternate_payee_amount
+        - step: 3
+          action: >
+            member_final_payment = member_pre_option * payment_option_factor
+      critical_note: >
+        ORDER MATTERS: DRO split (step 2) MUST happen BEFORE payment option
+        (step 3). If reversed, the alternate payee amount would be incorrect.
+    output:
+      name: "dro_sequence_result"
+      type: "object"
+      fields:
+        - name: "reduced_benefit"
+          type: "decimal"
+        - name: "alternate_payee_amount"
+          type: "decimal"
+        - name: "member_pre_option"
+          type: "decimal"
+        - name: "member_final_payment"
+          type: "decimal"
+    dependencies:
+      - "RULE-REDUCTION-APPLY"
+      - "RULE-DRO-MARITAL-SHARE"
+    tags: ["dro", "sequence", "critical-order"]
+    test_cases:
+      - name: "Happy path - Robert Martinez DRO with J&S 50%"
+        type: "happy_path"
+        demo_case_ref: "Case 4: Robert Martinez DRO"
+        description: >
+          Unreduced $4,354.17, no early reduction (factor 1.00),
+          marital fraction 0.5622, AP gets 50%, then J&S 50% on remainder.
+        inputs:
+          unreduced_monthly_benefit: 4354.17
+          reduction_factor: 1.00
+          dro_active: true
+          marital_fraction: 0.5622
+          alternate_payee_share_pct: 0.50
+          payment_option_factor: 0.9450
+        expected:
+          reduced_benefit: 4354.17
+          alternate_payee_amount: 1223.75
+          member_pre_option: 3130.42
+          member_final_payment: 2958.25
+          notes: >
+            Step 1: $4,354.17 * 1.00 = $4,354.17
+            Step 2: $4,354.17 * 0.5622 * 0.50 = $1,223.75; retained = $3,130.42
+            Step 3: $3,130.42 * 0.9450 = $2,958.25
+      - name: "Boundary - no DRO active"
+        type: "boundary"
+        description: "When no DRO, skip the split step"
+        inputs:
+          unreduced_monthly_benefit: 4354.17
+          reduction_factor: 1.00
+          dro_active: false
+          payment_option_factor: 0.9450
+        expected:
+          reduced_benefit: 4354.17
+          alternate_payee_amount: 0.0
+          member_pre_option: 4354.17
+          member_final_payment: 4114.69
+      - name: "Below boundary - DRO with early reduction"
+        type: "below_boundary"
+        description: "Early reduced benefit then DRO split then payment option"
+        inputs:
+          unreduced_monthly_benefit: 2070.00
+          reduction_factor: 0.70
+          dro_active: true
+          marital_fraction: 0.40
+          alternate_payee_share_pct: 0.50
+          payment_option_factor: 0.9450
+        expected:
+          reduced_benefit: 1449.00
+          alternate_payee_amount: 289.80
+          member_pre_option: 1159.20
+          member_final_payment: 1095.44
+      - name: "Negative - DRO active but missing marital fraction"
+        type: "negative"
+        description: "Cannot process DRO without marital fraction"
+        inputs:
+          unreduced_monthly_benefit: 4354.17
+          reduction_factor: 1.00
+          dro_active: true
+          marital_fraction: null
+          payment_option_factor: 0.9450
+        expected:
+          error: "MISSING_DRO_DATA"
+          message: "marital_fraction is required when dro_active is true"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-DRO-METHODS: DRO Division Methods
+  # ===========================================================================
+  - id: "RULE-DRO-METHODS"
+    name: "DRO Division Methods"
+    description: >
+      The plan supports the following DRO division methods:
+      - Shared Payment: Alternate payee receives a portion of each monthly payment
+      - Separate Interest: Alternate payee's share is segregated and treated independently
+      The method is specified in the DRO document.
+    source_reference:
+      document: "RMC"
+      section: "Section 9.03 - DRO Division Methods"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["active", "terminated", "retired"]
+    inputs:
+      - name: "dro_method"
+        type: "enum"
+        required: true
+        constraints:
+          enum_values: ["shared_payment", "separate_interest"]
+      - name: "alternate_payee_amount"
+        type: "decimal"
+        required: true
+    logic:
+      type: "conditional"
+      conditions:
+        - condition: "dro_method = 'shared_payment'"
+          result:
+            description: "AP receives portion of member's payment each month"
+            payment_timing: "concurrent_with_member"
+            independent_election: false
+        - condition: "dro_method = 'separate_interest'"
+          result:
+            description: "AP's share is segregated; AP may elect own payment timing"
+            payment_timing: "independent"
+            independent_election: true
+    output:
+      name: "dro_method_result"
+      type: "object"
+      fields:
+        - name: "payment_timing"
+          type: "string"
+        - name: "independent_election"
+          type: "boolean"
+    tags: ["dro", "methods", "division"]
+    test_cases:
+      - name: "Happy path - shared payment method"
+        type: "happy_path"
+        demo_case_ref: "Case 4: Robert Martinez DRO"
+        description: "Standard shared payment DRO"
+        inputs:
+          dro_method: "shared_payment"
+          alternate_payee_amount: 1223.75
+        expected:
+          payment_timing: "concurrent_with_member"
+          independent_election: false
+      - name: "Boundary - separate interest method"
+        type: "boundary"
+        description: "Alternate payee gets independent timing"
+        inputs:
+          dro_method: "separate_interest"
+          alternate_payee_amount: 1223.75
+        expected:
+          payment_timing: "independent"
+          independent_election: true
+      - name: "Below boundary - zero alternate payee amount"
+        type: "below_boundary"
+        description: "Edge case if marital overlap is zero"
+        inputs:
+          dro_method: "shared_payment"
+          alternate_payee_amount: 0.0
+        expected:
+          payment_timing: "concurrent_with_member"
+          independent_election: false
+          notes: "Zero amount DRO is effectively a no-op"
+      - name: "Negative - invalid DRO method"
+        type: "negative"
+        inputs:
+          dro_method: "lump_sum"
+          alternate_payee_amount: 1223.75
+        expected:
+          error: "INVALID_DRO_METHOD"
+          message: "dro_method must be 'shared_payment' or 'separate_interest'"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-DRO-NO-IPR: DRO Excludes IPR
+  # ===========================================================================
+  - id: "RULE-DRO-NO-IPR"
+    name: "DRO Does Not Divide IPR Benefits"
+    description: >
+      Insurance Premium Reimbursement (IPR) benefits are NOT subject to
+      division under a DRO. IPR is a personal benefit to the member only.
+      The alternate payee has no claim to IPR benefits.
+    source_reference:
+      document: "RMC"
+      section: "Section 9.04 - DRO Exclusions - IPR"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["retired"]
+    inputs:
+      - name: "dro_active"
+        type: "boolean"
+        required: true
+      - name: "ipr_monthly_amount"
+        type: "decimal"
+        required: false
+    logic:
+      type: "conditional"
+      conditions:
+        - condition: "dro_active = true"
+          result:
+            ipr_subject_to_dro: false
+            ipr_to_member: "ipr_monthly_amount"
+            ipr_to_alternate_payee: 0.0
+    output:
+      name: "dro_ipr_exclusion"
+      type: "object"
+      fields:
+        - name: "ipr_subject_to_dro"
+          type: "boolean"
+          value: false
+        - name: "ipr_to_member"
+          type: "decimal"
+        - name: "ipr_to_alternate_payee"
+          type: "decimal"
+          value: 0.0
+    tags: ["dro", "ipr", "exclusion"]
+    test_cases:
+      - name: "Happy path - IPR not divided in DRO"
+        type: "happy_path"
+        demo_case_ref: "Case 4: Robert Martinez DRO"
+        description: "Member's IPR stays entirely with member"
+        inputs:
+          dro_active: true
+          ipr_monthly_amount: 343.75
+        expected:
+          ipr_subject_to_dro: false
+          ipr_to_member: 343.75
+          ipr_to_alternate_payee: 0.0
+      - name: "Boundary - no DRO active"
+        type: "boundary"
+        description: "Without DRO, IPR is simply the member's benefit"
+        inputs:
+          dro_active: false
+          ipr_monthly_amount: 343.75
+        expected:
+          ipr_subject_to_dro: false
+          ipr_to_member: 343.75
+          ipr_to_alternate_payee: 0.0
+      - name: "Below boundary - zero IPR"
+        type: "below_boundary"
+        description: "Member with no IPR benefit"
+        inputs:
+          dro_active: true
+          ipr_monthly_amount: 0.0
+        expected:
+          ipr_subject_to_dro: false
+          ipr_to_member: 0.0
+          ipr_to_alternate_payee: 0.0
+      - name: "Negative - AP claims IPR"
+        type: "negative"
+        description: "Even if requested, IPR cannot go to alternate payee"
+        inputs:
+          dro_active: true
+          ipr_monthly_amount: 343.75
+        expected:
+          ipr_subject_to_dro: false
+          ipr_to_alternate_payee: 0.0
+          notes: "IPR is NEVER divisible under DRO regardless of court order language"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-DRO-NO-HEALTH: DRO Excludes Health Benefits
+  # ===========================================================================
+  - id: "RULE-DRO-NO-HEALTH"
+    name: "DRO Does Not Divide Health Benefits"
+    description: >
+      Health insurance benefits provided through the plan are NOT subject
+      to division under a DRO. Health benefits are personal to the member.
+    source_reference:
+      document: "RMC"
+      section: "Section 9.05 - DRO Exclusions - Health Benefits"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["retired"]
+    inputs:
+      - name: "dro_active"
+        type: "boolean"
+        required: true
+      - name: "health_benefit_applicable"
+        type: "boolean"
+        required: false
+    logic:
+      type: "conditional"
+      conditions:
+        - condition: "dro_active = true"
+          result:
+            health_subject_to_dro: false
+    output:
+      name: "dro_health_exclusion"
+      type: "object"
+      fields:
+        - name: "health_subject_to_dro"
+          type: "boolean"
+          value: false
+    tags: ["dro", "health", "exclusion"]
+    test_cases:
+      - name: "Happy path - health benefits not divided"
+        type: "happy_path"
+        demo_case_ref: "Case 4: Robert Martinez DRO"
+        inputs:
+          dro_active: true
+          health_benefit_applicable: true
+        expected:
+          health_subject_to_dro: false
+      - name: "Boundary - no DRO"
+        type: "boundary"
+        inputs:
+          dro_active: false
+          health_benefit_applicable: true
+        expected:
+          health_subject_to_dro: false
+      - name: "Below boundary - no health benefit"
+        type: "below_boundary"
+        inputs:
+          dro_active: true
+          health_benefit_applicable: false
+        expected:
+          health_subject_to_dro: false
+      - name: "Negative - DRO attempts to divide health"
+        type: "negative"
+        description: "Health benefits cannot be divided regardless of DRO terms"
+        inputs:
+          dro_active: true
+          health_benefit_applicable: true
+        expected:
+          health_subject_to_dro: false
+          notes: "Health benefits are NEVER divisible under DRO"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-DRO-COLA: DRO COLA Application
+  # ===========================================================================
+  - id: "RULE-DRO-COLA"
+    name: "DRO COLA Application"
+    description: >
+      When a COLA (Cost of Living Adjustment) is applied to the member's
+      benefit, the DRO marital share split is recalculated on the
+      COLA-adjusted benefit. Both the member and alternate payee receive
+      their proportional share of the COLA increase.
+    source_reference:
+      document: "RMC"
+      section: "Section 9.06 - DRO COLA Treatment"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["retired"]
+    inputs:
+      - name: "pre_cola_benefit"
+        type: "decimal"
+        required: true
+      - name: "cola_factor"
+        type: "decimal"
+        required: true
+        description: "COLA adjustment factor (e.g., 1.03 for 3% increase)"
+      - name: "marital_fraction"
+        type: "decimal"
+        required: true
+      - name: "alternate_payee_share_pct"
+        type: "decimal"
+        required: true
+    logic:
+      type: "formula"
+      expression: >
+        post_cola_benefit = pre_cola_benefit * cola_factor;
+        new_marital_share = post_cola_benefit * marital_fraction;
+        new_ap_amount = new_marital_share * alternate_payee_share_pct;
+        new_member_amount = post_cola_benefit - new_ap_amount
+    output:
+      name: "dro_cola_result"
+      type: "object"
+      fields:
+        - name: "post_cola_benefit"
+          type: "decimal"
+        - name: "new_ap_amount"
+          type: "decimal"
+        - name: "new_member_amount"
+          type: "decimal"
+    dependencies: ["RULE-COLA", "RULE-DRO-MARITAL-SHARE"]
+    tags: ["dro", "cola", "adjustment"]
+    test_cases:
+      - name: "Happy path - 3% COLA on DRO benefit"
+        type: "happy_path"
+        demo_case_ref: "Case 4: Robert Martinez DRO"
+        description: "3% COLA applied, marital fraction 0.5622"
+        inputs:
+          pre_cola_benefit: 4354.17
+          cola_factor: 1.03
+          marital_fraction: 0.5622
+          alternate_payee_share_pct: 0.50
+        expected:
+          post_cola_benefit: 4484.80
+          new_ap_amount: 1260.58
+          new_member_amount: 3224.22
+      - name: "Boundary - zero COLA"
+        type: "boundary"
+        description: "No COLA applied (factor = 1.00)"
+        inputs:
+          pre_cola_benefit: 4354.17
+          cola_factor: 1.00
+          marital_fraction: 0.5622
+          alternate_payee_share_pct: 0.50
+        expected:
+          post_cola_benefit: 4354.17
+          new_ap_amount: 1223.75
+          new_member_amount: 3130.42
+      - name: "Below boundary - very small COLA"
+        type: "below_boundary"
+        description: "1% COLA"
+        inputs:
+          pre_cola_benefit: 4354.17
+          cola_factor: 1.01
+          marital_fraction: 0.5622
+          alternate_payee_share_pct: 0.50
+        expected:
+          post_cola_benefit: 4397.71
+          new_ap_amount: 1235.98
+          new_member_amount: 3161.73
+      - name: "Negative - negative COLA factor"
+        type: "negative"
+        description: "COLA factor below 1.0 would reduce benefits"
+        inputs:
+          pre_cola_benefit: 4354.17
+          cola_factor: 0.97
+          marital_fraction: 0.5622
+          alternate_payee_share_pct: 0.50
+        expected:
+          error: "INVALID_COLA"
+          message: "cola_factor must be >= 1.0; benefits cannot be reduced by COLA"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"

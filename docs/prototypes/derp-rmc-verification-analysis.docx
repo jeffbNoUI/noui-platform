@@ -1,0 +1,662 @@
+NoUI DERP POC
+
+**DERP Knowledge Analysis & Verification Questionnaire**
+
+Updated with Denver Revised Municipal Code (January 2024 Edition)
+Verification
+
+Date: February 21, 2026 \| Version: 2.0 \| Status: RMC-Verified
+
+1\. Executive Summary
+
+We have obtained and fully analyzed the Denver Revised Municipal Code
+(DRMC), Sections 18-391 through 18-430.7, January 2024 edition, as
+published by DERP. This 61-page document is the ultimate governing
+authority for all DERP benefit provisions. Analysis of the complete RMC
+text has allowed us to definitively resolve multiple critical and
+high-priority items, significantly de-risking the POC build.
+
+**Verification Status Summary**
+
+  -------------------------- ----------- ---------------------------------
+  **Category**               **Count**   **Details**
+
+  RESOLVED by RMC            **12**      Direct RMC section citations for
+                                         all critical items
+
+  NEW FINDINGS from RMC      **8**       Previously unknown details now
+                                         documented
+
+  Remaining OPEN             **6**       Operational/procedural items
+                                         requiring DERP staff input
+
+  OUT OF SCOPE (confirmed)   **3**       SS Make-Up, DROP/DROP II,
+                                         Disability
+  -------------------------- ----------- ---------------------------------
+
+2\. Critical Items --- Resolved by RMC
+
+2.1 CRITICAL-001: Early Retirement Reduction Rates
+
+**Status: FULLY RESOLVED --- Direct RMC Citation Obtained**
+
+**RMC Section:** §18-409(b) --- Early retirement
+
+The RMC contains the actual statutory reduction tables, which
+definitively confirm the rates previously verified against three DERP
+member-facing sources:
+
+**Members Employed Before July 1, 2011 (Tiers 1 & 2): 3% per year under
+65**
+
+  ----------------------------------- -----------------------------------
+  **Age at Retirement**               **% of Normal Benefit**
+
+  Under 55                            0%
+
+  55                                  70%
+
+  56                                  73%
+
+  57                                  76%
+
+  58                                  79%
+
+  59                                  82%
+
+  60                                  85%
+
+  61                                  88%
+
+  62                                  91%
+
+  63                                  94%
+
+  64                                  97%
+
+  65                                  100%
+  ----------------------------------- -----------------------------------
+
+**Members First Employed On or After July 1, 2011 (Tier 3): 6% per year
+under 65**
+
+  ----------------------------------- -----------------------------------
+  **Age at Retirement**               **% of Normal Benefit**
+
+  Under 60                            0%
+
+  60                                  70%
+
+  61                                  76%
+
+  62                                  82%
+
+  63                                  88%
+
+  64                                  94%
+
+  65                                  100%
+  ----------------------------------- -----------------------------------
+
+**Impact:** Case 2 (Jennifer Kim) previously recalculated with corrected
+3% rate. RMC now provides the definitive statutory authority. The table
+also confirms reduction is by completed years only (integer age), not
+prorated by months.
+
+2.2 CRITICAL-002: Employer Contribution Rate
+
+**Status: FULLY RESOLVED --- Direct RMC Citation Obtained**
+
+**RMC Section:** §18-407(e)(1) and §18-407(f)(1)
+
+The RMC states: Effective January 1, 2023, employer contributes 17.95%
+and employee contributes 8.45% of gross salary. Total combined rate:
+26.40%. Our earlier project documents used 11% for employer rate, which
+was likely the rate circa 2005-2010. The seed data generator should use
+era-appropriate rates.
+
+3\. Complete RMC Verification Matrix
+
+Every material provision used in the POC has been traced to a specific
+RMC section. Green indicates our project documents match the RMC
+exactly.
+
+  --------------- ---------------- --------------- --------------------- ---------------
+  **Provision**   **RMC §**        **Our Docs      **RMC Says**          **Verdict**
+                                   Said**                                
+
+  **Tier 1        18-409(a)(1)     2.0% ×          2% of monthly salary  **✓ CONFIRMED**
+  Formula**                        AMS(36mo)       averaged over highest 
+                                                   36 consecutive months 
+
+  **Tier 2        18-409(a)(2)     1.5% ×          1.5% of monthly       **✓ CONFIRMED**
+  Formula**                        AMS(36mo)       salary averaged over  
+                                                   highest 36            
+                                                   consecutive months    
+                                                   after Aug 31, 2004    
+
+  **Tier 3        18-409(a)(3)     1.5% ×          1.5% of monthly       **✓ CONFIRMED**
+  Formula**                        AMS(60mo)       salary averaged over  
+                                                   highest 60            
+                                                   consecutive months    
+                                                   on/after July 1, 2011 
+
+  **Tier 1        18-409(a)(1)     Before Sept 1,  Service begins before **✓ CONFIRMED +
+  Boundary**                       2004            September 1, 2004 and detail**
+                                                   terminates after      
+                                                   December 31, 1999     
+
+  **Tier 2        18-409(a)(2)     Sept 1, 2004 -- Service begins        **✓ CONFIRMED**
+  Boundary**                       June 30, 2011   on/after Sept 1, 2004 
+                                                   but before July 1,    
+                                                   2011                  
+
+  **Tier 3        18-409(a)(3)     On/after July   Initial service first **✓ CONFIRMED**
+  Boundary**                       1, 2011         begins on/after July  
+                                                   1, 2011               
+
+  **Rule of 75**  18-402(20)       Age+svc≥75, min Age + credited        **✓ CONFIRMED +
+                                   55              service ≥ 75, min age detail**
+                                                   55. Must be attained  
+                                                   while active.         
+
+  **Rule of 85**  18-402(20)       Age+svc≥85, min Age + credited        **✓ CONFIRMED +
+                                   60              service ≥ 85, min age detail**
+                                                   60. Must be attained  
+                                                   while active.         
+
+  **Early Ret.    18-409(b)        3%/yr           3% per year under 65  **✓ CONFIRMED**
+  T1/T2**                          (corrected)     with table. Age 55 =  
+                                                   70%.                  
+
+  **Early Ret.    18-409(b)        6%/yr           6% per year under 65  **✓ CONFIRMED**
+  T3**                                             with table. Age 60 =  
+                                                   70%.                  
+
+  **Vesting       18-402(31)       5 years         5 years for members   **✓ CONFIRMED +
+  (modern)**                                       appointed on/after    detail**
+                                                   Jan 1, 1987.          
+                                                   Pre-1987: 10 years.   
+
+  **Employee      18-407(f)(1)     8.45%           8.45% effective Jan   **✓ CONFIRMED**
+  Contrib**                                        1, 2023               
+
+  **Employer      18-407(e)(1)     17.95%          17.95% effective Jan  **✓ CONFIRMED**
+  Contrib**                        (corrected)     1, 2023               
+
+  **Leave         18-402(15)       Hired before    Service begins on or  **✓ CONFIRMED**
+  Payout**                         Jan 1, 2010     before Dec 31, 2009:  
+                                                   included. After:      
+                                                   excluded.             
+
+  **Purchased     18-415(a) +      Calc only, not  Cannot be used for    **✓ CONFIRMED**
+  Svc**           18-402(9)        elig            vesting or qualifying 
+                                                   for different         
+                                                   category of benefits  
+
+  **Spousal       18-410(a)(1-2)   Required if     Married member must   **✓ CONFIRMED**
+  Consent**                        married         have spouse consent   
+                                                   for max benefit or    
+                                                   non-spouse            
+                                                   beneficiary           
+
+  **J&S Options** 18-410(a)(1)     100/75/50%      100%, 75%, or 50% J&S **✓ CONFIRMED**
+                                                   annuity               
+
+  **DRO           18-418(b)        Per §18-418     Division of benefit   **✓ CONFIRMED**
+  Authority**                                      only between member   
+                                                   and former spouse, by 
+                                                   written agreement     
+
+  **COLA**        18-414           Discretionary   Board may adjust, not **✓ CONFIRMED +
+                                                   more than annually.   detail**
+                                                   Max 5%/yr or actual   
+                                                   CPI.                  
+
+  **Normal Ret.   18-408(a)        Age 65, 5 yrs   Age 65. Fully vested. **✓ CONFIRMED**
+  Age**                            svc             All tiers.            
+
+  **30-Day        18-408 intro     30 days from    Within 30 days of     **✓ CONFIRMED +
+  Deadline**                       last day        separation; otherwise detail**
+                                                   becomes deferred      
+                                                   member                
+
+  **Death         18-411(d)        \$5k normal,    Specific schedules by **✓ CONFIRMED +
+  Benefit**                        reduced early   age and tier. See     detail**
+                                                   Section 5.            
+  --------------- ---------------- --------------- --------------------- ---------------
+
+4\. New Findings from RMC Analysis
+
+These items were discovered during RMC analysis and were not previously
+documented in project materials. Several have implications for the POC
+build.
+
+4.1 Default Benefit for Married Members Who Fail to Elect
+
+**RMC Section:** §18-410(a)(1)
+
+**Priority:** HIGH --- Affects workspace logic
+
+If a married member and spouse fail to consent to a distribution form,
+the default is a 50% Joint and Survivor annuity (actuarial equivalent of
+the single life annuity). This is a critical default behavior that the
+workspace must enforce: the system cannot allow a married member to
+proceed to payment without either a J&S election or a signed spousal
+consent form waiving J&S rights.
+
+**Action:** Add default-to-50%-J&S rule in eligibility.yaml. Workspace
+must flag married members who have not completed spousal consent.
+
+4.2 Automatic Deferred Member Classification
+
+**RMC Section:** §18-402(10) and §18-408 preamble
+
+**Priority:** HIGH --- Affects process orchestration
+
+The RMC defines a deferred member as one who does not submit the
+required retirement application within 30 days of separation. This is
+automatic---there is no appeal or extension process in the statute. A
+member who misses the 30-day window becomes a deferred member and any
+subsequent retirement is a deferred retirement. This answers Q-ELIG-04
+from the original questionnaire: there is no appeal process mentioned in
+the RMC. The member simply becomes deferred.
+
+**Action:** Process orchestrator must track the 30-day window and alert
+CSR staff. After 30 days, member status changes to deferred
+automatically.
+
+4.3 Historical Vesting Threshold: 10 Years Pre-1987
+
+**RMC Section:** §18-402(31)
+
+**Priority:** LOW --- Legacy, but affects seed data
+
+Members appointed before January 1, 1987 required 10 years of credited
+service to vest (versus 5 years for later members). While no active
+member in the current workforce would be affected by this threshold
+(they would have vested decades ago), the seed data generator should use
+era-appropriate vesting rules for historical member records.
+
+4.4 Rule of 75/85 Must Be Attained While Active
+
+**RMC Section:** §18-402(20)
+
+**Priority:** HIGH --- Affects eligibility engine
+
+The RMC explicitly states that the Rule of 75 (or 85) must be attained
+by the member while employed as an active member, prior to termination
+of employment. If a member terminates employment after earning the
+required service credit but before reaching the minimum age (55/60), the
+member may not apply for or receive benefits under the rule until
+reaching that minimum age. This clarifies a subtle edge case: the Rule
+can be met before minimum age, but benefits cannot start until minimum
+age.
+
+**Action:** Eligibility engine must check both the sum threshold AND
+minimum age. A deferred member who met the sum while active but hasn\'t
+reached minimum age should show as \'Rule met --- benefits available at
+age XX.\'
+
+4.5 Death Benefit Schedules Are Age-Specific, Not Formula-Based
+
+**RMC Section:** §18-411(d)(1-2)
+
+**Priority:** MEDIUM --- Confirms calculation approach
+
+The RMC provides explicit dollar-amount schedules for early retirement
+death benefits rather than a formula. This means the reduction is by
+completed age years, not prorated:
+
+  ----------- ----------------------------- -----------------------------
+  **Age**     **Pre-July 2011 (Tiers 1&2)** **On/After July 2011 (Tier
+                                            3)**
+
+  65+         \$5,000 (normal)              \$5,000 (normal)
+
+  64          \$4,750                       \$4,500
+
+  63          \$4,500                       \$4,000
+
+  62          \$4,250                       \$3,500
+
+  61          \$4,000                       \$3,000
+
+  60          \$3,750                       \$2,500
+
+  59          \$3,500                       ---
+
+  58          \$3,250                       ---
+
+  57          \$3,000                       ---
+
+  56          \$2,750                       ---
+
+  55          \$2,500                       ---
+  ----------- ----------------------------- -----------------------------
+
+This confirms our calculation approach (\$250/year for Tiers 1&2,
+\$500/year for Tier 3) and also confirms it is by integer age, not
+prorated for months.
+
+4.6 Social Security Make-Up Benefit --- Full Formula Now Available
+
+**RMC Section:** §18-409(i)
+
+**Priority:** OUT OF SCOPE for POC, but documented for future reference
+
+The RMC provides the complete SS Make-Up formula including birth-year
+percentage table (0% before 1938, scaling to 15% for 1960+). Applies
+only to pre-July 2011 members. Begins at later of retirement or age 62.
+Not applicable to disability retirees. Inapplicable to Tier 3 members.
+We have the full formula documented for future phases.
+
+4.7 Re-Employment Creates Separate Benefit Calculations (Bridged
+Benefit)
+
+**RMC Section:** §18-408(j)(1)
+
+**Priority:** MEDIUM --- Future phase, but affects data model
+
+When a retired member returns to work, benefits are suspended. Upon
+subsequent retirement, the member receives a \'bridged benefit\'---two
+or more separately calculated retirement benefits combined into one
+payment. A re-employed member after July 1, 2011 earns new service under
+Tier 3 formula regardless of original tier. The original benefit amount
+never changes.
+
+4.8 DRO Alternate Payees Excluded from Health Benefits
+
+**RMC Section:** §18-418(b)(8)
+
+**Priority:** HIGH --- Answers Q-DRO-01
+
+The RMC explicitly states: \'No health benefits available under the plan
+shall be paid to, or made available for the use of, the former spouse.\'
+This definitively answers Q-DRO-01: the DRO alternate payee is NOT
+eligible for IPR or any health benefits from DERP. Case 4 (Robert
+Martinez DRO variant) should not include IPR for Patricia.
+
+5\. Updated Questionnaire --- Items for DERP Staff
+
+The following items remain open and require DERP staff input. Items
+resolved by RMC analysis have been moved to Sections 2-4. Only items
+that cannot be answered from the governing documents remain here.
+
+5.1 Benefit Calculations
+
+**Q-CALC-01 \[HIGH\] \[OPEN\]**
+
+**What actuarial factors does DERP use for Joint & Survivor
+reductions?**
+
+**Context:** The RMC (§18-410) states J&S is calculated on an
+\'actuarially equivalent basis\' using mortality tables and interest
+rates per §18-409(h). The statutory interest rate for actuarial
+assumptions is 7.00%. We need the actual J&S factor tables or
+methodology to calculate reduced amounts for 100%, 75%, and 50% J&S
+options.
+
+**RMC Reference:** §18-409(h)(1-3) and §18-410(a)(1)
+
+> **Resolution:** Continue using illustrative factors per BUILD_HISTORY
+> Decision 17. Flag for DERP verification. The statutory 7% rate
+> provides a reference point.
+
+**Q-CALC-02 \[MEDIUM\] \[PARTIALLY RESOLVED\]**
+
+**Does DERP apply early retirement reduction by completed years only?**
+
+**Context:** The RMC tables in §18-409(b) list whole-integer ages (55,
+56, 57\...) with corresponding percentages. This strongly implies
+reduction is by completed years. For example, a member age 55 years 11
+months would get the 70% rate (same as age 55 years 0 months). Please
+confirm there is no monthly proration.
+
+**RMC Reference:** §18-409(b) --- Tables show integer ages only
+
+> **Resolution:** RMC tables show integer ages only, strongly implying
+> completed-years approach. Build with integer-age logic; verify with
+> DERP staff.
+
+**Q-CALC-03 \[MEDIUM\] \[OPEN\]**
+
+**How does DERP handle members with less than the full AMS averaging
+period?**
+
+**Context:** The RMC states that if a member has fewer than 36 (or 60)
+consecutive months, the benefit is averaged over actual consecutive
+months. Does DERP encounter this in practice? Are there edge cases with
+re-employed members?
+
+**RMC Reference:** §18-409(a)(1-3) --- Each subsection addresses this
+
+5.2 Leave Payout
+
+**Q-LEAVE-01 \[MEDIUM\] \[OPEN\]**
+
+**How does the leave payout appear in payroll data?**
+
+**Context:** The RMC defines the leave payout inclusion/exclusion by
+hire date but does not specify how it appears in payroll systems. Is it
+added to the final month\'s gross pay, or a separate record? This
+affects how the Data Connector retrieves salary data for AMS
+calculation.
+
+**RMC Reference:** §18-402(15) --- Gross pay definition
+
+**Q-LEAVE-02 \[MEDIUM\] \[OPEN\]**
+
+**Are there caps on leave payout amounts or anti-spiking provisions?**
+
+**Context:** The RMC does not mention any cap on the leave payout amount
+included in gross pay. Does DERP apply any administrative cap, or does
+the full accrued leave balance get included? Is there an anti-spiking
+provision that limits AMS increases?
+
+**RMC Reference:** §18-402(15) --- No cap language found
+
+5.3 Service Credit
+
+**Q-SVC-01 \[MEDIUM\] \[PARTIALLY RESOLVED\]**
+
+**What are the current purchase-of-service cost factors?**
+
+**Context:** RMC §18-415(c)(2) states cost is \'the actuarial amount
+required to provide the credited service based upon the member\'s age
+and years of service at the time of election and purchase.\' We have the
+Purchase of Service Cost Factor PDFs in our project files. Can DERP
+confirm these are current?
+
+**RMC Reference:** §18-415(c)(2)
+
+> **Resolution:** RMC confirms actuarial cost methodology. Cost factor
+> PDFs in project files need DERP confirmation of currency.
+
+5.4 Domestic Relations Orders
+
+**Q-DRO-01 \[HIGH\] \[RESOLVED\]**
+
+**Is the DRO alternate payee eligible for IPR at DERP?**
+
+**Context:** Previously open. RMC §18-418(b)(8) explicitly excludes
+former spouses from health benefits.
+
+**RMC Reference:** §18-418(b)(8)
+
+> **Resolution:** NO. The RMC states: \'No health benefits available
+> under the plan shall be paid to, or made available for the use of, the
+> former spouse.\' IPR is a health benefit. Case 4 should not include
+> IPR for Patricia.
+
+**Q-DRO-02 \[MEDIUM\] \[PARTIALLY RESOLVED\]**
+
+**Does DERP allow the alternate payee to elect their own payment
+option?**
+
+**Context:** RMC §18-418(b)(5)(a) states payments to the former spouse
+terminate at their death unless \'the former spouse agrees at the time
+of initial payment\...to the option of a continued method of benefit
+payment following the member\'s death.\' This implies the former spouse
+may have some election options. Can DERP clarify the available options?
+
+**RMC Reference:** §18-418(b)(5)
+
+> **Resolution:** RMC suggests former spouse can agree to continued
+> payment after member\'s death. Specific options need DERP
+> clarification.
+
+**Q-DRO-03 \[MEDIUM\] \[OPEN\]**
+
+**Does DERP share COLA increases with DRO alternate payees?**
+
+**Context:** RMC §18-414 describes COLA adjustments to \'retired members
+and beneficiaries.\' A DRO former spouse is technically not a
+beneficiary. Does the COLA apply to the former spouse\'s portion?
+
+**RMC Reference:** §18-414
+
+5.5 Eligibility & Retirement Processing
+
+**Q-ELIG-01 \[HIGH\] \[RESOLVED\]**
+
+**At what age can a deferred-vested member begin collecting?**
+
+**Context:** Previously open.
+
+**RMC Reference:** §18-408(c) and §18-409(e)
+
+> **Resolution:** Pre-July 2011: Age 55 (with Rule of 75 normal or early
+> retirement). On/after July 2011: Age 60. Deferred members can elect
+> normal (if Rule of 75/85 was met while active) or early retirement
+> with reduction.
+
+**Q-ELIG-02 \[CRITICAL\] \[PARTIALLY RESOLVED\]**
+
+**Can DERP confirm the RMC sections cited are current?**
+
+**Context:** We now have the January 2024 edition. The most recent
+ordinance cited is Ord. No. 1424-21 (Dec 13, 2021). Have there been any
+amendments since January 2024 that affect benefit formulas, eligibility,
+or contribution rates?
+
+**RMC Reference:** Full document --- Jan 2024 edition
+
+> **Resolution:** We have the Jan 2024 edition. Need DERP to confirm no
+> amendments since then. The contribution rates show \'Effective January
+> 1, 2023\' which is the latest rate change.
+
+**Q-ELIG-03 \[HIGH\] \[PARTIALLY RESOLVED\]**
+
+**Does DERP require that the retirement effective date be the first day
+of a month?**
+
+**Context:** RMC §18-408(a) says benefits are \'payable on the first
+business day of the calendar month following termination.\' §18-408(b)
+says \'payable on the first business day of any month following
+termination.\' This implies effective date is always the first of a
+month following separation. Please confirm.
+
+**RMC Reference:** §18-408(a-b)
+
+> **Resolution:** RMC strongly implies first-of-month-after-separation.
+> Build with this assumption; verify with DERP.
+
+**Q-ELIG-04 \[MEDIUM\] \[RESOLVED\]**
+
+**What happens if a member misses the 30-day application deadline?**
+
+**Context:** Previously open.
+
+**RMC Reference:** §18-402(10) and §18-408 preamble
+
+> **Resolution:** The member automatically becomes a \'deferred member\'
+> per §18-402(10). Any subsequent retirement is a deferred retirement
+> per §18-408(c). No appeal process is mentioned in the RMC. Benefits
+> are paid prospectively only.
+
+6\. Impact on POC Build
+
+6.1 Rules Engine Updates Required
+
+  -------------------- ----------------- ---------------------- --------------------
+  **Rule File**        **RMC Source**    **Change Required**    **Status**
+
+  eligibility.yaml     §18-408,          Add early ret. tables  Required before
+                       18-409(b)         as lookup, not         build
+                                         formula. Add           
+                                         deferred-member        
+                                         auto-classification.   
+
+  membership.yaml      §18-407(e)(1),    Employer rate: 17.95%. Required ---
+                       (f)(1)            Employee: 8.45%.       corrected
+                                         Effective Jan 1, 2023. 
+
+  benefits.yaml        §18-409(a)(1-3)   No changes needed ---  Verified ✓
+                                         formulas confirmed     
+
+  options.yaml         §18-410(a)(1)     Add default 50% J&S    New rule needed
+                                         for married members    
+                                         who fail to elect      
+
+  death-benefit.yaml   §18-411(d)        Use statutory lookup   Refine
+                                         tables, not formulas.  implementation
+                                         Separate tables by     
+                                         tier.                  
+
+  dro.yaml             §18-418(b)        Remove IPR from alt    Updates needed
+                                         payee. Add DRO         
+                                         timeline requirements  
+                                         (180-day court, 90-day 
+                                         plan submission).      
+
+  cola.yaml            §18-414           Add COLA detail: max   New detail
+                                         5% or CPI, first       
+                                         eligible Jan 1 of 2nd  
+                                         calendar year after    
+                                         retirement year.       
+                                         Cannot reduce below    
+                                         retirement amount.     
+  -------------------- ----------------- ---------------------- --------------------
+
+6.2 Demo Case Impact
+
+**Case 1 (Robert Martinez):** No changes. Rule of 75 confirmed by
+§18-402(20). All provisions verified.
+
+**Case 2 (Jennifer Kim):** Early retirement rate already corrected to
+3%. Now confirmed by statutory table in §18-409(b). \$1,633.07/month is
+the verified amount.
+
+**Case 3 (David Washington):** No changes. Tier 3 6% rate confirmed.
+Rule of 85 confirmed by §18-402(20).
+
+**Case 4 (Robert Martinez DRO):** Remove IPR for Patricia per
+§18-418(b)(8). DRO division methodology confirmed. Verify COLA
+applicability to former spouse\'s share (Q-DRO-03 remains open).
+
+7\. Source Document Reference
+
+All verifications in this document are traced to the following
+authoritative source:
+
+**Document:** The Revised Municipal Code of the City and County of
+Denver, Section 18-391 through 18-430.7
+
+**Edition:** January 2024
+
+**Source:** DERP-published copy (DERP_DRMC_Jan_2024.pdf)
+
+**Pages:** 61 pages covering Division 1 (Generally), Division 2 (1963
+Retirement Plan), Division 3 (DROP), Division 4 (DROP II)
+
+**Key Ordinance Updates Reflected:** Through Ord. No. 1424-21 (December
+13, 2021)
+
+This document supersedes all member-facing materials (handbook, website,
+FAQ) as the governing authority per DERP\'s own legal disclaimer. Where
+member-facing materials and the RMC agree (as they do on all provisions
+we checked), this provides the highest-confidence verification possible
+short of a direct DERP legal opinion.
+
+*--- End of Document ---*

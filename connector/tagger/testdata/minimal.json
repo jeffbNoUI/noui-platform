@@ -1,0 +1,181 @@
+{
+  "source": "test_db",
+  "driver": "mysql",
+  "database": "test_db",
+  "introspected_at": "2026-01-01T00:00:00Z",
+  "table_count": 11,
+  "tables": [
+    {
+      "name": "employees",
+      "row_count": 200,
+      "columns": [
+        {"name": "id", "data_type": "int", "is_nullable": false, "key_type": "PRI"},
+        {"name": "first_name", "data_type": "varchar", "is_nullable": false, "key_type": ""},
+        {"name": "last_name", "data_type": "varchar", "is_nullable": false, "key_type": ""},
+        {"name": "date_of_birth", "data_type": "date", "is_nullable": true, "key_type": ""},
+        {"name": "gender", "data_type": "varchar", "is_nullable": true, "key_type": ""},
+        {"name": "date_of_joining", "data_type": "date", "is_nullable": false, "key_type": ""},
+        {"name": "status", "data_type": "varchar", "is_nullable": false, "key_type": ""},
+        {"name": "employment_type", "data_type": "varchar", "is_nullable": true, "key_type": ""},
+        {"name": "department", "data_type": "varchar", "is_nullable": true, "key_type": ""},
+        {"name": "designation", "data_type": "varchar", "is_nullable": true, "key_type": ""},
+        {"name": "company", "data_type": "varchar", "is_nullable": true, "key_type": ""}
+      ],
+      "foreign_keys": [],
+      "noui_tags": []
+    },
+    {
+      "name": "monthly_salary_records",
+      "row_count": 7200,
+      "columns": [
+        {"name": "id", "data_type": "int", "is_nullable": false, "key_type": "PRI"},
+        {"name": "employee_id", "data_type": "int", "is_nullable": false, "key_type": "MUL"},
+        {"name": "start_date", "data_type": "date", "is_nullable": false, "key_type": ""},
+        {"name": "end_date", "data_type": "date", "is_nullable": false, "key_type": ""},
+        {"name": "gross_pay", "data_type": "decimal", "is_nullable": false, "key_type": ""},
+        {"name": "net_pay", "data_type": "decimal", "is_nullable": false, "key_type": ""},
+        {"name": "total_deduction", "data_type": "decimal", "is_nullable": false, "key_type": ""},
+        {"name": "base_gross_pay", "data_type": "decimal", "is_nullable": false, "key_type": ""},
+        {"name": "posting_date", "data_type": "date", "is_nullable": true, "key_type": ""},
+        {"name": "status", "data_type": "varchar", "is_nullable": false, "key_type": ""}
+      ],
+      "foreign_keys": [
+        {"constraint_name": "fk_salary_emp", "column": "employee_id", "referenced_table": "employees", "referenced_column": "id"}
+      ],
+      "noui_tags": []
+    },
+    {
+      "name": "payroll_batch_runs",
+      "row_count": 36,
+      "columns": [
+        {"name": "id", "data_type": "int", "is_nullable": false, "key_type": "PRI"},
+        {"name": "start_date", "data_type": "date", "is_nullable": false, "key_type": ""},
+        {"name": "end_date", "data_type": "date", "is_nullable": false, "key_type": ""},
+        {"name": "posting_date", "data_type": "date", "is_nullable": false, "key_type": ""},
+        {"name": "number_of_employees", "data_type": "int", "is_nullable": false, "key_type": ""},
+        {"name": "total_amount", "data_type": "decimal", "is_nullable": false, "key_type": ""},
+        {"name": "salary_slips_created", "data_type": "int", "is_nullable": false, "key_type": ""},
+        {"name": "status", "data_type": "varchar", "is_nullable": false, "key_type": ""}
+      ],
+      "foreign_keys": [],
+      "noui_tags": []
+    },
+    {
+      "name": "leave_entitlements",
+      "row_count": 600,
+      "columns": [
+        {"name": "id", "data_type": "int", "is_nullable": false, "key_type": "PRI"},
+        {"name": "employee", "data_type": "varchar", "is_nullable": false, "key_type": "MUL"},
+        {"name": "leave_type", "data_type": "varchar", "is_nullable": false, "key_type": ""},
+        {"name": "new_leaves_allocated", "data_type": "decimal", "is_nullable": false, "key_type": ""},
+        {"name": "total_leaves_allocated", "data_type": "decimal", "is_nullable": false, "key_type": ""},
+        {"name": "unused_leaves", "data_type": "decimal", "is_nullable": false, "key_type": ""},
+        {"name": "from_date", "data_type": "date", "is_nullable": false, "key_type": ""},
+        {"name": "to_date", "data_type": "date", "is_nullable": false, "key_type": ""},
+        {"name": "carry_forward", "data_type": "tinyint", "is_nullable": false, "key_type": ""},
+        {"name": "total_leave_days", "data_type": "decimal", "is_nullable": true, "key_type": ""}
+      ],
+      "foreign_keys": [],
+      "noui_tags": []
+    },
+    {
+      "name": "daily_attendance",
+      "row_count": 50000,
+      "columns": [
+        {"name": "id", "data_type": "int", "is_nullable": false, "key_type": "PRI"},
+        {"name": "employee", "data_type": "varchar", "is_nullable": false, "key_type": "MUL"},
+        {"name": "attendance_date", "data_type": "date", "is_nullable": false, "key_type": ""},
+        {"name": "status", "data_type": "varchar", "is_nullable": false, "key_type": ""},
+        {"name": "working_hours", "data_type": "decimal", "is_nullable": true, "key_type": ""},
+        {"name": "late_entry", "data_type": "tinyint", "is_nullable": false, "key_type": ""},
+        {"name": "early_exit", "data_type": "tinyint", "is_nullable": false, "key_type": ""}
+      ],
+      "foreign_keys": [],
+      "noui_tags": []
+    },
+    {
+      "name": "system_settings",
+      "row_count": 1,
+      "columns": [
+        {"name": "name", "data_type": "varchar", "is_nullable": false, "key_type": "PRI"},
+        {"name": "value", "data_type": "text", "is_nullable": true, "key_type": ""},
+        {"name": "modified", "data_type": "datetime", "is_nullable": true, "key_type": ""}
+      ],
+      "foreign_keys": [],
+      "noui_tags": []
+    },
+    {
+      "name": "training_events",
+      "row_count": 150,
+      "columns": [
+        {"name": "id", "data_type": "int", "is_nullable": false, "key_type": "PRI"},
+        {"name": "employee", "data_type": "varchar", "is_nullable": false, "key_type": ""},
+        {"name": "training_date", "data_type": "date", "is_nullable": false, "key_type": ""},
+        {"name": "event_name", "data_type": "varchar", "is_nullable": false, "key_type": ""},
+        {"name": "trainer", "data_type": "varchar", "is_nullable": true, "key_type": ""},
+        {"name": "result", "data_type": "varchar", "is_nullable": true, "key_type": ""},
+        {"name": "hours", "data_type": "decimal", "is_nullable": true, "key_type": ""}
+      ],
+      "foreign_keys": [],
+      "noui_tags": []
+    },
+    {
+      "name": "expense_claims",
+      "row_count": 500,
+      "columns": [
+        {"name": "id", "data_type": "int", "is_nullable": false, "key_type": "PRI"},
+        {"name": "employee", "data_type": "varchar", "is_nullable": false, "key_type": ""},
+        {"name": "expense_date", "data_type": "date", "is_nullable": false, "key_type": ""},
+        {"name": "claim_amount", "data_type": "decimal", "is_nullable": false, "key_type": ""},
+        {"name": "sanctioned_amount", "data_type": "decimal", "is_nullable": false, "key_type": ""},
+        {"name": "expense_type", "data_type": "varchar", "is_nullable": false, "key_type": ""},
+        {"name": "approval_status", "data_type": "varchar", "is_nullable": false, "key_type": ""}
+      ],
+      "foreign_keys": [],
+      "noui_tags": []
+    },
+    {
+      "name": "staff_appraisals",
+      "row_count": 400,
+      "columns": [
+        {"name": "id", "data_type": "int", "is_nullable": false, "key_type": "PRI"},
+        {"name": "employee", "data_type": "varchar", "is_nullable": false, "key_type": ""},
+        {"name": "score", "data_type": "decimal", "is_nullable": true, "key_type": ""},
+        {"name": "rating", "data_type": "varchar", "is_nullable": true, "key_type": ""},
+        {"name": "goal", "data_type": "varchar", "is_nullable": true, "key_type": ""},
+        {"name": "appraisal_cycle", "data_type": "varchar", "is_nullable": true, "key_type": ""}
+      ],
+      "foreign_keys": [],
+      "noui_tags": []
+    },
+    {
+      "name": "shift_assignments",
+      "row_count": 1200,
+      "columns": [
+        {"name": "id", "data_type": "int", "is_nullable": false, "key_type": "PRI"},
+        {"name": "employee", "data_type": "varchar", "is_nullable": false, "key_type": ""},
+        {"name": "shift_type", "data_type": "varchar", "is_nullable": false, "key_type": ""},
+        {"name": "start_date", "data_type": "date", "is_nullable": false, "key_type": ""},
+        {"name": "end_date", "data_type": "date", "is_nullable": false, "key_type": ""},
+        {"name": "status", "data_type": "varchar", "is_nullable": false, "key_type": ""}
+      ],
+      "foreign_keys": [],
+      "noui_tags": []
+    },
+    {
+      "name": "employee_loans",
+      "row_count": 80,
+      "columns": [
+        {"name": "id", "data_type": "int", "is_nullable": false, "key_type": "PRI"},
+        {"name": "employee", "data_type": "varchar", "is_nullable": false, "key_type": ""},
+        {"name": "loan_amount", "data_type": "decimal", "is_nullable": false, "key_type": ""},
+        {"name": "repayment_amount", "data_type": "decimal", "is_nullable": false, "key_type": ""},
+        {"name": "disbursement_date", "data_type": "date", "is_nullable": false, "key_type": ""},
+        {"name": "rate_of_interest", "data_type": "decimal", "is_nullable": true, "key_type": ""},
+        {"name": "status", "data_type": "varchar", "is_nullable": false, "key_type": ""}
+      ],
+      "foreign_keys": [],
+      "noui_tags": []
+    }
+  ]
+}

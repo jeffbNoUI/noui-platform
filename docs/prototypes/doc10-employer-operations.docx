@@ -1,0 +1,611 @@
+NoUI Training Document Series
+
+**Public Pension Domain Knowledge**
+
+Document 10: Employer Operations
+
+Version 1.0 \| February 2026
+
+*Employer responsibilities in pension administration: contributions,
+reporting, and compliance*
+
+Executive Summary
+
+Employers play a critical role in pension administration, serving as the
+primary interface between employees and the pension system. Employer
+responsibilities include enrolling eligible employees, collecting and
+remitting contributions, reporting compensation and service data, and
+maintaining accurate records that form the foundation for benefit
+calculations.
+
+This document examines employer operational requirements including
+contribution remittance, payroll reporting, employee enrollment, data
+quality responsibilities, and compliance requirements. For systems like
+DERP that serve a single employer (City and County of Denver), these
+operations are internal processes. For statewide systems serving
+multiple employers, these become complex multi-party relationships
+requiring robust data exchange and reconciliation.
+
+1\. Contribution Management
+
+1.1 Contribution Structure
+
+Public pension funding typically involves both employee and employer
+contributions:
+
+  ----------------------- ----------------------- -----------------------
+  **Contribution Type**   **DERP Rate**           **Characteristics**
+
+  Employee                8.45%                   Pre-tax, mandatory
+
+  Employer                17.95%                  Budget appropriation
+
+  Combined                26.40%                  Total plan funding
+  ----------------------- ----------------------- -----------------------
+
+1.2 Employee Contributions
+
+Employee contributions are typically handled through payroll:
+
+-   Withheld from each paycheck before taxes (IRC 414(h) pickup)
+
+-   Calculated as percentage of pensionable compensation
+
+-   Mandatory for all eligible employees
+
+-   Accumulate with interest for potential refund if member leaves
+    non-vested
+
+1.3 Employer Contributions
+
+Employer contributions may be structured in different ways:
+
+**Fixed Rate:** A set percentage of payroll, like DERP\'s 17.95%.
+Provides budget predictability but may not match actuarial requirements.
+
+**Actuarially Determined:** Contribution rate calculated annually by
+actuary to fund benefits. Rate varies based on investment returns and
+demographic experience.
+
+**Hybrid:** Combination of fixed base rate plus variable component if
+funding falls below thresholds.
+
+1.4 Contribution Remittance
+
+Employers must remit contributions according to plan requirements:
+
+-   Timing: Typically within X days after each pay period
+
+-   Format: Electronic funds transfer with supporting data
+
+-   Reconciliation: Contributions must match reported payroll
+
+-   Late penalties: Interest charges on delayed contributions
+
+2\. Payroll Reporting
+
+2.1 Regular Payroll Reports
+
+Each pay period, employers submit detailed payroll information:
+
+-   Employee identification (SSN, employee ID)
+
+-   Pay period dates
+
+-   Gross compensation
+
+-   Pensionable compensation (may differ from gross)
+
+-   Employee contributions withheld
+
+-   Hours worked (for part-time service credit)
+
+-   Employment status changes
+
+2.2 Pensionable Compensation
+
+Plans define which compensation components are pensionable:
+
+Typically Included
+
+-   Base salary
+
+-   Longevity pay
+
+-   Shift differentials
+
+-   Regular overtime (varies by plan)
+
+-   Acting/temporary upgrade pay
+
+Typically Excluded
+
+-   Bonuses (unless specifically included)
+
+-   Expense reimbursements
+
+-   Fringe benefit allowances
+
+-   Severance pay
+
+-   Non-cash compensation
+
+2.3 DERP Pensionable Compensation
+
+For DERP, pensionable compensation includes base salary and certain
+additional compensation. Leave payouts are treated as pensionable salary
+for members hired before January 1, 2010, which can significantly impact
+final average salary calculations.
+
+2.4 Report Validation
+
+Payroll reports undergo validation before processing:
+
+-   Format validation (required fields, data types)
+
+-   Reasonableness checks (salary within ranges)
+
+-   Consistency checks (employee exists, status matches)
+
+-   Reconciliation (contributions match calculated amounts)
+
+3\. Employee Enrollment
+
+3.1 Eligibility Determination
+
+Employers must correctly identify pension-eligible employees:
+
+-   Employment classification (permanent vs. temporary)
+
+-   Hours threshold (minimum hours for eligibility)
+
+-   Waiting periods (if any before enrollment)
+
+-   Position coverage (some positions may be excluded)
+
+3.2 Enrollment Process
+
+**Step 1:** Employer identifies eligible new hire
+
+**Step 2:** Employee completes enrollment forms
+
+**Step 3:** Employee designates beneficiaries
+
+**Step 4:** Employer submits enrollment to pension system
+
+**Step 5:** Pension system establishes member record
+
+**Step 6:** Contributions begin with next pay period
+
+3.3 Enrollment Data
+
+New member enrollment typically requires:
+
+-   Legal name and any aliases
+
+-   Social Security number
+
+-   Date of birth
+
+-   Gender (for actuarial purposes)
+
+-   Mailing address
+
+-   Hire date (critical for tier determination)
+
+-   Position/classification
+
+-   Initial salary
+
+-   Beneficiary designation
+
+3.4 Tier Assignment
+
+For multi-tier plans like DERP, the hire date determines benefit tier:
+
+-   Tier 1: Hired before September 1, 2004
+
+-   Tier 2: Hired September 1, 2004 through June 30, 2011
+
+-   Tier 3: Hired on or after July 1, 2011
+
+Accurate hire date reporting is essential as tier assignment affects all
+future benefit calculations.
+
+4\. Employment Status Changes
+
+4.1 Types of Changes
+
+Employers must report various employment status changes:
+
+**Salary Changes:** Promotions, demotions, step increases, COLAs.
+Critical for AMS calculations.
+
+**Position Changes:** Transfers, reclassifications. May affect
+eligibility or benefit provisions.
+
+**Status Changes:** Full-time to part-time, active to leave, return from
+leave.
+
+**Termination:** Resignation, retirement, death, dismissal. Triggers
+benefit processing.
+
+4.2 Salary Change Reporting
+
+Accurate salary history is essential for benefit calculations:
+
+-   Effective date of change
+
+-   Previous salary
+
+-   New salary
+
+-   Reason for change
+
+-   Position if changed
+
+4.3 Leave Reporting
+
+Various leave types affect pension administration:
+
+  ----------------- -------------------------- --------------------------
+  **Leave Type**    **Service Credit**         **Contributions**
+
+  Paid Leave        Continues                  Continue on paid salary
+
+  FMLA Unpaid       May continue               May be purchased later
+
+  Personal Unpaid   Typically stops            No contributions
+
+  Military Leave    Protected by USERRA        Special provisions
+
+  Workers\' Comp    Typically continues        Varies by plan
+  ----------------- -------------------------- --------------------------
+
+4.4 Termination Reporting
+
+When employees terminate, employers must report:
+
+-   Last day worked
+
+-   Reason for termination
+
+-   Final salary
+
+-   Any leave payout amounts
+
+-   Accrued leave balances (if applicable to pension)
+
+-   Final contribution amounts
+
+5\. Data Quality Responsibilities
+
+5.1 Employer Data Quality Role
+
+Employers are the source of most pension data and bear primary
+responsibility for accuracy:
+
+-   Employee demographic information
+
+-   Employment dates and history
+
+-   Salary and compensation data
+
+-   Service credit accumulation
+
+-   Status changes and terminations
+
+5.2 Common Data Quality Issues
+
+Data quality problems frequently encountered include:
+
+**Incorrect Hire Dates:** Wrong dates can affect tier determination and
+service credit. Particularly problematic for rehired employees.
+
+**Compensation Errors:** Including non-pensionable pay, excluding
+pensionable components, or incorrect amounts affect contribution and
+benefit calculations.
+
+**Missing Periods:** Gaps in payroll reporting can result in missing
+service credit.
+
+**Status Discrepancies:** Employee shown as active when terminated, or
+vice versa.
+
+**Demographic Errors:** Wrong SSN, date of birth, or name spellings
+create member record problems.
+
+5.3 Data Correction Process
+
+When errors are discovered:
+
+-   Identify scope and impact of error
+
+-   Determine correction method (adjustment vs. reversal/re-entry)
+
+-   Calculate contribution adjustments if needed
+
+-   Process correction with documentation
+
+-   Verify correction is reflected accurately
+
+-   Maintain audit trail of changes
+
+5.4 Retroactive Corrections
+
+Some corrections require retroactive adjustments:
+
+-   May involve recalculating contributions for prior periods
+
+-   May require employer to remit additional contributions
+
+-   May result in refunds for over-contributions
+
+-   Should trigger recalculation of any affected benefits
+
+6\. Multi-Employer System Considerations
+
+While DERP serves a single employer, statewide systems serve hundreds of
+employers with varying capabilities.
+
+6.1 Employer Onboarding
+
+Adding new participating employers requires:
+
+-   Adoption agreement or resolution
+
+-   Identification of covered positions
+
+-   Contribution rate determination
+
+-   System access and training
+
+-   Initial employee census
+
+-   Historical data migration (if applicable)
+
+6.2 Employer Categories
+
+Employers may have different relationships with the system:
+
+**Mandatory Participants:** Required by law to participate. All eligible
+employees must be covered.
+
+**Optional Participants:** May elect to participate. May have different
+plan provisions.
+
+**Contract Employers:** Participate through contractual agreement. May
+have unique terms.
+
+6.3 Employer Reporting Variations
+
+Different employers may have different capabilities:
+
+-   Large employers: Automated data exchange, sophisticated HR systems
+
+-   Small employers: Manual reporting, limited staff
+
+-   School districts: Unique calendar, seasonal employment
+
+-   Public safety: 24-hour shifts, overtime complexities
+
+6.4 Employer Account Management
+
+For each employer, the pension system tracks:
+
+-   Employer identification and contact information
+
+-   Applicable plan provisions and contribution rates
+
+-   Reporting schedules and deadlines
+
+-   Historical contributions and adjustments
+
+-   Compliance status and any outstanding issues
+
+7\. Compliance and Audit
+
+7.1 Employer Compliance Requirements
+
+Employers must comply with various requirements:
+
+-   Timely enrollment of eligible employees
+
+-   Accurate calculation and withholding of contributions
+
+-   On-time remittance of contributions
+
+-   Complete and accurate payroll reporting
+
+-   Prompt reporting of status changes
+
+-   Cooperation with audits and requests
+
+7.2 Compliance Monitoring
+
+Pension systems monitor employer compliance through:
+
+-   Automated validation of submissions
+
+-   Reconciliation of contributions to reported payroll
+
+-   Periodic audits of employer records
+
+-   Comparison to prior period patterns
+
+-   Investigation of member complaints or discrepancies
+
+7.3 Non-Compliance Consequences
+
+Employers failing to comply may face:
+
+-   Interest charges on late contributions
+
+-   Penalties for persistent late payment
+
+-   Liability for member benefit losses
+
+-   Audit findings and corrective action requirements
+
+-   Board notification and escalation
+
+7.4 Employer Audits
+
+Pension systems may conduct employer audits examining:
+
+-   Proper classification of employees for eligibility
+
+-   Accuracy of reported compensation
+
+-   Completeness of enrollment for all eligible employees
+
+-   Proper withholding and remittance of contributions
+
+-   Compliance with reporting requirements
+
+8\. Employer Self-Service
+
+8.1 Employer Portal Functions
+
+Modern pension systems provide employer portals for:
+
+-   Payroll data submission
+
+-   Contribution payment
+
+-   Employee enrollment
+
+-   Status change reporting
+
+-   Contribution and payment history
+
+-   Report generation
+
+-   Document access
+
+8.2 User Management
+
+Employer portals require user access controls:
+
+-   Multiple user roles (administrator, payroll, HR)
+
+-   Role-based permissions
+
+-   User provisioning and deprovisioning
+
+-   Audit logging of user actions
+
+-   Security requirements (passwords, MFA)
+
+8.3 Integration Options
+
+Employers may integrate their HR/payroll systems:
+
+-   File-based batch uploads (common)
+
+-   API integration (for sophisticated employers)
+
+-   Manual entry (for small employers)
+
+-   Standardized file formats
+
+-   Real-time validation and feedback
+
+9\. Retirement Process Coordination
+
+9.1 Employer Role in Retirement
+
+When employees retire, employers must:
+
+-   Confirm termination date and status
+
+-   Report final salary information
+
+-   Calculate and report any leave payout
+
+-   Submit final contribution payment
+
+-   Provide any required certifications
+
+9.2 Leave Payout Coordination
+
+For DERP members eligible for leave payout (hired before January 1,
+2010):
+
+-   Employer calculates unused leave balance
+
+-   Determines payout amount based on final salary
+
+-   Reports payout as pensionable compensation
+
+-   Withholds pension contribution on payout
+
+-   Pension system includes in AMS calculation
+
+9.3 Information Verification
+
+Employers may be asked to verify information during retirement
+processing:
+
+-   Employment dates confirmation
+
+-   Salary history verification
+
+-   Position/classification confirmation
+
+-   Leave balance certification
+
+10\. Implications for NoUI Development
+
+10.1 Employer Data Model
+
+-   Employer master records with identification and contact info
+
+-   Employer-specific plan provisions and rates
+
+-   Reporting period tracking
+
+-   Contribution payment history
+
+-   User accounts and permissions
+
+10.2 Data Exchange
+
+-   Payroll data import and validation
+
+-   Error handling and feedback
+
+-   Contribution reconciliation
+
+-   Adjustment processing
+
+-   Historical data correction
+
+10.3 Employer Self-Service
+
+-   Secure portal access
+
+-   Role-based functionality
+
+-   Reporting capabilities
+
+-   Document management
+
+-   Communication tools
+
+Conclusion
+
+Employers are essential partners in pension administration, providing
+the source data that underlies all benefit calculations. Accurate,
+timely reporting of enrollment, contributions, compensation, and status
+changes ensures that members receive correct benefits and that plan
+funding remains on track.
+
+For DERP as a single-employer plan, these operations are internal City
+functions. The NoUI platform must support the data exchange and
+validation processes that ensure employer data flows correctly into the
+pension system. Data quality monitoring, error correction workflows, and
+clear audit trails are essential for maintaining the data integrity on
+which accurate benefit calculations depend.
+
+*--- End of Document 10 ---*

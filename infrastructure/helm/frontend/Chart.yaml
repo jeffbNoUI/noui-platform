@@ -1,0 +1,5 @@
+apiVersion: v2
+name: derp-frontend
+description: NoUI DERP POC - Frontend Workspace
+version: 0.1.0
+appVersion: "0.1.0"

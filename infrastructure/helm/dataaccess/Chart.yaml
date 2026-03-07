@@ -1,0 +1,5 @@
+apiVersion: v2
+name: derp-dataaccess
+description: NoUI DERP POC - Data Connector Service
+version: 0.1.0
+appVersion: "0.1.0"

@@ -1,0 +1,494 @@
+# =============================================================================
+# DERP Membership Rules
+# =============================================================================
+# Domain: membership
+# Rules: RULE-TIER-1, RULE-TIER-2, RULE-TIER-3, RULE-CONTRIB-EE, RULE-CONTRIB-ER
+# Authority: DERP Restated Master Contract (RMC)
+# =============================================================================
+
+metadata:
+  domain: "membership"
+  version: "1.0.0"
+  effective_date: "2026-03-02"
+  authority: "DERP Restated Master Contract (RMC)"
+  description: >
+    Defines tier classification based on hire date and contribution rates
+    for employees and employers in the DERP plan.
+  governance:
+    owner: "DERP Rules Committee"
+    approved_by: "Plan Administrator"
+    approval_date: "2026-03-02"
+    review_cycle: "annual"
+    next_review_date: "2027-03-02"
+    audit_trail: true
+    change_log:
+      - version: "1.0.0"
+        date: "2026-03-02"
+        author: "Rules Committee"
+        description: "Initial rule definitions for DERP NoUI POC"
+
+rules:
+  # ===========================================================================
+  # RULE-TIER-1: Tier 1 Classification
+  # ===========================================================================
+  - id: "RULE-TIER-1"
+    name: "Tier 1 Member Classification"
+    description: >
+      A member is classified as Tier 1 if they were hired BEFORE September 1, 2004
+      AND terminated employment after December 31, 1999 (or are still active).
+      Tier 1 members receive a 2.0% multiplier and 36-month AMS window.
+    source_reference:
+      document: "RMC"
+      section: "Section 2.01(a) - Tier 1 Membership"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1"]
+      member_types: ["active", "terminated", "retired"]
+    inputs:
+      - name: "hire_date"
+        type: "date"
+        required: true
+        description: "Member's original hire date"
+      - name: "termination_date"
+        type: "date"
+        required: false
+        description: "Member's termination date, null if still active"
+    logic:
+      type: "conditional"
+      conditions:
+        - condition: "hire_date < '2004-09-01'"
+          and: "termination_date IS NULL OR termination_date > '1999-12-31'"
+          result:
+            tier: "tier_1"
+            multiplier: 0.020
+            ams_months: 36
+            rule_of_n: 75
+            rule_of_n_min_age: 55
+    output:
+      name: "tier_classification"
+      type: "object"
+      fields:
+        - name: "tier"
+          type: "enum"
+          values: ["tier_1"]
+        - name: "multiplier"
+          type: "decimal"
+        - name: "ams_months"
+          type: "integer"
+        - name: "rule_of_n"
+          type: "integer"
+        - name: "rule_of_n_min_age"
+          type: "integer"
+    dependencies: []
+    tags: ["membership", "tier", "classification"]
+    test_cases:
+      - name: "Happy path - Robert Martinez Tier 1 classification"
+        type: "happy_path"
+        demo_case_ref: "Case 1: Robert Martinez - Tier 1"
+        description: "Member hired 1998-06-15 with no termination is Tier 1"
+        inputs:
+          hire_date: "1998-06-15"
+          termination_date: null
+        expected:
+          tier: "tier_1"
+          multiplier: 0.020
+          ams_months: 36
+          rule_of_n: 75
+          rule_of_n_min_age: 55
+      - name: "Boundary - hired day before Tier 2 cutoff"
+        type: "boundary"
+        description: "Member hired on Aug 31, 2004 (last day for Tier 1)"
+        inputs:
+          hire_date: "2004-08-31"
+          termination_date: null
+        expected:
+          tier: "tier_1"
+          multiplier: 0.020
+          ams_months: 36
+      - name: "Below boundary - hired on Tier 2 cutoff date"
+        type: "below_boundary"
+        description: "Member hired on Sep 1, 2004 should NOT be Tier 1"
+        inputs:
+          hire_date: "2004-09-01"
+          termination_date: null
+        expected:
+          tier: null
+          classification_result: "not_tier_1"
+      - name: "Negative - terminated before Jan 1, 2000"
+        type: "negative"
+        description: "Member hired before cutoff but terminated before 2000 is NOT Tier 1"
+        inputs:
+          hire_date: "1995-03-15"
+          termination_date: "1999-06-30"
+        expected:
+          tier: null
+          classification_result: "not_tier_1"
+          reason: "Terminated before December 31, 1999"
+      - name: "Edge case - terminated exactly Dec 31, 1999"
+        type: "edge_case"
+        description: "Terminated on the boundary date itself - NOT Tier 1 (must be AFTER)"
+        inputs:
+          hire_date: "1990-01-01"
+          termination_date: "1999-12-31"
+        expected:
+          tier: null
+          classification_result: "not_tier_1"
+          reason: "Terminated on Dec 31, 1999 - must be after, not on"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-TIER-2: Tier 2 Classification
+  # ===========================================================================
+  - id: "RULE-TIER-2"
+    name: "Tier 2 Member Classification"
+    description: >
+      A member is classified as Tier 2 if they were hired on or after September 1, 2004
+      AND before July 1, 2011. Tier 2 members receive a 1.5% multiplier
+      and 36-month AMS window.
+    source_reference:
+      document: "RMC"
+      section: "Section 2.01(b) - Tier 2 Membership"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_2"]
+      member_types: ["active", "terminated", "retired"]
+    inputs:
+      - name: "hire_date"
+        type: "date"
+        required: true
+        description: "Member's original hire date"
+    logic:
+      type: "conditional"
+      conditions:
+        - condition: "hire_date >= '2004-09-01' AND hire_date < '2011-07-01'"
+          result:
+            tier: "tier_2"
+            multiplier: 0.015
+            ams_months: 36
+            rule_of_n: 75
+            rule_of_n_min_age: 55
+    output:
+      name: "tier_classification"
+      type: "object"
+      fields:
+        - name: "tier"
+          type: "enum"
+          values: ["tier_2"]
+        - name: "multiplier"
+          type: "decimal"
+        - name: "ams_months"
+          type: "integer"
+        - name: "rule_of_n"
+          type: "integer"
+        - name: "rule_of_n_min_age"
+          type: "integer"
+    dependencies: []
+    tags: ["membership", "tier", "classification"]
+    test_cases:
+      - name: "Happy path - Jennifer Kim Tier 2 classification"
+        type: "happy_path"
+        demo_case_ref: "Case 2: Jennifer Kim - Tier 2"
+        description: "Member hired 2005-03-01 is Tier 2"
+        inputs:
+          hire_date: "2005-03-01"
+        expected:
+          tier: "tier_2"
+          multiplier: 0.015
+          ams_months: 36
+          rule_of_n: 75
+          rule_of_n_min_age: 55
+      - name: "Boundary - hired on first day of Tier 2 window"
+        type: "boundary"
+        description: "Member hired on Sep 1, 2004 (first eligible Tier 2 date)"
+        inputs:
+          hire_date: "2004-09-01"
+        expected:
+          tier: "tier_2"
+          multiplier: 0.015
+          ams_months: 36
+      - name: "Below boundary - hired day before Tier 2 window"
+        type: "below_boundary"
+        description: "Member hired on Aug 31, 2004 should NOT be Tier 2"
+        inputs:
+          hire_date: "2004-08-31"
+        expected:
+          tier: null
+          classification_result: "not_tier_2"
+      - name: "Negative - hired on Tier 3 start date"
+        type: "negative"
+        description: "Member hired Jul 1, 2011 is Tier 3, NOT Tier 2"
+        inputs:
+          hire_date: "2011-07-01"
+        expected:
+          tier: null
+          classification_result: "not_tier_2"
+      - name: "Boundary - last day of Tier 2 window"
+        type: "boundary"
+        description: "Member hired Jun 30, 2011 (last eligible Tier 2 date)"
+        inputs:
+          hire_date: "2011-06-30"
+        expected:
+          tier: "tier_2"
+          multiplier: 0.015
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-TIER-3: Tier 3 Classification
+  # ===========================================================================
+  - id: "RULE-TIER-3"
+    name: "Tier 3 Member Classification"
+    description: >
+      A member is classified as Tier 3 if they were hired on or after July 1, 2011.
+      Tier 3 members receive a 1.5% multiplier and 60-month AMS window.
+    source_reference:
+      document: "RMC"
+      section: "Section 2.01(c) - Tier 3 Membership"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_3"]
+      member_types: ["active", "terminated", "retired"]
+    inputs:
+      - name: "hire_date"
+        type: "date"
+        required: true
+        description: "Member's original hire date"
+    logic:
+      type: "conditional"
+      conditions:
+        - condition: "hire_date >= '2011-07-01'"
+          result:
+            tier: "tier_3"
+            multiplier: 0.015
+            ams_months: 60
+            rule_of_n: 85
+            rule_of_n_min_age: 60
+    output:
+      name: "tier_classification"
+      type: "object"
+      fields:
+        - name: "tier"
+          type: "enum"
+          values: ["tier_3"]
+        - name: "multiplier"
+          type: "decimal"
+        - name: "ams_months"
+          type: "integer"
+        - name: "rule_of_n"
+          type: "integer"
+        - name: "rule_of_n_min_age"
+          type: "integer"
+    dependencies: []
+    tags: ["membership", "tier", "classification"]
+    test_cases:
+      - name: "Happy path - David Washington Tier 3 classification"
+        type: "happy_path"
+        demo_case_ref: "Case 3: David Washington - Tier 3"
+        description: "Member hired 2015-01-10 is Tier 3"
+        inputs:
+          hire_date: "2015-01-10"
+        expected:
+          tier: "tier_3"
+          multiplier: 0.015
+          ams_months: 60
+          rule_of_n: 85
+          rule_of_n_min_age: 60
+      - name: "Boundary - hired on first day of Tier 3 window"
+        type: "boundary"
+        description: "Member hired Jul 1, 2011 (first eligible Tier 3 date)"
+        inputs:
+          hire_date: "2011-07-01"
+        expected:
+          tier: "tier_3"
+          multiplier: 0.015
+          ams_months: 60
+          rule_of_n: 85
+          rule_of_n_min_age: 60
+      - name: "Below boundary - hired last day of Tier 2 window"
+        type: "below_boundary"
+        description: "Member hired Jun 30, 2011 should NOT be Tier 3"
+        inputs:
+          hire_date: "2011-06-30"
+        expected:
+          tier: null
+          classification_result: "not_tier_3"
+      - name: "Negative - hired well before Tier 3"
+        type: "negative"
+        description: "Member hired in 1998 is definitely not Tier 3"
+        inputs:
+          hire_date: "1998-06-15"
+        expected:
+          tier: null
+          classification_result: "not_tier_3"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-CONTRIB-EE: Employee Contribution Rate
+  # ===========================================================================
+  - id: "RULE-CONTRIB-EE"
+    name: "Employee Contribution Rate"
+    description: >
+      All DERP members contribute 8.45% of their gross pensionable salary
+      as the employee contribution. This rate is uniform across all tiers.
+    source_reference:
+      document: "RMC"
+      section: "Section 3.01 - Employee Contributions"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["active"]
+    inputs:
+      - name: "gross_pensionable_salary"
+        type: "decimal"
+        required: true
+        description: "Member's gross pensionable salary for the pay period"
+        constraints:
+          min: 0
+      - name: "tier"
+        type: "enum"
+        required: true
+        constraints:
+          enum_values: ["tier_1", "tier_2", "tier_3"]
+    logic:
+      type: "formula"
+      expression: "employee_contribution = gross_pensionable_salary * 0.0845"
+      variables:
+        employee_contribution_rate: 0.0845
+    output:
+      name: "employee_contribution"
+      type: "decimal"
+      precision: 2
+      description: "Employee contribution amount for the pay period"
+    tags: ["membership", "contribution", "employee"]
+    test_cases:
+      - name: "Happy path - standard salary contribution"
+        type: "happy_path"
+        demo_case_ref: "Case 1: Robert Martinez - Tier 1"
+        description: "Employee earning $75,000/year, monthly contribution"
+        inputs:
+          gross_pensionable_salary: 6250.00
+          tier: "tier_1"
+        expected:
+          employee_contribution: 528.13
+          rate_applied: 0.0845
+      - name: "Boundary - minimum salary"
+        type: "boundary"
+        description: "Contribution on a very small salary amount"
+        inputs:
+          gross_pensionable_salary: 100.00
+          tier: "tier_2"
+        expected:
+          employee_contribution: 8.45
+      - name: "Below boundary - zero salary"
+        type: "below_boundary"
+        description: "No contribution when salary is zero (e.g., unpaid leave)"
+        inputs:
+          gross_pensionable_salary: 0.00
+          tier: "tier_3"
+        expected:
+          employee_contribution: 0.00
+      - name: "Negative - negative salary input"
+        type: "negative"
+        description: "System should reject negative salary values"
+        inputs:
+          gross_pensionable_salary: -5000.00
+          tier: "tier_1"
+        expected:
+          error: "INVALID_INPUT"
+          message: "gross_pensionable_salary must be >= 0"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-CONTRIB-ER: Employer Contribution Rate
+  # ===========================================================================
+  - id: "RULE-CONTRIB-ER"
+    name: "Employer Contribution Rate"
+    description: >
+      The employer contributes 17.95% of the member's gross pensionable salary.
+      This rate is uniform across all tiers.
+    source_reference:
+      document: "RMC"
+      section: "Section 3.02 - Employer Contributions"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["active"]
+    inputs:
+      - name: "gross_pensionable_salary"
+        type: "decimal"
+        required: true
+        description: "Member's gross pensionable salary for the pay period"
+        constraints:
+          min: 0
+      - name: "tier"
+        type: "enum"
+        required: true
+        constraints:
+          enum_values: ["tier_1", "tier_2", "tier_3"]
+    logic:
+      type: "formula"
+      expression: "employer_contribution = gross_pensionable_salary * 0.1795"
+      variables:
+        employer_contribution_rate: 0.1795
+    output:
+      name: "employer_contribution"
+      type: "decimal"
+      precision: 2
+      description: "Employer contribution amount for the pay period"
+    tags: ["membership", "contribution", "employer"]
+    test_cases:
+      - name: "Happy path - standard salary employer contribution"
+        type: "happy_path"
+        demo_case_ref: "Case 1: Robert Martinez - Tier 1"
+        description: "Employer contribution on $75,000/year member, monthly"
+        inputs:
+          gross_pensionable_salary: 6250.00
+          tier: "tier_1"
+        expected:
+          employer_contribution: 1121.88
+          rate_applied: 0.1795
+      - name: "Boundary - minimum salary"
+        type: "boundary"
+        description: "Employer contribution on a very small salary"
+        inputs:
+          gross_pensionable_salary: 100.00
+          tier: "tier_2"
+        expected:
+          employer_contribution: 17.95
+      - name: "Below boundary - zero salary"
+        type: "below_boundary"
+        description: "No employer contribution when salary is zero"
+        inputs:
+          gross_pensionable_salary: 0.00
+          tier: "tier_3"
+        expected:
+          employer_contribution: 0.00
+      - name: "Negative - negative salary input"
+        type: "negative"
+        description: "System should reject negative salary values"
+        inputs:
+          gross_pensionable_salary: -5000.00
+          tier: "tier_1"
+        expected:
+          error: "INVALID_INPUT"
+          message: "gross_pensionable_salary must be >= 0"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"

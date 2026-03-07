@@ -1,0 +1,95 @@
+NoUI Platform
+
+AI Data Governance Policy
+
+Version 1.0 - February 2026
+
+1\. Foundational Principle
+
+**AI NEVER TOUCHES THE MONEY**
+
+No AI service may execute, approve, or directly influence any financial
+transaction, benefit payment, or monetary calculation. AI services
+operate in an advisory and orchestration capacity only. All financial
+operations are performed by deterministic, auditable code with human
+oversight.
+
+2\. Data Classification Levels
+
+All data within the NoUI platform is classified into one of five levels,
+each with specific handling requirements for AI services.
+
+  ------------------ ------------------ ------------------ -------------------
+  **Level**          **Examples**       **AI Access**      **Rationale**
+
+  **RESTRICTED**     SSN, bank          **NEVER**          Identity theft
+                     accounts, direct                      risk, financial
+                     deposit info                          fraud risk
+
+  **CONFIDENTIAL**   Full name + DOB,   **READ-ONLY for    Required for
+                     salary history,    workspace          context; never
+                     benefit amounts    composition**      transmitted
+                                                           externally
+
+  **SENSITIVE**      Service dates,     READ for rules     Needed to determine
+                     tier, employment   evaluation context applicable rules
+                     status                                
+
+  **INTERNAL**       Rule definitions,  FULL ACCESS        No PII; operational
+                     process configs,                      data only
+                     workflow states                       
+
+  **PUBLIC**         Plan provisions,   FULL ACCESS        Publicly available
+                     statute text,                         information
+                     published rates                       
+  ------------------ ------------------ ------------------ -------------------
+
+3\. AI Data Flow Rules
+
+3.1 External AI Services (Claude API)
+
+**RESTRICTED data:** Never transmitted. Masked or tokenized if reference
+needed.
+
+**CONFIDENTIAL data:** Never transmitted. AI receives anonymized or
+synthetic equivalents.
+
+**SENSITIVE data:** May transmit category indicators (e.g., \'Tier 1
+member\') without specific values.
+
+**INTERNAL/PUBLIC data:** May transmit freely for AI processing.
+
+3.2 Internal AI Services
+
+Internal AI services (relevance engine, orchestrator) may access
+CONFIDENTIAL and SENSITIVE data in read-only mode for workspace
+composition and prioritization. These services run within the agency\'s
+security boundary and do not transmit data externally.
+
+4\. Trust Progression Data Governance
+
+Data access permissions expand as the system progresses through trust
+phases:
+
+**Phase 1 (Transparent):** All AI operations logged. Staff can see
+exactly what data AI accessed and why.
+
+**Phase 2 (Verified):** Logging continues. Audit reports automatically
+generated.
+
+**Phase 3 (Supervised):** Logging continues. Anomaly detection on AI
+data access patterns.
+
+**Phase 4 (Autonomous):** Logging continues. Full audit trail maintained
+indefinitely.
+
+5\. Enforcement
+
+These policies are enforced architecturally through the Data Connector
+layer. The Data Connector acts as the sole gateway to member data and
+implements classification-based access controls. AI services cannot
+bypass the Data Connector to access data directly.
+
+Violations of this policy (attempted access to RESTRICTED data by AI
+services) are logged as security events and trigger immediate alerts to
+system administrators.

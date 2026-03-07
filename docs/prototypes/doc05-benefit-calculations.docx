@@ -1,0 +1,748 @@
+NoUI Training Document Series
+
+**Public Pension Domain Knowledge**
+
+Document 5: Benefit Calculation Methods
+
+Version 1.0 \| February 2026
+
+*Comprehensive guide to pension benefit formulas, calculations, and
+verification methods*
+
+Executive Summary
+
+Benefit calculation is the core function of pension administration.
+Every pension system exists ultimately to calculate and pay correct
+benefits to members. This document provides comprehensive coverage of
+benefit calculation methods, from the fundamental formula components
+through complete worked examples using DERP demo cases.
+
+Accuracy in benefit calculations is non-negotiable. Errors can result in
+underpayment (harming members), overpayment (harming the plan), or legal
+liability. Calculations must be verifiable to the penny against hand
+calculations, and every component must be traceable to governing
+documents. This document establishes the calculation methodology that
+NoUI must implement with absolute precision.
+
+1\. The Core Benefit Formula
+
+The fundamental benefit formula for defined benefit pensions multiplies
+three components to produce an annual benefit amount:
+
+**Annual Benefit = Accrual Rate × Years of Service × Average Monthly
+Salary × 12**
+
+Or equivalently for monthly benefits:
+
+**Monthly Benefit = Accrual Rate × Years of Service × Average Monthly
+Salary**
+
+1.1 Formula Components
+
+**Accrual Rate (Multiplier):** The percentage of salary earned as
+pension benefit for each year of service. Expressed as a decimal in
+calculations (2.0% = 0.02, 1.5% = 0.015).
+
+**Years of Service:** Total credited service, typically expressed as
+years and decimal fractions. Includes both earned service and purchased
+service for benefit calculation purposes.
+
+**Average Monthly Salary (AMS):** The average of the member\'s highest
+consecutive months of salary as defined by plan provisions. Also called
+Final Average Salary (FAS) or Highest Average Compensation (HAC).
+
+1.2 DERP Formula Parameters
+
+  ----------------- ----------------- ----------------- -----------------
+  **Parameter**     **Tier 1**        **Tier 2**        **Tier 3**
+
+  Accrual Rate      2.0%              1.5%              1.5%
+
+  AMS Period        36 months         36 months         60 months
+
+  Consecutive       Yes               Yes               Yes
+  Required                                              
+  ----------------- ----------------- ----------------- -----------------
+
+2\. Service Credit Calculation
+
+Service credit represents the time worked that counts toward the benefit
+formula. Accurate service calculation requires tracking employment
+periods, handling breaks and leaves, and incorporating purchased
+service.
+
+2.1 Calculating Earned Service
+
+Earned service accumulates from actual employment with covered
+employers. The calculation involves:
+
+-   Identifying all employment periods with start and end dates
+
+-   Calculating days, months, or years of service for each period
+
+-   Handling partial months according to plan rules
+
+-   Aggregating total service across all periods
+
+Service Calculation Methods
+
+**Exact Day Method:** Calculate exact days of service, convert to years
+(days ÷ 365.25). Most precise method.
+
+**Year-Month Method:** Count complete years and months, convert months
+to decimal (months ÷ 12). Common approach.
+
+**Hours Method:** Track actual hours worked, convert to years based on
+full-time equivalent (e.g., 2,080 hours = 1 year).
+
+2.2 Service Credit Example
+
+Robert Martinez (Demo Case 1):
+
+-   Hire Date: June 15, 1997
+
+-   Retirement Date: April 1, 2026
+
+-   Calculation: From June 15, 1997 to April 1, 2026
+
+-   Years: 28 complete years (June 1997 to June 2025)
+
+-   Additional months: June 2025 to April 2026 = 9 months, 17 days
+
+-   Total: 28 years + 9.57 months = 28.797 years (or 28 years, 9 months,
+    17 days)
+
+-   Rounded for calculation: 28.75 years (using 9/12 = 0.75)
+
+2.3 Purchased Service
+
+Purchased service adds to the service credit used in benefit
+calculations. Common categories include:
+
+-   Military service buyback
+
+-   Prior public employment
+
+-   Leave of absence periods
+
+-   Redeposit of previously refunded service
+
+Example - Jennifer Kim (Demo Case 2):
+
+-   Earned service: 18 years, 2 months (18.17 years)
+
+-   Purchased service: 3 years
+
+-   Total service for benefit calculation: 21.17 years
+
+-   Service for eligibility (Rule of 75): 18.17 years only
+
+3\. Average Monthly Salary (AMS) Calculation
+
+AMS calculation is often the most complex component of benefit
+determination. It requires identifying the highest consecutive averaging
+period, handling compensation components, and addressing special
+situations like leave payouts.
+
+3.1 Identifying the Averaging Period
+
+The averaging period is the consecutive period of highest salary used in
+the benefit formula:
+
+-   Tier 1 and 2: Highest 36 consecutive months
+
+-   Tier 3: Highest 60 consecutive months
+
+Key principles:
+
+-   Period must be consecutive (no gaps)
+
+-   System must search all possible windows to find highest average
+
+-   Final partial month may be included depending on plan rules
+
+3.2 Compensation Components
+
+Plans define which compensation elements are included in pensionable
+salary:
+
+**Typically Included:** Base salary, longevity pay, shift differentials,
+regular overtime (if plan allows)
+
+**Typically Excluded:** Bonuses, expense reimbursements, severance pay,
+non-cash compensation
+
+**Special Treatment:** Leave payouts (DERP includes for pre-2010 hires),
+overtime caps
+
+3.3 Leave Payout Impact
+
+DERP allows members hired before January 1, 2010 to have unused leave
+paid out and treated as salary for pension calculation. This can
+significantly boost AMS:
+
+Example - Robert Martinez:
+
+-   Normal final month salary: approximately \$9,200
+
+-   Leave payout in final month: \$52,000
+
+-   Final month salary for AMS: \$61,200
+
+-   This high month pulls up the 36-month average substantially
+
+3.4 AMS Calculation Process
+
+Step-by-step AMS determination:
+
+**Step 1:** Gather complete salary history with pensionable compensation
+by month
+
+**Step 2:** Include any leave payouts in appropriate month(s) for
+eligible members
+
+**Step 3:** Identify all possible consecutive windows of required length
+
+**Step 4:** Calculate average monthly salary for each window
+
+**Step 5:** Select highest average as the AMS
+
+**Step 6:** Document which period was used and why
+
+4\. Complete Benefit Calculation
+
+This section walks through the complete calculation process, applying
+the formula with all components.
+
+4.1 Calculation Workflow
+
+The complete calculation follows this sequence:
+
+-   1\. Determine member\'s tier from hire date
+
+-   2\. Calculate total service credit (earned + purchased)
+
+-   3\. Calculate AMS using tier-appropriate averaging period
+
+-   4\. Apply benefit formula: Rate × Service × AMS
+
+-   5\. Determine eligibility category (normal, rule of years, early)
+
+-   6\. Apply early retirement reduction if applicable
+
+-   7\. Result: Monthly benefit at maximum (single life) amount
+
+4.2 Worked Example: Robert Martinez (Case 1)
+
+Given Information
+
+-   Hire Date: June 15, 1997 → Tier 1 (before Sept 1, 2004)
+
+-   Date of Birth: March 8, 1963
+
+-   Retirement Date: April 1, 2026
+
+-   Leave Payout: \$52,000
+
+Step 1: Service Credit
+
+-   Employment: June 15, 1997 to April 1, 2026
+
+-   Total: 28 years, 9 months, 17 days
+
+-   Decimal: 28.75 years
+
+Step 2: AMS Calculation
+
+-   Tier 1 uses 36-month averaging period
+
+-   Assume monthly salaries averaging \~\$9,000 for most recent months
+
+-   Final month includes \$52,000 leave payout
+
+-   36-month total with payout: approximately \$375,600
+
+-   AMS: \$375,600 ÷ 36 = \$10,433.33 (illustrative)
+
+Step 3: Apply Formula
+
+-   Accrual Rate: 2.0% = 0.02
+
+-   Service: 28.75 years
+
+-   AMS: \$10,433.33
+
+-   Monthly Benefit = 0.02 × 28.75 × \$10,433.33
+
+-   Monthly Benefit = \$5,999.17 (illustrative)
+
+Step 4: Eligibility Check
+
+-   Age at retirement: 63
+
+-   Rule of 75: 63 + 28.75 = 91.75 ≥ 75 ✓
+
+-   Minimum age 55: 63 ≥ 55 ✓
+
+-   Result: Qualifies for unreduced benefit
+
+Step 5: Final Benefit
+
+-   No early retirement reduction applies
+
+-   Maximum monthly benefit: \$5,999.17 (illustrative)
+
+-   This is the single-life amount before any payment option adjustments
+
+4.3 Worked Example: Jennifer Kim (Case 2)
+
+Given Information
+
+-   Hire Date: March 1, 2008 → Tier 2 (Sept 2004 - June 2011)
+
+-   Date of Birth: June 22, 1970
+
+-   Retirement Date: May 1, 2026
+
+-   Earned Service: 18 years, 2 months
+
+-   Purchased Service: 3 years
+
+Step 1: Service Credit
+
+-   Earned: 18.17 years
+
+-   Purchased: 3.00 years
+
+-   Total for benefit calculation: 21.17 years
+
+-   For Rule of 75: 18.17 years (earned only)
+
+Step 2: AMS Calculation
+
+-   Tier 2 uses 36-month averaging period
+
+-   No leave payout (hired after Jan 1, 2010? Need to verify)
+
+-   Actually hired March 1, 2008 - before Jan 1, 2010
+
+-   Assume leave payout eligibility but none taken
+
+-   AMS based on salary history: \$7,346.00 (from case documentation)
+
+Step 3: Apply Formula
+
+-   Accrual Rate: 1.5% = 0.015
+
+-   Service: 21.17 years
+
+-   AMS: \$7,346.00
+
+-   Monthly Benefit = 0.015 × 21.17 × \$7,346.00
+
+-   Unreduced Monthly Benefit = \$2,332.96
+
+Step 4: Eligibility Check
+
+-   Age at retirement: 55
+
+-   Rule of 75: 55 + 18.17 = 73.17 \< 75 ✗
+
+-   Early retirement: Age 55 ≥ 55 ✓, Service 18.17 ≥ 5 ✓
+
+-   Result: Early retirement with reduction
+
+Step 5: Early Retirement Reduction
+
+-   Years under 65: 10 years
+
+-   Reduction rate: 3% per year (Tier 2)
+
+-   Total reduction: 10 × 3% = 30%
+
+-   Reduction factor: 1 - 0.30 = 0.70
+
+-   Reduced benefit: \$2,332.96 × 0.70 = \$1,633.07
+
+Final Benefit
+
+-   Maximum monthly benefit: \$1,633.07
+
+4.4 Worked Example: David Washington (Case 3)
+
+Given Information
+
+-   Hire Date: September 1, 2012 → Tier 3 (on/after July 1, 2011)
+
+-   Date of Birth: February 14, 1963
+
+-   Retirement Date: April 1, 2026
+
+-   Service: 13 years, 7 months
+
+Step 1: Service Credit
+
+-   Employment: September 1, 2012 to April 1, 2026
+
+-   Total: 13 years, 7 months = 13.58 years
+
+Step 2: AMS Calculation
+
+-   Tier 3 uses 60-month averaging period
+
+-   No leave payout eligibility (hired after Jan 1, 2010)
+
+-   Assume AMS from salary history: \$8,500.00 (illustrative)
+
+Step 3: Apply Formula
+
+-   Accrual Rate: 1.5% = 0.015
+
+-   Service: 13.58 years
+
+-   AMS: \$8,500.00
+
+-   Monthly Benefit = 0.015 × 13.58 × \$8,500.00
+
+-   Unreduced Monthly Benefit = \$1,731.45
+
+Step 4: Eligibility Check
+
+-   Age at retirement: 63
+
+-   Rule of 85: 63 + 13.58 = 76.58 \< 85 ✗
+
+-   Minimum age for Rule of 85: 60 ✓
+
+-   Early retirement: Age 63 ≥ 60 ✓, Service 13.58 ≥ 5 ✓
+
+-   Result: Early retirement with reduction
+
+Step 5: Early Retirement Reduction
+
+-   Years under 65: 2 years
+
+-   Reduction rate: 6% per year (Tier 3)
+
+-   Total reduction: 2 × 6% = 12%
+
+-   Reduction factor: 1 - 0.12 = 0.88
+
+-   Reduced benefit: \$1,731.45 × 0.88 = \$1,523.68
+
+5\. Domestic Relations Order Calculations
+
+When a member is subject to a Domestic Relations Order (DRO), the
+benefit must be divided between the member and the alternate payee
+(typically a former spouse). DERP uses a marital share methodology.
+
+5.1 Marital Share Method
+
+The marital share represents the portion of the benefit earned during
+the marriage while the member was employed with the plan:
+
+**Marital Fraction = Service During Marriage ÷ Total Service at
+Retirement**
+
+**Marital Share = Total Benefit × Marital Fraction**
+
+**Alternate Payee Amount = Marital Share × Award Percentage**
+
+5.2 Worked Example: Case 4 (Robert Martinez with DRO)
+
+Given Information
+
+-   Same as Case 1, plus:
+
+-   Marriage Date: August 15, 1999
+
+-   Divorce Date: November 3, 2017
+
+-   DRO Award: 40% of marital share to former spouse Patricia
+
+Step 1: Calculate Base Benefit
+
+-   Same calculation as Case 1
+
+-   Unreduced monthly benefit: \$5,999.17 (illustrative)
+
+Step 2: Calculate Service During Marriage
+
+-   Marriage: August 15, 1999
+
+-   Divorce: November 3, 2017
+
+-   Marriage duration while employed: 18 years, 2 months, 19 days
+
+-   Decimal: 18.25 years
+
+Step 3: Calculate Marital Fraction
+
+-   Service during marriage: 18.25 years
+
+-   Total service at retirement: 28.75 years
+
+-   Marital Fraction: 18.25 ÷ 28.75 = 0.6348 (63.48%)
+
+Step 4: Calculate Marital Share
+
+-   Total benefit: \$5,999.17
+
+-   Marital share: \$5,999.17 × 0.6348 = \$3,808.27
+
+Step 5: Calculate Alternate Payee Amount
+
+-   Marital share: \$3,808.27
+
+-   DRO percentage: 40%
+
+-   Patricia\'s share: \$3,808.27 × 0.40 = \$1,523.31
+
+Step 6: Calculate Member\'s Remaining Benefit
+
+-   Total benefit: \$5,999.17
+
+-   Less alternate payee: \$1,523.31
+
+-   Robert\'s benefit: \$4,475.86
+
+Note: This is the maximum (single life) benefit before payment option
+adjustments. Payment options affect Robert\'s portion; Patricia\'s DRO
+amount may have different payment rules.
+
+6\. Rounding and Precision
+
+Benefit calculations require consistent rounding rules to ensure
+reproducible results. Plans specify rounding approaches that must be
+followed exactly.
+
+6.1 Intermediate Calculations
+
+Best practice is to maintain full precision (many decimal places) during
+intermediate calculations and apply rounding only to final results:
+
+-   Service credit: Calculate to 4+ decimal places, display to 2
+
+-   AMS: Calculate with full precision, round to cents
+
+-   Accrual calculation: Maintain full precision through multiplication
+
+-   Final benefit: Round to cents (2 decimal places) as last step
+
+6.2 Rounding Methods
+
+**Standard Rounding:** Round 0.5 up to next whole number. Most common
+approach.
+
+**Banker\'s Rounding:** Round 0.5 to nearest even number. Reduces bias
+over many calculations.
+
+**Truncation:** Always round down, ignoring fractional amount. Less
+common for benefits.
+
+The specific rounding method should be verified against plan documents
+or administrative practice.
+
+6.3 Penny-Perfect Verification
+
+Benefit calculations must be verifiable to the penny against hand
+calculations. This requires:
+
+-   Documenting every calculation step
+
+-   Showing all intermediate values
+
+-   Applying consistent rounding rules
+
+-   Providing source data for all inputs
+
+-   Enabling independent verification
+
+7\. Supplemental Benefits
+
+Beyond the primary pension benefit, DERP provides additional benefits
+that require separate calculations.
+
+7.1 Insurance Premium Reimbursement (IPR)
+
+IPR helps retirees offset health insurance costs:
+
+-   Medicare-eligible retirees: \$6.25 per month per year of service
+
+-   Non-Medicare retirees: \$12.50 per month per year of service
+
+IPR calculation:
+
+**IPR = Rate × Years of Service (earned only)**
+
+Example for Robert Martinez (28.75 years earned service, Medicare
+eligible):
+
+-   IPR = \$6.25 × 28.75 = \$179.69 per month
+
+Note: Purchased service does NOT count toward IPR.
+
+7.2 Lump-Sum Death Benefit
+
+DERP provides a lump-sum death benefit payable at retirement:
+
+-   Normal retirement or Rule of 75/85: \$5,000
+
+-   Early retirement Tiers 1 & 2: \$5,000 minus \$250 per year under 65
+
+-   Early retirement Tier 3: \$5,000 minus \$500 per year under 65
+
+Examples:
+
+-   Robert Martinez (Rule of 75): \$5,000
+
+-   Jennifer Kim (10 years early, Tier 2): \$5,000 - (10 × \$250) =
+    \$2,500
+
+-   David Washington (2 years early, Tier 3): \$5,000 - (2 × \$500) =
+    \$4,000
+
+7.3 COLA (Cost-of-Living Adjustment)
+
+DERP COLAs are discretionary and board-approved, not automatic. When
+granted:
+
+-   COLA percentage applied to monthly benefit
+
+-   Becomes permanent addition to benefit
+
+-   Compounds with subsequent COLAs
+
+COLA is not guaranteed and cannot be calculated in advance. Systems
+should track COLA history and apply adjustments when authorized.
+
+8\. Calculation Validation and Testing
+
+Given the critical importance of calculation accuracy, robust validation
+processes are essential.
+
+8.1 Validation Approaches
+
+**Hand Calculation Verification:** Every calculated benefit should be
+verifiable by manual calculation using the same inputs. This is the gold
+standard for accuracy.
+
+**Parallel Calculation:** Running calculations through independent
+systems or methods and comparing results.
+
+**Boundary Testing:** Testing cases at eligibility boundaries, tier
+transitions, and edge conditions.
+
+**Historical Comparison:** Comparing new system calculations to
+historical records for known cases.
+
+8.2 Test Case Categories
+
+Comprehensive testing should include:
+
+-   Each benefit tier with typical scenarios
+
+-   Each eligibility category (normal, rule of years, early)
+
+-   Purchased service inclusion and exclusion
+
+-   Leave payout impact (eligible vs. ineligible)
+
+-   DRO cases with various award structures
+
+-   Maximum benefit limits
+
+-   Minimum benefit provisions
+
+-   Boundary conditions (exactly meeting thresholds)
+
+8.3 DERP Demo Cases as Test Suite
+
+The four demo cases provide coverage of key scenarios:
+
+  ----------------- ----------------- ----------------- -----------------
+  **Case**          **Tier**          **Eligibility**   **Special
+                                                        Features**
+
+  1: Martinez       Tier 1            Rule of 75        Leave payout,
+                                                        highest rate
+
+  2: Kim            Tier 2            Early (30%)       Purchased
+                                                        service,
+                                                        threshold
+                                                        proximity
+
+  3: Washington     Tier 3            Early (12%)       60-month AMS,
+                                                        Rule of 85
+
+  4: Martinez DRO   Tier 1            Rule of 75        DRO calculation,
+                                                        marital share
+  ----------------- ----------------- ----------------- -----------------
+
+9\. Implications for NoUI Development
+
+9.1 Calculation Engine Requirements
+
+-   Implement all formula variations by tier exactly as specified
+
+-   Calculate service credit with appropriate precision
+
+-   Determine AMS using correct averaging periods
+
+-   Apply early retirement reductions correctly
+
+-   Handle DRO calculations with marital share methodology
+
+-   Calculate supplemental benefits (IPR, death benefit)
+
+9.2 Transparency Requirements
+
+-   Show every calculation step, not just final result
+
+-   Display formula being applied with variable values
+
+-   Identify which salary months comprise the AMS
+
+-   Explain eligibility determination and any reductions
+
+-   Reference governing document sections for each rule
+
+9.3 Verification Capabilities
+
+-   Enable export of calculation details for audit
+
+-   Support hand-calculation verification workflow
+
+-   Generate test cases from rule definitions
+
+-   Flag calculations that should be manually reviewed
+
+-   Track calculation version when rules change
+
+9.4 Data Quality Requirements
+
+-   Validate salary history completeness before calculation
+
+-   Flag missing or suspicious compensation data
+
+-   Verify service credit records match employment history
+
+-   Confirm tier determination based on hire date
+
+-   Check DRO data completeness for affected members
+
+Conclusion
+
+Benefit calculation is where pension administration demonstrates its
+core competency. Every formula, every variable, every rounding decision
+must be implemented with precision and documented for verification. The
+worked examples in this document establish the calculation methodology
+that NoUI must replicate exactly.
+
+The four demo cases provide comprehensive coverage of DERP\'s
+calculation scenarios, serving as both documentation and test suite.
+When the system produces results matching these calculations to the
+penny, with full transparency into every step, it demonstrates the
+accuracy and auditability that pension fiduciaries require.
+
+*--- End of Document 5 ---*

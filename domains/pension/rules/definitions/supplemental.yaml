@@ -1,0 +1,651 @@
+# =============================================================================
+# DERP Supplemental Benefits Rules
+# =============================================================================
+# Domain: supplemental
+# Rules: RULE-IPR, RULE-DEATH-NORMAL, RULE-DEATH-EARLY-T12,
+#        RULE-DEATH-EARLY-T3, RULE-DEATH-ELECTION, RULE-DEATH-REEMPLOY
+# Authority: DERP Restated Master Contract (RMC)
+# =============================================================================
+
+metadata:
+  domain: "supplemental"
+  version: "1.0.0"
+  effective_date: "2026-03-02"
+  authority: "DERP Restated Master Contract (RMC)"
+  description: >
+    Defines supplemental benefit rules including Insurance Premium
+    Reimbursement (IPR), death benefit amounts by tier (using statutory
+    lookup tables), death benefit election, and reemployment provisions.
+  governance:
+    owner: "DERP Rules Committee"
+    approved_by: "Plan Administrator"
+    approval_date: "2026-03-02"
+    review_cycle: "annual"
+    next_review_date: "2027-03-02"
+    audit_trail: true
+    change_log:
+      - version: "1.0.0"
+        date: "2026-03-02"
+        author: "Rules Committee"
+        description: "Initial supplemental benefit rule definitions for DERP NoUI POC"
+
+rules:
+  # ===========================================================================
+  # RULE-IPR: Insurance Premium Reimbursement
+  # ===========================================================================
+  - id: "RULE-IPR"
+    name: "Insurance Premium Reimbursement (IPR)"
+    description: >
+      Eligible retirees receive an Insurance Premium Reimbursement (IPR):
+      - Non-Medicare: $12.50 per year of EARNED service per month
+      - Medicare-eligible: $6.25 per year of EARNED service per month
+      CRITICAL: Only EARNED service years count. Purchased service is EXCLUDED.
+      IPR is NOT subject to DRO division.
+    source_reference:
+      document: "RMC"
+      section: "Section 10.01 - Insurance Premium Reimbursement"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["retired"]
+    inputs:
+      - name: "earned_service_years"
+        type: "decimal"
+        required: true
+        description: "EARNED service years only (purchased EXCLUDED)"
+      - name: "medicare_eligible"
+        type: "boolean"
+        required: true
+        description: "Whether the retiree is Medicare-eligible"
+    logic:
+      type: "conditional"
+      conditions:
+        - condition: "medicare_eligible = false"
+          result:
+            rate_per_year: 12.50
+            ipr_monthly: "earned_service_years * 12.50"
+        - condition: "medicare_eligible = true"
+          result:
+            rate_per_year: 6.25
+            ipr_monthly: "earned_service_years * 6.25"
+      critical_note: >
+        PURCHASED SERVICE MUST BE EXCLUDED from IPR calculation.
+        Only earned_service_years is used. This is a common error source.
+    output:
+      name: "ipr_benefit"
+      type: "object"
+      fields:
+        - name: "ipr_monthly_amount"
+          type: "decimal"
+          precision: 2
+        - name: "rate_per_year"
+          type: "decimal"
+        - name: "service_years_used"
+          type: "decimal"
+          description: "Must be earned only"
+    dependencies: ["RULE-SVC-EARNED"]
+    tags: ["supplemental", "ipr", "insurance"]
+    test_cases:
+      - name: "Happy path - Robert Martinez non-Medicare IPR"
+        type: "happy_path"
+        demo_case_ref: "Case 1: Robert Martinez - Tier 1"
+        description: "27.5 earned years, non-Medicare, $12.50/yr"
+        inputs:
+          earned_service_years: 27.5
+          medicare_eligible: false
+        expected:
+          ipr_monthly_amount: 343.75
+          rate_per_year: 12.50
+          service_years_used: 27.5
+          notes: "27.5 * $12.50 = $343.75/month"
+      - name: "Boundary - Robert Martinez Medicare IPR"
+        type: "boundary"
+        demo_case_ref: "Case 1: Robert Martinez - Tier 1"
+        description: "Same member after turning 65 and becoming Medicare-eligible"
+        inputs:
+          earned_service_years: 27.5
+          medicare_eligible: true
+        expected:
+          ipr_monthly_amount: 171.88
+          rate_per_year: 6.25
+          service_years_used: 27.5
+          notes: "27.5 * $6.25 = $171.875 rounded to $171.88"
+      - name: "Below boundary - minimum service IPR"
+        type: "below_boundary"
+        description: "Exactly 5 years earned, non-Medicare"
+        inputs:
+          earned_service_years: 5.0
+          medicare_eligible: false
+        expected:
+          ipr_monthly_amount: 62.50
+          rate_per_year: 12.50
+      - name: "Negative - purchased service must not count"
+        type: "negative"
+        demo_case_ref: "Case 2: Jennifer Kim - Tier 2"
+        description: >
+          Jennifer has 20 earned + 3 purchased = 23 total. IPR must use
+          ONLY the 20 earned years, not 23.
+        inputs:
+          earned_service_years: 20.0
+          medicare_eligible: false
+        expected:
+          ipr_monthly_amount: 250.00
+          service_years_used: 20.0
+          notes: >
+            If incorrectly using 23 total: 23 * $12.50 = $287.50. WRONG.
+            Correct with 20 earned: 20 * $12.50 = $250.00.
+      - name: "Edge case - David Washington Tier 3 IPR"
+        type: "edge_case"
+        demo_case_ref: "Case 3: David Washington - Tier 3"
+        description: "11 earned years, non-Medicare"
+        inputs:
+          earned_service_years: 11.0
+          medicare_eligible: false
+        expected:
+          ipr_monthly_amount: 137.50
+          rate_per_year: 12.50
+          service_years_used: 11.0
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-DEATH-NORMAL: Death Benefit - Normal Retirement Age (Tiers 1&2)
+  # ===========================================================================
+  - id: "RULE-DEATH-NORMAL"
+    name: "Death Benefit Lookup - Tiers 1 and 2"
+    description: >
+      Statutory lookup table for death benefit amounts for Tier 1 and
+      Tier 2 members. Amounts increase by $250 per year of age from 55 to 65.
+      MUST use this table, NOT a formula.
+    source_reference:
+      document: "RMC"
+      section: "Section 10.02(a) - Death Benefits, Tiers 1 and 2"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2"]
+      member_types: ["retired"]
+    inputs:
+      - name: "age_at_death"
+        type: "integer"
+        required: true
+        description: "Member's age at death (whole years)"
+        constraints:
+          min: 55
+          max: 65
+    logic:
+      type: "lookup_table"
+      description: >
+        STATUTORY TABLE - $250 increments per year for Tiers 1 and 2.
+        DO NOT replace with a formula. Use this table directly.
+      table:
+        - age: 55
+          death_benefit: 2500.00
+        - age: 56
+          death_benefit: 2750.00
+        - age: 57
+          death_benefit: 3000.00
+        - age: 58
+          death_benefit: 3250.00
+        - age: 59
+          death_benefit: 3500.00
+        - age: 60
+          death_benefit: 3750.00
+        - age: 61
+          death_benefit: 4000.00
+        - age: 62
+          death_benefit: 4250.00
+        - age: 63
+          death_benefit: 4500.00
+        - age: 64
+          death_benefit: 4750.00
+        - age: 65
+          death_benefit: 5000.00
+      key_field: "age"
+      value_field: "death_benefit"
+    output:
+      name: "death_benefit_amount"
+      type: "decimal"
+      precision: 2
+    tags: ["supplemental", "death-benefit", "statutory-table", "tier-1", "tier-2"]
+    test_cases:
+      - name: "Happy path - Robert Martinez age 62 death benefit"
+        type: "happy_path"
+        demo_case_ref: "Case 1: Robert Martinez - Tier 1"
+        description: "Tier 1, age 62 death benefit lookup"
+        inputs:
+          age_at_death: 62
+        expected:
+          death_benefit: 4250.00
+      - name: "Boundary - maximum at age 65"
+        type: "boundary"
+        inputs:
+          age_at_death: 65
+        expected:
+          death_benefit: 5000.00
+      - name: "Below boundary - minimum at age 55"
+        type: "below_boundary"
+        inputs:
+          age_at_death: 55
+        expected:
+          death_benefit: 2500.00
+      - name: "Negative - age below table range"
+        type: "negative"
+        description: "Age 50 is not in the death benefit table"
+        inputs:
+          age_at_death: 50
+        expected:
+          error: "AGE_OUT_OF_RANGE"
+          message: "Death benefit table covers ages 55-65 for Tiers 1 and 2"
+      - name: "Negative - age above table range"
+        type: "negative"
+        description: "Age above 65 uses the age 65 amount"
+        inputs:
+          age_at_death: 70
+        expected:
+          death_benefit: 5000.00
+          notes: "Ages above 65 receive the maximum death benefit of $5,000"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-DEATH-EARLY-T12: Death Benefit - Early Retirement (Tiers 1&2)
+  # ===========================================================================
+  - id: "RULE-DEATH-EARLY-T12"
+    name: "Death Benefit - Early Retirement Tiers 1 and 2"
+    description: >
+      For Tier 1 and Tier 2 members who took early retirement, the death
+      benefit is determined by the statutory table based on age at death.
+      Same table as RULE-DEATH-NORMAL since the death benefit is
+      age-based, not retirement-type-based.
+    source_reference:
+      document: "RMC"
+      section: "Section 10.02(b) - Death Benefits, Early Retirement Tiers 1 and 2"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2"]
+      member_types: ["retired"]
+    inputs:
+      - name: "age_at_death"
+        type: "integer"
+        required: true
+        constraints:
+          min: 55
+          max: 65
+      - name: "retirement_type"
+        type: "enum"
+        required: true
+        constraints:
+          enum_values: ["early"]
+    logic:
+      type: "lookup_table"
+      description: "Uses same statutory table as RULE-DEATH-NORMAL for Tiers 1&2"
+      table:
+        - age: 55
+          death_benefit: 2500.00
+        - age: 56
+          death_benefit: 2750.00
+        - age: 57
+          death_benefit: 3000.00
+        - age: 58
+          death_benefit: 3250.00
+        - age: 59
+          death_benefit: 3500.00
+        - age: 60
+          death_benefit: 3750.00
+        - age: 61
+          death_benefit: 4000.00
+        - age: 62
+          death_benefit: 4250.00
+        - age: 63
+          death_benefit: 4500.00
+        - age: 64
+          death_benefit: 4750.00
+        - age: 65
+          death_benefit: 5000.00
+      key_field: "age"
+      value_field: "death_benefit"
+    output:
+      name: "death_benefit_amount"
+      type: "decimal"
+      precision: 2
+    dependencies: ["RULE-DEATH-NORMAL"]
+    tags: ["supplemental", "death-benefit", "early-retirement", "tier-1", "tier-2"]
+    test_cases:
+      - name: "Happy path - Jennifer Kim early retiree at 55"
+        type: "happy_path"
+        demo_case_ref: "Case 2: Jennifer Kim - Tier 2"
+        description: "Tier 2, early retirement, death at age 55"
+        inputs:
+          age_at_death: 55
+          retirement_type: "early"
+        expected:
+          death_benefit: 2500.00
+      - name: "Boundary - death at age 65"
+        type: "boundary"
+        inputs:
+          age_at_death: 65
+          retirement_type: "early"
+        expected:
+          death_benefit: 5000.00
+      - name: "Below boundary - death at age 58"
+        type: "below_boundary"
+        inputs:
+          age_at_death: 58
+          retirement_type: "early"
+        expected:
+          death_benefit: 3250.00
+      - name: "Negative - wrong retirement type"
+        type: "negative"
+        inputs:
+          age_at_death: 60
+          retirement_type: "normal"
+        expected:
+          error: "WRONG_RETIREMENT_TYPE"
+          message: "Use RULE-DEATH-NORMAL for normal retirees"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-DEATH-EARLY-T3: Death Benefit - Early Retirement (Tier 3)
+  # ===========================================================================
+  - id: "RULE-DEATH-EARLY-T3"
+    name: "Death Benefit - Tier 3"
+    description: >
+      Statutory lookup table for death benefit amounts for Tier 3 members.
+      Amounts increase by $500 per year of age from 60 to 65.
+      MUST use this table, NOT a formula.
+    source_reference:
+      document: "RMC"
+      section: "Section 10.02(c) - Death Benefits, Tier 3"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_3"]
+      member_types: ["retired"]
+    inputs:
+      - name: "age_at_death"
+        type: "integer"
+        required: true
+        description: "Member's age at death (whole years)"
+        constraints:
+          min: 60
+          max: 65
+    logic:
+      type: "lookup_table"
+      description: >
+        STATUTORY TABLE - $500 increments per year for Tier 3.
+        DO NOT replace with a formula. Use this table directly.
+      table:
+        - age: 60
+          death_benefit: 2500.00
+        - age: 61
+          death_benefit: 3000.00
+        - age: 62
+          death_benefit: 3500.00
+        - age: 63
+          death_benefit: 4000.00
+        - age: 64
+          death_benefit: 4500.00
+        - age: 65
+          death_benefit: 5000.00
+      key_field: "age"
+      value_field: "death_benefit"
+    output:
+      name: "death_benefit_amount"
+      type: "decimal"
+      precision: 2
+    tags: ["supplemental", "death-benefit", "statutory-table", "tier-3"]
+    test_cases:
+      - name: "Happy path - David Washington age 62 death benefit"
+        type: "happy_path"
+        demo_case_ref: "Case 3: David Washington - Tier 3"
+        description: "Tier 3, age 62 death benefit"
+        inputs:
+          age_at_death: 62
+        expected:
+          death_benefit: 3500.00
+      - name: "Boundary - maximum at age 65"
+        type: "boundary"
+        inputs:
+          age_at_death: 65
+        expected:
+          death_benefit: 5000.00
+      - name: "Below boundary - minimum at age 60"
+        type: "below_boundary"
+        inputs:
+          age_at_death: 60
+        expected:
+          death_benefit: 2500.00
+      - name: "Negative - age below Tier 3 table range"
+        type: "negative"
+        description: "Age 59 is not in the Tier 3 death benefit table"
+        inputs:
+          age_at_death: 59
+        expected:
+          error: "AGE_OUT_OF_RANGE"
+          message: "Death benefit table covers ages 60-65 for Tier 3"
+      - name: "Negative - do not confuse with Tier 1/2 table"
+        type: "negative"
+        description: >
+          At age 62, Tier 3 death benefit is $3,500 ($500 increments),
+          NOT $4,250 ($250 increments from Tiers 1/2). This test catches
+          tier table misapplication.
+        inputs:
+          age_at_death: 62
+        expected:
+          death_benefit: 3500.00
+          must_not_equal: 4250.00
+          notes: "Tiers 1/2 at age 62 = $4,250. Tier 3 at age 62 = $3,500."
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-DEATH-ELECTION: Death Benefit Payment Election
+  # ===========================================================================
+  - id: "RULE-DEATH-ELECTION"
+    name: "Death Benefit Payment Election"
+    description: >
+      Upon a retiree's death, the death benefit is paid to the designated
+      beneficiary. If a J&S option was elected, the survivor benefit
+      continues per the elected option. The death benefit (lump sum) is
+      separate from the survivor annuity.
+    source_reference:
+      document: "RMC"
+      section: "Section 10.03 - Death Benefit Payment"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["retired"]
+    inputs:
+      - name: "death_benefit_amount"
+        type: "decimal"
+        required: true
+      - name: "designated_beneficiary"
+        type: "string"
+        required: true
+      - name: "payment_option_elected"
+        type: "enum"
+        required: true
+        constraints:
+          enum_values: ["Maximum", "JS-100", "JS-75", "JS-50"]
+      - name: "survivor_payment"
+        type: "decimal"
+        required: false
+        default: 0.0
+    logic:
+      type: "procedural"
+      steps:
+        - step: 1
+          action: "Pay death_benefit_amount as lump sum to designated_beneficiary"
+        - step: 2
+          condition: "payment_option_elected IN ('JS-100', 'JS-75', 'JS-50')"
+          action: "Continue survivor_payment to J&S beneficiary monthly"
+        - step: 3
+          condition: "payment_option_elected = 'Maximum'"
+          action: "No survivor annuity; only lump sum death benefit paid"
+    output:
+      name: "death_payment"
+      type: "object"
+      fields:
+        - name: "lump_sum_death_benefit"
+          type: "decimal"
+        - name: "ongoing_survivor_annuity"
+          type: "decimal"
+        - name: "beneficiary"
+          type: "string"
+    tags: ["supplemental", "death-benefit", "election"]
+    test_cases:
+      - name: "Happy path - J&S 50% retiree dies"
+        type: "happy_path"
+        demo_case_ref: "Case 1: Robert Martinez - Tier 1"
+        description: "Retiree had J&S 50%, spouse gets lump sum + survivor annuity"
+        inputs:
+          death_benefit_amount: 4250.00
+          designated_beneficiary: "Spouse"
+          payment_option_elected: "JS-50"
+          survivor_payment: 2057.35
+        expected:
+          lump_sum_death_benefit: 4250.00
+          ongoing_survivor_annuity: 2057.35
+          beneficiary: "Spouse"
+      - name: "Boundary - Maximum option, no survivor"
+        type: "boundary"
+        description: "Single life retiree, only lump sum paid"
+        inputs:
+          death_benefit_amount: 4250.00
+          designated_beneficiary: "Estate"
+          payment_option_elected: "Maximum"
+          survivor_payment: 0.0
+        expected:
+          lump_sum_death_benefit: 4250.00
+          ongoing_survivor_annuity: 0.0
+      - name: "Below boundary - small death benefit"
+        type: "below_boundary"
+        inputs:
+          death_benefit_amount: 2500.00
+          designated_beneficiary: "Child"
+          payment_option_elected: "JS-100"
+          survivor_payment: 658.57
+        expected:
+          lump_sum_death_benefit: 2500.00
+          ongoing_survivor_annuity: 658.57
+      - name: "Negative - no beneficiary designated"
+        type: "negative"
+        inputs:
+          death_benefit_amount: 4250.00
+          designated_beneficiary: null
+          payment_option_elected: "Maximum"
+        expected:
+          error: "NO_BENEFICIARY"
+          message: "A designated beneficiary must be on file for death benefit payment"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-DEATH-REEMPLOY: Death Benefit After Reemployment
+  # ===========================================================================
+  - id: "RULE-DEATH-REEMPLOY"
+    name: "Death Benefit After Reemployment"
+    description: >
+      If a retired member returns to covered employment and subsequently dies,
+      the death benefit is recalculated based on the member's age at the
+      time of the second death. Service credit earned during reemployment
+      may affect the benefit calculation.
+    source_reference:
+      document: "RMC"
+      section: "Section 10.04 - Death Benefit, Reemployment"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["retired"]
+    inputs:
+      - name: "was_reemployed"
+        type: "boolean"
+        required: true
+      - name: "age_at_death"
+        type: "integer"
+        required: true
+      - name: "tier"
+        type: "enum"
+        required: true
+        constraints:
+          enum_values: ["tier_1", "tier_2", "tier_3"]
+    logic:
+      type: "conditional"
+      conditions:
+        - condition: "was_reemployed = true"
+          result:
+            recalculate: true
+            use_rule: "Appropriate RULE-DEATH-* based on tier"
+        - condition: "was_reemployed = false"
+          result:
+            recalculate: false
+            use_rule: "Original death benefit applies"
+    dependencies: ["RULE-DEATH-NORMAL", "RULE-DEATH-EARLY-T12", "RULE-DEATH-EARLY-T3"]
+    output:
+      name: "reemploy_death_benefit"
+      type: "object"
+      fields:
+        - name: "recalculate"
+          type: "boolean"
+        - name: "death_benefit_amount"
+          type: "decimal"
+    tags: ["supplemental", "death-benefit", "reemployment"]
+    test_cases:
+      - name: "Happy path - reemployed member death benefit"
+        type: "happy_path"
+        description: "Reemployed Tier 1 member dies at age 64"
+        inputs:
+          was_reemployed: true
+          age_at_death: 64
+          tier: "tier_1"
+        expected:
+          recalculate: true
+          death_benefit_amount: 4750.00
+      - name: "Boundary - not reemployed"
+        type: "boundary"
+        description: "Standard retiree, no recalculation needed"
+        inputs:
+          was_reemployed: false
+          age_at_death: 62
+          tier: "tier_1"
+        expected:
+          recalculate: false
+      - name: "Below boundary - Tier 3 reemployed"
+        type: "below_boundary"
+        description: "Tier 3 reemployed member, uses Tier 3 table"
+        inputs:
+          was_reemployed: true
+          age_at_death: 63
+          tier: "tier_3"
+        expected:
+          recalculate: true
+          death_benefit_amount: 4000.00
+      - name: "Negative - invalid tier"
+        type: "negative"
+        inputs:
+          was_reemployed: true
+          age_at_death: 62
+          tier: "tier_4"
+        expected:
+          error: "INVALID_TIER"
+          message: "tier must be one of: tier_1, tier_2, tier_3"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"

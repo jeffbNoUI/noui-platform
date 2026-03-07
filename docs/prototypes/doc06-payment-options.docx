@@ -1,0 +1,655 @@
+NoUI Training Document Series
+
+**Public Pension Domain Knowledge**
+
+Document 6: Payment Options & Survivor Benefits
+
+Version 1.0 \| February 2026
+
+*Understanding benefit payment forms, survivor protection, and
+beneficiary requirements*
+
+Executive Summary
+
+Payment options determine how a member\'s pension benefit is paid during
+retirement and what, if anything, continues to a survivor after the
+member\'s death. Choosing a payment option is one of the most
+consequential financial decisions a member makes, as it is typically
+irrevocable once payments begin.
+
+This document examines the common payment options available in public
+pension plans, the actuarial principles underlying option calculations,
+survivor benefit provisions, spousal consent requirements, and special
+considerations for beneficiary designations. Understanding these
+concepts is essential for systems that calculate option amounts,
+generate retirement estimates, and support member counseling.
+
+1\. Payment Options Overview
+
+Public pension plans typically offer several payment options, each
+representing a different balance between the member\'s lifetime benefit
+and protection for survivors.
+
+1.1 Standard Payment Options
+
+DERP offers the following payment options:
+
+  ------------------ -------------------------- --------------------------
+  **Option**         **Member Receives**        **Survivor Receives**
+
+  Maximum (Single    Highest monthly amount     Nothing
+  Life)                                         
+
+  100% Joint &       Reduced amount             100% of member\'s amount
+  Survivor                                      
+
+  75% Joint &        Reduced amount             75% of member\'s amount
+  Survivor                                      
+
+  50% Joint &        Reduced amount             50% of member\'s amount
+  Survivor                                      
+  ------------------ -------------------------- --------------------------
+
+1.2 Key Concepts
+
+**Maximum Benefit (Single Life Annuity):** The unreduced benefit
+calculated using the plan formula. This provides the highest monthly
+payment but ceases entirely upon the member\'s death. No survivor
+benefit is paid.
+
+**Joint and Survivor (J&S) Options:** Reduced benefits that continue
+paying to a designated beneficiary after the member\'s death. The
+reduction reflects the expected additional payments to the survivor.
+
+**Actuarial Equivalence:** All payment options are designed to have the
+same present value at retirement. Options with survivor benefits have
+lower monthly amounts because payments are expected to continue longer.
+
+2\. Maximum Benefit (Single Life Annuity)
+
+The maximum benefit represents the full pension amount without reduction
+for survivor protection.
+
+2.1 Characteristics
+
+-   Highest possible monthly payment
+
+-   Payments continue for member\'s lifetime only
+
+-   All payments cease upon member\'s death
+
+-   No continuing benefit to any survivor
+
+-   May still include lump-sum death benefit if applicable
+
+2.2 When Maximum is Appropriate
+
+Members may appropriately choose maximum benefit when:
+
+-   No spouse or dependent who needs survivor protection
+
+-   Spouse has sufficient independent retirement income
+
+-   Alternative survivor protection in place (life insurance, assets)
+
+-   Health conditions suggest shorter life expectancy
+
+-   Need to maximize current income
+
+2.3 Spousal Consent Requirement
+
+DERP requires that if a member is married, the spouse must be designated
+as beneficiary for at least a 50% Joint and Survivor option unless the
+spouse consents in writing to a different election. This protects
+spouses from unknowingly being left without survivor benefits.
+
+Married members electing Maximum benefit must obtain notarized spousal
+consent acknowledging:
+
+-   Understanding that no survivor benefit will be paid
+
+-   Voluntary consent to waive survivor protection
+
+-   Acknowledgment of financial implications
+
+3\. Joint and Survivor Options
+
+Joint and Survivor options provide continuing benefits to a designated
+beneficiary after the member\'s death, in exchange for a reduced
+lifetime benefit to the member.
+
+3.1 How J&S Options Work
+
+Under a J&S option:
+
+-   Member receives reduced monthly benefit during lifetime
+
+-   Upon member\'s death, designated beneficiary receives continuing
+    benefit
+
+-   Survivor benefit continues for beneficiary\'s lifetime
+
+-   Payments cease entirely when both member and beneficiary have died
+
+3.2 DERP J&S Options
+
+100% Joint and Survivor
+
+The survivor receives 100% of the member\'s reduced benefit amount:
+
+-   Largest reduction to member\'s benefit
+
+-   Maximum protection for survivor
+
+-   Survivor payment equals member\'s payment
+
+-   Often chosen when survivor has limited other income
+
+75% Joint and Survivor
+
+The survivor receives 75% of the member\'s reduced benefit amount:
+
+-   Moderate reduction to member\'s benefit
+
+-   Substantial survivor protection
+
+-   Balances member income with survivor needs
+
+50% Joint and Survivor
+
+The survivor receives 50% of the member\'s reduced benefit amount:
+
+-   Smallest reduction to member\'s benefit
+
+-   Minimum survivor protection meeting spousal consent default
+
+-   Assumes survivor can live on reduced income
+
+-   Often chosen when survivor has other income sources
+
+3.3 Factors Affecting J&S Reduction
+
+The reduction applied to create J&S options depends on several factors:
+
+-   Member\'s age at retirement: Younger members have larger reductions
+
+-   Beneficiary\'s age: Younger beneficiaries increase expected payout
+    period
+
+-   J&S percentage: Higher survivor percentages mean larger reductions
+
+-   Mortality assumptions: Plan\'s actuarial tables affect calculations
+
+-   Interest rate assumptions: Discount rates used in actuarial
+    calculations
+
+4\. Actuarial Basis for Payment Options
+
+Payment option calculations are based on actuarial principles that
+ensure all options have equivalent present value at retirement.
+
+4.1 Present Value Concept
+
+The present value of a payment stream depends on:
+
+-   Amount of each payment
+
+-   Expected duration of payments (mortality assumptions)
+
+-   Discount rate (time value of money)
+
+For actuarially equivalent options, the present value at retirement is
+the same regardless of which option is chosen.
+
+4.2 Actuarial Reduction Factors
+
+Plans typically publish actuarial factors used to calculate option
+amounts. These factors:
+
+-   Vary by member\'s age at retirement
+
+-   Vary by beneficiary\'s age
+
+-   Differ for each J&S percentage
+
+-   Are derived from mortality tables and interest assumptions
+
+-   May be updated when actuarial assumptions change
+
+4.3 Sample Factor Table
+
+Illustrative actuarial factors (actual factors vary by plan):
+
+  ----------------- ----------------- ----------------- -----------------
+  **Member Age**    **50% J&S         **75% J&S         **100% J&S
+                    Factor**          Factor**          Factor**
+
+  55                0.92              0.88              0.84
+
+  60                0.94              0.91              0.87
+
+  65                0.95              0.93              0.90
+
+  70                0.97              0.95              0.93
+  ----------------- ----------------- ----------------- -----------------
+
+Note: Factors assume beneficiary is same age as member. Younger
+beneficiaries result in lower factors (larger reductions).
+
+4.4 Calculation Example
+
+Robert Martinez (Demo Case 1) elects 75% J&S with spouse Elena:
+
+-   Maximum benefit: \$5,999.17 (illustrative)
+
+-   Robert\'s age: 63
+
+-   Elena\'s age: 59
+
+-   Assumed 75% J&S factor for this age combination: 0.89
+
+-   Robert\'s reduced benefit: \$5,999.17 × 0.89 = \$5,339.26
+
+-   If Robert dies first, Elena receives: \$5,339.26 × 0.75 = \$4,004.45
+
+5\. Pop-Up Provisions
+
+Some pension plans include \'pop-up\' provisions that increase the
+member\'s benefit if the designated beneficiary dies before the member.
+
+5.1 How Pop-Up Works
+
+Under a pop-up provision:
+
+-   Member initially receives reduced J&S benefit
+
+-   If beneficiary predeceases the member
+
+-   Member\'s benefit \'pops up\' to maximum (single life) amount
+
+-   Higher benefit continues for member\'s remaining lifetime
+
+5.2 Pop-Up Availability
+
+Not all plans offer pop-up provisions. When available:
+
+-   May require additional reduction at retirement
+
+-   Protects against \'losing\' the reduction if beneficiary dies first
+
+-   Particularly valuable when beneficiary has health concerns
+
+-   Adds complexity to payment administration
+
+5.3 DERP Pop-Up Status
+
+Verify whether DERP offers pop-up provisions in the governing documents.
+If available, the system must track beneficiary vital status and
+automatically adjust payments upon beneficiary death.
+
+6\. Beneficiary Designations
+
+Proper beneficiary designation is critical for ensuring benefits are
+paid correctly after a member\'s death.
+
+6.1 Types of Beneficiaries
+
+**Primary Beneficiary:** First in line to receive benefits upon
+member\'s death. For J&S options, this is typically the spouse or
+partner who will receive continuing benefits.
+
+**Contingent Beneficiary:** Receives benefits only if primary
+beneficiary predeceases the member or otherwise cannot receive benefits.
+
+**Estate:** Benefits paid to member\'s estate for distribution according
+to will or intestate succession. Generally less favorable for tax and
+administrative purposes.
+
+6.2 Beneficiary Requirements
+
+Different payment options have different beneficiary requirements:
+
+-   Maximum: No beneficiary required for continuing benefits (though may
+    designate for lump-sum death benefit)
+
+-   J&S Options: Must designate specific individual as survivor
+    beneficiary
+
+-   J&S beneficiary typically cannot be changed after retirement begins
+
+-   Beneficiary must provide date of birth for actuarial calculations
+
+6.3 Spousal Beneficiary Rules
+
+DERP requires special handling for married members:
+
+-   Spouse must be beneficiary for at least 50% J&S unless spouse
+    consents otherwise
+
+-   Spousal consent must be in writing and notarized
+
+-   Consent form must explain financial implications
+
+-   Non-spouse beneficiary requires documented spousal waiver
+
+6.4 Changing Beneficiaries
+
+Beneficiary change rules vary by situation:
+
+-   Before retirement: Generally can change beneficiaries freely
+
+-   After retirement (Maximum): May be able to change lump-sum death
+    benefit beneficiary
+
+-   After retirement (J&S): Survivor beneficiary typically cannot be
+    changed
+
+-   Upon divorce: DRO may affect beneficiary rights
+
+7\. Pre-Retirement Death Benefits
+
+When a member dies before retirement, different benefit provisions apply
+depending on member status and plan provisions.
+
+7.1 Vested Member Death
+
+When a vested member dies before retirement:
+
+-   Surviving spouse may be entitled to survivor annuity
+
+-   Survivor annuity typically calculated as if member retired on date
+    of death
+
+-   May be reduced based on member\'s age at death
+
+-   Alternative lump-sum options may be available
+
+-   Non-spouse beneficiaries may have different options
+
+7.2 Non-Vested Member Death
+
+When a non-vested member dies:
+
+-   No pension benefit is payable
+
+-   Beneficiary receives refund of member contributions plus interest
+
+-   Employer contributions are forfeited to the plan
+
+-   Life insurance or other death benefits may apply separately
+
+7.3 Active vs. Inactive Death
+
+Plans may distinguish between death while actively employed vs. after
+termination:
+
+-   Active member death may have enhanced provisions
+
+-   Duty-related death (for public safety) may have special benefits
+
+-   Inactive vested member death may have more limited options
+
+7.4 Survivor Annuity Calculation
+
+Pre-retirement survivor annuity calculation typically involves:
+
+-   Calculate benefit member would have received at death or earliest
+    eligibility
+
+-   Apply actuarial reduction for early commencement if applicable
+
+-   Apply J&S reduction factor to determine survivor amount
+
+-   May use special pre-retirement death factors
+
+8\. Post-Retirement Death Benefits
+
+Benefits payable upon a retiree\'s death depend on the payment option
+elected at retirement.
+
+8.1 Maximum Option Death
+
+When a retiree who elected Maximum dies:
+
+-   Monthly benefit payments cease
+
+-   Final payment may be prorated to date of death
+
+-   Lump-sum death benefit (if any) is payable
+
+-   Unpaid benefit amounts for month of death go to beneficiary or
+    estate
+
+-   No continuing pension to any survivor
+
+8.2 J&S Option Death
+
+When a retiree who elected J&S dies:
+
+-   Monthly payments continue to designated survivor
+
+-   Amount depends on J&S percentage elected (50%, 75%, 100%)
+
+-   Payments continue for survivor\'s lifetime
+
+-   Upon survivor\'s subsequent death, all payments cease
+
+-   Lump-sum death benefit may also be payable
+
+8.3 Lump-Sum Death Benefit
+
+DERP provides a lump-sum death benefit at retirement, payable upon the
+retiree\'s death:
+
+-   Normal/Rule of 75/85 retirement: \$5,000
+
+-   Early retirement (Tiers 1&2): \$5,000 minus \$250 per year under 65
+
+-   Early retirement (Tier 3): \$5,000 minus \$500 per year under 65
+
+-   Member elects payment as lump sum or 50/100 monthly installments
+
+-   Election is irrevocable
+
+8.4 Survivor Death
+
+When the survivor beneficiary of a J&S option dies:
+
+-   If member is still living: Benefit may pop-up if plan provides
+
+-   If member died first: All pension payments cease
+
+-   Any remaining lump-sum death benefit is not affected
+
+-   Estate receives final payment amounts due
+
+9\. Special Situations
+
+9.1 Domestic Relations Orders
+
+DROs can significantly affect payment option elections and survivor
+benefits:
+
+-   DRO may specify payment option requirements
+
+-   Former spouse may be entitled to survivor benefits
+
+-   Current spouse rights must be coordinated with DRO requirements
+
+-   Separate interest vs. shared payment approaches differ
+
+DRO calculations and processes are covered in detail in Document 7.
+
+9.2 Same-Sex Spouses and Domestic Partners
+
+Following legal recognition of same-sex marriage:
+
+-   Same-sex spouses have identical rights to opposite-sex spouses
+
+-   Domestic partner recognition varies by jurisdiction
+
+-   Historical benefit claims may have special provisions
+
+-   Systems must handle various relationship designations
+
+9.3 Minor Children as Beneficiaries
+
+When minor children are designated as beneficiaries:
+
+-   Guardian or custodian may be required to receive payments
+
+-   Special accounts (UTMA/UGMA) may be needed
+
+-   Payments may be held until child reaches majority
+
+-   Court involvement may be required for significant amounts
+
+9.4 Incapacitated Beneficiaries
+
+When beneficiaries cannot manage their own affairs:
+
+-   Legal guardian or conservator may receive payments
+
+-   Representative payee designation may be required
+
+-   Special needs trusts may be appropriate to preserve benefits
+    eligibility
+
+-   Court documentation typically required
+
+10\. Payment Option Election Process
+
+10.1 Timing of Election
+
+Payment option elections are typically made:
+
+-   As part of the retirement application process
+
+-   Before the first payment is issued
+
+-   With sufficient time for counseling and consideration
+
+-   DERP: Application must be received within 30 days of last day worked
+
+10.2 Required Information
+
+To make a payment option election, the following is needed:
+
+-   Benefit estimates for all available options
+
+-   Beneficiary information including date of birth
+
+-   Spousal consent documentation if required
+
+-   Understanding of financial implications
+
+-   Member acknowledgment of irrevocability
+
+10.3 Counseling and Education
+
+Members should receive:
+
+-   Clear explanation of all options
+
+-   Comparison of lifetime vs. survivor benefits
+
+-   Discussion of personal circumstances affecting choice
+
+-   Written materials to review
+
+-   Opportunity to ask questions
+
+10.4 Irrevocability
+
+Payment option elections are typically irrevocable:
+
+-   Once payments begin, option cannot be changed
+
+-   J&S beneficiary cannot be changed after retirement
+
+-   Member bears consequences of election
+
+-   Makes pre-retirement counseling critical
+
+11\. Implications for NoUI Development
+
+11.1 Calculation Requirements
+
+-   Calculate maximum benefit as baseline
+
+-   Apply actuarial factors for each J&S option
+
+-   Use correct factors based on member and beneficiary ages
+
+-   Handle age differences appropriately
+
+-   Support factor table updates when assumptions change
+
+11.2 Data Requirements
+
+-   Member date of birth (validated)
+
+-   Beneficiary date of birth
+
+-   Beneficiary relationship to member
+
+-   Marital status for spousal consent rules
+
+-   DRO status and requirements if applicable
+
+11.3 Presentation Requirements
+
+-   Display all options with amounts clearly
+
+-   Show survivor benefit amounts for each J&S option
+
+-   Highlight differences between options
+
+-   Support comparison and what-if analysis
+
+-   Generate formal benefit election documents
+
+11.4 Compliance Requirements
+
+-   Enforce spousal consent requirements
+
+-   Track beneficiary designations accurately
+
+-   Document election and consent properly
+
+-   Coordinate with DRO requirements
+
+-   Maintain election records indefinitely
+
+11.5 Survivor Payment Processing
+
+-   Track member death notification
+
+-   Verify beneficiary eligibility
+
+-   Calculate and initiate survivor payments
+
+-   Handle lump-sum death benefit payments
+
+-   Manage beneficiary information updates
+
+Conclusion
+
+Payment option elections represent one of the most important decisions a
+retiring member makes. The choice between maximizing lifetime income and
+providing survivor protection involves trade-offs that depend on
+individual circumstances, and the election is typically permanent.
+
+Systems supporting retirement processing must accurately calculate all
+options, clearly present the trade-offs, enforce spousal consent
+requirements, and reliably administer survivor benefits when members
+die. The actuarial principles underlying option calculations ensure that
+all choices have equivalent present value, but their lifetime
+implications differ dramatically based on who dies first and when.
+
+NoUI must implement these provisions with precision while providing the
+transparency that helps members, counselors, and administrators
+understand exactly how each option is calculated and what it means for
+the member\'s retirement security.
+
+*--- End of Document 6 ---*

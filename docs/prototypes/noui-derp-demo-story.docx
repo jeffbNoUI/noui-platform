@@ -1,0 +1,432 @@
+**NoUI**
+
+AI-Driven Pension Administration
+
+**Modernize Without Replacing. Deliver Value in Weeks, Not Years.**
+
+*A compelling case for the Denver Employees Retirement Plan*
+
+**Confidential** \| February 2026 \| Prepared for DERP Leadership
+
+**The Challenge You Already Know**
+
+You manage retirement benefits for roughly 28,800 members across three
+distinct benefit tiers, each with its own formulas, eligibility rules,
+and reduction rates. Your staff navigates legacy screens that were
+designed decades ago. Every retirement application requires careful
+hand-checking. Every legislative change means months of analysis and
+recoding. And when your most experienced staff members retire, their
+institutional knowledge walks out the door.
+
+You are not alone. Across the country, public pension systems face the
+same compounding pressures:
+
+-   **Legacy systems consume 70--80% of IT budgets** just for
+    maintenance, leaving almost nothing for innovation or improvement.
+
+-   **System replacement projects cost \$20--80 million** and fail more
+    than half the time. CalPERS abandoned a \$250M modernization effort.
+    These are not edge cases; they are the norm.
+
+-   **Institutional knowledge is disappearing** as experienced staff
+    retire faster than new analysts can learn systems that lack
+    documentation.
+
+-   **Member expectations have shifted.** People expect the same digital
+    clarity from their pension as they get from their bank. Legacy
+    systems cannot deliver that.
+
+-   **Compliance burden is growing.** GASB requirements, audit
+    standards, and legislative changes demand traceability that aging
+    systems simply were not built to provide.
+
+  -----------------------------------------------------------------------
+  **The real cost of the status quo** is not just the IT maintenance
+  budget. It is the calculation errors that become liabilities, the staff
+  hours lost to workarounds, the member complaints from slow processing,
+  and the compliance risk from systems that cannot demonstrate how they
+  arrived at a number.
+
+  -----------------------------------------------------------------------
+
+**A Different Approach: Modernize Without Replacing**
+
+NoUI does not ask you to rip out your existing system. Instead, it
+connects to your current database, learns your business rules from your
+governing documents, and delivers a modern, intelligent workspace to
+your staff --- all while your legacy system continues to operate
+undisturbed.
+
+**How It Works**
+
+**NoUI reads your governing authority** --- the Revised Municipal Code
+of the City and County of Denver, Sections 18-391 through 18-430.7 ---
+and drafts rule configurations that are then certified by your subject
+matter experts. Every calculation traces directly back to the statute.
+This is not a black box; it is the most transparent benefit
+administration system available.
+
+The platform operates through four integrated layers:
+
+-   **Data Connector:** Connects to your existing database through
+    standard adapters. Your data never leaves your building. NoUI reads
+    what it needs and presents it in a clean, modern format.
+
+-   **Business Intelligence:** A rules engine that implements your
+    specific plan provisions --- all three DERP tiers, Rule of 75 and
+    Rule of 85, early retirement reductions, purchased service, DRO
+    calculations --- every rule referenced to its source in the RMC.
+
+-   **Relevance Engine:** Intelligently prioritizes what each staff
+    member needs to see for the specific task at hand, while keeping
+    everything else accessible. No more hunting through 15--20 screens.
+
+-   **Dynamic Workspace:** Composes a task-specific interface on the
+    fly. Processing a Tier 1 Rule of 75 retirement? The workspace shows
+    the Rule of 75 calculation, the leave payout impact, and the spousal
+    consent requirements. Processing a Tier 3 early retirement?
+    Different workspace, different emphasis, same system.
+
+  -----------------------------------------------------------------------
+  **Key principle:** AI accelerates configuration and orchestration. AI
+  never performs benefit calculations. Every number produced by NoUI
+  comes from a deterministic, auditable, version-controlled rules engine.
+  Your actuaries and auditors can trace any result from the final dollar
+  amount back to the specific RMC section that governs it.
+
+  -----------------------------------------------------------------------
+
+**Business Outcomes That Matter**
+
+**1. Accuracy You Can Prove**
+
+Every benefit calculation matches your plan provisions to the penny.
+Every formula, every input, every derivation is visible and traceable.
+When a board member asks how a particular benefit was calculated, your
+staff does not need to reverse-engineer the answer from a legacy system
+--- NoUI shows the complete calculation chain: the statute reference,
+the member data inputs, the formula applied, and the result.
+
+During the proof of concept, NoUI demonstrates this with four real-world
+scenarios drawn from your plan provisions:
+
+-   **A Tier 1 member retiring under Rule of 75** with a leave payout
+    that boosts the final benefit, married with a Joint & Survivor
+    election.
+
+-   **A Tier 2 member taking early retirement with purchased service**
+    --- showing exactly how purchased service counts for the benefit
+    formula but is excluded from Rule of 75 eligibility, and how a
+    scenario modeler reveals that waiting one year would eliminate the
+    early retirement penalty entirely.
+
+-   **A Tier 3 member with the different 60-month AMS window and 6%
+    reduction rate,** demonstrating how the system adapts seamlessly
+    across tiers.
+
+-   **A DRO case** showing the marital share calculation, percentage
+    split, and interaction with payment option elections.
+
+**2. Staff Productivity and Knowledge Preservation**
+
+Your staff currently navigates multiple legacy screens per transaction,
+often relying on personal knowledge of which screens to check and in
+what order. When experienced analysts retire, that operational
+choreography is lost.
+
+NoUI changes this fundamentally. The workspace adapts to the task,
+pulling together everything the analyst needs and highlighting what
+requires attention. A retirement application that currently requires
+checking a dozen screens becomes a single, purpose-built workspace.
+Processing times drop. Training time for new staff drops further,
+because the system itself embodies institutional knowledge rather than
+depending on it living in people's heads.
+
+**3. Proactive Error Detection**
+
+NoUI's data quality engine continuously analyzes your database for
+embedded problems that your current system cannot detect: status/date
+contradictions, beneficiary allocation errors, contribution balance
+mismatches, and other anomalies that accumulate silently over decades.
+In the POC, we deliberately seed the demonstration database with
+realistic data quality issues --- and show the system finding them
+automatically.
+
+For pension plans that have been operating for decades, these embedded
+errors represent real financial exposure. Overpayments become
+liabilities. Underpayments become legal risk. NoUI surfaces these issues
+before they reach a benefit check.
+
+**4. Legislative Change Without the Crisis**
+
+When the Denver City Council amends Sections 18-391 through 18-430.7,
+your current response is a multi-month project: analyze the change,
+identify affected calculations, modify the legacy system, test, and
+deploy. During that gap, you are running on outdated rules or manual
+workarounds.
+
+NoUI detects legislative changes, drafts updated rule configurations,
+regenerates the full test suite, and presents everything for human
+certification --- typically within hours, not months. The annual
+platform fee includes this continuous legislative compliance. For
+context, many agencies currently spend \$100,000--\$300,000 per year on
+legislative change management alone.
+
+**IT Relief: Less Burden, More Capability**
+
+**Your Data Never Leaves Your Building**
+
+NoUI uses a split architecture where AI services operate in the cloud
+while your member data stays entirely on-premises, behind your firewall,
+under your control. A small Data Connector appliance sits in your data
+center and communicates with the NoUI intelligence layer --- but no
+personally identifiable information ever transits to the cloud. This is
+not a policy or a promise; it is an architectural impossibility for PII
+to exist in the cloud environment.
+
+This eliminates entire categories of compliance risk. There is no cloud
+data breach scenario to plan for because the data is not there. Your
+existing security posture for member data remains intact and unchanged.
+
+**Zero Disruption to Current Operations**
+
+NoUI does not modify, replace, or interfere with your legacy system. It
+reads from your existing database through standard connectors. Your
+current system continues to operate exactly as it does today. Staff can
+use both systems in parallel during transition, and the legacy system
+remains the system of record until you decide otherwise.
+
+This means no big-bang cutover, no data migration project, no weekend
+outage, no risk of a failed go-live. The system proves itself alongside
+your existing operations.
+
+**Progressive Database Modernization --- Included**
+
+Within approximately 12--18 months of normal operation, NoUI delivers a
+clean, modern PostgreSQL database as a natural byproduct of its work.
+Every transaction it processes builds and validates the modern schema.
+There is no separate data conversion project, no data migration weekend,
+no reconciliation effort. The modern database simply emerges from
+operational use.
+
+A standalone database migration of comparable scope for a plan of DERP's
+size would typically cost \$2--5 million as a separate project. With
+NoUI, it is included at no additional charge.
+
+**Reduced IT Dependency**
+
+Legacy pension systems create deep IT dependencies: specialized staff
+who understand the aging codebase, vendor relationships for platforms
+that are approaching end-of-life, and constant firefighting to keep
+integrations working. NoUI reduces this dependency by abstracting away
+the legacy complexity behind a modern interface and API layer. Your IT
+team spends less time maintaining the old system and more time on
+initiatives that move the organization forward.
+
+**Lower Cost of Ownership**
+
+**The Comparison That Matters**
+
+For a plan of DERP's scale, the alternatives look like this:
+
+  --------------- -------------- -------------- -------------- --------------
+  **Approach**    **Year 1       **5-Year       **Time to      **Risk**
+                  Cost**         Total**        Value**        
+
+  **Full System   \$5--10M       \$25--50M      3--5 years     High (50%+
+  Replacement**                                                failure)
+
+  **Legacy Vendor \$3--5M        \$15--25M      2--3 years     Moderate
+  Upgrade**                                                    
+
+  **Status Quo    \$0 upfront    \$2--5M hidden Never          Increasing
+  (do nothing)**                                               
+
+  **NoUI          \~\$900K       \~\$2.7M       Weeks          Low
+  Platform**                                                   
+  --------------- -------------- -------------- -------------- --------------
+
+NoUI delivers the functional equivalent of a full system replacement at
+a fraction of the cost and timeline. The initial investment covers
+implementation, licensing, and go-live support. The ongoing annual fee
+covers continuous operation, legislative compliance, and platform
+evolution.
+
+**The Hidden Cost of Doing Nothing**
+
+Even if DERP is not actively considering a system replacement, the
+status quo carries substantial costs that accumulate year over year:
+
+-   **Staff inefficiency:** Navigating 15--20 legacy screens per
+    transaction represents an estimated 30--40% productivity loss across
+    benefits staff.
+
+-   **Calculation errors:** Over- and under-payments resulting from
+    manual processes and opaque legacy logic typically cost
+    \$50K--\$500K annually for a plan of this size.
+
+-   **Compliance exposure:** Inability to demonstrate complete rule
+    traceability creates audit risk and potential legal liability.
+
+-   **Knowledge attrition:** Every experienced staff departure costs
+    months of institutional knowledge and training investment for
+    replacements.
+
+-   **Rising maintenance costs:** Legacy vendors routinely increase
+    support fees on aging platforms, knowing customers have no
+    alternatives.
+
+For a 28,800-member plan, these hidden costs typically total
+\$500K--\$1.5M annually. NoUI's investment pays for itself within 12
+months through operational savings alone, before accounting for the
+strategic value of a modern platform.
+
+**What the Investment Includes**
+
+  ----------------------------------- -----------------------------------
+  **Component**                       **What It Covers**
+
+  **Implementation Fee**              Governing document ingestion, rule
+                                      extraction and certification,
+                                      schema mapping, workspace
+                                      composition, parallel testing,
+                                      staff training, go-live support
+
+  **Product License**                 Perpetual access to the NoUI
+                                      platform for DERP, all four
+                                      architecture layers, AI
+                                      intelligence, self-testing rule
+                                      engine
+
+  **Annual Per-Member Fee**           Continuous operation, legislative
+                                      compliance monitoring, platform
+                                      updates, data quality monitoring,
+                                      progressive database migration
+  ----------------------------------- -----------------------------------
+
+There are no surprise costs, no change-order billing for legislative
+updates, and no separate fees for the database modernization that other
+vendors would charge millions to deliver.
+
+**What You Will See in the Demonstration**
+
+The proof of concept is built entirely from DERP's own governing
+documents and plan provisions. It is not a generic demo with your logo
+on it. Every rule, every formula, every edge case comes from the Revised
+Municipal Code.
+
+**Seven Moments That Tell the Story**
+
++---+------------------------------------------------------------------+
+| ✅ | **\"The system knows our rules.\"**                             |
+|   |                                                                  |
+|   | Every calculation matches DERP provisions exactly --- three      |
+|   | tiers, two eligibility rules, different reduction rates, leave   |
+|   | payouts, purchased service, DRO calculations.                    |
++---+------------------------------------------------------------------+
+
++---+------------------------------------------------------------------+
+| 🎯 | **\"Workers see what they need.\"**                             |
+|   |                                                                  |
+|   | The workspace adapts based on member tier and situation. A Tier  |
+|   | 1 Rule of 75 retirement looks different from a Tier 3 early      |
+|   | retirement because they are different processes with different   |
+|   | requirements.                                                    |
++---+------------------------------------------------------------------+
+
++---+------------------------------------------------------------------+
+| 🔍 | **\"The math is transparent.\"**                                |
+|   |                                                                  |
+|   | Every formula, every input, every derivation is visible and      |
+|   | traceable. Click on any number and see where it came from ---    |
+|   | all the way back to the statute.                                 |
++---+------------------------------------------------------------------+
+
++---+------------------------------------------------------------------+
+| 📜 | **\"It was built from our governing documents.\"**              |
+|   |                                                                  |
+|   | Rules reference the Revised Municipal Code directly. The system  |
+|   | didn't learn from legacy code behavior; it learned from the law. |
++---+------------------------------------------------------------------+
+
++---+------------------------------------------------------------------+
+| ⚙️ | **\"It tests itself.\"**                                        |
+|   |                                                                  |
+|   | Hundreds of test cases generated automatically from rule         |
+|   | definitions, covering boundary conditions and edge cases that    |
+|   | manual testing would miss.                                       |
++---+------------------------------------------------------------------+
+
++---+------------------------------------------------------------------+
+| 🚨 | **\"It finds problems we didn't know about.\"**                 |
+|   |                                                                  |
+|   | The data quality engine discovers embedded errors in the         |
+|   | database --- status contradictions, allocation mismatches,       |
+|   | calculation anomalies --- before they reach a benefit check.     |
++---+------------------------------------------------------------------+
+
++---+------------------------------------------------------------------+
+| 💡 | **\"It learns from history.\"**                                 |
+|   |                                                                  |
+|   | Transaction analysis reveals operational patterns and insights   |
+|   | that help leadership understand how the plan actually operates   |
+|   | day to day.                                                      |
++---+------------------------------------------------------------------+
+
+**The Scenario Modeler: A Moment Worth Watching For**
+
+One of the four demo cases features a Tier 2 member, age 55, taking
+early retirement with a 30% benefit reduction. The system calculates her
+reduced benefit correctly --- and then, without being asked, identifies
+that she is just 2 points shy of meeting the Rule of 75. It shows her
+that waiting one additional year would eliminate the penalty entirely,
+increasing her monthly benefit by approximately 54%.
+
+This is the kind of insight that experienced staff provide today through
+personal knowledge. NoUI makes it systematic and automatic, ensuring
+every member gets the same level of guidance regardless of which analyst
+processes their application.
+
+**Why This Matters Now**
+
+DERP serves the people who serve Denver. Every firefighter, every city
+clerk, every parks employee depends on this plan to deliver their
+retirement benefit accurately and on time. The systems that support this
+mission are aging, and the people who understand them are retiring.
+
+The question is not whether to modernize --- it is how. The traditional
+path costs tens of millions, takes years, and fails more often than it
+succeeds. NoUI offers a fundamentally different approach: deploy in
+weeks, prove value immediately, modernize progressively, and protect
+your data absolutely.
+
+  -----------------------------------------------------------------------
+  **NoUI is not asking DERP to trust a new system.** It is asking DERP to
+  verify one. Every calculation shows its work. Every rule cites its
+  source. Every result can be checked by hand. Trust is earned through
+  transparency, not promised through marketing.
+
+  -----------------------------------------------------------------------
+
+**Next Steps**
+
+We propose a straightforward path forward:
+
+1.  **Proof of Concept Review:** Walk through the live demonstration
+    with DERP leadership. See your rules, your tiers, your edge cases
+    running in real time.
+
+2.  **Calculation Audit:** NoUI independently verifies 50--100 real
+    member calculations against your current system. This step alone
+    often surfaces discrepancies worth investigating.
+
+3.  **Board Presentation:** Present findings and proposal to the board
+    of trustees, addressing fiduciary concerns directly with verifiable
+    evidence.
+
+4.  **Implementation:** Full deployment alongside your existing system,
+    with parallel operation until you are completely satisfied.
+
+**Premium value. Zero disruption. Absolute transparency.**
+
+*NoUI --- The safest path to modernization.*

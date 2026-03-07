@@ -1,0 +1,523 @@
+NoUI Platform
+
+**Card Stack Workspace**
+
+**Usability & Business Process Review**
+
+DERP Proof of Concept
+
+February 2026 \| DRAFT
+
+Executive Summary
+
+This review evaluates the card-stack workspace prototype against three
+criteria: the actual DERP service retirement business process, the NoUI
+design principles documented in our governing architecture, and the goal
+of straight-through processing that eliminates unnecessary analyst
+interaction with routine cases.
+
+**Bottom line:** The card-stack interaction model is visually compelling
+and the zoom transition communicates system intelligence effectively.
+However, the prototype's step sequence does not map to what an analyst
+actually does when processing a retirement application. The steps are
+organized around *presenting data to be admired* rather than *confirming
+decisions that advance the case*. This distinction is the difference
+between a demo and a production tool.
+
+This review identifies seven specific findings, each with a recommended
+resolution. The findings range from structural (the step model itself)
+to interaction-level (what "Confirm" means on each card). Implementing
+these recommendations transforms the prototype from a calculation viewer
+into a workflow engine that processes retirement applications.
+
+1\. Business Process Alignment
+
+1.1 The Actual Analyst Workflow
+
+When a Benefits Analyst claims a retirement application from their work
+queue, the DERP Service Retirement Process (PROC-SVC-RET) defines six
+stages with explicit entry and exit criteria. The analyst's job is not
+to *view* each stage---it is to *verify, confirm, and advance* through
+stages where the system has already done the computational work. The
+stages are:
+
+  ----------- --------------- ------------------------ --------------------------
+  **Stage**   **Name**        **What the Analyst       **Exit = Case Advances
+                              Does**                   When\...**
+
+  1           Application     Verify completeness:     Checklist complete OR case
+              Intake          docs on file,            pended for missing
+                              notarization confirmed,  documents
+                              30-day deadline met,     
+                              retirement date valid    
+
+  2           Eligibility     Review system-computed   Eligibility confirmed.
+              Determination   tier, service, age, and  Reduction (if any)
+                              rule evaluation. Confirm acknowledged.
+                              or flag discrepancies.   
+
+  3           Benefit         Review AMS window,       Calculation verified. All
+              Calculation     salary data, leave       payment options computed.
+                              payout, formula, and     
+                              result. Verify numbers   
+                              match expectations.      
+
+  4           Election &      Record member's payment  All elections recorded and
+              Certification   option, beneficiary, tax verified against
+                              withholding, insurance,  application.
+                              death benefit election.  
+                              Confirm spousal consent. 
+
+  5           Supervisor      Independent              Supervisor approves,
+              Review          recalculation,           returns, or escalates.
+                              completeness check,      
+                              approval or return.      
+
+  6           Benefit         Create payment record,   Benefit payment record
+              Activation      set effective date,      created. Case closed.
+                              activate direct deposit, 
+                              update member status.    
+  ----------- --------------- ------------------------ --------------------------
+
+1.2 Where the Prototype Diverges
+
+The prototype presents steps organized around **data categories**
+(retirement overview, eligibility, salary, calculation, payment,
+certification). The actual process is organized around **analyst
+decisions**. This is a fundamental difference:
+
+  ----------------------- ----------------------- -----------------------
+  **Prototype Step**      **What It Does**        **What's Missing**
+
+  Confirm Retirement      Shows retirement type,  No document checklist.
+                          age, service, rule      No deadline
+                          evaluation              verification. No
+                                                  application
+                                                  completeness gate.
+
+  Eligibility & Service   Shows tier, vesting,    Overlaps heavily with
+                          earned/purchased        step 1. No clear
+                          service                 decision the analyst is
+                                                  making.
+
+  Salary & AMS            Shows salary table and  Read-only display.
+                          AMS computation         Analyst cannot flag
+                                                  data issues or request
+                                                  corrections.
+
+  Benefit Calculation     Shows formula and       No verification action.
+                          result                  "Confirm" has no
+                                                  meaning here.
+
+  Payment Option          Shows all four options  Election is
+                          with elected one        pre-populated. Analyst
+                          highlighted             is viewing, not
+                                                  recording a decision.
+
+  Certification           Shows IPR, death        Combines unrelated
+                          benefit, deadlines      items. No actual
+                                                  certification action or
+                                                  signature verification.
+  ----------------------- ----------------------- -----------------------
+
+**The core problem:** every step ends with the same generic "Confirm →"
+button. In a real workflow engine, each step's exit action should be
+specific to the decision being made at that stage. "Confirm" after
+reviewing a document checklist means something fundamentally different
+from "Confirm" after reviewing a benefit calculation.
+
+2\. Straight-Through Processing Analysis
+
+2.1 What Straight-Through Processing Means Here
+
+Straight-through processing (STP) in pension administration means that
+when the system has high confidence in every input and computation, the
+case should advance through stages with minimal analyst friction. The
+analyst's role shifts from *performing work* to *verifying that work was
+performed correctly*.
+
+For a case like Robert Martinez (Case 1)---Rule of 75 met, clean salary
+history, no data quality issues, complete application---the ideal
+interaction is:
+
+1.  System shows application checklist. All documents received. Analyst
+    confirms with one action.
+
+2.  System shows pre-computed eligibility and benefit calculation in a
+    combined verification view. Everything checks out. Analyst confirms
+    with one action.
+
+3.  System shows member's elections from the application (payment
+    option, beneficiary, death benefit, tax, insurance). Analyst
+    verifies against application. One action.
+
+4.  Case routes to supervisor queue automatically.
+
+That's three analyst interactions for a clean case, not six. The current
+prototype requires the analyst to click through six cards of read-only
+data regardless of whether the case has issues.
+
+2.2 The Composition Engine's Role
+
+This is where NoUI's Tier 1/Tier 2 composition becomes critical. The
+composition engine should evaluate the case *before* the analyst opens
+it and determine:
+
+-   **Which stages require analyst attention** (based on data quality,
+    completeness, complexity flags)
+
+-   **Which stages can be pre-verified** (system computed, no
+    discrepancies, no flags---presented as a summary chip rather than a
+    full card)
+
+-   **What the preview cards should show** (not just the next data
+    category, but the next *decision point*)
+
+For Jennifer Kim (Case 2)---early retirement with purchased
+service---the composition engine would flag the eligibility stage
+because it has complexity: purchased service exclusion from Rule of 75,
+the threshold proximity alert, and the 30% reduction calculation all
+require analyst attention. That card *should* be a full interactive
+card. But the salary verification card, if the data is clean, could be a
+pre-verified summary that the analyst reviews in two seconds rather than
+a full step.
+
+2.3 Adaptive Card Depth
+
+The card-stack model actually supports this beautifully if we introduce
+the concept of **adaptive card depth**:
+
+-   **Full card** --- Requires analyst review and action. Shows all
+    relevant data with decision-specific confirmation. This is the
+    current prototype's card.
+
+-   **Summary card** --- System pre-verified this stage. Shows the
+    conclusion and key values in a compact view. Analyst can expand to
+    full depth if they want, but one-click confirmation advances. The
+    preview card in the right stack could BE this level.
+
+-   **Auto-verified chip** --- For stages with zero flags and complete
+    data. Rendered as a completed chip in the header before the analyst
+    even starts. The analyst doesn't interact with it unless they choose
+    to review.
+
+This means a clean Case 1 might present two full cards and three summary
+cards, while a complex Case 4 (DRO) might present five full cards. The
+stack adapts to the work, not the data model.
+
+3\. NoUI Principle Compliance
+
+3.1 Principles Correctly Applied
+
+"Small bits of information at a time"
+
+The card-stack model correctly limits each view to one coherent
+information cluster. The salary table is on its own card, not mixed with
+eligibility. The benefit calculation stands alone. This is a significant
+improvement over the three-column layout and faithfully implements the
+micro-interaction pattern.
+
+"Work comes to the worker"
+
+The member banner and flag system correctly establish context before the
+analyst begins. The preview cards showing pre-computed values signal
+that the system has done the work---the analyst's job is verification,
+not computation.
+
+Transparency
+
+Every calculation shows its formula, inputs, and derivation. The Rule of
+75/85 evaluation is visible. The AMS window is explicit. Statutory
+references are present (RMC §18-401). This faithfully implements the
+"show your work" principle.
+
+3.2 Principles Violated or Underserved
+
+"Not a wizard with linear Back/Next"
+
+Our own architecture document states: ***"This is not a traditional
+wizard with a linear Back/Next flow. The process orchestrator defines
+the steps and their dependencies, but the worker can navigate
+non-linearly when the dependencies allow it."***
+
+The prototype implements a linear wizard. The Confirm → button advances
+sequentially. The Back button goes backward. The step dots are numbered
+1--6 in a fixed sequence. While clicking a preview card allows skipping
+ahead, the primary interaction pattern is wizard-like. The card stack
+metaphor *looks* different from a wizard but *behaves* identically.
+
+"Show everything, prioritize what matters"
+
+The Relevance Engine principle requires that the workspace ***never
+hides data that a competent analyst might want to see***. The current
+prototype only shows the data for the active step. If the analyst is on
+the Payment Option card and wants to check the leave payout amount, they
+must navigate backward. A real workflow engine would let the analyst
+view any completed or preview card in detail without losing their place
+in the workflow.
+
+Completeness indicators
+
+The architecture requires indicators like "Showing 3 of 28
+years---highest average calculation period." The salary table shows the
+AMS window data but doesn't indicate the total salary history available.
+No component includes completeness language.
+
+Contextual validation feedback
+
+The architecture describes inline validation that goes beyond format
+checking---for example, changing the retirement date should immediately
+update the Rule of 75 calculation. The prototype is entirely read-only.
+There is no place where the analyst interacts with data; they only
+observe it.
+
+Actionable exit states
+
+Each process stage should have **specific exit actions**, not a generic
+"Confirm." The UX architecture defines: advance, pend (waiting for
+external input), return (flag an issue for a previous stage), and
+escalate (supervisor attention). The prototype only supports advance.
+
+4\. Specific Findings
+
+F-1: Steps model data categories, not analyst decisions
+
+**Severity: Structural**
+
+**Current:** Steps are Retirement Overview, Eligibility, Salary,
+Calculation, Payment, Certification---organized by what data to show.
+
+**Should be:** Steps are Application Completeness, Eligibility
+Verification, Benefit Verification, Election Recording, Final
+Review---organized by what the analyst decides.
+
+**Impact:** The current steps create artificial separations (eligibility
+and retirement overview are nearly the same information) and miss real
+stages (application intake with document checklist is entirely absent).
+The step count should be driven by the case's complexity, not a fixed
+template.
+
+**Recommendation:** Restructure cards around process stages from
+PROC-SVC-RET. Each card's footer should name the specific action:
+"Verify Complete," "Confirm Eligibility," "Verify Calculation," "Record
+Elections," "Submit for Review."
+
+F-2: No application intake / document completeness gate
+
+**Severity: Critical business gap**
+
+**Current:** The prototype begins at eligibility. There is no document
+checklist, no 30-day deadline verification, no notarization
+confirmation.
+
+**Impact:** The first real task an analyst performs---confirming the
+application package is complete---is absent. This is a blocking gate: an
+incomplete application cannot advance to eligibility determination.
+Missing this stage means the prototype cannot demonstrate actual case
+processing.
+
+**Recommendation:** Add an Application Intake card as the first stage.
+It should show: document checklist with received/missing status per
+document, 30-day deadline verification (application date vs. last day
+worked), notarization status, and retirement date validity check. The
+exit action should be "Package Complete" or "Pend for Documents" (not
+just "Confirm").
+
+F-3: Confirm button is semantically empty
+
+**Severity: UX integrity**
+
+**Current:** Every card has the same "Confirm →" button regardless of
+what's being confirmed.
+
+**Impact:** The analyst doesn't know what they're attesting to. In a
+fiduciary system, confirmation is a meaningful act---the analyst is
+certifying that they reviewed and verified specific data. A generic
+button undermines the transparency principle.
+
+**Recommendation:** Each card's action button should be specific:
+"Documents Verified," "Eligibility Confirmed," "Calculation Verified,"
+"Elections Recorded," "Submit for Supervisor Review." Secondary actions
+should be available: "Flag Issue," "Pend for Research," "Return to Prior
+Stage."
+
+F-4: No interaction model for analyst input
+
+**Severity: Functional gap**
+
+**Current:** All cards are read-only displays. The analyst views data
+but never enters, corrects, or flags anything.
+
+**Impact:** Real case processing requires interaction: recording
+elections from the paper application, flagging salary discrepancies,
+noting spousal consent status, entering tax withholding preferences. The
+prototype cannot demonstrate the Election and Certification stage (Stage
+4) at all because it has no input mechanism.
+
+**Recommendation:** At minimum, the Election card should allow the
+analyst to record: payment option selected, beneficiary confirmation,
+death benefit election (50 or 100 installments), and spousal consent
+status. These are selections from the paper application being entered
+into the system. The card's role shifts from "displaying pre-set data"
+to "capturing the member's irrevocable decisions."
+
+F-5: Preview cards show data, not decision context
+
+**Severity: UX optimization**
+
+**Current:** Preview cards show hero values (\$10,639.45/mo,
+\$6,117.68/mo) that are interesting but don't tell the analyst what
+they'll need to *do* at that step.
+
+**Should show:** Decision signals. For example, the Eligibility preview
+for Jennifer Kim should show "30% Reduction --- Review Required" with an
+amber indicator, not just "21.17y service." The Benefit Calculation
+preview for Robert Martinez should show "✓ Pre-verified --- No flags"
+with a green indicator, signaling the analyst can likely confirm
+quickly.
+
+**Recommendation:** Each preview card should show: (1) the step title,
+(2) a confidence/status signal (green = pre-verified, amber = attention
+needed, red = issue found), and (3) one hero value. This transforms the
+preview stack from a data peek into a workload forecast.
+
+F-6: Linear navigation prevents efficient case processing
+
+**Severity: Efficiency**
+
+**Current:** The analyst must step through cards sequentially. The
+completed chips at the top allow revisiting, but the primary flow is
+linear.
+
+**Impact:** An experienced analyst processing a clean case should be
+able to scan the summary of pre-verified stages and jump directly to the
+first stage that requires their attention. The architecture explicitly
+states non-linear navigation should be supported where dependencies
+allow.
+
+**Recommendation:** Support two interaction modes: (1) **Guided mode**
+(current linear flow, appropriate for new analysts or complex cases),
+and (2) **Expert mode** where all stages are visible as expandable cards
+in a single scrollable view, with attention badges highlighting which
+stages need action. Expert mode is the command-palette equivalent for
+case processing---it eliminates navigation for power users.
+
+F-7: No case-level status or routing indication
+
+**Severity: Workflow gap**
+
+**Current:** There is no indication of where this case sits in the
+overall process, who will handle it next, or when the member will be
+notified.
+
+**Impact:** An analyst completing their work should see the case
+transition: "Submitting to Supervisor Queue → Assigned to \[Supervisor
+Name\] → Est. completion by \[date\]." This closes the loop and builds
+confidence that the system is a real workflow engine, not a calculation
+viewer.
+
+**Recommendation:** Add a minimal case status bar below the member
+banner showing: current stage, assigned to, received date, processing
+deadline, and case age. The final card's exit action should animate a
+routing transition showing the case moving to the next queue.
+
+5\. What the Prototype Gets Right
+
+This review is deliberately focused on gaps, but the prototype
+establishes several foundations that should be preserved:
+
+-   **The card-stack metaphor itself is strong.** The zoom transition
+    from preview to active card communicates forward momentum in a way
+    that tab switches and page loads cannot. The "work is coming to you"
+    feeling is present.
+
+-   **The 70/30 layout split works.** The active card at 70% gives
+    sufficient room for data-dense content while the preview stack at
+    30% provides workload context without competing for attention.
+
+-   **Rendering actual content in preview cards is the right choice.**
+    The semi-transparent overlay with title is better than a simple
+    icon-and-label tile. It signals that the system has already computed
+    everything---the intelligence is real.
+
+-   **Three themes demonstrate multi-client potential.** The DERP Brand
+    theme matches their visual identity. The ability to switch themes
+    proves the architecture supports multiple pension plan deployments.
+
+-   **The member banner with tier badges and flags is excellent.**
+    Instant context before work begins. This is precisely what the UX
+    architecture describes.
+
+-   **Calculation transparency is done well.** The formula display,
+    statutory references, and derivation traces are exactly what pension
+    boards need to see to trust the system.
+
+6\. Recommended Prototype Evolution
+
+The following progression transforms the current prototype from a
+calculation viewer into a workflow engine without discarding the
+card-stack interaction model:
+
+Phase 1: Restructure cards around process stages
+
+Replace the six data-category cards with cards that map to PROC-SVC-RET
+stages. The card count becomes dynamic: clean cases may present 3--4
+cards while complex cases present 5--7. The composition engine
+determines card count and depth at workspace assembly time.
+
+Phase 2: Add meaningful exit actions
+
+Each card gets stage-specific primary and secondary actions. The Confirm
+button becomes "Verify Complete," "Confirm Eligibility," etc. Secondary
+actions include "Pend," "Flag Issue," "Return." The card footer becomes
+a decision point, not a page-turn.
+
+Phase 3: Add application intake card
+
+The first card in every retirement case becomes the document checklist.
+This is the real entry point for an analyst. It demonstrates the
+system's awareness of what's needed for this specific case (DRO case
+needs additional documents, married member needs spousal consent, etc.).
+
+Phase 4: Introduce adaptive card depth
+
+Preview cards gain confidence signals (green/amber/red). Pre-verified
+stages can be confirmed from the summary view without expanding to a
+full card. Complex stages auto-expand to full depth. The analyst's time
+is spent where the work is, not where the data is.
+
+Phase 5: Add election recording interaction
+
+At minimum, one card should allow data entry: the election recording
+card where the analyst captures the member's irrevocable decisions from
+the paper application. This demonstrates that the workspace is not just
+a viewer but a processing tool.
+
+7\. The Bar We're Setting
+
+The goal is not to build a better pension administration screen. It is
+to build a system where a DERP analyst opens a retirement case and
+thinks: ***"It already did the work. I just need to verify and
+confirm."***
+
+That means:
+
+-   A clean Case 1 should take under 3 minutes to process, not 15.
+
+-   A complex Case 4 should surface every complication *before* the
+    analyst encounters it.
+
+-   The analyst should never wonder "what do I do next?"---the next card
+    is already visible, already computed, already contextualized.
+
+-   The analyst should never dig for supporting data---everything
+    relevant to the current decision is on the active card, and
+    everything else is one click away.
+
+The card-stack model can deliver this. The visual foundation is in
+place. What transforms it from a demo into a product is aligning the
+cards with what the analyst actually does, making confirmation
+meaningful, and letting the composition engine decide how much of the
+analyst's time each case deserves.
+
+*End of Review*

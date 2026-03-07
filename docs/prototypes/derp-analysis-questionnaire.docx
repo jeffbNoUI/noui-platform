@@ -1,0 +1,681 @@
+**NoUI --- DERP POC**
+
+Project Knowledge Analysis & Client Questionnaire
+
+February 21, 2026 --- Comprehensive Cross-Document Review
+
+**Executive Summary**
+
+This document presents the results of a comprehensive analysis of all
+NoUI project knowledge documents, including 14 domain knowledge
+documents (doc01--doc14), DERP-published forms and flyers (Retirement
+Application, Spousal Consent forms, DRO forms, Health Insurance forms,
+member flyers), case calculation files, test fixtures, architecture
+references, process definitions, and build history. The analysis
+cross-references every claim, formula, rate, and process definition to
+identify conflicts, ambiguities, and gaps that must be resolved before
+(or during) POC development.
+
+The review found that the CRITICAL-001 discrepancy (early retirement
+reduction rates) has been properly identified and resolved across
+project files. However, several additional issues remain that require
+client clarification to ensure the POC accurately reflects DERP's actual
+operational practices.
+
+**Section 1: Previously Identified & Resolved Conflicts**
+
+These issues were discovered in earlier work sessions and have been
+corrected in project documents. They are listed here for completeness
+and to confirm resolution status.
+
+**1.1 CRITICAL-001: Early Retirement Reduction Rates (RESOLVED)**
+
+**Issue:** Original documents stated 6% per year for all tiers. DERP
+sources confirm 3% for Tiers 1 & 2, 6% for Tier 3 only.
+
+**Status:** RESOLVED. All project files corrected. Case 2 recalculated
+(\$1,633.07 vs prior \$933.18). CLAUDE.md, test fixtures, system prompt,
+and build history updated.
+
+**Residual:** RMC §18-401(c) direct text verification still pending.
+Probability of error in three independent DERP sources is effectively
+zero, but statutory confirmation would be ideal.
+
+**1.2 CRITICAL-002: Employer Contribution Rate (RESOLVED)**
+
+**Issue:** Project documents stated 11%. DERP Handbook (Jan 2024) states
+17.95%.
+
+**Status:** RESOLVED. Decision 26 updated rate. Seed data generator
+should use era-appropriate rates.
+
+**Residual:** Historical contribution rate schedule needed for accurate
+synthetic data generation across employment eras.
+
+**1.3 IMPORTANT-001: Social Security Make-Up Benefit (RESOLVED --- Out
+of Scope)**
+
+**Status:** Decision 25 explicitly marks this as OUT OF SCOPE for POC.
+Placeholder rule RULE-SS-MAKEUP added. Application intake still collects
+SS Estimate for Tier 1/2 age 62+.
+
+**1.4 IMPORTANT-002: Lump-Sum Death Benefit (RESOLVED --- In Scope)**
+
+**Status:** Decision 23 added to POC scope. Rules, calculations, and
+workspace components defined.
+
+**Section 2: Newly Identified Conflicts & Discrepancies**
+
+The following issues emerged from cross-referencing the complete
+document set and require attention.
+
+**2.1 Lump-Sum Death Benefit --- Disability Retirement Formula**
+
+**Source:** Retirement Application (Part C, Revised 06/10/2025)
+
+The retirement application reveals a disability retirement death benefit
+formula not captured in project documents: for Disability Retirement
+before age 65, the benefit is 150% of the member's annualized AMS,
+limited to \$50,000. This benefit is reduced to \$5,000 at age 65. While
+disability retirement is out of POC scope, this formula exists on the
+actual application form members will see.
+
+**Impact:** LOW for POC (disability is out of scope), but the rules
+engine should have a placeholder acknowledging this formula exists.
+
+**2.2 Pop-Up Provision --- Confirmed but Not Modeled**
+
+**Source:** Retirement Application (Part B) and Doc06 (Payment Options)
+
+The DERP Retirement Application (Part B) explicitly states: "I
+understand that if my beneficiary should predecease me, I may not select
+another beneficiary. However my benefit will be increased prospectively
+to the Type 1, Maximum Benefit." Doc06 flags this as "verify whether
+DERP offers pop-up provisions." The application form confirms DERP does
+offer pop-ups.
+
+**Impact:** MEDIUM. The POC should acknowledge pop-up in the payment
+option explanation, even if post-retirement pop-up processing is out of
+scope. The retirement application language should be reflected in
+workspace design.
+
+**2.3 DRO Agreement Form --- DROP/DROP II Division**
+
+**Source:** DRO_Agreement.pdf (DERP form)
+
+The DERP DRO Agreement form includes provisions for dividing Deferred
+Retirement Option Plan (DROP/DROP II) accounts in addition to the
+defined benefit plan. Our project documents mention DRO division of the
+pension benefit but do not reference DROP at all. DROP is a separate
+program where members who are eligible to retire but continue working
+can accumulate benefits in a lump-sum account.
+
+**Impact:** LOW for POC (DROP is not in scope), but this reveals an
+entire benefit program (DROP and DROP II) that exists at DERP and is not
+documented in our project knowledge.
+
+**2.4 Spousal Consent --- Two Distinct Forms**
+
+**Source:** SpousalConsentBeforeRetirement.pdf and
+SpousalConsentAtRetirement.pdf
+
+DERP uses two separate spousal consent forms with different legal
+implications. The "Before Retirement" form is revocable and applies to
+active/inactive members. The "At Retirement" form is irrevocable,
+permanent, and cannot be signed more than 90 days before the first
+payment. Our project documents reference spousal consent as a single
+concept without distinguishing these two forms or their timing
+constraints.
+
+**Impact:** MEDIUM. The workspace must distinguish which form applies
+and enforce the 90-day timing constraint for the At Retirement form.
+
+**2.5 Lump-Sum Death Benefit --- Reduction Formula Discrepancy**
+
+**Source:** Retirement Application Part C vs. IMPORTANT-002 in process
+definition
+
+The process definition's IMPORTANT-002 states the early retirement death
+benefit is "\$2,500 at age 55, reduced by \$250 per year under 65."
+However, the retirement application form states: "the lump-sum death
+benefit is reduced by \$250 for each year the member is under the age of
+65" starting from \$5,000, not \$2,500. The CRITICAL-001-resolution.md
+file correctly interprets this as \$5,000 minus (\$250 × years under
+65), yielding \$2,500 at age 55. The discrepancy is in the process
+definition's description, not the calculation itself.
+
+**Impact:** LOW. The calculations are correct; only the descriptive
+language needs cleanup.
+
+**2.6 BUILD_PLAN.md Still References 6% Reduction**
+
+**Source:** BUILD_PLAN.md, Step 2.4
+
+The BUILD_PLAN.md file still contains "Early retirement reduction: 6%
+per year under age 65" in the benefit calculation rules section. While
+the CLAUDE.md, test fixtures, and case calculations have all been
+corrected, this planning document was not updated.
+
+**Impact:** LOW. Risk of confusion if someone reads BUILD_PLAN.md
+without checking BUILD_HISTORY.md Decision 22.
+
+**2.7 50% J&S Factor Inconsistency in Case 4**
+
+**Source:** BUILD_HISTORY.md Decision 17 vs. Case 4 Calculation
+
+Decision 17 standardized J&S factors including 50% J&S at 0.9450.
+However, the Case 4 DRO calculation uses 0.9350 for the 50% J&S option.
+This creates a small discrepancy in the illustrative payment option
+amounts.
+
+**Impact:** LOW. These are placeholder factors anyway, but they should
+be internally consistent across all demo cases.
+
+**2.8 Doc05 AMS Values --- Illustrative vs. Actual**
+
+**Source:** doc05-benefit-calculations.docx vs. case calculation files
+
+Doc05 uses illustrative AMS values (e.g., \$10,433.33 for Case 1,
+\$7,346.00 for Case 2, \$8,500.00 for Case 3) while the case calculation
+files use precise values derived from synthetic salary histories
+(\$10,639.45 for Case 1, \$7,347.62 for Case 2). This is expected since
+doc05 was written as a training document, but it means doc05 will
+produce different final benefit amounts than the test fixtures.
+
+**Impact:** LOW. Expected divergence, but doc05 should note that values
+are illustrative and test fixtures contain authoritative calculations.
+
+**2.9 Retirement Application --- Re-Employment Rules**
+
+**Source:** Retirement Application Part H
+
+The application confirms the 30-day separation minimum and 1,000-hour
+annual limit for re-employment with covered employers. Violation results
+in benefit suspension for the remainder of the calendar year. Our
+project docs reference this but do not detail the enforcement mechanism
+or how the system should track it.
+
+**Impact:** LOW for POC. Re-employment monitoring is a post-retirement
+function outside initial scope, but the rules should be documented.
+
+**Section 3: Vague or Undefined Areas Requiring Clarification**
+
+These are areas where our project documentation makes assumptions, uses
+placeholder values, or where DERP's actual operational practices are not
+fully captured.
+
+**3.1 Actuarial Factors for J&S Options**
+
+All demo cases use placeholder actuarial factors (Decision 19). DERP
+must have published actuarial factor tables that vary by member age,
+beneficiary age, and J&S percentage. Without these, payment option
+amounts are illustrative only. We need DERP's actual factor tables or
+the methodology to derive them.
+
+**3.2 Rounding Methodology**
+
+Doc05 discusses rounding options (standard, banker's, truncation) and
+recommends verifying against plan documents. BUILD_HISTORY Decision 21
+specifies banker's rounding for the POC, but this has not been verified
+against DERP's actual practice.
+
+**3.3 Service Credit Calculation Precision**
+
+Robert Martinez's service is calculated as 28.75 years using 9/12
+months, but the exact duration is 28 years, 9 months, 17 days (28.797
+years by exact day method). The case files use the year-month method
+rounding to the nearest quarter. DERP's actual service credit
+calculation methodology (exact days, year-month, or hours) is
+unconfirmed.
+
+**3.4 Leave Payout --- PTO vs. Sick/Vacation**
+
+Case 2 notes Jennifer Kim was hired before Jan 1, 2010 (eligible for
+leave payout) but has PTO rather than separate sick/vacation leave. The
+case assumes PTO is not eligible. DERP's actual rules on PTO eligibility
+for pension calculation purposes are unclear.
+
+**3.5 Interest Rate on Contribution Refunds**
+
+The project documents state non-vested members receive contributions
+plus interest but do not specify the interest rate, compounding method,
+or crediting frequency DERP uses.
+
+**3.6 Anti-Spiking Provisions**
+
+Doc03 discusses anti-spiking rules that limit AMS manipulation through
+late-career salary spikes. Whether DERP has specific anti-spiking
+provisions (e.g., a cap on year-over-year salary increases in the AMS
+window) is not documented.
+
+**3.7 Service Purchase Cost Methodology**
+
+Doc08 discusses various cost calculation methodologies (actuarial
+present value, employee contribution based, full actuarial cost) but
+does not specify which method DERP uses or what the current cost factors
+are.
+
+**3.8 Deferred Retirement Eligibility Age**
+
+Our documents note deferred retirement as a category but do not specify
+at what age a deferred-vested member can begin collecting benefits under
+DERP rules.
+
+**3.9 COLA History and Application Method**
+
+COLAs at DERP are discretionary and board-approved. We don't have the
+historical COLA schedule, how COLAs are applied (compounding on current
+benefit vs. fixed on original), the effective date pattern, or whether
+there's a waiting period before new retirees receive their first COLA.
+
+**3.10 Health Insurance Plan Details for IPR**
+
+The IPR benefit is conditional on enrolling in a DERP group health plan.
+The Health Insurance Election Form shows specific plan options (Kaiser,
+UnitedHealthCare, Humana, Cigna, Delta, VSP). The workspace should
+display available plans, but we need to know if plan eligibility varies
+by any member attribute.
+
+**3.11 MyDERP Self-Service Portal**
+
+The Retirement Application references a "MSS Portal" and "MyDERP.org"
+for self-service. Understanding what members can already do through this
+portal is important for understanding how NoUI fits alongside existing
+member self-service capabilities.
+
+**3.12 Tax Withholding Rules**
+
+The Retirement Application (Part E/F) captures federal and Colorado
+state tax withholding elections. The workspace needs to present these
+options, but the specific withholding calculation rules and defaults are
+not documented.
+
+**Section 4: Client Questionnaire**
+
+The following questions are organized by topic area and priority.
+CRITICAL items must be answered before POC development can proceed for
+affected components. HIGH items should be answered to ensure accuracy.
+MEDIUM items improve completeness but can be deferred.
+
+**4.1 Benefit Calculation Rules**
+
+  --------------- ---------------------------------------------------------
+  **Q-CALC-01**   **\[CRITICAL\] What rounding methodology does DERP use
+                  for benefit calculations?**
+
+  **Context**     Standard rounding (0.5 rounds up), banker's rounding (0.5
+                  rounds to even), or truncation? At what stage is rounding
+                  applied --- only at the final monthly benefit, or at
+                  intermediate steps?
+
+  **Response**    
+  --------------- ---------------------------------------------------------
+
+  --------------- ---------------------------------------------------------
+  **Q-CALC-02**   **\[CRITICAL\] How does DERP calculate partial years of
+                  service credit?**
+
+  **Context**     Year-month method (months/12), exact day method
+                  (days/365.25), or some other approach? For Robert
+                  Martinez, his service is either 28.75 (year-month) or
+                  28.797 (exact day). Which does DERP use?
+
+  **Response**    
+  --------------- ---------------------------------------------------------
+
+  --------------- ---------------------------------------------------------
+  **Q-CALC-03**   **\[CRITICAL\] Are the early retirement reduction years
+                  calculated using completed years only, or are partial
+                  years prorated?**
+
+  **Context**     Our assumption (Decision 18): completed years only (e.g.,
+                  age 63 years 11 months = 2 years under 65 = 12% for Tier
+                  3). Does DERP prorate to months?
+
+  **Response**    
+  --------------- ---------------------------------------------------------
+
+  --------------- ---------------------------------------------------------
+  **Q-CALC-04**   **\[CRITICAL\] Can DERP provide the actuarial factor
+                  tables used for J&S payment option calculations?**
+
+  **Context**     We need the factors by member age, beneficiary age, and
+                  J&S percentage (100%, 75%, 50%). Our demo cases currently
+                  use placeholder factors.
+
+  **Response**    
+  --------------- ---------------------------------------------------------
+
+  --------------- ---------------------------------------------------------
+  **Q-CALC-05**   **\[HIGH\] Does DERP have anti-spiking provisions that
+                  cap year-over-year salary increases in the AMS window?**
+
+  **Context**     Some plans limit pensionable salary growth (e.g., 110% of
+                  prior year). If DERP has such limits, they affect the AMS
+                  calculation logic.
+
+  **Response**    
+  --------------- ---------------------------------------------------------
+
+  --------------- ---------------------------------------------------------
+  **Q-CALC-06**   **\[HIGH\] Is there a maximum benefit cap (dollar amount
+                  or percentage of salary) at DERP?**
+
+  **Context**     Some plans cap the total benefit at a percentage of final
+                  average salary or a dollar amount. If such a cap exists,
+                  it must be modeled.
+
+  **Response**    
+  --------------- ---------------------------------------------------------
+
+**4.2 Leave Payout & Compensation**
+
+  ---------------- ---------------------------------------------------------
+  **Q-LEAVE-01**   **\[HIGH\] How does DERP handle PTO for pension
+                   calculation purposes?**
+
+  **Context**      Members hired before Jan 1, 2010 with sick/vacation leave
+                   can have payouts treated as salary. What happens if the
+                   employer has transitioned from separate sick/vacation to
+                   consolidated PTO? Is PTO eligible for pension payout?
+
+  **Response**     
+  ---------------- ---------------------------------------------------------
+
+  ---------------- ---------------------------------------------------------
+  **Q-LEAVE-02**   **\[HIGH\] What compensation types are included in
+                   "pensionable salary" at DERP?**
+
+  **Context**      Base salary is clearly included. Are overtime, bonuses,
+                   stipends, acting/temporary pay, shift differentials, or
+                   other special pay types included or excluded from the AMS
+                   calculation?
+
+  **Response**     
+  ---------------- ---------------------------------------------------------
+
+  ---------------- ---------------------------------------------------------
+  **Q-LEAVE-03**   **\[MEDIUM\] When a leave payout is added to the final
+                   month, is it added to gross pay or as a separate line
+                   item?**
+
+  **Context**      This affects how the Data Connector retrieves and
+                   processes salary records. We need to know how it appears
+                   in the payroll system.
+
+  **Response**     
+  ---------------- ---------------------------------------------------------
+
+**4.3 Service Credit & Purchases**
+
+  -------------- ---------------------------------------------------------
+  **Q-SVC-01**   **\[MEDIUM\] What is the cost calculation methodology for
+                 service purchases at DERP?**
+
+  **Context**    Actuarial present value, employee contribution
+                 equivalent, or another method? What are the current cost
+                 factors?
+
+  **Response**   
+  -------------- ---------------------------------------------------------
+
+  -------------- ---------------------------------------------------------
+  **Q-SVC-02**   **\[HIGH\] Does purchased service count toward vesting at
+                 DERP?**
+
+  **Context**    Our documents say no, consistent with most plans. Please
+                 confirm.
+
+  **Response**   
+  -------------- ---------------------------------------------------------
+
+  -------------- ---------------------------------------------------------
+  **Q-SVC-03**   **\[MEDIUM\] Are there time limits on service purchases
+                 at DERP (e.g., military buyback must occur within X years
+                 of hire)?**
+
+  **Context**    Understanding deadlines helps the system flag purchase
+                 opportunities for eligible members.
+
+  **Response**   
+  -------------- ---------------------------------------------------------
+
+**4.4 Eligibility & Retirement Processing**
+
+  --------------- ---------------------------------------------------------
+  **Q-ELIG-01**   **\[HIGH\] At what age can a deferred-vested member begin
+                  collecting their pension benefit?**
+
+  **Context**     Our documents note deferred retirement as a category but
+                  do not specify the age at which benefits can commence. Is
+                  it age 65, or earlier with reduction?
+
+  **Response**    
+  --------------- ---------------------------------------------------------
+
+  --------------- ---------------------------------------------------------
+  **Q-ELIG-02**   **\[CRITICAL\] Can DERP confirm that the Revised
+                  Municipal Code sections cited in our documents are
+                  current?**
+
+  **Context**     We reference RMC §18-391 through §18-430.7. Have there
+                  been any recent amendments that would affect benefit
+                  formulas, eligibility rules, or contribution rates?
+
+  **Response**    
+  --------------- ---------------------------------------------------------
+
+  --------------- ---------------------------------------------------------
+  **Q-ELIG-03**   **\[HIGH\] Does DERP require that the retirement
+                  effective date be the first day of a month?**
+
+  **Context**     Our process definition assumes this. Does DERP enforce
+                  this, or can members retire on any date?
+
+  **Response**    
+  --------------- ---------------------------------------------------------
+
+  --------------- ---------------------------------------------------------
+  **Q-ELIG-04**   **\[MEDIUM\] What happens if a member misses the 30-day
+                  application deadline?**
+
+  **Context**     Our docs say benefits are "deferred AND lump-sum death
+                  benefit forfeited." Is there an appeal process? Can the
+                  member re-apply later?
+
+  **Response**    
+  --------------- ---------------------------------------------------------
+
+**4.5 Domestic Relations Orders**
+
+  -------------- ---------------------------------------------------------
+  **Q-DRO-01**   **\[HIGH\] Is the DRO alternate payee eligible for IPR at
+                 DERP?**
+
+  **Context**    Case 4 assumes Patricia may receive proportional IPR
+                 based on marital service years. Does DERP actually extend
+                 IPR to DRO alternate payees?
+
+  **Response**   
+  -------------- ---------------------------------------------------------
+
+  -------------- ---------------------------------------------------------
+  **Q-DRO-02**   **\[MEDIUM\] Does DERP allow the alternate payee to elect
+                 their own payment option?**
+
+  **Context**    Some plans allow the alternate payee to elect separate
+                 payment terms. Others pay only a single-life annuity to
+                 the alternate payee.
+
+  **Response**   
+  -------------- ---------------------------------------------------------
+
+  -------------- ---------------------------------------------------------
+  **Q-DRO-03**   **\[MEDIUM\] Does DERP share COLA increases with DRO
+                 alternate payees?**
+
+  **Context**    If a COLA is granted, does the alternate payee's portion
+                 also increase, or is it fixed at the retirement-date
+                 amount?
+
+  **Response**   
+  -------------- ---------------------------------------------------------
+
+**4.6 Supplemental Benefits**
+
+  --------------- ---------------------------------------------------------
+  **Q-SUPP-01**   **\[MEDIUM\] Does DERP offer a Deferred Retirement Option
+                  Plan (DROP or DROP II)?**
+
+  **Context**     The DRO Agreement form references DROP/DROP II. If these
+                  exist, please describe: eligibility, how the lump sum
+                  accrues, distribution options, and whether this is
+                  something members actively use.
+
+  **Response**    
+  --------------- ---------------------------------------------------------
+
+  --------------- ---------------------------------------------------------
+  **Q-SUPP-02**   **\[MEDIUM\] Can DERP provide the historical COLA
+                  schedule for the past 10--20 years?**
+
+  **Context**     Dates, percentages, and which retiree cohorts received
+                  each adjustment. This helps validate our COLA tracking
+                  model.
+
+  **Response**    
+  --------------- ---------------------------------------------------------
+
+  --------------- ---------------------------------------------------------
+  **Q-SUPP-03**   **\[MEDIUM\] Is there a waiting period before new
+                  retirees receive their first COLA?**
+
+  **Context**     Some plans require 12 months of retirement before the
+                  first COLA applies. Does DERP have such a rule?
+
+  **Response**    
+  --------------- ---------------------------------------------------------
+
+  --------------- ---------------------------------------------------------
+  **Q-SUPP-04**   **\[MEDIUM\] What is the interest rate and compounding
+                  method for contribution refunds?**
+
+  **Context**     Non-vested members receive contributions plus interest.
+                  What rate? Compounded how often? Credited when?
+
+  **Response**    
+  --------------- ---------------------------------------------------------
+
+**4.7 Operational Practices**
+
+  -------------- ---------------------------------------------------------
+  **Q-OPS-01**   **\[CRITICAL\] What does DERP's current technology
+                 landscape look like?**
+
+  **Context**    Database platform (SQL Server, Oracle, etc.), pension
+                 administration software vendor (if any), self-service
+                 portal technology (MyDERP), document management system,
+                 payroll integration method. This directly affects Data
+                 Connector design.
+
+  **Response**   
+  -------------- ---------------------------------------------------------
+
+  -------------- ---------------------------------------------------------
+  **Q-OPS-02**   **\[HIGH\] How many staff members process retirements,
+                 and what is the approximate annual volume?**
+
+  **Context**    Understanding staff count and case volume helps size the
+                 POC workspace design and queue management.
+
+  **Response**   
+  -------------- ---------------------------------------------------------
+
+  -------------- ---------------------------------------------------------
+  **Q-OPS-03**   **\[HIGH\] Does DERP currently use a formal supervisor
+                 review/approval workflow for retirement processing?**
+
+  **Context**    Our process definition includes a supervisor review
+                 stage. Does DERP currently have this, and are there
+                 approval thresholds (e.g., benefits over \$X require
+                 additional sign-off)?
+
+  **Response**   
+  -------------- ---------------------------------------------------------
+
+  -------------- ---------------------------------------------------------
+  **Q-OPS-04**   **\[MEDIUM\] How does DERP currently handle employer
+                 contribution rate changes over time in historical
+                 records?**
+
+  **Context**    The rate has changed from \~11% to 17.95%. Do historical
+                 records reflect the rate in effect at the time, or have
+                 they been restated?
+
+  **Response**   
+  -------------- ---------------------------------------------------------
+
+  -------------- ---------------------------------------------------------
+  **Q-OPS-05**   **\[MEDIUM\] What is the typical processing timeline from
+                 complete application receipt to first payment?**
+
+  **Context**    Our documents estimate 2--4 weeks. What is DERP's actual
+                 experience?
+
+  **Response**   
+  -------------- ---------------------------------------------------------
+
+**Section 5: Summary of Findings**
+
+**5.1 Critical Path Items**
+
+The following items are on the critical path for POC development and
+should be prioritized in client discussions:
+
+-   Actuarial factor tables for J&S payment options (Q-CALC-04)
+
+-   Rounding methodology confirmation (Q-CALC-01)
+
+-   Service credit calculation precision method (Q-CALC-02)
+
+-   Early retirement reduction proration method (Q-CALC-03)
+
+-   RMC currency confirmation (Q-ELIG-02)
+
+-   Current technology landscape (Q-OPS-01)
+
+**5.2 Document Cleanup Items**
+
+These are internal corrections to make before client-facing
+presentations:
+
+-   Update BUILD_PLAN.md to correct 6% reference (Section 2.6)
+
+-   Align Case 4 50% J&S factor with Decision 17 standard (Section 2.7)
+
+-   Add note to doc05 that AMS values are illustrative (Section 2.8)
+
+-   Model pop-up provision in payment option workspace (Section 2.2)
+
+-   Distinguish two spousal consent forms in process definition (Section
+    2.4)
+
+**5.3 Areas of Strength**
+
+The project knowledge base is remarkably comprehensive. Several areas
+are particularly well-documented and internally consistent:
+
+-   Tier determination logic (hire date boundaries, eligibility rules)
+    --- consistent across all 14+ documents
+
+-   Service purchase exclusion rules --- correctly modeled in every case
+    file, doc, and test fixture
+
+-   DRO calculation methodology and sequencing --- consistent and
+    verified against DERP forms
+
+-   Process definition stages --- align well with DERP's published
+    five-step member process
+
+-   CRITICAL-001 resolution process --- exemplary research methodology
+    with multiple source verification

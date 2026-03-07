@@ -1,0 +1,719 @@
+# =============================================================================
+# DERP Payment Options Rules
+# =============================================================================
+# Domain: payment-options
+# Rules: RULE-PAY-MAXIMUM, RULE-JS-100, RULE-JS-75, RULE-JS-50,
+#        RULE-JS-DEFAULT, RULE-SPOUSAL-CONSENT, RULE-BENEFICIARY-PREDECEASE
+# Authority: DERP Restated Master Contract (RMC)
+# =============================================================================
+
+metadata:
+  domain: "payment-options"
+  version: "1.0.0"
+  effective_date: "2026-03-02"
+  authority: "DERP Restated Master Contract (RMC)"
+  description: >
+    Defines payment option rules including Maximum (single life), Joint and
+    Survivor options (100%, 75%, 50%), default payment rules, spousal consent,
+    and beneficiary predecease provisions.
+  governance:
+    owner: "DERP Rules Committee"
+    approved_by: "Plan Administrator"
+    approval_date: "2026-03-02"
+    review_cycle: "annual"
+    next_review_date: "2027-03-02"
+    audit_trail: true
+    change_log:
+      - version: "1.0.0"
+        date: "2026-03-02"
+        author: "Rules Committee"
+        description: "Initial payment options rule definitions for DERP NoUI POC"
+
+rules:
+  # ===========================================================================
+  # RULE-PAY-MAXIMUM: Maximum (Single Life) Payment
+  # ===========================================================================
+  - id: "RULE-PAY-MAXIMUM"
+    name: "Maximum (Single Life) Payment Option"
+    description: >
+      The Maximum payment option provides the highest monthly benefit amount.
+      It is a single-life annuity that pays only during the member's lifetime
+      with no survivor benefit. Unmarried members may elect this freely;
+      married members require spousal consent.
+    source_reference:
+      document: "RMC"
+      section: "Section 8.01 - Maximum Payment Option"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "reduced_monthly_benefit"
+        type: "decimal"
+        required: true
+        description: "Monthly benefit after any early retirement reduction"
+      - name: "marital_status"
+        type: "enum"
+        required: true
+        constraints:
+          enum_values: ["married", "unmarried"]
+      - name: "spousal_consent"
+        type: "boolean"
+        required: false
+        description: "Required if married and electing Maximum"
+    logic:
+      type: "procedural"
+      steps:
+        - step: 1
+          action: "If married and spousal_consent != true, block Maximum election"
+        - step: 2
+          action: "monthly_payment = reduced_monthly_benefit (no adjustment factor)"
+        - step: 3
+          action: "survivor_benefit = 0"
+    output:
+      name: "maximum_payment"
+      type: "object"
+      fields:
+        - name: "monthly_payment"
+          type: "decimal"
+        - name: "survivor_benefit"
+          type: "decimal"
+          value: 0.0
+        - name: "option_name"
+          type: "string"
+          value: "Maximum (Single Life)"
+    dependencies: ["RULE-REDUCTION-APPLY"]
+    tags: ["payment", "maximum", "single-life"]
+    test_cases:
+      - name: "Happy path - Robert Martinez Maximum payment"
+        type: "happy_path"
+        demo_case_ref: "Case 1: Robert Martinez - Tier 1"
+        description: "Unmarried member electing Maximum"
+        inputs:
+          reduced_monthly_benefit: 4354.17
+          marital_status: "unmarried"
+        expected:
+          monthly_payment: 4354.17
+          survivor_benefit: 0.0
+          option_name: "Maximum (Single Life)"
+      - name: "Boundary - married with spousal consent"
+        type: "boundary"
+        description: "Married member may elect Maximum with consent"
+        inputs:
+          reduced_monthly_benefit: 3000.00
+          marital_status: "married"
+          spousal_consent: true
+        expected:
+          monthly_payment: 3000.00
+          survivor_benefit: 0.0
+      - name: "Below boundary - small benefit amount"
+        type: "below_boundary"
+        inputs:
+          reduced_monthly_benefit: 300.00
+          marital_status: "unmarried"
+        expected:
+          monthly_payment: 300.00
+          survivor_benefit: 0.0
+      - name: "Negative - married without spousal consent"
+        type: "negative"
+        description: "Married member cannot elect Maximum without consent"
+        inputs:
+          reduced_monthly_benefit: 3000.00
+          marital_status: "married"
+          spousal_consent: false
+        expected:
+          error: "SPOUSAL_CONSENT_REQUIRED"
+          message: "Married members must obtain spousal consent for Maximum option"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-JS-100: Joint and 100% Survivor
+  # ===========================================================================
+  - id: "RULE-JS-100"
+    name: "Joint and 100% Survivor Payment Option"
+    description: >
+      Provides a reduced monthly benefit during the member's lifetime,
+      with 100% of the member's payment continuing to the survivor
+      after the member's death. Uses J&S 100% actuarial factor.
+    source_reference:
+      document: "RMC"
+      section: "Section 8.02(a) - Joint and 100% Survivor"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "reduced_monthly_benefit"
+        type: "decimal"
+        required: true
+        description: "Monthly benefit after any early retirement reduction"
+      - name: "js_100_factor"
+        type: "decimal"
+        required: true
+        description: "Actuarial factor for J&S 100% (illustrative: 0.8850)"
+        constraints:
+          min: 0.0
+          max: 1.0
+    logic:
+      type: "formula"
+      expression: "monthly_payment = reduced_monthly_benefit * js_100_factor"
+      variables:
+        js_100_factor_illustrative: 0.8850
+        survivor_percentage: 1.00
+    output:
+      name: "js_100_payment"
+      type: "object"
+      fields:
+        - name: "monthly_payment"
+          type: "decimal"
+        - name: "survivor_payment"
+          type: "decimal"
+          description: "100% of monthly_payment"
+        - name: "option_name"
+          type: "string"
+          value: "Joint and 100% Survivor"
+    tags: ["payment", "joint-survivor", "100-percent"]
+    test_cases:
+      - name: "Happy path - Robert Martinez J&S 100%"
+        type: "happy_path"
+        demo_case_ref: "Case 1: Robert Martinez - Tier 1"
+        description: "Tier 1 unreduced benefit with J&S 100% factor"
+        inputs:
+          reduced_monthly_benefit: 4354.17
+          js_100_factor: 0.8850
+        expected:
+          monthly_payment: 3853.44
+          survivor_payment: 3853.44
+          notes: "$4,354.17 * 0.8850 = $3,853.44"
+      - name: "Boundary - factor at maximum (1.0)"
+        type: "boundary"
+        description: "Edge case if factor were 1.0 (no reduction)"
+        inputs:
+          reduced_monthly_benefit: 3000.00
+          js_100_factor: 1.0
+        expected:
+          monthly_payment: 3000.00
+          survivor_payment: 3000.00
+      - name: "Below boundary - David Washington with early reduction"
+        type: "below_boundary"
+        demo_case_ref: "Case 3: David Washington - Tier 3"
+        description: "Already reduced benefit further reduced by J&S factor"
+        inputs:
+          reduced_monthly_benefit: 744.15
+          js_100_factor: 0.8850
+        expected:
+          monthly_payment: 658.57
+          survivor_payment: 658.57
+      - name: "Negative - zero factor"
+        type: "negative"
+        description: "Factor of 0 would eliminate the benefit entirely"
+        inputs:
+          reduced_monthly_benefit: 4000.00
+          js_100_factor: 0.0
+        expected:
+          error: "INVALID_FACTOR"
+          message: "J&S factor must be greater than 0"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-JS-75: Joint and 75% Survivor
+  # ===========================================================================
+  - id: "RULE-JS-75"
+    name: "Joint and 75% Survivor Payment Option"
+    description: >
+      Provides a reduced monthly benefit during the member's lifetime,
+      with 75% of the member's payment continuing to the survivor
+      after the member's death. Uses J&S 75% actuarial factor.
+    source_reference:
+      document: "RMC"
+      section: "Section 8.02(b) - Joint and 75% Survivor"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "reduced_monthly_benefit"
+        type: "decimal"
+        required: true
+      - name: "js_75_factor"
+        type: "decimal"
+        required: true
+        description: "Actuarial factor for J&S 75% (illustrative: 0.9150)"
+        constraints:
+          min: 0.0
+          max: 1.0
+    logic:
+      type: "formula"
+      expression: >
+        monthly_payment = reduced_monthly_benefit * js_75_factor;
+        survivor_payment = monthly_payment * 0.75
+      variables:
+        js_75_factor_illustrative: 0.9150
+        survivor_percentage: 0.75
+    output:
+      name: "js_75_payment"
+      type: "object"
+      fields:
+        - name: "monthly_payment"
+          type: "decimal"
+        - name: "survivor_payment"
+          type: "decimal"
+          description: "75% of monthly_payment"
+        - name: "option_name"
+          type: "string"
+          value: "Joint and 75% Survivor"
+    tags: ["payment", "joint-survivor", "75-percent"]
+    test_cases:
+      - name: "Happy path - Robert Martinez J&S 75%"
+        type: "happy_path"
+        demo_case_ref: "Case 1: Robert Martinez - Tier 1"
+        inputs:
+          reduced_monthly_benefit: 4354.17
+          js_75_factor: 0.9150
+        expected:
+          monthly_payment: 3984.07
+          survivor_payment: 2988.05
+          notes: "$4,354.17 * 0.9150 = $3,984.07; survivor = $3,984.07 * 0.75 = $2,988.05"
+      - name: "Boundary - very high factor"
+        type: "boundary"
+        inputs:
+          reduced_monthly_benefit: 3000.00
+          js_75_factor: 0.99
+        expected:
+          monthly_payment: 2970.00
+          survivor_payment: 2227.50
+      - name: "Below boundary - small benefit"
+        type: "below_boundary"
+        inputs:
+          reduced_monthly_benefit: 500.00
+          js_75_factor: 0.9150
+        expected:
+          monthly_payment: 457.50
+          survivor_payment: 343.13
+      - name: "Negative - factor exceeds 1.0"
+        type: "negative"
+        inputs:
+          reduced_monthly_benefit: 3000.00
+          js_75_factor: 1.05
+        expected:
+          error: "INVALID_FACTOR"
+          message: "J&S factor must not exceed 1.0"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-JS-50: Joint and 50% Survivor
+  # ===========================================================================
+  - id: "RULE-JS-50"
+    name: "Joint and 50% Survivor Payment Option"
+    description: >
+      Provides a reduced monthly benefit during the member's lifetime,
+      with 50% of the member's payment continuing to the survivor
+      after the member's death. Uses J&S 50% actuarial factor.
+    source_reference:
+      document: "RMC"
+      section: "Section 8.02(c) - Joint and 50% Survivor"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "reduced_monthly_benefit"
+        type: "decimal"
+        required: true
+      - name: "js_50_factor"
+        type: "decimal"
+        required: true
+        description: "Actuarial factor for J&S 50% (illustrative: 0.9450)"
+        constraints:
+          min: 0.0
+          max: 1.0
+    logic:
+      type: "formula"
+      expression: >
+        monthly_payment = reduced_monthly_benefit * js_50_factor;
+        survivor_payment = monthly_payment * 0.50
+      variables:
+        js_50_factor_illustrative: 0.9450
+        survivor_percentage: 0.50
+    output:
+      name: "js_50_payment"
+      type: "object"
+      fields:
+        - name: "monthly_payment"
+          type: "decimal"
+        - name: "survivor_payment"
+          type: "decimal"
+          description: "50% of monthly_payment"
+        - name: "option_name"
+          type: "string"
+          value: "Joint and 50% Survivor"
+    tags: ["payment", "joint-survivor", "50-percent"]
+    test_cases:
+      - name: "Happy path - Robert Martinez J&S 50%"
+        type: "happy_path"
+        demo_case_ref: "Case 1: Robert Martinez - Tier 1"
+        inputs:
+          reduced_monthly_benefit: 4354.17
+          js_50_factor: 0.9450
+        expected:
+          monthly_payment: 4114.69
+          survivor_payment: 2057.35
+          notes: "$4,354.17 * 0.9450 = $4,114.69; survivor = $4,114.69 * 0.50 = $2,057.35"
+      - name: "Boundary - Jennifer Kim with early reduction and J&S 50%"
+        type: "boundary"
+        demo_case_ref: "Case 2: Jennifer Kim - Tier 2"
+        description: "Illustrative: already-reduced benefit with J&S 50%"
+        inputs:
+          reduced_monthly_benefit: 2070.00
+          js_50_factor: 0.9450
+        expected:
+          monthly_payment: 1956.15
+          survivor_payment: 978.08
+      - name: "Below boundary - minimum benefit scenario"
+        type: "below_boundary"
+        inputs:
+          reduced_monthly_benefit: 300.00
+          js_50_factor: 0.9450
+        expected:
+          monthly_payment: 283.50
+          survivor_payment: 141.75
+      - name: "Negative - zero benefit input"
+        type: "negative"
+        inputs:
+          reduced_monthly_benefit: 0.0
+          js_50_factor: 0.9450
+        expected:
+          monthly_payment: 0.0
+          survivor_payment: 0.0
+          notes: "A $0 benefit would indicate something upstream went wrong"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-JS-DEFAULT: Default Payment Option for Married Members
+  # ===========================================================================
+  - id: "RULE-JS-DEFAULT"
+    name: "Default Payment Option for Married Members"
+    description: >
+      If a married member does not make an explicit payment option election,
+      the default is Joint and 50% Survivor. Unmarried members default
+      to Maximum (Single Life).
+    source_reference:
+      document: "RMC"
+      section: "Section 8.03 - Default Payment Option"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "marital_status"
+        type: "enum"
+        required: true
+        constraints:
+          enum_values: ["married", "unmarried"]
+      - name: "explicit_election_made"
+        type: "boolean"
+        required: true
+    logic:
+      type: "conditional"
+      conditions:
+        - condition: "explicit_election_made = true"
+          result:
+            use_default: false
+            default_option: null
+        - condition: "marital_status = 'married' AND explicit_election_made = false"
+          result:
+            use_default: true
+            default_option: "JS-50"
+            default_rule: "RULE-JS-50"
+        - condition: "marital_status = 'unmarried' AND explicit_election_made = false"
+          result:
+            use_default: true
+            default_option: "Maximum"
+            default_rule: "RULE-PAY-MAXIMUM"
+    output:
+      name: "default_payment"
+      type: "object"
+      fields:
+        - name: "use_default"
+          type: "boolean"
+        - name: "default_option"
+          type: "string"
+    tags: ["payment", "default", "married"]
+    test_cases:
+      - name: "Happy path - married member defaults to J&S 50%"
+        type: "happy_path"
+        description: "Married member makes no election"
+        inputs:
+          marital_status: "married"
+          explicit_election_made: false
+        expected:
+          use_default: true
+          default_option: "JS-50"
+      - name: "Boundary - married member makes explicit election"
+        type: "boundary"
+        description: "Election overrides default"
+        inputs:
+          marital_status: "married"
+          explicit_election_made: true
+        expected:
+          use_default: false
+          default_option: null
+      - name: "Below boundary - unmarried defaults to Maximum"
+        type: "below_boundary"
+        description: "Unmarried member with no election"
+        inputs:
+          marital_status: "unmarried"
+          explicit_election_made: false
+        expected:
+          use_default: true
+          default_option: "Maximum"
+      - name: "Negative - invalid marital status"
+        type: "negative"
+        inputs:
+          marital_status: "divorced"
+          explicit_election_made: false
+        expected:
+          error: "INVALID_MARITAL_STATUS"
+          message: "marital_status must be 'married' or 'unmarried'"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-SPOUSAL-CONSENT: Spousal Consent Requirement
+  # ===========================================================================
+  - id: "RULE-SPOUSAL-CONSENT"
+    name: "Spousal Consent Requirement"
+    description: >
+      A married member who elects the Maximum (Single Life) option or
+      names a non-spouse beneficiary must obtain notarized spousal consent.
+      Without consent, the election is invalid.
+    source_reference:
+      document: "RMC"
+      section: "Section 8.04 - Spousal Consent"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "marital_status"
+        type: "enum"
+        required: true
+        constraints:
+          enum_values: ["married", "unmarried"]
+      - name: "elected_option"
+        type: "enum"
+        required: true
+        constraints:
+          enum_values: ["Maximum", "JS-100", "JS-75", "JS-50"]
+      - name: "beneficiary_is_spouse"
+        type: "boolean"
+        required: false
+        default: true
+      - name: "spousal_consent_obtained"
+        type: "boolean"
+        required: false
+    logic:
+      type: "conditional"
+      conditions:
+        - condition: "marital_status = 'unmarried'"
+          result:
+            consent_required: false
+            consent_valid: true
+        - condition: >
+            marital_status = 'married'
+            AND elected_option = 'Maximum'
+          result:
+            consent_required: true
+            consent_valid: "spousal_consent_obtained = true"
+        - condition: >
+            marital_status = 'married'
+            AND beneficiary_is_spouse = false
+          result:
+            consent_required: true
+            consent_valid: "spousal_consent_obtained = true"
+        - condition: >
+            marital_status = 'married'
+            AND elected_option IN ('JS-100', 'JS-75', 'JS-50')
+            AND beneficiary_is_spouse = true
+          result:
+            consent_required: false
+            consent_valid: true
+    output:
+      name: "spousal_consent"
+      type: "object"
+      fields:
+        - name: "consent_required"
+          type: "boolean"
+        - name: "consent_valid"
+          type: "boolean"
+    tags: ["payment", "consent", "spousal"]
+    test_cases:
+      - name: "Happy path - unmarried, no consent needed"
+        type: "happy_path"
+        demo_case_ref: "Case 1: Robert Martinez - Tier 1"
+        description: "Unmarried member never needs consent"
+        inputs:
+          marital_status: "unmarried"
+          elected_option: "Maximum"
+        expected:
+          consent_required: false
+          consent_valid: true
+      - name: "Boundary - married with J&S 50% to spouse"
+        type: "boundary"
+        description: "Standard married election, no consent needed"
+        inputs:
+          marital_status: "married"
+          elected_option: "JS-50"
+          beneficiary_is_spouse: true
+        expected:
+          consent_required: false
+          consent_valid: true
+      - name: "Below boundary - married electing Maximum with consent"
+        type: "below_boundary"
+        description: "Married member gets consent for Maximum"
+        inputs:
+          marital_status: "married"
+          elected_option: "Maximum"
+          spousal_consent_obtained: true
+        expected:
+          consent_required: true
+          consent_valid: true
+      - name: "Negative - married electing Maximum without consent"
+        type: "negative"
+        description: "Election should be blocked"
+        inputs:
+          marital_status: "married"
+          elected_option: "Maximum"
+          spousal_consent_obtained: false
+        expected:
+          consent_required: true
+          consent_valid: false
+          error: "CONSENT_NOT_OBTAINED"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-BENEFICIARY-PREDECEASE: Beneficiary Predecease Provision
+  # ===========================================================================
+  - id: "RULE-BENEFICIARY-PREDECEASE"
+    name: "Beneficiary Predecease Provision"
+    description: >
+      If the designated beneficiary predeceases the member, the member's
+      payment reverts to the Maximum (Single Life) amount. This applies
+      to all J&S options.
+    source_reference:
+      document: "RMC"
+      section: "Section 8.05 - Beneficiary Predecease"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["retired"]
+    inputs:
+      - name: "current_payment_option"
+        type: "enum"
+        required: true
+        constraints:
+          enum_values: ["Maximum", "JS-100", "JS-75", "JS-50"]
+      - name: "beneficiary_deceased"
+        type: "boolean"
+        required: true
+      - name: "current_monthly_payment"
+        type: "decimal"
+        required: true
+      - name: "original_maximum_amount"
+        type: "decimal"
+        required: true
+        description: "What the Maximum option would have been"
+    logic:
+      type: "conditional"
+      conditions:
+        - condition: "beneficiary_deceased = true AND current_payment_option != 'Maximum'"
+          result:
+            revert_to_maximum: true
+            new_monthly_payment: "original_maximum_amount"
+        - condition: "beneficiary_deceased = false"
+          result:
+            revert_to_maximum: false
+            new_monthly_payment: "current_monthly_payment"
+    output:
+      name: "predecease_adjustment"
+      type: "object"
+      fields:
+        - name: "revert_to_maximum"
+          type: "boolean"
+        - name: "new_monthly_payment"
+          type: "decimal"
+    tags: ["payment", "predecease", "reversion"]
+    test_cases:
+      - name: "Happy path - beneficiary alive, no change"
+        type: "happy_path"
+        description: "Normal situation, beneficiary is alive"
+        inputs:
+          current_payment_option: "JS-50"
+          beneficiary_deceased: false
+          current_monthly_payment: 4114.69
+          original_maximum_amount: 4354.17
+        expected:
+          revert_to_maximum: false
+          new_monthly_payment: 4114.69
+      - name: "Boundary - beneficiary predeceases, revert to Maximum"
+        type: "boundary"
+        description: "Beneficiary dies, member gets Maximum amount"
+        inputs:
+          current_payment_option: "JS-100"
+          beneficiary_deceased: true
+          current_monthly_payment: 3853.44
+          original_maximum_amount: 4354.17
+        expected:
+          revert_to_maximum: true
+          new_monthly_payment: 4354.17
+      - name: "Below boundary - already on Maximum"
+        type: "below_boundary"
+        description: "Member on Maximum, beneficiary death is irrelevant"
+        inputs:
+          current_payment_option: "Maximum"
+          beneficiary_deceased: true
+          current_monthly_payment: 4354.17
+          original_maximum_amount: 4354.17
+        expected:
+          revert_to_maximum: false
+          new_monthly_payment: 4354.17
+          notes: "Already on Maximum, no change needed"
+      - name: "Negative - beneficiary not designated"
+        type: "negative"
+        description: "System should handle missing beneficiary gracefully"
+        inputs:
+          current_payment_option: "JS-50"
+          beneficiary_deceased: null
+          current_monthly_payment: 3000.00
+          original_maximum_amount: 3500.00
+        expected:
+          error: "MISSING_BENEFICIARY_STATUS"
+          message: "beneficiary_deceased status must be specified"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"

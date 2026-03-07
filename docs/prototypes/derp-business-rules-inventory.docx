@@ -1,0 +1,1834 @@
+**NoUI DERP POC**
+
+**Business Rules Inventory**
+
+Service Retirement Process
+
+Complete Rule Identification with Source Verification
+
+Version 1.0 \| February 21, 2026
+
+Governing Authority: Revised Municipal Code, City and County of Denver
+
+Sections 18-391 through 18-430.7 (January 2024 Edition)
+
+**DRAFT --- Pending DERP Operational Confirmation on Open Items**
+
+**Executive Summary**
+
+This document is the comprehensive business rules inventory for the NoUI
+DERP POC Service Retirement process. Every rule that the calculation
+engine and workspace composition system must implement is identified,
+sourced to the governing Revised Municipal Code (RMC), and classified by
+verification status.
+
+**Verification Status Legend:**
+
+**✅ CONFIRMED** --- Directly verified against RMC statutory text or
+DERP-published authoritative materials.
+
+**⚠️ ASSUMED** --- Reasonable project assumption not yet confirmed by
+DERP or RMC. Must be validated before production.
+
+**❓ OPEN** --- Requires DERP staff input. Cannot be resolved from
+available documentation.
+
+**Total Rules: 52 \| Confirmed: 48 \| Assumed: 4 \| Open Items: 12 \|
+Flagged Assumptions: 38**
+
+**Methodology**
+
+Every rule was identified by systematic analysis of the Denver Revised
+Municipal Code (DRMC, January 2024 edition, §18-391 through §18-430.7),
+cross-referenced against DERP member-facing materials (Active Member
+Handbook, website, FAQ, application forms), and validated against the
+four hand-calculated demo cases. Rules are organized in evaluation order
+matching the Service Retirement process workflow.
+
+For each rule, five attributes are documented: (1) precise rule
+statement, (2) governing source with RMC section, (3) verification
+status, (4) any assumptions surfaced during analysis, and (5) test
+implications for the POC test suite.
+
+**Critical Open Items Requiring DERP Input**
+
+These items affect calculation accuracy and must be resolved before the
+rules engine can be finalized:
+
+  ----------------------------------------------------------------------------------
+  **Item ID**        **Description**                    **Priority**   **Status**
+  ------------------ ---------------------------------- -------------- -------------
+  TIER-REHIRE-01     If a member quits (not retires) in HIGH           Open
+                     Tier 2 era and is rehired in Tier                 
+                     3 era, which tier applies? Most                   
+                     likely: original tier based on                    
+                     \'initial service\' language, but                 
+                     needs DERP confirmation.                          
+
+  CONTRIB-HIST-01    Historical employee contribution   HIGH           Open
+                     rate schedule needed for realistic                
+                     seed data generation spanning                     
+                     multiple decades. Low priority ---                
+                     does not affect rules engine.                     
+
+  Q-CALC-02          \[CRITICAL\] How does DERP         CRITICAL       Open
+                     calculate partial years of service                
+                     credit? Year-month method                         
+                     (months/12) or exact day method                   
+                     (days/365.25)? Affects every                      
+                     benefit calculation.                              
+
+  Q-CALC-02-IMPACT   The age + service sum depends on   CRITICAL       Open
+                     how partial years are calculated.                 
+                     Year-month vs exact day could                     
+                     change whether a member is 0.01                   
+                     above or below 75.                                
+
+  Q-CALC-03          \[CRITICAL\] While the statutory   CRITICAL       Open
+                     table strongly implies integer-age                
+                     (no proration), DERP staff                        
+                     confirmation would eliminate any                  
+                     ambiguity. E.g., does a member age                
+                     55 years 11 months get 70% or                     
+                     something between 70% and 73%?                    
+
+  Q-AMS-01           How are partial months at start or HIGH           Open
+                     end of employment handled in AMS                  
+                     window? Include at prorated                       
+                     amount, or exclude?                               
+
+  Q-CALC-05          \[HIGH\] Does DERP have            CRITICAL       Open
+                     anti-spiking provisions that cap                  
+                     year-over-year salary increases in                
+                     the AMS window?                                   
+
+  Q-FURLOUGH-01      What is the cost formula for       HIGH           Open
+                     purchasing furlough days? Is it                   
+                     the same actuarial methodology as                 
+                     service purchase?                                 
+
+  Q-CALC-01          \[CRITICAL\] What rounding         CRITICAL       Open
+                     methodology does DERP use?                        
+                     Standard rounding, banker\'s                      
+                     rounding, or truncation? At what                  
+                     stage is rounding applied?                        
+
+  Q-CALC-04          \[CRITICAL\] Can DERP provide the  CRITICAL       Open
+                     actuarial factor tables for J&S                   
+                     calculations? Factors by member                   
+                     age, beneficiary age, and J&S                     
+                     percentage.                                       
+
+  Q-DRO-03           What is DERP\'s default position   HIGH           Open
+                     on COLA for DRO alternate payees                  
+                     when the court order is silent?                   
+
+  Q-PROCESS-01       Is the 15th-of-month cutoff a hard HIGH           Open
+                     rule or a guideline? Does it apply                
+                     to the month before the effective                 
+                     date specifically?                                
+  ----------------------------------------------------------------------------------
+
+**Category 1: Membership & Tier Determination**
+
+These rules fire first on every member interaction. They determine which
+set of subsequent rules applies. Tier determination is immutable once
+established and gates all eligibility and benefit calculations.
+
+**1.0 --- Summary**
+
+  --------------------------------------------------------------------------
+  **Rule ID**       **Rule Name**              **Status**   **Open Items**
+  ----------------- -------------------------- ------------ ----------------
+  RULE-TIER-1       Tier 1 Determination       ✅ CONFIRMED 1 assumptions
+
+  RULE-TIER-2       Tier 2 Determination       ✅ CONFIRMED ---
+
+  RULE-TIER-3       Tier 3 Determination       ✅ CONFIRMED 1 open
+
+  RULE-CONTRIB-EE   Employee Contribution Rate ✅ CONFIRMED 1 open
+
+  RULE-CONTRIB-ER   Employer Contribution Rate ✅ CONFIRMED 1 assumptions
+  --------------------------------------------------------------------------
+
+**1.1 --- RULE-TIER-1**
+
+**RULE-TIER-1 Tier 1 Determination**
+
+**Rule Statement:** A member is classified as Tier 1 if their initial
+service began before September 1, 2004 AND they terminated service after
+December 31, 1999.
+
+**Source:** RMC §18-409(a)(1) **✅ CONFIRMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• The \'terminates after Dec 31, 1999\' clause means members who
+separated before 2000 are under a prior plan provision. Seed data must
+not generate Tier 1 members with termination before Jan 1, 2000.
+
+**Test Implications:** Boundary: hire Aug 31, 2004 = Tier 1; hire Sep 1,
+2004 = Tier 2. Also test termination date clause (pre-2000 termination
+should not produce Tier 1).
+
+**Tier Applicability:** Tier 1 only (determination rule)
+
+**1.2 --- RULE-TIER-2**
+
+**RULE-TIER-2 Tier 2 Determination**
+
+**Rule Statement:** A member is classified as Tier 2 if their initial
+service began on or after September 1, 2004 but before July 1, 2011.
+
+**Source:** RMC §18-409(a)(2) **✅ CONFIRMED**
+
+**Test Implications:** Boundary: hire Sep 1, 2004 = Tier 2; hire Jun 30,
+2011 = Tier 2; hire Jul 1, 2011 = Tier 3.
+
+**Tier Applicability:** Tier 2 only (determination rule)
+
+**1.3 --- RULE-TIER-3**
+
+**RULE-TIER-3 Tier 3 Determination**
+
+**Rule Statement:** A member is classified as Tier 3 if their initial
+service first began on or after July 1, 2011.
+
+**Source:** RMC §18-409(a)(3) **✅ CONFIRMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• Tier is determined by INITIAL hire date, not most recent. For
+re-employment after retirement, RMC §18-408(j)(1) confirms new service
+earns under Tier 3 formula regardless of original tier, but original
+benefit retains original tier.
+
+**❓ Open Items:**
+
+• \[TIER-REHIRE-01\] If a member quits (not retires) in Tier 2 era and
+is rehired in Tier 3 era, which tier applies? Most likely: original tier
+based on \'initial service\' language, but needs DERP confirmation.
+
+**Test Implications:** Boundary: hire Jul 1, 2011 = Tier 3; hire Jun 30,
+2011 = Tier 2. Test rehire scenario if DERP clarifies.
+
+**Tier Applicability:** Tier 3 only (determination rule)
+
+**1.4 --- RULE-CONTRIB-EE**
+
+**RULE-CONTRIB-EE Employee Contribution Rate**
+
+**Rule Statement:** Employee contributes 8.45% of gross salary, pretax.
+
+**Source:** RMC §18-407(f)(1), effective January 1, 2023 **✅
+CONFIRMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• This is the current rate only. Historical rates needed for seed data
+(8.45% since at least 2014; earlier rates unknown). For the rules
+engine, only current rate matters.
+
+**❓ Open Items:**
+
+• \[CONTRIB-HIST-01\] Historical employee contribution rate schedule
+needed for realistic seed data generation spanning multiple decades. Low
+priority --- does not affect rules engine.
+
+**Test Implications:** Verify 8.45% applied to gross salary. Verify
+pretax treatment.
+
+**Tier Applicability:** All tiers
+
+**1.5 --- RULE-CONTRIB-ER**
+
+**RULE-CONTRIB-ER Employer Contribution Rate**
+
+**Rule Statement:** Employer contributes 17.95% of gross salary.
+
+**Source:** RMC §18-407(e)(1), effective January 1, 2023 **✅
+CONFIRMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• Same historical rate caveat as employee contribution. Approximate:
+\~11% pre-2012, scaling to 17.95% current. These are estimates for seed
+data, not verified rates.
+
+**Test Implications:** Verify 17.95% applied to gross salary in
+current-era calculations.
+
+**Tier Applicability:** All tiers
+
+**Category 2: Service Credit Calculation**
+
+Service credit feeds both eligibility determination and benefit
+calculation, but with different inclusion rules. The critical
+distinction between earned and purchased service affects multiple
+downstream rules.
+
+**2.0 --- Summary**
+
+  ------------------------------------------------------------------------------
+  **Rule ID**           **Rule Name**              **Status**   **Open Items**
+  --------------------- -------------------------- ------------ ----------------
+  RULE-SVC-EARNED       Earned Service Credit      ✅ CONFIRMED 1 open
+                        Calculation                             
+
+  RULE-SVC-PURCHASED    Purchased Service Credit   ✅ CONFIRMED ---
+
+  RULE-SVC-SEPARATION   Service Credit Type        ✅ CONFIRMED ---
+                        Separation                              
+  ------------------------------------------------------------------------------
+
+**2.1 --- RULE-SVC-EARNED**
+
+**RULE-SVC-EARNED Earned Service Credit Calculation**
+
+**Rule Statement:** Earned service credit accumulates from actual
+employment with covered employers, calculated from hire date to
+termination/retirement date.
+
+**Source:** RMC §18-402 (definitions), §18-409(a) (benefit calculation
+references) **✅ CONFIRMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• Service credit calculation method (year-month vs. exact day) is NOT
+specified in the RMC. Our demo cases use year-month (months/12, e.g., 28
+yrs 9 mo = 28.75). If DERP uses exact days, Robert Martinez would be
+28.797 instead of 28.75.
+
+**❓ Open Items:**
+
+• \[Q-CALC-02\] \[CRITICAL\] How does DERP calculate partial years of
+service credit? Year-month method (months/12) or exact day method
+(days/365.25)? Affects every benefit calculation.
+
+**Test Implications:** Test with known employment periods. Verify
+calculation matches chosen method precisely. Must test both methods
+until DERP confirms which one.
+
+**Tier Applicability:** All tiers
+
+**2.2 --- RULE-SVC-PURCHASED**
+
+**RULE-SVC-PURCHASED Purchased Service Credit**
+
+**Rule Statement:** Purchased service credit counts toward benefit
+CALCULATION only. It is explicitly EXCLUDED from: vesting, Rule of 75/85
+determination, and IPR calculation.
+
+**Source:** RMC §18-415(a) --- \'Cannot be used for vesting or
+qualifying for different benefit category\' **✅ CONFIRMED**
+
+**Test Implications:** Critical test: member with purchased service must
+show different totals for \'service for calculation\' vs \'service for
+eligibility\'. Jennifer Kim (Case 2) is the primary test: 21.17 total
+but 18.17 for Rule of 75. Test that IPR uses earned-only service.
+
+**Tier Applicability:** All tiers
+
+**2.3 --- RULE-SVC-SEPARATION**
+
+**RULE-SVC-SEPARATION Service Credit Type Separation**
+
+**Rule Statement:** System must maintain separate tracking of earned,
+purchased, military, and leave service credit types. Each type has
+different applicability rules.
+
+**Source:** RMC §18-415 (purchase provisions), §18-402 (definitions)
+**✅ CONFIRMED**
+
+**Test Implications:** Verify data model stores service credit by type.
+Verify each usage point (eligibility, benefit calc, IPR) pulls the
+correct subset.
+
+**Tier Applicability:** All tiers
+
+**Category 3: Eligibility Determination**
+
+Eligibility rules gate the benefit calculation and determine whether
+reductions apply. They must be evaluated in a strict hierarchy. The
+interaction between age, service, tier, and minimum age requirements
+creates the complexity.
+
+**3.0 --- Summary**
+
+  --------------------------------------------------------------------------------
+  **Rule ID**             **Rule Name**              **Status**   **Open Items**
+  ----------------------- -------------------------- ------------ ----------------
+  RULE-VESTING            Vesting Requirement        ✅ CONFIRMED 2 assumptions
+
+  RULE-NORMAL-RET         Normal Retirement          ✅ CONFIRMED ---
+                          Eligibility                             
+
+  RULE-RULE-OF-75         Rule of 75 Eligibility     ✅ CONFIRMED 1 open
+
+  RULE-RULE-OF-85         Rule of 85 Eligibility     ✅ CONFIRMED 1 assumptions
+
+  RULE-EARLY-RET-T12      Early Retirement           ✅ CONFIRMED ---
+                          Eligibility (Tiers 1 & 2)               
+
+  RULE-EARLY-RET-T3       Early Retirement           ✅ CONFIRMED ---
+                          Eligibility (Tier 3)                    
+
+  RULE-EARLY-REDUCE-T12   Early Retirement Reduction ✅ CONFIRMED 1 open
+                          (Tiers 1 & 2)                           
+
+  RULE-EARLY-REDUCE-T3    Early Retirement Reduction ✅ CONFIRMED 1 assumptions
+                          (Tier 3)                                
+
+  RULE-DEFERRED           Deferred Retirement        ✅ CONFIRMED 1 assumptions
+
+  RULE-ELIG-HIERARCHY     Eligibility Evaluation     ✅ CONFIRMED 1 assumptions
+                          Order                                   
+  --------------------------------------------------------------------------------
+
+**3.1 --- RULE-VESTING**
+
+**RULE-VESTING Vesting Requirement**
+
+**Rule Statement:** A member must have at least 5 years of credited
+service to be vested and eligible for any retirement benefit. Members
+appointed before January 1, 1987 required 10 years. Post-1987 but
+pre-July 2011: 5 years or age 65 (whichever earlier). Post-July 2011: 5
+years regardless of age.
+
+**Source:** RMC §18-402(31) **✅ CONFIRMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• For POC scope, all synthetic members are post-1987 hires, so 5-year
+vesting applies. The 10-year pre-1987 rule is documented but not
+expected in demo cases.
+
+• Vesting uses credited service (earned only? or earned + purchased?).
+RMC §18-415(a) says purchased service cannot be used for vesting, so
+vesting is earned-only.
+
+**Test Implications:** Test at boundary: exactly 5.00 years = vested;
+4.99 years = not vested. Verify purchased service excluded from vesting
+count.
+
+**Tier Applicability:** All tiers (with era-specific variations)
+
+**3.2 --- RULE-NORMAL-RET**
+
+**RULE-NORMAL-RET Normal Retirement Eligibility**
+
+**Rule Statement:** Age 65 or older AND at least 5 years of credited
+service = normal retirement. Full unreduced benefit. Applies to all
+tiers.
+
+**Source:** RMC §18-402(20), §18-408 **✅ CONFIRMED**
+
+**Test Implications:** Test: age 65 with 5 years = normal. Age 64 with
+30 years = NOT normal (may be Rule of N). Age 65 with 4 years = NOT
+eligible at all.
+
+**Tier Applicability:** All tiers
+
+**3.3 --- RULE-RULE-OF-75**
+
+**RULE-RULE-OF-75 Rule of 75 Eligibility**
+
+**Rule Statement:** For Tiers 1 and 2: if age + earned service credit ≥
+75 AND member has attained minimum age 55, member qualifies for
+unreduced benefit. Rule must be attained while employed as active
+member, prior to termination.
+
+**Source:** RMC §18-402(20) **✅ CONFIRMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• Rule uses EARNED service only (purchased excluded per
+RULE-SVC-PURCHASED). Confirmed by §18-415(a).
+
+• If member terminates after meeting the sum but before reaching age 55,
+they must wait until age 55 to apply. They do NOT lose the Rule --- they
+just cannot collect until minimum age.
+
+**❓ Open Items:**
+
+• \[Q-CALC-02-IMPACT\] The age + service sum depends on how partial
+years are calculated. Year-month vs exact day could change whether a
+member is 0.01 above or below 75.
+
+**Test Implications:** Robert Martinez (Case 1): 63 + 28.75 = 91.75 ≥ 75
+✓. Jennifer Kim (Case 2): 55 + 18.17 = 73.17 \< 75 ✗. Test exact
+boundary: sum = 75.00 exactly. Test sum = 74.99. Test member who meets
+sum but is age 54 (must wait).
+
+**Tier Applicability:** Tiers 1 and 2 only
+
+**3.4 --- RULE-RULE-OF-85**
+
+**RULE-RULE-OF-85 Rule of 85 Eligibility**
+
+**Rule Statement:** For Tier 3: if age + earned service credit ≥ 85 AND
+member has attained minimum age 60, member qualifies for unreduced
+benefit. Rule must be attained while employed as active member, prior to
+termination.
+
+**Source:** RMC §18-402(20) **✅ CONFIRMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• Same partial-year calculation dependency as Rule of 75.
+
+**Test Implications:** David Washington (Case 3): 63 + 13.58 = 76.58 \<
+85 ✗. Test exact boundary: sum = 85.00. Test member who meets sum at age
+59 (must wait until 60).
+
+**Tier Applicability:** Tier 3 only
+
+**3.5 --- RULE-EARLY-RET-T12**
+
+**RULE-EARLY-RET-T12 Early Retirement Eligibility (Tiers 1 & 2)**
+
+**Rule Statement:** Age 55 or older AND at least 5 years of credited
+service AND does not meet normal retirement or Rule of 75. Benefit is
+reduced.
+
+**Source:** RMC §18-408, §18-409(b) **✅ CONFIRMED**
+
+**Test Implications:** Jennifer Kim (Case 2): age 55, 18+ years service,
+does not meet Rule of 75 = early retirement. Test age 54 with 5 years =
+NOT eligible.
+
+**Tier Applicability:** Tiers 1 and 2
+
+**3.6 --- RULE-EARLY-RET-T3**
+
+**RULE-EARLY-RET-T3 Early Retirement Eligibility (Tier 3)**
+
+**Rule Statement:** Age 60 or older AND at least 5 years of credited
+service AND does not meet normal retirement or Rule of 85. Benefit is
+reduced.
+
+**Source:** RMC §18-408, §18-409(b) **✅ CONFIRMED**
+
+**Test Implications:** David Washington (Case 3): age 63, 13+ years,
+does not meet Rule of 85 = early retirement. Test age 59 with 5 years =
+NOT eligible for Tier 3 early.
+
+**Tier Applicability:** Tier 3 only
+
+**3.7 --- RULE-EARLY-REDUCE-T12**
+
+**RULE-EARLY-REDUCE-T12 Early Retirement Reduction (Tiers 1 & 2)**
+
+**Rule Statement:** Benefit reduced by 3% per year under age 65. Maximum
+reduction 30% at age 55. Reduction is permanent. RMC provides statutory
+lookup table by integer age (age 55 = 70%, age 56 = 73%, \... age 64 =
+97%, age 65 = 100%).
+
+**Source:** RMC §18-409(b) --- statutory table **✅ CONFIRMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• Integer-age approach confirmed by RMC statutory table. No monthly
+proration. Decision 18 assumed completed years only --- RMC table
+confirms this by listing integer ages only.
+
+**❓ Open Items:**
+
+• \[Q-CALC-03\] \[CRITICAL\] While the statutory table strongly implies
+integer-age (no proration), DERP staff confirmation would eliminate any
+ambiguity. E.g., does a member age 55 years 11 months get 70% or
+something between 70% and 73%?
+
+**Test Implications:** Jennifer Kim (Case 2): age 55, 10 years under 65,
+30% reduction, benefit × 0.70 = \$1,633.07. Test each integer age from
+55 to 64. Verify reduction is permanent (does not change at age 65).
+
+**Tier Applicability:** Tiers 1 and 2
+
+**3.8 --- RULE-EARLY-REDUCE-T3**
+
+**RULE-EARLY-REDUCE-T3 Early Retirement Reduction (Tier 3)**
+
+**Rule Statement:** Benefit reduced by 6% per year under age 65. Maximum
+reduction 30% at age 60. Reduction is permanent. RMC provides statutory
+lookup table (age 60 = 70%, age 61 = 76%, \... age 64 = 94%, age 65 =
+100%).
+
+**Source:** RMC §18-409(b) --- statutory table **✅ CONFIRMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• Same integer-age approach as Tiers 1/2. Note: Tier 3 table increments
+are 6% (not uniform --- 70, 76, 82, 88, 94, 100).
+
+**Test Implications:** David Washington (Case 3): age 63, 2 years under
+65, 12% reduction, benefit × 0.88. Test each integer age from 60 to 64.
+
+**Tier Applicability:** Tier 3 only
+
+**3.9 --- RULE-DEFERRED**
+
+**RULE-DEFERRED Deferred Retirement**
+
+**Rule Statement:** Vested member who terminates employment before
+reaching any retirement eligibility. Benefits calculated based on
+service and salary at termination. Must wait until reaching eligibility
+age to begin payments. If application deadline missed (30 days),
+automatically classified as deferred.
+
+**Source:** RMC §18-402(10), §18-408 **✅ CONFIRMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• Automatic deferred classification after 30-day deadline is confirmed
+by RMC --- no appeal or extension in statute.
+
+**Test Implications:** Test: vested member age 50 terminates = deferred.
+Test: member misses 30-day application deadline = forced deferred.
+
+**Tier Applicability:** All tiers
+
+**3.10 --- RULE-ELIG-HIERARCHY**
+
+**RULE-ELIG-HIERARCHY Eligibility Evaluation Order**
+
+**Rule Statement:** Eligibility is evaluated in strict order: (1) Tier
+determination, (2) Age at retirement, (3) Service credit separation, (4)
+Vesting check, (5) Normal retirement check, (6) Rule of 75/85 check, (7)
+Early retirement check, (8) Deferred if none met. First qualifying
+category applies.
+
+**Source:** Derived from RMC structure; evaluation order is
+architectural decision documented in
+noui-derp-service-retirement-process.md **✅ CONFIRMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• A member who qualifies for both normal retirement (age 65+) and Rule
+of 75 should be classified as normal retirement. The hierarchy prevents
+double-classification but the benefit amount is identical.
+
+**Test Implications:** Test member who meets multiple categories (age
+65, Rule of 75 met). Verify single classification returned. Test all
+four demo cases produce correct eligibility type.
+
+**Tier Applicability:** All tiers
+
+**Category 4: Benefit Calculation**
+
+The core calculation engine. Every formula, every intermediate value,
+and every rounding decision must be verifiable to the penny against hand
+calculations. This is where pension administration demonstrates its core
+competency.
+
+**4.0 --- Summary**
+
+  -------------------------------------------------------------------------------
+  **Rule ID**            **Rule Name**              **Status**   **Open Items**
+  ---------------------- -------------------------- ------------ ----------------
+  RULE-AMS-WINDOW        AMS Averaging Period       ✅ CONFIRMED 1 open
+
+  RULE-AMS-CALC          AMS Calculation Method     ✅ CONFIRMED 1 open
+
+  RULE-LEAVE-PAYOUT      Leave Payout Inclusion     ✅ CONFIRMED 2 assumptions
+
+  RULE-FURLOUGH          Furlough Impact on AMS     ⚠️ ASSUMED   1 open
+
+  RULE-BENEFIT-T1        Tier 1 Benefit Formula     ✅ CONFIRMED ---
+
+  RULE-BENEFIT-T2        Tier 2 Benefit Formula     ✅ CONFIRMED ---
+
+  RULE-BENEFIT-T3        Tier 3 Benefit Formula     ✅ CONFIRMED ---
+
+  RULE-REDUCTION-APPLY   Early Retirement Reduction ✅ CONFIRMED ---
+                         Application                             
+
+  RULE-ROUNDING          Calculation Rounding       ⚠️ ASSUMED   1 open
+                         Strategy                                
+  -------------------------------------------------------------------------------
+
+**4.1 --- RULE-AMS-WINDOW**
+
+**RULE-AMS-WINDOW AMS Averaging Period**
+
+**Rule Statement:** AMS uses the highest consecutive months of
+pensionable salary. Tiers 1 & 2: 36 consecutive months. Tier 3: 60
+consecutive months.
+
+**Source:** RMC §18-409(a)(1-3) **✅ CONFIRMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• Period must be consecutive (no gaps). System must search ALL possible
+windows to find the highest average.
+
+• How partial months at start/end of employment are handled is not
+specified in the RMC. Our assumption: only complete months are included.
+
+**❓ Open Items:**
+
+• \[Q-AMS-01\] How are partial months at start or end of employment
+handled in AMS window? Include at prorated amount, or exclude?
+
+**Test Implications:** Jennifer Kim (Case 2): 36-month window, AMS =
+\$7,347.62. David Washington (Case 3): 60-month window. Verify window
+slides to find highest average, not just most recent.
+
+**Tier Applicability:** All tiers (window size varies)
+
+**4.2 --- RULE-AMS-CALC**
+
+**RULE-AMS-CALC AMS Calculation Method**
+
+**Rule Statement:** For each possible consecutive window of N months,
+sum all pensionable compensation and divide by N. The highest resulting
+average is the AMS.
+
+**Source:** RMC §18-409(a)(1-3) **✅ CONFIRMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• Pensionable compensation includes base salary, longevity pay, shift
+differentials. Excludes bonuses, expense reimbursements, severance.
+
+• Anti-spiking provisions: unknown whether DERP caps year-over-year
+salary increases in the AMS window.
+
+**❓ Open Items:**
+
+• \[Q-CALC-05\] \[HIGH\] Does DERP have anti-spiking provisions that cap
+year-over-year salary increases in the AMS window?
+
+**Test Implications:** Verify AMS matches hand calculations for all four
+demo cases to the penny (after rounding strategy is applied).
+
+**Tier Applicability:** All tiers
+
+**4.3 --- RULE-LEAVE-PAYOUT**
+
+**RULE-LEAVE-PAYOUT Leave Payout Inclusion**
+
+**Rule Statement:** For members whose service begins on or before
+December 31, 2009: unused sick and vacation leave paid out at separation
+is treated as salary and included in the AMS calculation. Members hired
+on or after January 1, 2010: leave payout is NOT included.
+
+**Source:** RMC §18-402(15) **✅ CONFIRMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• The leave payout is added to the FINAL month\'s salary before AMS
+window calculation. This can dramatically boost the AMS if the final
+month falls within the highest window.
+
+• Note: The hire date cutoff (Jan 1, 2010) does NOT align with tier
+boundaries (Sep 1, 2004 / Jul 1, 2011). A Tier 2 member hired March 1,
+2008 IS eligible. A Tier 2 member hired Feb 1, 2010 is NOT eligible.
+
+**Test Implications:** Robert Martinez (Case 1): hired 1997, eligible,
+\$52,000 payout boosts final month. Jennifer Kim (Case 2): hired March
+2008, eligible for leave payout (hired before Jan 1, 2010). David
+Washington (Case 3): hired Sep 2012, NOT eligible. Test the hire-date
+boundary independent of tier.
+
+**Tier Applicability:** All tiers (eligibility based on hire date, not
+tier)
+
+**4.4 --- RULE-FURLOUGH**
+
+**RULE-FURLOUGH Furlough Impact on AMS**
+
+**Rule Statement:** If furlough days fall within the AMS window, they
+reduce pensionable salary for those months. Members may purchase
+furlough days to negate this impact.
+
+**Source:** RMC §18-402 (definitions), operational practice **⚠️
+ASSUMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• Furlough purchase mechanism exists but specific cost calculation and
+process details are not fully documented in available RMC sections. This
+rule is included for completeness but no demo case exercises it.
+
+**❓ Open Items:**
+
+• \[Q-FURLOUGH-01\] What is the cost formula for purchasing furlough
+days? Is it the same actuarial methodology as service purchase?
+
+**Test Implications:** No demo case currently exercises this. If
+included in POC, would need a synthetic member with furlough in AMS
+window to test before/after impact.
+
+**Tier Applicability:** All tiers
+
+**4.5 --- RULE-BENEFIT-T1**
+
+**RULE-BENEFIT-T1 Tier 1 Benefit Formula**
+
+**Rule Statement:** Monthly Benefit = AMS × 2.0% × Total Service Years
+(earned + purchased).
+
+**Source:** RMC §18-409(a)(1) **✅ CONFIRMED**
+
+**Test Implications:** Robert Martinez (Case 1): AMS × 0.02 × 28.75.
+Verify to the penny against hand calculation.
+
+**Tier Applicability:** Tier 1
+
+**4.6 --- RULE-BENEFIT-T2**
+
+**RULE-BENEFIT-T2 Tier 2 Benefit Formula**
+
+**Rule Statement:** Monthly Benefit = AMS × 1.5% × Total Service Years
+(earned + purchased).
+
+**Source:** RMC §18-409(a)(2) **✅ CONFIRMED**
+
+**Test Implications:** Jennifer Kim (Case 2): \$7,347.62 × 0.015 × 21.17
+= \$2,332.96. Verify to the penny.
+
+**Tier Applicability:** Tier 2
+
+**4.7 --- RULE-BENEFIT-T3**
+
+**RULE-BENEFIT-T3 Tier 3 Benefit Formula**
+
+**Rule Statement:** Monthly Benefit = AMS × 1.5% × Total Service Years
+(earned + purchased).
+
+**Source:** RMC §18-409(a)(3) **✅ CONFIRMED**
+
+**Test Implications:** David Washington (Case 3): verify against hand
+calculation. Note: same multiplier as Tier 2 but different AMS window
+(60 vs 36 months).
+
+**Tier Applicability:** Tier 3
+
+**4.8 --- RULE-REDUCTION-APPLY**
+
+**RULE-REDUCTION-APPLY Early Retirement Reduction Application**
+
+**Rule Statement:** If early retirement, multiply unreduced benefit by
+(1 - reduction_percentage). Reduction is permanent for lifetime.
+
+**Source:** RMC §18-409(b) **✅ CONFIRMED**
+
+**Test Implications:** Jennifer Kim: \$2,332.96 × 0.70 = \$1,633.07.
+David Washington: unreduced × 0.88.
+
+**Tier Applicability:** All tiers (when early retirement applies)
+
+**4.9 --- RULE-ROUNDING**
+
+**RULE-ROUNDING Calculation Rounding Strategy**
+
+**Rule Statement:** Carry full precision through all intermediate
+calculations. Round only the final monthly benefit amount to cents (2
+decimal places). Use banker\'s rounding (round half to even).
+
+**Source:** BUILD_HISTORY Decision 21 --- project decision, NOT
+confirmed by DERP **⚠️ ASSUMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• DERP\'s actual rounding methodology is unknown. We have assumed
+banker\'s rounding. DERP may use standard rounding (0.5 rounds up) or
+truncation. This could cause penny-level differences.
+
+**❓ Open Items:**
+
+• \[Q-CALC-01\] \[CRITICAL\] What rounding methodology does DERP use?
+Standard rounding, banker\'s rounding, or truncation? At what stage is
+rounding applied?
+
+**Test Implications:** Test cases at rounding boundaries (amounts ending
+in exactly .X50). Compare results under each rounding method to quantify
+impact.
+
+**Tier Applicability:** All tiers
+
+**Category 5: Payment Options & Spousal Consent**
+
+Payment option selection determines the lifetime benefit structure. J&S
+options reduce the member\'s benefit in exchange for survivor
+protection. Spousal consent requirements protect marital interests. All
+elections are irrevocable.
+
+**5.0 --- Summary**
+
+  --------------------------------------------------------------------------------------
+  **Rule ID**                   **Rule Name**              **Status**   **Open Items**
+  ----------------------------- -------------------------- ------------ ----------------
+  RULE-PAY-MAXIMUM              Maximum Benefit (Single    ✅ CONFIRMED ---
+                                Life Annuity)                           
+
+  RULE-JS-100                   100% Joint & Survivor      ✅ CONFIRMED 1 open
+                                Option                                  
+
+  RULE-JS-75                    75% Joint & Survivor       ✅ CONFIRMED 1 assumptions
+                                Option                                  
+
+  RULE-JS-50                    50% Joint & Survivor       ✅ CONFIRMED 1 assumptions
+                                Option                                  
+
+  RULE-JS-DEFAULT               Default Payment Option for ✅ CONFIRMED ---
+                                Married Members                         
+
+  RULE-SPOUSAL-CONSENT          Spousal Consent            ✅ CONFIRMED ---
+                                Requirement                             
+
+  RULE-BENEFICIARY-PREDECEASE   Beneficiary Predeceases    ✅ CONFIRMED ---
+                                Member                                  
+  --------------------------------------------------------------------------------------
+
+**5.1 --- RULE-PAY-MAXIMUM**
+
+**RULE-PAY-MAXIMUM Maximum Benefit (Single Life Annuity)**
+
+**Rule Statement:** The maximum benefit is the full calculated monthly
+amount with no survivor protection. Payments continue for member\'s
+lifetime only; all payments cease upon death.
+
+**Source:** RMC §18-410(a) **✅ CONFIRMED**
+
+**Test Implications:** Verify maximum equals the formula output (after
+reduction if applicable, after DRO split if applicable).
+
+**Tier Applicability:** All tiers
+
+**5.2 --- RULE-JS-100**
+
+**RULE-JS-100 100% Joint & Survivor Option**
+
+**Rule Statement:** Reduced benefit that, upon member\'s death,
+continues at 100% of the member\'s reduced amount to the designated
+beneficiary for life.
+
+**Source:** RMC §18-410(a)(1) **✅ CONFIRMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• Actuarial factors for J&S options are NOT available. POC uses
+placeholder factors (100% J&S: 0.8850). Actual factors depend on member
+age, beneficiary age, and DERP\'s actuarial tables.
+
+**❓ Open Items:**
+
+• \[Q-CALC-04\] \[CRITICAL\] Can DERP provide the actuarial factor
+tables for J&S calculations? Factors by member age, beneficiary age, and
+J&S percentage.
+
+**Test Implications:** Using placeholder factors: verify calculation is
+maximum × factor. When real factors obtained, recalculate all demo
+cases.
+
+**Tier Applicability:** All tiers
+
+**5.3 --- RULE-JS-75**
+
+**RULE-JS-75 75% Joint & Survivor Option**
+
+**Rule Statement:** Reduced benefit that, upon member\'s death,
+continues at 75% of the member\'s reduced amount to the designated
+beneficiary for life.
+
+**Source:** RMC §18-410(a)(1) **✅ CONFIRMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• Placeholder factor: 0.9150. Same dependency on actual actuarial
+tables.
+
+**Test Implications:** Robert Martinez (Case 1) elects 75% J&S with
+Elena. Verify: member benefit = maximum × 0.9150; survivor = member
+benefit × 0.75.
+
+**Tier Applicability:** All tiers
+
+**5.4 --- RULE-JS-50**
+
+**RULE-JS-50 50% Joint & Survivor Option**
+
+**Rule Statement:** Reduced benefit that, upon member\'s death,
+continues at 50% of the member\'s reduced amount to the designated
+beneficiary for life.
+
+**Source:** RMC §18-410(a)(1) **✅ CONFIRMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• Placeholder factor: 0.9450. Default option for married members who
+fail to make an election.
+
+**Test Implications:** Verify: member benefit = maximum × 0.9450;
+survivor = member benefit × 0.50.
+
+**Tier Applicability:** All tiers
+
+**5.5 --- RULE-JS-DEFAULT**
+
+**RULE-JS-DEFAULT Default Payment Option for Married Members**
+
+**Rule Statement:** If a married member fails to elect a payment option,
+the default is 50% J&S with spouse as beneficiary.
+
+**Source:** RMC §18-410(a)(1) --- confirmed in RMC verification v3 **✅
+CONFIRMED**
+
+**Test Implications:** Test: married member with no election recorded →
+system defaults to 50% J&S. Unmarried member with no election → Maximum.
+
+**Tier Applicability:** All tiers
+
+**5.6 --- RULE-SPOUSAL-CONSENT**
+
+**RULE-SPOUSAL-CONSENT Spousal Consent Requirement**
+
+**Rule Statement:** If married, spouse must be designated as beneficiary
+for at least 50% J&S option UNLESS spouse provides notarized written
+consent to waive this right. Consent form cannot be signed/submitted
+more than 90 days before first payment. Consent is irrevocable.
+
+**Source:** RMC §18-410(a)(1), Spousal Consent At Retirement form **✅
+CONFIRMED**
+
+**Test Implications:** Test: married member elects Maximum without
+spousal consent → blocked. Married member elects 50% J&S with non-spouse
+beneficiary → requires consent. Married member elects 75% J&S with
+spouse → no consent needed. 90-day timing validation.
+
+**Tier Applicability:** All tiers
+
+**5.7 --- RULE-BENEFICIARY-PREDECEASE**
+
+**RULE-BENEFICIARY-PREDECEASE Beneficiary Predeceases Member**
+
+**Rule Statement:** If J&S beneficiary predeceases the member, the
+member\'s benefit is increased prospectively to the Maximum (single
+life) amount. Member may NOT select a new beneficiary.
+
+**Source:** Retirement Application Page 2 --- explicit statement on form
+**✅ CONFIRMED**
+
+**Test Implications:** Test: beneficiary death event → member benefit
+recalculated to Maximum. No new beneficiary election allowed.
+
+**Tier Applicability:** All tiers
+
+**Category 6: Domestic Relations Orders (DRO)**
+
+DRO rules govern the division of pension benefits pursuant to court
+orders from divorce proceedings. The critical principle is sequencing:
+DRO split happens FIRST, before payment option selection. The alternate
+payee\'s amount is independent of the member\'s J&S election.
+
+**6.0 --- Summary**
+
+  ---------------------------------------------------------------------------------
+  **Rule ID**              **Rule Name**              **Status**   **Open Items**
+  ------------------------ -------------------------- ------------ ----------------
+  RULE-DRO-MARITAL-SHARE   DRO Marital Share          ✅ CONFIRMED 1 assumptions
+                           Calculation                             
+
+  RULE-DRO-SEQUENCE        DRO Split Before Payment   ✅ CONFIRMED ---
+                           Option                                  
+
+  RULE-DRO-METHODS         DRO Division Methods       ✅ CONFIRMED 1 assumptions
+
+  RULE-DRO-NO-IPR          DRO Alternate Payee IPR    ✅ CONFIRMED 1 assumptions
+                           Exclusion                               
+
+  RULE-DRO-NO-HEALTH       DRO Alternate Payee Health ✅ CONFIRMED ---
+                           Insurance Exclusion                     
+
+  RULE-DRO-COLA            DRO and COLA Applicability ⚠️ ASSUMED   1 open
+  ---------------------------------------------------------------------------------
+
+**6.1 --- RULE-DRO-MARITAL-SHARE**
+
+**RULE-DRO-MARITAL-SHARE DRO Marital Share Calculation**
+
+**Rule Statement:** Marital fraction = service credit during marriage /
+total service credit at retirement. Marital share = maximum benefit ×
+marital fraction. Alternate payee receives their awarded percentage of
+the marital share.
+
+**Source:** RMC §18-418(b), doc07-domestic-relations-orders **✅
+CONFIRMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• Service during marriage is calculated from marriage date to divorce
+date, overlapping with employment period only. If marriage predates
+employment, marital service starts at hire date.
+
+**Test Implications:** Case 4: marriage Aug 15, 1999 to Nov 3, 2017 =
+18.25 years of marital service. Fraction: 18.25/28.75 = 63.48%. Patricia
+gets 40% of marital share.
+
+**Tier Applicability:** All tiers
+
+**6.2 --- RULE-DRO-SEQUENCE**
+
+**RULE-DRO-SEQUENCE DRO Split Before Payment Option**
+
+**Rule Statement:** DRO split is calculated on the Maximum (single life)
+benefit FIRST. The member\'s remaining benefit (after DRO) is then
+subject to J&S option selection. The alternate payee\'s amount is NOT
+affected by the member\'s payment option election.
+
+**Source:** RMC §18-418(b), doc07 Section 6 **✅ CONFIRMED**
+
+**Test Implications:** Case 4: DRO split from maximum, THEN 75% J&S
+applied to remainder. Patricia\'s \$1,553.24 is unaffected by Robert\'s
+J&S election. This is the single most important sequencing rule for DRO
+cases.
+
+**Tier Applicability:** All tiers
+
+**6.3 --- RULE-DRO-METHODS**
+
+**RULE-DRO-METHODS DRO Division Methods**
+
+**Rule Statement:** DROs may divide benefits by: (a) percentage of
+marital share (most common), (b) fixed dollar amount, or (c) present
+value offset (no ongoing plan involvement).
+
+**Source:** RMC §18-418(b), doc07 Section 4 **✅ CONFIRMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• POC implements percentage-of-marital-share method (Case 4). Fixed
+dollar method is simpler but less common. Present value offset requires
+no system calculation.
+
+**Test Implications:** Case 4 demonstrates percentage method. Future
+test cases could add fixed-dollar method.
+
+**Tier Applicability:** All tiers
+
+**6.4 --- RULE-DRO-NO-IPR**
+
+**RULE-DRO-NO-IPR DRO Alternate Payee IPR Exclusion**
+
+**Rule Statement:** Former spouse receiving DRO benefits is NOT eligible
+for IPR (Insurance Premium Reduction).
+
+**Source:** RMC §18-418(b)(8) **✅ CONFIRMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• Case 4 calculation document originally included Patricia\'s IPR. This
+must be removed per RMC verification v3.
+
+**Test Implications:** Case 4: verify Patricia does NOT receive IPR.
+Robert still receives IPR on his earned service.
+
+**Tier Applicability:** All tiers
+
+**6.5 --- RULE-DRO-NO-HEALTH**
+
+**RULE-DRO-NO-HEALTH DRO Alternate Payee Health Insurance Exclusion**
+
+**Rule Statement:** Former spouse is NOT eligible for DERP health
+insurance benefits.
+
+**Source:** RMC §18-418(b)(8) **✅ CONFIRMED**
+
+**Test Implications:** Verify workspace does not show health insurance
+options for alternate payees.
+
+**Tier Applicability:** All tiers
+
+**6.6 --- RULE-DRO-COLA**
+
+**RULE-DRO-COLA DRO and COLA Applicability**
+
+**Rule Statement:** Whether the alternate payee\'s share participates in
+future COLAs depends on the specific DRO language.
+
+**Source:** doc07 Section 4 **⚠️ ASSUMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• COLA participation for alternate payees is determined by DRO order
+language, not plan default. Each DRO must be reviewed individually.
+
+**❓ Open Items:**
+
+• \[Q-DRO-03\] What is DERP\'s default position on COLA for DRO
+alternate payees when the court order is silent?
+
+**Test Implications:** Test both scenarios: COLA-participating and
+non-participating alternate payee shares.
+
+**Tier Applicability:** All tiers
+
+**Category 7: Supplemental Benefits (IPR & Death Benefit)**
+
+Supplemental benefits are calculated alongside the core retirement
+benefit. IPR provides health insurance assistance. The lump-sum death
+benefit is an irrevocable election made at retirement.
+
+**7.0 --- Summary**
+
+  -------------------------------------------------------------------------------
+  **Rule ID**            **Rule Name**              **Status**   **Open Items**
+  ---------------------- -------------------------- ------------ ----------------
+  RULE-IPR               Insurance Premium          ✅ CONFIRMED 2 assumptions
+                         Reduction                               
+
+  RULE-DEATH-NORMAL      Lump-Sum Death Benefit     ✅ CONFIRMED 1 assumptions
+                         (Normal/Rule of N)                      
+
+  RULE-DEATH-EARLY-T12   Lump-Sum Death Benefit     ✅ CONFIRMED 1 assumptions
+                         (Early Retirement, Tiers 1              
+                         & 2)                                    
+
+  RULE-DEATH-EARLY-T3    Lump-Sum Death Benefit     ✅ CONFIRMED ---
+                         (Early Retirement, Tier 3)              
+
+  RULE-DEATH-ELECTION    Death Benefit Election     ✅ CONFIRMED ---
+
+  RULE-DEATH-REEMPLOY    Death Benefit              ✅ CONFIRMED ---
+                         Re-Employment Exclusion                 
+  -------------------------------------------------------------------------------
+
+**7.1 --- RULE-IPR**
+
+**RULE-IPR Insurance Premium Reduction**
+
+**Rule Statement:** IPR provides a monthly supplement: \$12.50 per year
+of earned service (non-Medicare eligible) or \$6.25 per year of earned
+service (Medicare eligible). Purchased service is EXCLUDED from IPR
+calculation.
+
+**Source:** RMC §18-412, process definition **✅ CONFIRMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• IPR uses EARNED service only. This is consistent with the
+purchased-service exclusion principle.
+
+• Medicare eligibility is typically at age 65, but members may become
+Medicare-eligible earlier through disability. For POC, we assume age 65
+= Medicare transition point.
+
+**Test Implications:** Robert Martinez: 28.75 earned years × \$12.50 =
+\$359.38/month (pre-Medicare). Test transition to \$6.25 rate at
+Medicare eligibility.
+
+**Tier Applicability:** All tiers
+
+**7.2 --- RULE-DEATH-NORMAL**
+
+**RULE-DEATH-NORMAL Lump-Sum Death Benefit (Normal/Rule of N)**
+
+**Rule Statement:** For normal retirement, Rule of 75, Rule of 85, or
+Disability Retirement after age 65: lump-sum death benefit is \$5,000.
+
+**Source:** RMC §18-411(d)(1-2), Retirement Application Part C **✅
+CONFIRMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• Must retire directly from active service to be eligible. Deferred
+retirees are NOT eligible.
+
+**Test Implications:** Robert Martinez (Cases 1 & 4): \$5,000. Verify
+deferred members get \$0.
+
+**Tier Applicability:** All tiers
+
+**7.3 --- RULE-DEATH-EARLY-T12**
+
+**RULE-DEATH-EARLY-T12 Lump-Sum Death Benefit (Early Retirement, Tiers 1
+& 2)**
+
+**Rule Statement:** For early retirement: \$5,000 minus \$250 per
+completed year under age 65. RMC provides statutory dollar-amount table
+by integer age (age 55 = \$2,500, age 56 = \$2,750, \..., age 64 =
+\$4,750).
+
+**Source:** RMC §18-411(d)(1) --- statutory table **✅ CONFIRMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• Integer-age approach confirmed by statutory dollar-amount table (not
+formula-based; explicit amounts per age).
+
+**Test Implications:** Jennifer Kim (Case 2): age 55, \$2,500. Test each
+age from 55-64.
+
+**Tier Applicability:** Tiers 1 and 2
+
+**7.4 --- RULE-DEATH-EARLY-T3**
+
+**RULE-DEATH-EARLY-T3 Lump-Sum Death Benefit (Early Retirement, Tier
+3)**
+
+**Rule Statement:** For early retirement: \$5,000 minus \$500 per
+completed year under age 65. Statutory table: age 60 = \$2,500, age 61 =
+\$3,000, \..., age 64 = \$4,500.
+
+**Source:** RMC §18-411(d)(2) --- statutory table **✅ CONFIRMED**
+
+**Test Implications:** David Washington (Case 3): age 63, \$4,000. Test
+each age from 60-64.
+
+**Tier Applicability:** Tier 3
+
+**7.5 --- RULE-DEATH-ELECTION**
+
+**RULE-DEATH-ELECTION Death Benefit Election**
+
+**Rule Statement:** Lump-sum death benefit may be drawn in 50 or 100
+equal monthly installments. This is an irrevocable election made at
+retirement. Disbursement is concurrent with monthly retirement benefit.
+Member may also elect NOT to draw the death benefit.
+
+**Source:** RMC §18-411(d), Retirement Application Part C **✅
+CONFIRMED**
+
+**Test Implications:** Test: three election options (50 installments,
+100 installments, do not draw). Verify installment amount = total /
+elected installments. Verify irrevocability.
+
+**Tier Applicability:** All tiers
+
+**7.6 --- RULE-DEATH-REEMPLOY**
+
+**RULE-DEATH-REEMPLOY Death Benefit Re-Employment Exclusion**
+
+**Rule Statement:** Re-employed retirees are NOT entitled to a
+subsequent death benefit. The original amount from their first
+retirement applies.
+
+**Source:** RMC §18-408(j) **✅ CONFIRMED**
+
+**Test Implications:** Test: re-employed member\'s death benefit =
+original retirement amount, not recalculated.
+
+**Tier Applicability:** All tiers
+
+**Category 8: Process & Timing Rules**
+
+Process rules govern application deadlines, payment processing, and the
+irrevocability of elections. These rules enforce the administrative
+framework within which benefit calculations operate.
+
+**8.0 --- Summary**
+
+  ------------------------------------------------------------------------------
+  **Rule ID**           **Rule Name**              **Status**   **Open Items**
+  --------------------- -------------------------- ------------ ----------------
+  RULE-APP-DEADLINE     Application Filing         ✅ CONFIRMED 1 assumptions
+                        Deadline                                
+
+  RULE-NOTARIZATION     Application Notarization   ✅ CONFIRMED ---
+                        Requirement                             
+
+  RULE-PAYMENT-CUTOFF   Payment Processing Cutoff  ⚠️ ASSUMED   1 open
+
+  RULE-EFFECTIVE-DATE   Retirement Effective Date  ✅ CONFIRMED 1 assumptions
+
+  RULE-IRREVOCABILITY   Election Irrevocability    ✅ CONFIRMED ---
+
+  RULE-COLA             Cost of Living Adjustment  ✅ CONFIRMED 2 assumptions
+  ------------------------------------------------------------------------------
+
+**8.1 --- RULE-APP-DEADLINE**
+
+**RULE-APP-DEADLINE Application Filing Deadline**
+
+**Rule Statement:** Retirement application must be received within 30
+calendar days of last day worked. Missing this deadline results in
+automatic deferred member classification with no appeal or extension.
+
+**Source:** RMC §18-402(10), §18-408 **✅ CONFIRMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• 30 \'calendar days\' (not business days). Application must be
+RECEIVED, not postmarked.
+
+**Test Implications:** All four demo cases pass (applications filed well
+within 30 days). Test boundary: day 30 = accepted; day 31 = deferred.
+Test: what constitutes \'received\' (mail vs. in-person vs. electronic).
+
+**Tier Applicability:** All tiers
+
+**8.2 --- RULE-NOTARIZATION**
+
+**RULE-NOTARIZATION Application Notarization Requirement**
+
+**Rule Statement:** Retirement application must bear notarized signature
+before the application can be processed.
+
+**Source:** Retirement Application form, Spousal Consent form **✅
+CONFIRMED**
+
+**Test Implications:** Application without notarization → blocks
+progression past Stage 1 (Intake).
+
+**Tier Applicability:** All tiers
+
+**8.3 --- RULE-PAYMENT-CUTOFF**
+
+**RULE-PAYMENT-CUTOFF Payment Processing Cutoff**
+
+**Rule Statement:** Complete application package received by the 15th of
+the month prior to retirement effective date → first payment on time.
+Received after 15th → first payment delayed; combined first/second
+payment in following month.
+
+**Source:** Operational practice, Retirement Application instructions
+**⚠️ ASSUMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• This is documented in DERP member materials but the specific cutoff
+date (15th) is not in the RMC. It is an operational/administrative
+deadline, not a statutory one.
+
+**❓ Open Items:**
+
+• \[Q-PROCESS-01\] Is the 15th-of-month cutoff a hard rule or a
+guideline? Does it apply to the month before the effective date
+specifically?
+
+**Test Implications:** All four demo cases pass (complete packages
+before 15th). Test: package received March 16 for April 1 effective date
+→ first payment delayed.
+
+**Tier Applicability:** All tiers
+
+**8.4 --- RULE-EFFECTIVE-DATE**
+
+**RULE-EFFECTIVE-DATE Retirement Effective Date**
+
+**Rule Statement:** Retirement is effective on the first day of a
+calendar month following the last day of employment.
+
+**Source:** RMC §18-408, operational practice **✅ CONFIRMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• If last day worked is March 31, effective date is April 1. If last day
+worked is March 15, effective date is still April 1 (next
+first-of-month).
+
+**Test Implications:** Test various termination dates within a month.
+All should produce first-of-next-month effective date.
+
+**Tier Applicability:** All tiers
+
+**8.5 --- RULE-IRREVOCABILITY**
+
+**RULE-IRREVOCABILITY Election Irrevocability**
+
+**Rule Statement:** Payment option election, death benefit election, and
+spousal consent waiver are all irrevocable once retirement payments
+begin. J&S beneficiary cannot be changed after retirement.
+
+**Source:** RMC §18-410, Retirement Application form **✅ CONFIRMED**
+
+**Test Implications:** System must enforce: no election changes after
+Stage 5 (Payment Initiation). Pre-Stage 5 changes should be allowed.
+
+**Tier Applicability:** All tiers
+
+**8.6 --- RULE-COLA**
+
+**RULE-COLA Cost of Living Adjustment**
+
+**Rule Statement:** COLA is discretionary, approved by the DERP Board.
+No automatic formula. Maximum 5% per year or CPI (whichever is less).
+First eligible January 1 of the second calendar year after retirement.
+
+**Source:** RMC §18-414 **✅ CONFIRMED**
+
+**⚠️ Assumptions Surfaced:**
+
+• COLA is board-discretionary, not calculated by the system. The system
+tracks eligibility dates and applies board-approved amounts. No
+calculation engine component needed for COLA determination.
+
+• For POC, COLA is acknowledged in rules but not exercised in demo cases
+(all retire in 2026, first COLA eligibility would be January 1, 2028).
+
+**Test Implications:** Test: COLA eligibility date correctly calculated
+(Jan 1 of 2nd calendar year post-retirement). April 2026 retiree → first
+eligible Jan 1, 2028.
+
+**Tier Applicability:** All tiers
+
+**Appendix A: Assumptions Register**
+
+Every assumption embedded in the rules inventory, with risk
+classification. HIGH risk assumptions could cause calculation errors.
+MEDIUM risk assumptions may cause presentation or workflow issues. LOW
+risk assumptions affect only seed data or non-critical features.
+
+  ----------------------------------------------------------------------------------
+  **Related Rule**         **Assumption**                              **Risk**
+  ------------------------ ------------------------------------------- -------------
+  RULE-TIER-1              The \'terminates after Dec 31, 1999\'       LOW
+                           clause means members who separated before   
+                           2000 are under a prior plan provision. Seed 
+                           data must not generate Tier 1 members with  
+                           termination before Jan 1, 2000.             
+
+  RULE-TIER-3              Tier is determined by INITIAL hire date,    MEDIUM
+                           not most recent. For re-employment after    
+                           retirement, RMC §18-408(j)(1) confirms new  
+                           service earns under Tier 3 formula          
+                           regardless of original tier, but original   
+                           benefit retains original tier.              
+
+  RULE-CONTRIB-EE          This is the current rate only. Historical   LOW
+                           rates needed for seed data (8.45% since at  
+                           least 2014; earlier rates unknown). For the 
+                           rules engine, only current rate matters.    
+
+  RULE-CONTRIB-ER          Same historical rate caveat as employee     LOW
+                           contribution. Approximate: \~11% pre-2012,  
+                           scaling to 17.95% current. These are        
+                           estimates for seed data, not verified       
+                           rates.                                      
+
+  RULE-SVC-EARNED          Service credit calculation method           MEDIUM
+                           (year-month vs. exact day) is NOT specified 
+                           in the RMC. Our demo cases use year-month   
+                           (months/12, e.g., 28 yrs 9 mo = 28.75). If  
+                           DERP uses exact days, Robert Martinez would 
+                           be 28.797 instead of 28.75.                 
+
+  RULE-VESTING             For POC scope, all synthetic members are    MEDIUM
+                           post-1987 hires, so 5-year vesting applies. 
+                           The 10-year pre-1987 rule is documented but 
+                           not expected in demo cases.                 
+
+  RULE-VESTING             Vesting uses credited service (earned only? MEDIUM
+                           or earned + purchased?). RMC §18-415(a)     
+                           says purchased service cannot be used for   
+                           vesting, so vesting is earned-only.         
+
+  RULE-RULE-OF-75          Rule uses EARNED service only (purchased    MEDIUM
+                           excluded per RULE-SVC-PURCHASED). Confirmed 
+                           by §18-415(a).                              
+
+  RULE-RULE-OF-75          If member terminates after meeting the sum  MEDIUM
+                           but before reaching age 55, they must wait  
+                           until age 55 to apply. They do NOT lose the 
+                           Rule --- they just cannot collect until     
+                           minimum age.                                
+
+  RULE-RULE-OF-85          Same partial-year calculation dependency as MEDIUM
+                           Rule of 75.                                 
+
+  RULE-EARLY-REDUCE-T12    Integer-age approach confirmed by RMC       MEDIUM
+                           statutory table. No monthly proration.      
+                           Decision 18 assumed completed years only    
+                           --- RMC table confirms this by listing      
+                           integer ages only.                          
+
+  RULE-EARLY-REDUCE-T3     Same integer-age approach as Tiers 1/2.     MEDIUM
+                           Note: Tier 3 table increments are 6% (not   
+                           uniform --- 70, 76, 82, 88, 94, 100).       
+
+  RULE-DEFERRED            Automatic deferred classification after     MEDIUM
+                           30-day deadline is confirmed by RMC --- no  
+                           appeal or extension in statute.             
+
+  RULE-ELIG-HIERARCHY      A member who qualifies for both normal      MEDIUM
+                           retirement (age 65+) and Rule of 75 should  
+                           be classified as normal retirement. The     
+                           hierarchy prevents double-classification    
+                           but the benefit amount is identical.        
+
+  RULE-AMS-WINDOW          Period must be consecutive (no gaps).       MEDIUM
+                           System must search ALL possible windows to  
+                           find the highest average.                   
+
+  RULE-AMS-WINDOW          How partial months at start/end of          MEDIUM
+                           employment are handled is not specified in  
+                           the RMC. Our assumption: only complete      
+                           months are included.                        
+
+  RULE-AMS-CALC            Pensionable compensation includes base      MEDIUM
+                           salary, longevity pay, shift differentials. 
+                           Excludes bonuses, expense reimbursements,   
+                           severance.                                  
+
+  RULE-AMS-CALC            Anti-spiking provisions: unknown whether    MEDIUM
+                           DERP caps year-over-year salary increases   
+                           in the AMS window.                          
+
+  RULE-LEAVE-PAYOUT        The leave payout is added to the FINAL      MEDIUM
+                           month\'s salary before AMS window           
+                           calculation. This can dramatically boost    
+                           the AMS if the final month falls within the 
+                           highest window.                             
+
+  RULE-LEAVE-PAYOUT        Note: The hire date cutoff (Jan 1, 2010)    MEDIUM
+                           does NOT align with tier boundaries (Sep 1, 
+                           2004 / Jul 1, 2011). A Tier 2 member hired  
+                           March 1, 2008 IS eligible. A Tier 2 member  
+                           hired Feb 1, 2010 is NOT eligible.          
+
+  RULE-FURLOUGH            Furlough purchase mechanism exists but      MEDIUM
+                           specific cost calculation and process       
+                           details are not fully documented in         
+                           available RMC sections. This rule is        
+                           included for completeness but no demo case  
+                           exercises it.                               
+
+  RULE-ROUNDING            DERP\'s actual rounding methodology is      HIGH
+                           unknown. We have assumed banker\'s          
+                           rounding. DERP may use standard rounding    
+                           (0.5 rounds up) or truncation. This could   
+                           cause penny-level differences.              
+
+  RULE-JS-100              Actuarial factors for J&S options are NOT   MEDIUM
+                           available. POC uses placeholder factors     
+                           (100% J&S: 0.8850). Actual factors depend   
+                           on member age, beneficiary age, and DERP\'s 
+                           actuarial tables.                           
+
+  RULE-JS-75               Placeholder factor: 0.9150. Same dependency MEDIUM
+                           on actual actuarial tables.                 
+
+  RULE-JS-50               Placeholder factor: 0.9450. Default option  MEDIUM
+                           for married members who fail to make an     
+                           election.                                   
+
+  RULE-DRO-MARITAL-SHARE   Service during marriage is calculated from  MEDIUM
+                           marriage date to divorce date, overlapping  
+                           with employment period only. If marriage    
+                           predates employment, marital service starts 
+                           at hire date.                               
+
+  RULE-DRO-METHODS         POC implements percentage-of-marital-share  MEDIUM
+                           method (Case 4). Fixed dollar method is     
+                           simpler but less common. Present value      
+                           offset requires no system calculation.      
+
+  RULE-DRO-NO-IPR          Case 4 calculation document originally      MEDIUM
+                           included Patricia\'s IPR. This must be      
+                           removed per RMC verification v3.            
+
+  RULE-DRO-COLA            COLA participation for alternate payees is  MEDIUM
+                           determined by DRO order language, not plan  
+                           default. Each DRO must be reviewed          
+                           individually.                               
+
+  RULE-IPR                 IPR uses EARNED service only. This is       MEDIUM
+                           consistent with the purchased-service       
+                           exclusion principle.                        
+
+  RULE-IPR                 Medicare eligibility is typically at age    MEDIUM
+                           65, but members may become                  
+                           Medicare-eligible earlier through           
+                           disability. For POC, we assume age 65 =     
+                           Medicare transition point.                  
+
+  RULE-DEATH-NORMAL        Must retire directly from active service to MEDIUM
+                           be eligible. Deferred retirees are NOT      
+                           eligible.                                   
+
+  RULE-DEATH-EARLY-T12     Integer-age approach confirmed by statutory MEDIUM
+                           dollar-amount table (not formula-based;     
+                           explicit amounts per age).                  
+
+  RULE-APP-DEADLINE        30 \'calendar days\' (not business days).   MEDIUM
+                           Application must be RECEIVED, not           
+                           postmarked.                                 
+
+  RULE-PAYMENT-CUTOFF      This is documented in DERP member materials MEDIUM
+                           but the specific cutoff date (15th) is not  
+                           in the RMC. It is an                        
+                           operational/administrative deadline, not a  
+                           statutory one.                              
+
+  RULE-EFFECTIVE-DATE      If last day worked is March 31, effective   MEDIUM
+                           date is April 1. If last day worked is      
+                           March 15, effective date is still April 1   
+                           (next first-of-month).                      
+
+  RULE-COLA                COLA is board-discretionary, not calculated MEDIUM
+                           by the system. The system tracks            
+                           eligibility dates and applies               
+                           board-approved amounts. No calculation      
+                           engine component needed for COLA            
+                           determination.                              
+
+  RULE-COLA                For POC, COLA is acknowledged in rules but  MEDIUM
+                           not exercised in demo cases (all retire in  
+                           2026, first COLA eligibility would be       
+                           January 1, 2028).                           
+  ----------------------------------------------------------------------------------
+
+**Appendix B: Demo Case Coverage Matrix**
+
+Mapping of which rules are exercised by each demo case. Rules not
+covered by any demo case will require additional synthetic test members.
+
+  -------------------------------------------------------------------------------------
+  **Rule ID**                   **Case 1**    **Case 2**    **Case 3**    **Case 4**
+  ----------------------------- ------------- ------------- ------------- -------------
+  RULE-TIER-1                   ✓             ---           ---           ✓
+
+  RULE-TIER-2                   ---           ✓             ---           ---
+
+  RULE-TIER-3                   ---           ---           ✓             ---
+
+  RULE-CONTRIB-EE               ---           ---           ---           ---
+
+  RULE-CONTRIB-ER               ---           ---           ---           ---
+
+  RULE-SVC-EARNED               ✓             ✓             ✓             ✓
+
+  RULE-SVC-PURCHASED            ---           ✓             ---           ---
+
+  RULE-SVC-SEPARATION           ---           ✓             ---           ---
+
+  RULE-VESTING                  ✓             ✓             ✓             ✓
+
+  RULE-NORMAL-RET               ---           ---           ---           ---
+
+  RULE-RULE-OF-75               ✓             ✓             ---           ✓
+
+  RULE-RULE-OF-85               ---           ---           ✓             ---
+
+  RULE-EARLY-RET-T12            ---           ✓             ---           ---
+
+  RULE-EARLY-RET-T3             ---           ---           ✓             ---
+
+  RULE-EARLY-REDUCE-T12         ---           ✓             ---           ---
+
+  RULE-EARLY-REDUCE-T3          ---           ---           ✓             ---
+
+  RULE-DEFERRED                 ---           ---           ---           ---
+
+  RULE-ELIG-HIERARCHY           ---           ---           ---           ---
+
+  RULE-AMS-WINDOW               ✓             ✓             ✓             ✓
+
+  RULE-AMS-CALC                 ✓             ✓             ✓             ✓
+
+  RULE-LEAVE-PAYOUT             ✓             ✓             ---           ✓
+
+  RULE-FURLOUGH                 ---           ---           ---           ---
+
+  RULE-BENEFIT-T1               ✓             ---           ---           ✓
+
+  RULE-BENEFIT-T2               ---           ✓             ---           ---
+
+  RULE-BENEFIT-T3               ---           ---           ✓             ---
+
+  RULE-REDUCTION-APPLY          ---           ✓             ✓             ---
+
+  RULE-ROUNDING                 ---           ---           ---           ---
+
+  RULE-PAY-MAXIMUM              ✓             ✓             ✓             ✓
+
+  RULE-JS-100                   ---           ---           ---           ---
+
+  RULE-JS-75                    ✓             ---           ---           ✓
+
+  RULE-JS-50                    ---           ---           ---           ---
+
+  RULE-JS-DEFAULT               ---           ---           ---           ---
+
+  RULE-SPOUSAL-CONSENT          ✓             ---           ---           ✓
+
+  RULE-BENEFICIARY-PREDECEASE   ---           ---           ---           ---
+
+  RULE-DRO-MARITAL-SHARE        ---           ---           ---           ✓
+
+  RULE-DRO-SEQUENCE             ---           ---           ---           ✓
+
+  RULE-DRO-METHODS              ---           ---           ---           ✓
+
+  RULE-DRO-NO-IPR               ---           ---           ---           ✓
+
+  RULE-DRO-NO-HEALTH            ---           ---           ---           ---
+
+  RULE-DRO-COLA                 ---           ---           ---           ---
+
+  RULE-IPR                      ✓             ✓             ✓             ✓
+
+  RULE-DEATH-NORMAL             ✓             ---           ---           ✓
+
+  RULE-DEATH-EARLY-T12          ---           ✓             ---           ---
+
+  RULE-DEATH-EARLY-T3           ---           ---           ✓             ---
+
+  RULE-DEATH-ELECTION           ✓             ✓             ✓             ---
+
+  RULE-DEATH-REEMPLOY           ---           ---           ---           ---
+
+  RULE-APP-DEADLINE             ✓             ✓             ✓             ✓
+
+  RULE-NOTARIZATION             ✓             ---           ---           ---
+
+  RULE-PAYMENT-CUTOFF           ✓             ---           ---           ---
+
+  RULE-EFFECTIVE-DATE           ---           ---           ---           ---
+
+  RULE-IRREVOCABILITY           ---           ---           ---           ---
+
+  RULE-COLA                     ---           ---           ---           ---
+  -------------------------------------------------------------------------------------
+
+**Rules Not Covered by Any Demo Case**
+
+The following rules require additional synthetic test cases for
+coverage:
+
+**RULE-CONTRIB-EE:** Employee Contribution Rate --- Needs synthetic test
+case
+
+**RULE-CONTRIB-ER:** Employer Contribution Rate --- Needs synthetic test
+case
+
+**RULE-DEFERRED:** Deferred Retirement --- Needs synthetic test case
+
+**RULE-ELIG-HIERARCHY:** Eligibility Evaluation Order --- Needs
+synthetic test case
+
+**RULE-FURLOUGH:** Furlough Impact on AMS --- Needs synthetic test case
+
+**RULE-ROUNDING:** Calculation Rounding Strategy --- Needs synthetic
+test case
+
+**RULE-JS-100:** 100% Joint & Survivor Option --- Needs synthetic test
+case
+
+**RULE-JS-50:** 50% Joint & Survivor Option --- Needs synthetic test
+case
+
+**RULE-JS-DEFAULT:** Default Payment Option for Married Members ---
+Needs synthetic test case
+
+**RULE-BENEFICIARY-PREDECEASE:** Beneficiary Predeceases Member ---
+Needs synthetic test case
+
+**RULE-DRO-NO-HEALTH:** DRO Alternate Payee Health Insurance Exclusion
+--- Needs synthetic test case
+
+**RULE-DRO-COLA:** DRO and COLA Applicability --- Needs synthetic test
+case
+
+**RULE-DEATH-REEMPLOY:** Death Benefit Re-Employment Exclusion --- Needs
+synthetic test case
+
+**RULE-EFFECTIVE-DATE:** Retirement Effective Date --- Needs synthetic
+test case
+
+**RULE-IRREVOCABILITY:** Election Irrevocability --- Needs synthetic
+test case
+
+**RULE-COLA:** Cost of Living Adjustment --- Needs synthetic test case

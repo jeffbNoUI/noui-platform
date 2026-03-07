@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "compose-sim"
+version = "0.1.0"
+description = "AI Composition Simulation Framework — evaluate and refine LLM-driven UI composition"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=0.39.0",
+    "click>=8.1",
+    "rich>=13.0",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-asyncio", "ruff"]
+
+[project.scripts]
+compose-sim = "compose_sim.cli:cli"
+
+[tool.setuptools.packages.find]
+include = ["compose_sim*"]

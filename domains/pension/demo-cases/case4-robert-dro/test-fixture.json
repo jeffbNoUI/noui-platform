@@ -1,0 +1,71 @@
+{
+  "case_id": "case4-robert-dro",
+  "description": "Tier 1, Rule of 75 (same as Case 1) with DRO — 40% of marital share",
+  "member": {
+    "member_id": 10001,
+    "first_name": "Robert",
+    "last_name": "Martinez",
+    "dob": "1963-03-08",
+    "hire_date": "1997-06-15",
+    "tier": 1,
+    "marital_status": "M",
+    "status_code": "A"
+  },
+  "retirement_date": "2026-04-01",
+  "dro": {
+    "alt_payee_first": "Patricia",
+    "alt_payee_last": "Martinez",
+    "marriage_date": "1997-06-15",
+    "divorce_date": "2010-03-01",
+    "division_method": "PERCENTAGE",
+    "division_value": 40.0,
+    "court_order_num": "DR-2010-30214"
+  },
+  "inputs": {
+    "age_at_retirement": { "years": 63, "months": 0 },
+    "earned_service_years": 28.75,
+    "total_service_for_benefit": 28.75,
+    "total_service_for_eligibility": 28.75,
+    "ams_window_months": 36,
+    "leave_payout_amount": 52000.00,
+    "marital_service_start": "1997-06-15",
+    "marital_service_end": "2010-03-01",
+    "marital_service_years_approx": 12.71
+  },
+  "expected_eligibility": {
+    "vested": true,
+    "rule_of_75_met": true,
+    "best_eligible_type": "RULE_OF_75",
+    "reduction_pct": 0,
+    "reduction_factor": 1.0
+  },
+  "expected_dro": {
+    "marital_service_years_approx": 12.71,
+    "total_service_years": 28.75,
+    "marital_fraction_approx": 0.442,
+    "alt_payee_pct": 40.0,
+    "note": "DRO split applied BEFORE payment option selection (RULE-DRO-SEQUENCE)",
+    "sequence": "gross_benefit → DRO_split → member_after_DRO → payment_options"
+  },
+  "expected_benefit": {
+    "multiplier": 0.020,
+    "reduction_applies": false,
+    "death_benefit_amount": 5000.00
+  },
+  "timeline": {
+    "last_day_worked": "2026-03-31",
+    "application_received": "2026-03-10",
+    "effective_date": "2026-04-01",
+    "first_payment": "2026-04-01"
+  },
+  "test_points": [
+    "Same eligibility as Case 1 (Rule of 75 met, no reduction)",
+    "DRO marital share calculated: service during marriage / total service",
+    "Marital service: from hire (1997-06-15) to divorce (2010-03-01) = ~12.71 years",
+    "Alternate payee gets 40% of marital share",
+    "DRO split applied BEFORE payment option selection",
+    "Member's benefit after DRO is base for J&S option calculations",
+    "Death benefit unaffected by DRO",
+    "IPR unaffected by DRO (RULE-DRO-NO-IPR)"
+  ]
+}

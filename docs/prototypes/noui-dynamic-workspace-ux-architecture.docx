@@ -1,0 +1,611 @@
+**NoUI Platform**
+
+Dynamic Workspace
+
+User Experience Architecture
+
+*How AI Presents the Right Work Surface at the Right Time*
+
+DERP Proof of Concept
+
+February 2026
+
+*DRAFT --- Working Architecture Document*
+
+**1. The Core Insight: Work Comes to the Worker**
+
+Traditional pension administration systems are built around screens.
+Staff navigate through menus, hunt for the right form, pull up multiple
+windows, and mentally assemble the context they need. NoUI inverts this
+entirely. The system understands what work needs to be done, assembles
+the exact information and tools needed for that specific task, and
+presents it as a single, cohesive workspace. The worker never navigates.
+The work arrives ready.
+
++-----------------------------------------------------------------------+
+| **Design Philosophy**                                                 |
+|                                                                       |
+| *The best interface is the one you never have to think about. NoUI    |
+| does not present a pension administration system. It presents the     |
+| next thing you need to do, with everything you need to do it, and     |
+| nothing you don't.*                                                   |
++-----------------------------------------------------------------------+
+
+This document defines how the Dynamic Workspace layer delivers on that
+promise --- from the workflow queue that drives the worker's day,
+through the micro-interaction patterns that collect and validate data,
+to the learning loops that make the system progressively smarter about
+how it routes and presents work.
+
+**2. The Work Queue: The Heartbeat of the System**
+
+When a staff member opens NoUI, they do not see a dashboard of member
+records or a menu of system functions. They see their work queue --- a
+prioritized, filterable list of tasks waiting for their attention. This
+is the primary entry point for all interaction.
+
+**2.1 Queue as Primary Interface**
+
+The work queue is not a sidebar or secondary view. It is the home
+screen. Every piece of work in the system --- a retirement application
+to process, a benefit calculation to verify, a DRO to apply, a data
+quality finding to review --- exists as a work item in somebody's queue.
+Work items arrive through defined channels: a member submits a
+retirement application, a supervisor routes a case for review, the data
+quality engine surfaces a finding, or the process orchestrator advances
+a multi-stage workflow to the next step.
+
+Each work item in the queue shows just enough to orient the worker
+before they open it: the member's name and ID, the task type, the tier
+(color-coded), how long it has been waiting, any flags (DRO present,
+data quality issue, early retirement penalty), and its priority. The
+worker taps a work item, and the full workspace assembles.
+
+**2.2 Intelligent Prioritization**
+
+The queue is not a simple FIFO list. The system applies intelligent
+ordering based on multiple factors: regulatory deadlines (statutory
+processing windows), member impact (a retiring member waiting for their
+first check takes precedence over a routine verification), case
+complexity (simple cases that can be completed quickly are surfaced to
+prevent backlog accumulation), dependency chains (if case B depends on
+case A's completion, case A is promoted), and staff workload balancing
+(distributing complex cases evenly across the team).
+
+In Phase 1 (Transparent), all prioritization logic is visible. Workers
+can see why a particular item is at the top of their queue and can
+manually reorder if they disagree. Over time, the system learns which
+prioritization signals correlate with efficient processing and adjusts
+its recommendations accordingly.
+
+**2.3 Queue Filtering and Views**
+
+Workers can slice their queue by task type (retirement applications,
+verifications, DRO processing), by tier (show only Tier 3 cases), by
+status (waiting for documents, ready to calculate, pending supervisor
+review), by age (items older than five business days), or by flag (all
+cases with data quality findings). Supervisors see their team's
+aggregate queue with the same filters plus assignment controls. The
+system remembers each worker's preferred view and restores it on login.
+
+  ------------------------------------------------------------------------
+  **Queue          **What It Shows**        **Why It Matters**
+  Element**                                 
+  ---------------- ------------------------ ------------------------------
+  Member Identity  Name, ID, tier badge     Instant recognition and tier
+                   (color-coded)            context
+
+  Task Type        Retirement Application,  Worker knows what kind of work
+                   DRO Review, etc.         this is
+
+  Wait Time        Time since item entered  Urgency signal, prevents items
+                   queue                    aging out
+
+  Flags            DRO, early penalty, data Complexity preview before
+                   quality, purchased svc   opening
+
+  Priority         Calculated rank with     Transparent ordering workers
+  Indicator        visible reasoning        can trust
+
+  Stage            Application Review,      Where in the process this item
+                   Calculation, Final       sits
+                   Approval                 
+
+  Quick Actions    Claim, Reassign, Flag    Common actions without opening
+                   for Supervisor           full workspace
+  ------------------------------------------------------------------------
+
+**3. Workspace Assembly: Context-Driven Composition**
+
+When a worker selects a work item from their queue, the system assembles
+a workspace. This is not loading a screen. It is a dynamic composition
+where the system evaluates everything it knows about this member, this
+task, and this stage of the process, and constructs the exact set of
+components the worker needs.
+
+**3.1 The Composition Pipeline**
+
+Workspace assembly follows the established three-tier composition model.
+Tier 1 (Deterministic) uses the process configuration to define the base
+workspace: a retirement application at the calculation stage always
+includes the member banner, employment timeline, salary table, and
+benefit calculation panel. Tier 2 (Rule-Based) evaluates situational
+factors and adjusts: if the member has a DRO, the DRO impact panel
+appears; if they are eligible for leave payout, the leave payout
+calculator is added; if they have purchased service, a prominent callout
+highlights that purchased service is excluded from Rule of 75/85
+eligibility. Tier 3 (AI Augmentation) handles genuinely novel situations
+--- combinations of factors that the rule-based system has not
+encountered before.
+
+The critical point: Tier 1 and Tier 2 together handle the vast majority
+of cases. Tier 3 is invoked rarely. The workspace is fully functional
+without any AI service, per the established degradation hierarchy. When
+AI does contribute, it affects layout and emphasis, never the data
+displayed.
+
+**3.2 Progressive Disclosure Within the Workspace**
+
+Once assembled, the workspace itself follows a principle of progressive
+disclosure. Not every component is displayed at full depth
+simultaneously. The workspace opens with the most critical information
+for the current stage expanded and ready for interaction, while
+secondary components are present but collapsed to a summary line. The
+worker can expand any component with a single tap, but the system's
+judgment about what matters most guides the initial view.
+
+For example, when processing Robert Martinez's retirement (Case 1), the
+workspace at the calculation stage opens with the benefit calculation
+panel fully expanded, showing the formula, every input, and the result.
+The salary table shows a summary line ("AMS: \$8,542.31/mo --- highest
+36 consecutive months ending March 2026") that expands to the full
+monthly breakdown on tap. The employment timeline shows the total (28
+years, 9 months) with the full chronology available on expansion. The
+DRO panel is absent because Robert has no DRO. The leave payout section
+is expanded because it directly impacts the AMS.
+
+**3.3 Completeness Indicators**
+
+A distinctive feature: every summarized or filtered view includes a
+completeness indicator. The salary table summary says "Showing 3 of 28
+years --- highest average calculation period." The employment timeline
+says "4 employment records --- all shown." The service credit summary
+says "28.75 years earned service --- no purchased service." Workers
+always know what they are seeing relative to the whole picture. Nothing
+is hidden; some things are simply prioritized.
+
++-----------------------------------------------------------------------+
+| **Relevance Engine Principle**                                        |
+|                                                                       |
+| *Show everything, prioritize what matters. Default to inclusion, not  |
+| exclusion. The workspace never hides data that a competent analyst    |
+| might want to see. It foregrounds what the current task requires and  |
+| backgrounds the rest --- but the rest is always one tap away.*        |
++-----------------------------------------------------------------------+
+
+**4. Micro-Interaction Patterns: Small Bites, Not Wizards**
+
+Traditional pension systems present massive forms. A retirement
+application screen might have 40 fields across multiple tabs, mixing
+data entry, validation feedback, and calculation results in a single
+overwhelming view. NoUI takes a fundamentally different approach.
+
+**4.1 Focused Data Collection Steps**
+
+Instead of one monolithic form, the system presents small, focused
+interaction steps. Each step collects or confirms a specific, coherent
+set of data. A retirement application might flow through steps like:
+confirm retirement date and type, verify employment history is complete,
+confirm salary data and AMS window, review eligibility determination,
+review benefit calculation, select payment option and beneficiary, and
+final certification. Each step shows only the fields relevant to that
+step, with contextual guidance explaining what the system needs and why.
+
+This is not a traditional wizard with a linear Back/Next flow. The
+process orchestrator defines the steps and their dependencies, but the
+worker can navigate non-linearly when the dependencies allow it. If the
+salary data is already verified, the worker can jump directly to the
+eligibility determination. The system tracks which steps are complete,
+which are in progress, and which are blocked by dependencies --- and
+displays this as a lightweight progress indicator at the top of the
+workspace.
+
+**4.2 Inline Validation with Contextual Feedback**
+
+Each field validates as the worker interacts with it, not when they
+submit a form. But the validation goes beyond simple format checking.
+The system provides contextual, intelligent feedback that helps the
+worker understand the implications of the data.
+
+  -------------------------------------------------------------------------
+  **Interaction**   **Traditional System**  **NoUI Approach**
+  ----------------- ----------------------- -------------------------------
+  Retirement date   Date picker, error if   Date picker that immediately
+  entry             invalid                 shows: "Age at retirement: 63.
+                                            Service: 28y 9m. Meets Rule of
+                                            75 (91.75). No reduction."
+
+  Payment option    Dropdown list of codes  Side-by-side comparison showing
+  selection                                 monthly amount for each option
+                                            with the member's actual
+                                            numbers, spouse age factored in
+
+  Salary            Scrollable table of 28  AMS window highlighted with
+  confirmation      years                   callout: "Leave payout of
+                                            \$52,000 boosted final month.
+                                            AMS impact: +\$214.32/mo"
+
+  Beneficiary       Name/DOB/relationship   Pre-populated from existing
+  designation       fields                  records, with spousal consent
+                                            requirement flagged if married
+                                            and selecting less than 50% J&S
+  -------------------------------------------------------------------------
+
+**4.3 Contextual Intelligence Within Steps**
+
+Each step is context-aware. When the worker is on the payment option
+selection step for Robert Martinez (Case 1), the system knows Robert is
+married to Elena (age 59), knows he is selecting 75% J&S, and can
+immediately show both the member's reduced benefit and the survivor
+benefit amount. If the worker changes the selection to Maximum (single
+life), the system notes the spousal consent requirement: "Elena Martinez
+must sign spousal consent waiver for this option." The system never
+blocks the selection --- it informs and flags.
+
+For Jennifer Kim (Case 2), the scenario modeler is embedded directly in
+the eligibility step. When the system shows that Jennifer does not meet
+Rule of 75 and faces a 60% reduction, it immediately presents the key
+insight: "Waiting 2 more years to age 57 meets Rule of 75 --- no
+reduction. Monthly benefit increases from approximately \$1,400 to
+approximately \$4,200." This is not a separate analysis tool the worker
+must navigate to; it is part of the natural flow of processing the case.
+The exact figures come from the deterministic rules engine; the
+presentation decision comes from the composition system.
+
+**4.4 Save and Resume**
+
+Every interaction automatically saves state. If a worker is midway
+through processing a retirement application and gets pulled away --- a
+phone call, a supervisor question, end of shift --- they can close the
+workspace entirely. When they return to the work item in their queue,
+the workspace reassembles exactly where they left off, with every field
+they've touched preserved, every step's completion state intact, and a
+subtle indicator showing what they were last working on.
+
+**5. Intelligent Routing: Learning How Work Flows**
+
+The Process Orchestrator defines the formal stages and rules for how
+cases move through the system. But within those formal constraints,
+there is significant room for intelligence about how work actually gets
+routed and sequenced. This is where AI-driven operational learning
+applies --- in accordance with ADR-003: AI learns orchestration, not
+rules.
+
+**5.1 What the System Learns**
+
+By observing how work flows through the system, NoUI builds an
+increasingly refined model of operational patterns. This includes
+processing time patterns (Tier 1 retirements with leave payouts take 40%
+longer than without --- the system learns to allocate more time and not
+penalize workers in productivity metrics), common navigation paths (most
+analysts reviewing a DRO case access the employment timeline before the
+DRO panel to understand the marital period in context --- the system
+learns to position these adjacently), exception patterns (cases routed
+back from supervisor review most commonly fail on the same three
+verification points --- the system learns to emphasize those points
+during the initial processing step), and expertise matching (certain
+analysts process Tier 3 cases more efficiently because they are more
+familiar with the 60-month AMS window --- the system learns to route
+accordingly when workload permits).
+
++-----------------------------------------------------------------------+
+| **ADR-003 Boundary**                                                  |
+|                                                                       |
+| *AI learns from transaction history how work gets done --- task       |
+| patterns, data access sequences, workflow flows. AI does not derive   |
+| business rules from transaction patterns. Rules come from governing   |
+| documents only. The insights described here inform routing and        |
+| presentation. They never inform eligibility, calculation, or          |
+| determination.*                                                       |
++-----------------------------------------------------------------------+
+
+**5.2 Progressive Routing Refinement**
+
+Routing intelligence develops through three phases. In the initial phase
+(rule-based only), the Process Orchestrator routes based on configured
+rules: task type determines the processing queue, supervisors assign
+from their team queue, escalation follows defined thresholds (for
+example, any benefit exceeding a configured dollar amount requires
+senior review). In the observation phase, the system begins tracking
+patterns passively. It records which analysts handle which case types,
+how long processing takes by case characteristics, where cases stall or
+get returned, and what data workers access in what order. All
+observations are logged and available for human review but do not yet
+influence routing. In the recommendation phase, the system begins making
+routing suggestions: recommending case assignments based on observed
+expertise and current workload, suggesting workspace layouts based on
+observed access patterns, flagging cases likely to need escalation based
+on historical pattern matching, and proposing process refinements based
+on exception analysis. All suggestions are presented transparently and
+require human acceptance.
+
+**5.3 How Routing Feels to the Worker**
+
+From the worker's perspective, intelligent routing manifests as the
+system getting progressively better at putting the right work in front
+of them. In the early weeks, their queue is ordered by simple rules
+(oldest first within priority tiers). Over months, the queue starts to
+feel curated: the cases that match their expertise and current cognitive
+state appear at natural moments, complex cases arrive when they have
+uninterrupted time, simple cases cluster when they are between meetings.
+
+Workers never feel managed by the system. They can always manually
+reorder their queue, claim cases from the team pool, or reassign items.
+The system's intelligence is advisory, not directive. If a worker
+consistently overrides the system's routing for a particular case type,
+the system learns that preference rather than fighting it.
+
+**6. Visual Design Language**
+
+The workspace must feel modern and clean while communicating complex
+pension information with clarity. The design language prioritizes
+readability, clear hierarchy, and purposeful use of color.
+
+**6.1 Layout Principles**
+
+The workspace uses a single-column primary layout with a persistent
+member banner at top. There is no sidebar navigation --- the queue is
+the navigation. Content flows vertically in order of relevance.
+Components are visually separated by subtle cards with consistent
+padding, light borders, and generous whitespace. The overall aesthetic
+is closer to a well-designed financial dashboard than a government form.
+Typography uses a clear hierarchy: component titles at one weight,
+labels at another, data values prominent and easily scannable.
+
+**6.2 Color as Information**
+
+Color carries meaning throughout the interface, not decoration. Tier
+identification uses a consistent color-coding system (such as blue for
+Tier 1, amber for Tier 2, green for Tier 3) that appears in the member
+banner, the queue cards, and anywhere tier-specific provisions apply.
+Alert colors follow standard conventions: red for issues requiring
+immediate attention (critical data quality findings, processing deadline
+approaching), amber for cautions (early retirement penalty applies,
+spousal consent required), and informational blue for contextual notes.
+The AMS calculation window is highlighted within the salary table so the
+worker can instantly see which months contribute to the benefit.
+Calculation panels use subtle background shading to visually distinguish
+inputs, formulas, and results.
+
+**6.3 Animation and Transitions**
+
+Transitions are purposeful and brief. When a workspace assembles,
+components appear in a quick staggered sequence (not simultaneously) so
+the worker's eye follows the composition and understands the structure.
+When a component expands from summary to detail, the transition is
+smooth and fast (under 200ms) --- no jarring content shifts. When
+validation feedback appears, it fades in adjacent to the relevant field
+rather than popping up in a modal. Progress indicators use subtle
+animated fills rather than static bars. The overall feel should be
+responsive and alive without being distracting.
+
+**6.4 Mobile Responsiveness**
+
+While the primary use case is desktop workstations, the workspace must
+function on tablets (for field visits or offsite processing) and degrade
+gracefully on phones (for supervisors reviewing and approving on the
+go). The component-based architecture naturally supports responsive
+layouts: cards stack vertically on narrow screens, tables become
+scrollable or transform to card-based layouts, and the member banner
+collapses to essential information with an expand option.
+
+**7. The Four Demo Cases as UX Proof Points**
+
+Each demonstration case showcases specific UX capabilities. Here is how
+the workspace behaves differently for each, illustrating the composition
+system's intelligence.
+
+**7.1 Case 1: Robert Martinez --- Workspace Highlights Leave Payout
+Impact**
+
+When the worker opens Robert's retirement case, the workspace assembles
+with the leave payout calculator prominently positioned adjacent to the
+salary table. The AMS window highlight in the salary table extends to
+show the final month where the \$52,000 leave payout is added, with a
+visual callout showing the before-and-after AMS effect. The eligibility
+section shows a clean green indicator: Rule of 75 satisfied (91.75). The
+payment options comparison is expanded because Robert has selected 75%
+J&S, and the system shows both the member and survivor benefit with
+Elena's age factored in. The workspace does not show a DRO panel,
+purchased service callout, or early retirement reduction calculator ---
+none of these apply.
+
+**7.2 Case 2: Jennifer Kim --- Workspace Highlights the Dramatic
+Penalty**
+
+Jennifer's workspace opens with a prominent amber alert: "Early
+retirement reduction applies --- 60% reduction from maximum benefit."
+The scenario modeler is embedded directly in the calculation panel,
+pre-loaded with the comparison: current retirement date versus two years
+from now. The visual impact is dramatic: a side-by-side showing the
+monthly benefit nearly tripling if Jennifer waits. The purchased service
+section includes a clear callout: "3 years purchased service ---
+included in benefit calculation, excluded from Rule of 75 eligibility."
+This is the single most important distinction the system needs to
+communicate, and the workspace makes it unmissable.
+
+**7.3 Case 3: David Washington --- Workspace Adapts for Tier 3
+Provisions**
+
+David's workspace demonstrates tier-aware composition. The salary table
+is configured for the 60-month AMS window (not 36), and the highlight is
+visually distinct to signal the different calculation period. The
+eligibility section shows Rule of 85 (not Rule of 75), with the current
+score (76.58) and the gap clearly displayed. The early retirement
+reduction is 12% (two years under 65), much less dramatic than
+Jennifer's case, and the workspace presents it proportionally --- as a
+notable but manageable factor, not a crisis.
+
+**7.4 Case 4: Robert Martinez with DRO --- Workspace Adds DRO Layer**
+
+This case demonstrates incremental composition. The workspace starts
+identical to Case 1, then adds the DRO impact panel. The DRO panel shows
+the marital period on the employment timeline (visually overlaid), the
+marital fraction calculation (18.25/28.75 = 63.48%), and the split
+amounts. The payment options comparison now shows three columns: member
+portion, alternate payee portion, and total. The workspace handles the
+complexity of DRO interaction with payment options by presenting it as a
+natural extension of the existing calculation, not as a separate
+workflow.
+
+**8. Implementation Plan for the POC**
+
+This UX architecture breaks down into concrete implementation areas. The
+following plan sequences the work for the DERP proof of concept,
+focusing on what demonstrates the concept most effectively with limited
+resources.
+
+**8.1 Phase A: Queue and Shell**
+
+Build the application shell with the work queue as the primary view.
+This includes the queue data model (work items with type, member
+reference, stage, priority, flags, timestamps, and assignment), the
+queue API (list, filter, claim, reassign, update status), the queue UI
+(filterable list with tier color-coding, flag badges, wait-time display,
+and priority indicators), and the workspace shell (member banner,
+progress indicator, component container). For the POC, the queue is
+pre-populated with the four demo cases plus a set of additional
+synthetic work items to demonstrate filtering and prioritization. The
+routing is rule-based only (Phase 1 of the routing intelligence).
+
+**8.2 Phase B: Component Library**
+
+Build the individual workspace components as self-contained, composable
+units. Each component receives its data through a consistent props
+interface from the workspace composition engine: the member banner
+(persistent header with tier badge, status, and key identifiers), the
+employment timeline (visual chronology with DRO overlay capability), the
+salary table (with configurable AMS window highlighting for 36-month or
+60-month windows), the benefit calculation panel (full formula display
+with expandable derivation steps), the payment options comparison
+(side-by-side cards with actual calculated amounts), the scenario
+modeler (interactive date comparison with live recalculation), the DRO
+impact panel (marital fraction visualization and split amounts), and the
+supporting calculators (leave payout, early retirement reduction, IPR).
+
+**8.3 Phase C: Composition Engine**
+
+Wire the composition engine to the workspace shell. This is where the
+Tier 1 and Tier 2 composition logic assembles the correct components for
+each case. The composition engine receives the member context (tier,
+status, flags), the process context (type, current stage), and the
+situational context (DRO present, purchased service, leave payout
+eligible) and returns a workspace definition: which components to
+include, their initial expanded or collapsed state, their ordering, and
+any contextual parameters (such as the AMS window size for the salary
+table). The four demo cases serve as the integration test suite: each
+must produce the correct workspace composition with the correct
+components in the correct states.
+
+**8.4 Phase D: Micro-Interaction Polish**
+
+Refine the interaction patterns within each component. This includes
+inline validation with contextual feedback (not just format checking but
+domain-aware responses), progressive disclosure (expand/collapse with
+completeness indicators), the focused data collection flow for the
+retirement application process (small steps with non-linear navigation),
+auto-save with resume capability, and transitions (staggered component
+entry, smooth expand/collapse, contextual fade-in for validation
+feedback).
+
+**8.5 Phase E: Operational Intelligence (Post-POC Foundation)**
+
+For the POC, operational intelligence is demonstrated through the
+transaction analysis dashboard showing patterns discovered in the
+synthetic data. The actual routing refinement and workspace optimization
+based on learned patterns is a post-POC capability. However, the POC
+architecture should include the observation hooks (logging which
+components workers interact with, in what order, for how long) so the
+learning system has data to work with once deployed.
+
+  -----------------------------------------------------------------------------
+  **Phase**            **Core Deliverable**       **Demo Impact**
+  -------------------- -------------------------- -----------------------------
+  A: Queue and Shell   Work queue as primary UI,  \"Work comes to the worker,
+                       workspace container        not the other way around\"
+
+  B: Component Library All workspace components   \"The system shows exactly
+                       as composable units        what you need for each case\"
+
+  C: Composition       Tier 1+2 workspace         \"The workspace adapts
+  Engine               assembly                   automatically based on the
+                                                  member and the task\"
+
+  D:                   Inline validation,         \"It feels modern,
+  Micro-Interactions   progressive disclosure,    responsive, and intelligent\"
+                       save/resume                
+
+  E: Intelligence      Observation logging,       \"It learns how your team
+  Hooks                transaction analysis       works and gets smarter over
+                       dashboard                  time\"
+  -----------------------------------------------------------------------------
+
+**9. What This Is Not**
+
+It is worth being explicit about what the NoUI workspace does not do, to
+set expectations correctly for stakeholders reviewing this document.
+
+It is not a chatbot. Workers do not type natural language queries to get
+pension information. They interact with structured components that
+present deterministic data. AI operates behind the scenes in composition
+and routing, not as a conversational interface.
+
+It is not a self-service portal. This architecture describes the
+staff-facing workspace for pension administrators. Member self-service
+(where retirees or active members check their accounts) is a separate
+concern not addressed in the POC.
+
+It is not a replacement for human judgment. The system presents
+information, performs deterministic calculations, and suggests routing.
+Every determination, approval, and certification requires a human. The
+POC operates exclusively in Phase 1 (Transparent), where every output is
+presented for human verification.
+
+It is not a reporting tool. While the workspace includes analytical
+components (scenario modeler, data quality dashboard), it is not
+designed for ad hoc reporting or data exports. Reporting is a separate
+capability that sits alongside the workspace, not within it.
+
+**10. Success Criteria for UX in the POC Demo**
+
+When demonstrating the POC to DERP leadership, the UX should provoke
+specific reactions that validate the architecture:
+
+  ------------------------------------------------------------------------
+  **Reaction**          **What Triggers It**      **What It Validates**
+  --------------------- ------------------------- ------------------------
+  \"That's exactly what Workspace composition     Tier 1+2 composition is
+  I'd need to see for   matches analyst's mental  correct
+  this case\"           model                     
+
+  \"Wait, it knew about DRO panel appears         Situational awareness in
+  the DRO?\"            automatically for Case 4  composition
+
+  \"We've been telling  Jennifer Kim scenario     Contextual intelligence
+  people to wait but    modeler shows 3x benefit  changes outcomes
+  could never show them                           
+  why\"                                           
+
+  \"Our system has six  Single workspace replaces Dynamic composition
+  screens for this\"    multi-screen navigation   eliminates navigation
+
+  \"I can see exactly   Full formula with every   Transparency builds
+  how it calculated     input traceable           trust
+  that\"                                          
+
+  \"I didn't know we    Data quality findings     Proactive intelligence
+  had that data         surfaced in workspace     adds value
+  problem\"                                       
+  ------------------------------------------------------------------------
+
+*End of Document*

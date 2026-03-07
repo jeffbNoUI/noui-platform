@@ -1,0 +1,21 @@
+# PostgreSQL HR target — validates connector PG adapters
+# Port 5433 to avoid conflicts with any local PostgreSQL
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: hrlab
+      POSTGRES_PASSWORD: hrlab
+      POSTGRES_DB: hrlab
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hrlab"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:

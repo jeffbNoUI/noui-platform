@@ -1,0 +1,774 @@
+NoUI Training Document Series
+
+**Public Pension Domain Knowledge**
+
+Document 14: Common Workflows & Processes
+
+Version 1.0 \| February 2026
+
+*End-to-end operational workflows for pension administration*
+
+Executive Summary
+
+Pension administration involves complex workflows that combine document
+processing, data verification, benefit calculations, approvals, and
+member communication. Understanding these end-to-end processes is
+essential for designing systems that support staff efficiency while
+ensuring accuracy and compliance.
+
+This document examines the major operational workflows in pension
+administration, from service retirement processing through contribution
+refunds and death benefit administration. For each workflow, we identify
+the key stages, decision points, data requirements, and quality
+checkpoints. The DERP Service Retirement process---the focus of the NoUI
+POC---receives detailed treatment as the reference workflow.
+
+1\. Workflow Fundamentals
+
+1.1 Common Workflow Elements
+
+Most pension workflows share common elements:
+
+**Initiation:** How the process begins---member application, employer
+report, system trigger, or life event.
+
+**Document Collection:** Gathering required forms, supporting documents,
+and verifications.
+
+**Data Verification:** Confirming information accuracy against
+authoritative sources.
+
+**Calculation:** Applying plan rules to determine amounts, dates, or
+eligibility.
+
+**Review and Approval:** Quality check and authorization by appropriate
+staff.
+
+**Communication:** Notifying member of results, options, or
+requirements.
+
+**Implementation:** Executing the transaction (payment setup, record
+update, etc.).
+
+1.2 Workflow Complexity Factors
+
+Several factors increase workflow complexity:
+
+-   Multi-tier benefit structures requiring tier determination
+
+-   Special situations (DRO, disability, purchased service)
+
+-   Missing or inconsistent data requiring research
+
+-   Time-sensitive deadlines (application cutoffs, payment dates)
+
+-   Coordination with external parties (employers, courts, other plans)
+
+1.3 Quality Control Points
+
+Effective workflows include verification at critical points:
+
+-   Input validation when data enters the system
+
+-   Calculation verification before communicating to member
+
+-   Supervisory review before final processing
+
+-   Audit trails documenting all actions
+
+-   Reconciliation to catch errors before payment
+
+2\. Service Retirement Workflow
+
+Service retirement is the most common pension workflow, processing
+members from active employment into retirement status with monthly
+benefit payments. This is the workflow targeted by the DERP POC.
+
+2.1 Overview
+
+  ----------------------- -----------------------------------------------
+  **Aspect**              **Description**
+
+  Trigger                 Member application for retirement
+
+  Key Deadline            Application within 30 days of last day worked
+
+  Processing Cutoff       Complete by 15th for on-time first payment
+
+  Primary Output          Monthly benefit payment
+
+  Typical Duration        2-4 weeks from complete application
+  ----------------------- -----------------------------------------------
+
+2.2 Process Stages
+
+Stage 1: Pre-Application
+
+Before formal application, members typically:
+
+-   Request benefit estimate (may be years before retirement)
+
+-   Attend retirement counseling session
+
+-   Review payment options and tax implications
+
+-   Gather required documents
+
+-   Make preliminary decisions about retirement date and payment option
+
+Stage 2: Application Receipt
+
+When application is submitted:
+
+-   Verify application received within 30-day deadline
+
+-   Check application completeness
+
+-   Confirm notarization if required
+
+-   Verify retirement date and last day worked
+
+-   Log receipt date for processing tracking
+
+Stage 3: Eligibility Verification
+
+Confirm member meets retirement requirements:
+
+-   Determine benefit tier from hire date
+
+-   Calculate age at retirement date
+
+-   Calculate service credit (earned and purchased separately)
+
+-   Evaluate eligibility: normal, Rule of 75/85, or early retirement
+
+-   Confirm vesting (minimum 5 years)
+
+Stage 4: Benefit Calculation
+
+Calculate the retirement benefit:
+
+-   Verify salary history completeness
+
+-   Identify AMS period (highest 36 or 60 consecutive months)
+
+-   Include leave payout if applicable (hired before Jan 1, 2010)
+
+-   Calculate AMS
+
+-   Apply benefit formula: Rate × Service × AMS
+
+-   Apply early retirement reduction if applicable
+
+-   Calculate all payment option amounts
+
+Stage 5: Special Situations
+
+Address any complicating factors:
+
+-   DRO: Calculate alternate payee share, apply to options
+
+-   Purchased service: Confirm inclusion in benefit, exclusion from Rule
+
+-   Spousal consent: If married, verify beneficiary election or waiver
+
+-   Outstanding balances: Address any amounts owed to/from plan
+
+Stage 6: Review and Approval
+
+Quality assurance before member notification:
+
+-   Calculation verification by second staff member
+
+-   Supervisor review and approval
+
+-   Documentation completeness check
+
+-   System entry verification
+
+Stage 7: Member Notification
+
+Communicate benefit information to member:
+
+-   Benefit calculation details
+
+-   Payment option amounts
+
+-   Election form with deadline
+
+-   Tax withholding information
+
+-   Direct deposit enrollment
+
+Stage 8: Election Processing
+
+Process member\'s payment option election:
+
+-   Receive signed election form
+
+-   Verify spousal consent if required
+
+-   Confirm beneficiary designation
+
+-   Lock in payment option (irrevocable)
+
+-   Calculate final payment amount
+
+Stage 9: Payment Setup
+
+Establish ongoing payment:
+
+-   Create payee record
+
+-   Set up direct deposit
+
+-   Establish tax withholding
+
+-   Schedule first payment
+
+-   Transfer to retiree payroll
+
+Stage 10: First Payment and Closeout
+
+Complete the retirement process:
+
+-   Issue first payment
+
+-   Send welcome package with retiree information
+
+-   Close retirement case
+
+-   Update member status to retired
+
+-   Archive documentation
+
+2.3 DERP-Specific Requirements
+
+DERP service retirement includes specific provisions:
+
+  ----------------------- -----------------------------------------------
+  **Requirement**         **Details**
+
+  Application Deadline    Within 30 days of last day worked, notarized
+
+  Processing Cutoff       Complete by 15th of prior month
+
+  Payment Options         Maximum, 100% J&S, 75% J&S, 50% J&S
+
+  Spousal Consent         If married, minimum 50% J&S unless waived
+
+  Death Benefit           \$5,000 (reduced for early retirement)
+
+  Death Benefit Election  Lump sum or 50/100 monthly installments
+  ----------------------- -----------------------------------------------
+
+2.4 Demo Case Workflow Applications
+
+The four demo cases illustrate workflow variations:
+
+**Case 1 (Robert Martinez):** Standard Rule of 75 retirement with leave
+payout. Demonstrates AMS boost from leave payout, J&S option calculation
+with spouse.
+
+**Case 2 (Jennifer Kim):** Early retirement with purchased service.
+Demonstrates service credit separation, threshold proximity, early
+reduction calculation.
+
+**Case 3 (David Washington):** Tier 3 early retirement. Demonstrates
+60-month AMS, Rule of 85 evaluation, Tier 3 reduction rate.
+
+**Case 4 (Robert Martinez with DRO):** Retirement with DRO. Demonstrates
+marital share calculation, DRO integration with payment options.
+
+3\. Contribution Refund Workflow
+
+When non-vested members terminate employment, they may request a refund
+of their contributions plus interest.
+
+3.1 Eligibility Requirements
+
+-   Member has terminated covered employment
+
+-   90-day separation waiting period (DERP)
+
+-   Member is not vested (or vested member chooses refund over deferred
+    benefit)
+
+-   No pending disability or survivor claim
+
+3.2 Process Stages
+
+Stage 1: Termination Confirmation
+
+-   Receive termination report from employer
+
+-   Verify last day worked
+
+-   Confirm final contribution received
+
+-   Calculate 90-day waiting period end date
+
+Stage 2: Refund Application
+
+-   Receive member refund request
+
+-   Verify waiting period satisfied
+
+-   Confirm refund eligibility (vesting status)
+
+-   Calculate refund amount (contributions + interest)
+
+Stage 3: Calculation and Notification
+
+-   Calculate total contributions
+
+-   Calculate accumulated interest
+
+-   Determine tax withholding (mandatory 20% for eligible rollover)
+
+-   Notify member of amount and options
+
+Stage 4: Election and Processing
+
+-   Receive member election (direct payment vs. rollover)
+
+-   Process rollover paperwork if applicable
+
+-   Apply tax withholding
+
+-   Issue payment
+
+-   Close member record
+
+3.3 Vested Member Considerations
+
+Vested members who take refunds forfeit their pension:
+
+-   Must be clearly disclosed
+
+-   Signed acknowledgment required
+
+-   Spouse notification may be required
+
+-   Forfeiture is permanent (though service may be restored if rehired
+    and contributions redeposited)
+
+4\. Death Benefit Workflow
+
+Death benefit processing differs based on member status and plan
+provisions.
+
+4.1 Pre-Retirement Death (Active Member)
+
+Stage 1: Death Notification
+
+-   Receive death notification (employer, family, or other source)
+
+-   Verify death with documentation (death certificate)
+
+-   Identify beneficiaries on file
+
+-   Determine member status at death (vested, eligible for retirement)
+
+Stage 2: Benefit Determination
+
+-   Calculate any survivor annuity entitlement
+
+-   Determine contribution refund if no survivor benefit
+
+-   Calculate lump-sum death benefit if applicable
+
+-   Identify all payable amounts
+
+Stage 3: Beneficiary Contact and Processing
+
+-   Contact designated beneficiaries
+
+-   Provide claim forms and requirements
+
+-   Process survivor benefit election if applicable
+
+-   Issue payments
+
+-   Close member record
+
+4.2 Post-Retirement Death
+
+If Maximum Option Elected
+
+-   Cease monthly payments
+
+-   Calculate final payment amount (prorated to death)
+
+-   Process lump-sum death benefit (if elected)
+
+-   Close retiree record
+
+If J&S Option Elected
+
+-   Verify survivor beneficiary is living
+
+-   Transition payment to survivor
+
+-   Adjust amount per J&S percentage (50%, 75%, or 100%)
+
+-   Process lump-sum death benefit (if elected)
+
+-   Continue survivor payments for survivor\'s lifetime
+
+5\. Service Purchase Workflow
+
+Service purchases allow members to add service credit by paying the
+required cost.
+
+5.1 Process Stages
+
+Stage 1: Inquiry and Eligibility
+
+-   Receive member inquiry about purchasing service
+
+-   Determine type of service (military, prior employment, etc.)
+
+-   Verify eligibility to purchase
+
+-   Request supporting documentation
+
+Stage 2: Documentation and Verification
+
+-   Receive and review documentation (DD-214, prior employment records,
+    etc.)
+
+-   Verify service period dates
+
+-   Calculate creditable service amount
+
+-   Confirm any time limits have not expired
+
+Stage 3: Cost Calculation
+
+-   Apply cost calculation methodology
+
+-   Generate cost quote
+
+-   Set quote expiration date
+
+-   Present payment options
+
+Stage 4: Election and Payment
+
+-   Receive member purchase election
+
+-   Process payment (lump sum, rollover, or payroll deduction)
+
+-   Add service credit to member record
+
+-   Code service type appropriately (for eligibility restrictions)
+
+5.2 Key Considerations
+
+-   Purchased service type determines what it counts toward
+
+-   Cost quotes expire---delay means recalculation
+
+-   Incomplete payments may result in partial credit
+
+-   Impact on benefits vs. eligibility must be explained clearly
+
+6\. DRO Processing Workflow
+
+DRO processing involves legal document review, benefit calculation, and
+ongoing payment coordination.
+
+6.1 Process Stages
+
+Stage 1: Receipt and Initial Review
+
+-   Receive certified court order
+
+-   Verify parties (member and alternate payee)
+
+-   Check basic completeness
+
+-   Log receipt and notify parties
+
+Stage 2: Legal Review
+
+-   Review order against plan requirements
+
+-   Identify any deficiencies
+
+-   Determine if order can be accepted
+
+-   Prepare acceptance or rejection determination
+
+Stage 3: Determination Notice
+
+-   Notify member and alternate payee of determination
+
+-   If rejected, specify deficiencies and correction process
+
+-   If accepted, confirm DRO terms
+
+Stage 4: Account Flagging (if accepted)
+
+-   Flag member account for DRO
+
+-   Enter DRO details (dates, percentages)
+
+-   Enter alternate payee information
+
+-   Block retirement processing without DRO consideration
+
+Stage 5: Implementation at Retirement
+
+-   Calculate marital fraction at retirement
+
+-   Apply award percentage to marital share
+
+-   Calculate member and alternate payee amounts
+
+-   Establish separate payment records
+
+-   Process payments to each party
+
+7\. Member Service Workflows
+
+Ongoing member service involves numerous routine workflows.
+
+7.1 Benefit Estimates
+
+-   Receive estimate request
+
+-   Verify member data currency
+
+-   Calculate estimate under current provisions
+
+-   Generate projection to various retirement dates
+
+-   Provide written estimate with disclaimers
+
+7.2 Address/Contact Changes
+
+-   Receive change request
+
+-   Verify member identity
+
+-   Update contact information
+
+-   Confirm change with member
+
+7.3 Beneficiary Changes
+
+-   Receive beneficiary change request
+
+-   Verify member eligibility to change (pre-retirement)
+
+-   Process new beneficiary designation
+
+-   Confirm change with member
+
+7.4 Annual Statements
+
+-   Generate annual benefit statements
+
+-   Include service credit, contributions, projected benefits
+
+-   Mail or provide electronic access
+
+-   Handle returned mail
+
+7.5 Verification Requests
+
+-   Receive verification request (mortgage, employment, etc.)
+
+-   Verify authorization
+
+-   Provide requested information
+
+-   Document disclosure
+
+8\. Employer-Facing Workflows
+
+8.1 Payroll Reporting
+
+-   Receive employer payroll submission
+
+-   Validate data format and completeness
+
+-   Reconcile contributions to reported wages
+
+-   Identify and communicate errors
+
+-   Post validated data to member records
+
+8.2 Enrollment Processing
+
+-   Receive new member enrollment
+
+-   Verify eligibility
+
+-   Establish member record
+
+-   Assign benefit tier based on hire date
+
+-   Begin contribution processing
+
+8.3 Termination Reporting
+
+-   Receive termination notification
+
+-   Verify final contribution received
+
+-   Update member status
+
+-   Trigger appropriate follow-up (refund eligibility, deferred benefit)
+
+8.4 Leave Payout Coordination
+
+-   Receive leave payout amount at retirement
+
+-   Verify member eligibility (hired before Jan 1, 2010)
+
+-   Include in final month pensionable compensation
+
+-   Process contribution on payout amount
+
+9\. Workflow Support Requirements
+
+9.1 Document Management
+
+Workflows require robust document handling:
+
+-   Imaging and storage of incoming documents
+
+-   Association of documents with cases/members
+
+-   Version control for updated documents
+
+-   Retention according to policy
+
+-   Retrieval for audit and inquiry
+
+9.2 Work Queue Management
+
+Staff need tools to manage workflow volume:
+
+-   Case assignment and routing
+
+-   Priority and deadline management
+
+-   Status tracking
+
+-   Workload balancing
+
+-   Supervisor oversight
+
+9.3 Communication Tools
+
+Workflows involve extensive communication:
+
+-   Letter and notice generation
+
+-   Email integration
+
+-   Phone call logging
+
+-   Member portal messaging
+
+-   Template management
+
+9.4 Audit and Compliance
+
+All workflows must support audit requirements:
+
+-   Complete audit trail of all actions
+
+-   User identification for each transaction
+
+-   Timestamp recording
+
+-   Reason documentation for decisions
+
+-   Reporting for compliance review
+
+10\. Implications for NoUI Development
+
+10.1 Dynamic Workspace Composition
+
+NoUI composes workspaces based on workflow context:
+
+-   Retirement workspace shows relevant member data, calculations,
+    options
+
+-   Components adapt based on tier, eligibility, special situations
+
+-   Staff see what they need for current workflow stage
+
+-   Workspace evolves as case progresses
+
+10.2 Process Orchestration
+
+NoUI\'s Process Orchestrator manages workflow:
+
+-   Define stages with entry/exit criteria
+
+-   Track case status through workflow
+
+-   Route work based on rules
+
+-   Enforce required steps
+
+-   Support exception handling
+
+10.3 Calculation Transparency
+
+Every calculation shows its work:
+
+-   Formula applied with variable values
+
+-   Source data identified
+
+-   Intermediate steps visible
+
+-   Governing document references
+
+-   Verification against hand calculation possible
+
+10.4 Quality Checkpoints
+
+NoUI supports quality control:
+
+-   Data validation at entry
+
+-   Calculation verification workflows
+
+-   Approval routing
+
+-   Exception flagging
+
+-   Audit trail generation
+
+Conclusion
+
+Pension administration workflows combine regulatory requirements,
+complex calculations, member communication, and quality controls into
+end-to-end processes that must be executed consistently and accurately.
+Understanding these workflows is essential for designing systems that
+support staff while ensuring compliance.
+
+The DERP Service Retirement workflow---the focus of the NoUI
+POC---demonstrates how document receipt, eligibility verification,
+benefit calculation, option election, and payment setup combine into a
+cohesive process. The four demo cases illustrate variations that staff
+encounter: standard retirements, purchased service complications, early
+retirement reductions, and DRO divisions.
+
+NoUI\'s dynamic workspace composition, transparent calculations, and
+process orchestration capabilities are designed specifically to support
+these workflows while adapting to the unique circumstances of each case.
+By showing everything relevant while prioritizing what matters, NoUI
+helps staff process work efficiently without missing critical details.
+
+*--- End of Document 14 ---*
+
+**End of NoUI Training Document Series**

@@ -1,0 +1,40 @@
+replicaCount: 1
+
+image:
+  repository: noui-derp-poc/crm
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8083
+
+env:
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_USER: derp
+  DB_NAME: crm
+  DB_SSLMODE: disable
+  CORS_ORIGIN: "http://localhost:3000"
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 8083
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: 8083
+  initialDelaySeconds: 3
+  periodSeconds: 5

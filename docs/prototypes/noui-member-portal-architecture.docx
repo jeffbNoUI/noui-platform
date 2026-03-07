@@ -1,0 +1,1361 @@
+NoUI Platform
+
+**Member Self-Service Portal**
+
+**& Application Lifecycle Architecture**
+
+DERP Proof of Concept
+
+February 2026
+
+*DRAFT --- Working Architecture Document*
+
+1\. Purpose and Demo Narrative Impact
+
+The current POC design demonstrates NoUI's capabilities starting from a
+pre-populated work queue. A benefits analyst claims a work item and the
+system assembles the right workspace. This is powerful, but it begins
+the story in the middle. The audience must accept on faith that the work
+item *arrived somehow*.
+
+This document extends the POC to show the complete lifecycle: a member
+initiates retirement through a self-service portal, the system validates
+and routes the application into the staff work queue, the analyst
+processes it with full transparency into the member's digital
+submission, and the member sees real-time progress. Every step writes to
+and reads from the database. Nothing is pre-populated or simulated.
+
++-----------------------------------------------------------------------+
+| **The New Demo Narrative**                                            |
+|                                                                       |
+| *\"Watch what happens when Robert Martinez decides to retire. He logs |
+| into the member portal, sees his information pre-populated, completes |
+| his application, and submits. Now switch to the analyst view ---      |
+| there's the work item in the queue, with everything Robert submitted  |
+| already structured and validated. The analyst verifies, calculates,   |
+| and approves. Switch back to Robert's view --- he can see exactly     |
+| where his application is in the process. No phone calls. No           |
+| wondering. Complete transparency in both directions.\"*               |
++-----------------------------------------------------------------------+
+
+This transforms the POC from a demonstration of internal tooling into a
+demonstration of end-to-end digital pension administration.
+
+1.1 Relationship to Existing Architecture
+
++-----------------------------------------------------------------------+
+| **Architectural Relationship**                                        |
+|                                                                       |
+| *This document extends the Dynamic Workspace UX Architecture, the     |
+| Roles & Workspace Architecture, the Service Retirement Process        |
+| Definition, and the Member Context Hub POC Scope. It does not replace |
+| any of them. The member portal is a new entry point into the same     |
+| composition engine, the same rules engine, the same data layer. What  |
+| is new: a member-facing interface, a digital application pipeline, a  |
+| bidirectional status model, and the database mutations to support all |
+| three.*                                                               |
++-----------------------------------------------------------------------+
+
+2\. POC Scope Boundaries
+
+2.1 In Scope
+
+  -------------------------- -------------------------------------------------
+  **Capability**             **Description**
+
+  Digital retirement         Member completes the equivalent of DERP's 4-page
+  application                Retirement Application through a guided digital
+                             form. Parts A, B, C, and G are fully functional.
+                             Parts D, E, F, H are present but simplified.
+
+  Smart pre-population       System pre-fills member information from
+                             MEMBER_MASTER, beneficiary data from BENEFICIARY
+                             table, employment dates from EMPLOYMENT_HIST.
+                             Member confirms or corrects.
+
+  Application-to-work-item   Submitted application creates a real CASE_HIST
+  pipeline                   record, an APPLICATION_SUBMISSION record,
+                             TRANSACTION_LOG entries, and routes to the
+                             analyst queue.
+
+  Bidirectional status       Member portal shows application progress through
+  tracking                   defined stages. Staff actions advance the stage.
+                             Both views read from the same CASE_HIST record.
+
+  Staff workspace            Analyst's task workspace displays the digital
+  integration                submission as structured data alongside the
+                             calculated benefits. Staff can flag items needing
+                             member action.
+
+  Member communication       Staff can post status messages visible to the
+                             member. Member can respond. Messages stored in
+                             APPLICATION_MESSAGES table.
+
+  Document checklist         System tracks which required documents have been
+  tracking                   submitted. Checklist is visible to both member
+                             and analyst.
+
+  Database interactions      All operations perform real INSERT/UPDATE against
+                             PostgreSQL. No mocked data flows.
+  -------------------------- -------------------------------------------------
+
+2.2 Out of Scope (Post-POC)
+
+  ------------------------ ----------------------------------------------
+  **Capability**           **Rationale**
+
+  Benefit estimator in     Exists in current MyDERP; not the point of
+  portal                   this demo
+
+  Document upload/OCR      Physical documents (birth certificates, etc.)
+                           still require in-person or mail submission
+
+  E-signature /            DERP requires physical notarization per
+  e-notarization           current policy; cannot be digitized in POC
+
+  Address/contact          Standard portal feature, not architecturally
+  self-service             interesting for demo
+
+  Payment history / 1099-R Retiree portal feature, not applicable to
+  access                   pre-retirement demo
+
+  Real authentication      POC uses simulated auth with demo member
+  provider                 accounts
+
+  Spousal consent digital  Requires notarization; portal can inform but
+  workflow                 not collect
+  ------------------------ ----------------------------------------------
+
+2.3 Key Design Decision: Notarization Boundary
+
+DERP's retirement application **must be notarized**. This creates a
+deliberate boundary in the digital workflow. The member portal allows
+the member to complete all elections digitally, review and confirm their
+choices, and generate a pre-filled PDF of the official application. The
+member then prints, signs before a notary, and submits the notarized
+copy. Once DERP staff receives the notarized document, they confirm it
+in the system, which advances the application from **SUBMITTED_DIGITAL**
+to **NOTARIZED_RECEIVED** status.
+
+For the POC demo, we simulate this step with a single button click by
+the analyst ("Confirm notarized application received"). The
+architectural point is that the system models this real-world constraint
+rather than pretending it doesn't exist.
+
+3\. Retirement Application Form Mapping
+
+The DERP Retirement Application is a 4-page paper form with 9 parts (A
+through I). Each part maps to a specific step in the digital portal
+experience and specific database fields. This section provides the
+complete mapping.
+
+3.1 Part A: Member Information
+
+**Digital Experience:** Pre-populated from MEMBER_MASTER. Member reviews
+and confirms or requests correction. Corrections are flagged for staff
+review rather than directly modifying the legacy record.
+
+  ---------------- ------------------------------ -------------------- -----------------
+  **Form Field**   **Source Table.Column**        **Pre-populated?**   **Member
+                                                                       Editable?**
+
+  Name             MEMBER_MASTER.FIRST_NM,        Yes                  Request
+                   MIDDLE_NM, LAST_NM                                  correction only
+
+  DERP ID          MEMBER_MASTER.MBR_ID           Yes                  No (display only)
+
+  Date of Birth    MEMBER_MASTER.DOB              Yes                  Request
+                                                                       correction only
+
+  Gender           MEMBER_MASTER.GENDER_CD        Yes                  Request
+                                                                       correction only
+
+  Social Security  MEMBER_MASTER.SSN (masked)     Yes (last 4 only)    No
+  Number                                                               
+
+  Effective Date   Calculated suggestion          Suggested            Yes (constrained)
+  of Retirement                                                        
+
+  Retirement Type  Auto-determined from rules     Yes                  No (computed)
+                   engine                                              
+
+  Residence        MEMBER_MASTER.ADDR_LINE1,      Yes                  Yes
+  Address          CITY, etc.                                          
+
+  Mailing Address  Same or separate               Yes                  Yes
+
+  Phone Numbers    MEMBER_MASTER.HOME_PHONE,      Yes                  Yes
+                   CELL_PHONE                                          
+
+  Email Address    MEMBER_MASTER.EMAIL_ADDR       Yes                  Yes
+
+  Marital Status   MEMBER_MASTER.MARITAL_STATUS   Yes                  Yes
+                                                                       (certification)
+  ---------------- ------------------------------ -------------------- -----------------
+
+**Nuance --- Effective Date of Retirement:** The system suggests the
+first day of the month following the member's stated last day of work,
+per DERP rules. The portal explains that the benefit is effective the
+first of the month after separation and that separating at month-end
+maximizes service credit. This is an early demonstration of NoUI's rules
+intelligence surfacing at the member level.
+
+**Nuance --- Marital Status Certification:** The paper form requires the
+member to affirm "I am married" or "I am not married." This is a legal
+certification that may differ from what's on file. The digital form
+captures this as an explicit affirmation that writes to the
+APPLICATION_SUBMISSION record, not directly to MEMBER_MASTER. If the
+certification differs from the system record, a flag is raised for staff
+review.
+
+3.2 Part B: Retirement Benefit Option Election
+
+**Digital Experience:** The most consequential section. The portal
+presents this as an interactive decision tool, not a form. The system
+calculates all four payment option amounts in real time (using the rules
+engine and the member's actual salary/service data) and displays them
+side-by-side with clear explanations of trade-offs.
+
+  --------------------- ------------------------ -------------------------
+  **Election**          **Database Field**       **Validation Rules**
+
+  Type 1: Maximum       APP_PAYMENT_OPTION =     If married, triggers
+  Benefit               \'MAX\'                  spousal consent
+                                                 requirement flag
+
+  Type 2, Option 1:     APP_PAYMENT_OPTION =     Requires beneficiary
+  100% J&S              \'JS100\'                designation
+
+  Type 2, Option 2: 75% APP_PAYMENT_OPTION =     Requires beneficiary
+  J&S                   \'JS075\'                designation
+
+  Type 2, Option 3: 50% APP_PAYMENT_OPTION =     Requires beneficiary
+  J&S                   \'JS050\'                designation; minimum for
+                                                 married without consent
+
+  Beneficiary Name      APP_BENE_NAME,           Required for all J&S
+                        APP_BENE_SSN, etc.       options
+
+  Beneficiary           APP_BENE_RELATIONSHIP    Required for all J&S
+  Relationship                                   options
+
+  Beneficiary DOB       APP_BENE_DOB             Required (affects
+                                                 actuarial calculation)
+  --------------------- ------------------------ -------------------------
+
+**Nuance --- Irrevocability Warning:** The paper form states in bold:
+"once retirement benefits begin, neither the selected benefit option,
+nor the designated beneficiary, can ever be changed." The digital form
+must present this prominently with an explicit acknowledgment checkbox
+before the member can proceed. This acknowledgment is timestamped in
+APPLICATION_SUBMISSION.IRREVOCABILITY_ACK_TS.
+
+**Nuance --- Spousal Consent Logic:** If the member certifies they are
+married (Part A) and selects either Maximum benefit OR a J&S option
+naming someone other than their spouse, the system immediately flags
+that a Spousal Consent at Retirement form will be required. The portal
+displays this requirement clearly and generates a pre-filled Spousal
+Consent form for the member to print and have their spouse sign before a
+notary. The Spousal Consent form cannot be signed more than 90 days
+before first payment per DERP rules.
+
+**Nuance --- Beneficiary Predeceases Member:** The application states
+that if the J&S beneficiary dies before the member, the benefit
+increases to the Maximum amount and no new beneficiary can be selected.
+The portal includes this disclosure during beneficiary designation.
+
+3.3 Part C: Lump-Sum Death Benefit Election
+
+**Digital Experience:** Conditional section that adapts based on the
+member's retirement type. The system knows the retirement type from the
+eligibility determination and pre-selects the appropriate category.
+
+  ------------------- --------------------- ------------------------------
+  **Retirement Type** **Death Benefit       **Portal Behavior**
+                      Amount**              
+
+  Normal / Rule of    \$5,000               Show amount, offer 50 or 100
+  75/85                                     installment election
+
+  Early Retirement,   \$5,000 minus         Calculate and show actual
+  Tier 1/2            \$250/yr under 65     amount
+
+  Early Retirement,   \$5,000 minus         Calculate and show actual
+  Tier 3              \$500/yr under 65     amount
+
+  Disability (pre-65) 150% of AMS, max      Out of scope for POC
+                      \$50,000              
+
+  Deferred Retirement Not eligible          Section hidden entirely
+  ------------------- --------------------- ------------------------------
+
+**Database Fields:** APP_DEATH_BENEFIT_AMT (calculated),
+APP_DEATH_BENEFIT_ELECTION ('DRAW_50', 'DRAW_100', 'NO_DRAW'),
+APP_DEATH_BENE_NAME, APP_DEATH_BENE_SSN, APP_DEATH_BENE_RELATIONSHIP.
+
+**Nuance --- Installment Irrevocability:** Choosing 50 or 100
+installments is irrevocable. The installment is paid at the same time as
+the monthly retirement benefit. The portal must make this clear and
+require explicit acknowledgment.
+
+3.4 Part D: Direct Deposit Information
+
+**Digital Experience (Simplified for POC):** Per DRMC §18-413(b)(2),
+benefits must be paid by direct deposit. The actual DERP application
+notes that if the member entered direct deposit information via the MSS
+Portal, they don't need to attach a voided check. For the POC, we
+present a simple bank account entry form (routing number, account
+number, account type). This captures the data in APPLICATION_SUBMISSION
+but does not integrate with a banking validation service.
+
+**Database Fields:** APP_BANK_ROUTING, APP_BANK_ACCOUNT,
+APP_BANK_ACCT_TYPE ('CHECKING', 'SAVINGS'). These fields are stored in
+APPLICATION_SUBMISSION only, not written to a banking table.
+
+3.5 Part E: Income Tax Withholding Election
+
+**Digital Experience (Simplified for POC):** The portal presents the
+three federal and three Colorado state withholding options as radio
+buttons with explanatory text. The Colorado exclusion amounts
+(\$24,000/year for 65+, \$20,000/year for 55-64) are displayed as
+informational context. The system does not calculate withholding
+amounts; it captures the election for staff processing.
+
+**Database Fields:** APP_FED_TAX_ELECTION, APP_FED_TAX_FILING_STATUS,
+APP_FED_TAX_ADDL_AMT, APP_FED_TAX_FIXED_AMT, APP_FED_TAX_FIXED_PCT,
+APP_CO_TAX_ELECTION (mirror structure for Colorado). These use an ENUM
+pattern: 'NONE', 'TABLE', 'FIXED'.
+
+3.6 Part F: Electronic Communication
+
+**Digital Experience:** Simple acknowledgment that direct deposit
+advices and 1099-R forms are available electronically via MyDERP.org.
+Single checkbox. Database field: APP_ELECTRONIC_COMM_ACK (boolean,
+timestamped).
+
+3.7 Part G: Medical/Dental/Vision Insurance Participation
+
+**Digital Experience:** Critical for benefit calculation because it
+determines IPR eligibility. The portal presents a clear explanation of
+the IPR benefit: DERP contributes to insurance premiums based on years
+of service and Medicare eligibility. If the member elects "Yes," the
+system notes that a separate Health Insurance Election Form is required
+and calculates the IPR amount for display. If "No," the system confirms
+the member understands they can only enroll during Open Enrollment or
+qualifying life events.
+
+**Database Fields:** APP_INSURANCE_ELECTION ('YES', 'NO'). When 'YES',
+the document checklist adds the Health Insurance Election Form as a
+required item.
+
+**Nuance --- IPR Calculation Display:** The system calculates and
+displays the IPR amount during this step: \$6.25/year of service if
+Medicare-eligible, \$12.50/year if not. For Robert Martinez (28.75
+years, age 63, not Medicare-eligible): 28.75 × \$12.50 = \$359.38/month.
+This shows the member the financial impact of their insurance decision.
+
+3.8 Part H: Re-employment Acknowledgment
+
+**Digital Experience:** Informational section with acknowledgment
+checkbox. Displays the two key rules: 30-day minimum separation after
+final payout, and 1,000-hour annual limit for re-employment with a
+covered employer. Violation results in benefit suspension. Database
+field: APP_REEMPLOY_ACK (boolean, timestamped).
+
+3.9 Part I: Member Confirmation & Notarization
+
+**Digital Experience:** The final step has two sub-parts. First, a
+digital confirmation where the member reviews a complete summary of all
+elections and acknowledgments, then confirms digitally. This creates a
+timestamped record (APP_DIGITAL_CONFIRM_TS) with the member's portal
+session ID. Second, the system generates a pre-filled PDF of the
+official Retirement Application with all the member's elections
+populated. The member is instructed to print, sign before a notary, and
+submit the notarized copy to DERP via email, fax, or mail.
+
+**The notarization step is the bridge between digital and physical.**
+The digital submission creates the work item and begins preliminary
+processing. The notarized document receipt advances the process to the
+formal review stage. This dual-confirmation model accurately represents
+the real DERP process while demonstrating the value of digital
+pre-submission.
+
+4\. Database Schema Additions
+
+All new tables follow the legacy schema conventions established in the
+existing database design. These tables are added to the legacy schema
+(not a separate modern schema) because they represent data that a real
+pension system would store alongside existing records.
+
+4.1 APPLICATION_SUBMISSION
+
+Primary table for digital retirement applications. One row per
+submission. This is the digital equivalent of the paper form.
+
+  ----------------------------- --------------- ---------------------------------
+  **Column**                    **Type**        **Description**
+
+  APP_ID                        SERIAL PK       Auto-increment application
+                                                identifier
+
+  MBR_ID                        VARCHAR(10) FK  Reference to MEMBER_MASTER
+
+  CASE_ID                       INTEGER FK      Reference to CASE_HIST (created
+                                                on submission)
+
+  APP_STATUS                    VARCHAR(20)     DRAFT, SUBMITTED,
+                                                NOTARIZED_RECEIVED, IN_REVIEW,
+                                                APPROVED, DENIED
+
+  APP_SUBMIT_TS                 TIMESTAMP       When member clicked submit
+
+  APP_NOTARIZED_RECV_TS         TIMESTAMP       When staff confirmed notarized
+                                                copy received
+
+  EFF_RETIREMENT_DT             DATE            Elected effective date of
+                                                retirement
+
+  LAST_DAY_WORKED               DATE            Member's stated last day of
+                                                employment
+
+  RETIREMENT_TYPE               VARCHAR(20)     NORMAL, RULE_OF_75, RULE_OF_85,
+                                                EARLY
+
+  MARITAL_STATUS_CERT           VARCHAR(10)     MARRIED or NOT_MARRIED (legal
+                                                certification)
+
+  MARITAL_DIFF_FLAG             BOOLEAN         True if certification differs
+                                                from MEMBER_MASTER
+
+  APP_PAYMENT_OPTION            VARCHAR(10)     MAX, JS100, JS075, JS050
+
+  APP_BENE_NAME                 VARCHAR(100)    J&S beneficiary full name
+
+  APP_BENE_SSN                  VARCHAR(11)     J&S beneficiary SSN (encrypted at
+                                                rest)
+
+  APP_BENE_DOB                  DATE            J&S beneficiary date of birth
+
+  APP_BENE_GENDER               VARCHAR(1)      J&S beneficiary gender
+
+  APP_BENE_RELATIONSHIP         VARCHAR(30)     Relationship to member
+
+  APP_BENE_PHONE                VARCHAR(20)     J&S beneficiary phone
+
+  APP_BENE_ADDR                 TEXT            J&S beneficiary address
+
+  SPOUSAL_CONSENT_REQ           BOOLEAN         Whether spousal consent form is
+                                                required
+
+  SPOUSAL_CONSENT_RECV          BOOLEAN         Whether spousal consent form has
+                                                been received
+
+  IRREVOCABILITY_ACK_TS         TIMESTAMP       When member acknowledged
+                                                irrevocable elections
+
+  APP_DEATH_BENEFIT_AMT         DECIMAL(10,2)   Calculated lump-sum death benefit
+                                                amount
+
+  APP_DEATH_BENEFIT_ELECTION    VARCHAR(10)     DRAW_50, DRAW_100, NO_DRAW
+
+  APP_DEATH_BENE_NAME           VARCHAR(100)    Death benefit beneficiary (may
+                                                differ from J&S)
+
+  APP_DEATH_BENE_SSN            VARCHAR(11)     Death benefit beneficiary SSN
+
+  APP_DEATH_BENE_RELATIONSHIP   VARCHAR(30)     Relationship
+
+  APP_BANK_ROUTING              VARCHAR(9)      Direct deposit routing number
+
+  APP_BANK_ACCOUNT              VARCHAR(20)     Direct deposit account number
+                                                (encrypted)
+
+  APP_BANK_ACCT_TYPE            VARCHAR(10)     CHECKING or SAVINGS
+
+  APP_FED_TAX_ELECTION          VARCHAR(10)     NONE, TABLE, FIXED
+
+  APP_FED_TAX_FILING_STATUS     VARCHAR(10)     MARRIED, SINGLE (if TABLE)
+
+  APP_FED_TAX_ADDL_AMT          DECIMAL(8,2)    Additional withholding amount
+
+  APP_FED_TAX_FIXED_AMT         DECIMAL(8,2)    Fixed dollar amount (if FIXED)
+
+  APP_FED_TAX_FIXED_PCT         DECIMAL(5,2)    Fixed percentage (if FIXED)
+
+  APP_CO_TAX_ELECTION           VARCHAR(10)     NONE, TABLE, FIXED
+
+  APP_CO_TAX_FILING_STATUS      VARCHAR(10)     MARRIED, SINGLE
+
+  APP_CO_TAX_ADDL_AMT           DECIMAL(8,2)    Additional CO withholding
+
+  APP_CO_TAX_FIXED_AMT          DECIMAL(8,2)    Fixed CO dollar amount
+
+  APP_CO_TAX_FIXED_PCT          DECIMAL(5,2)    Fixed CO percentage
+
+  APP_ELECTRONIC_COMM_ACK       BOOLEAN         Electronic communication
+                                                acknowledgment
+
+  APP_INSURANCE_ELECTION        VARCHAR(3)      YES or NO
+
+  APP_REEMPLOY_ACK              BOOLEAN         Re-employment rules
+                                                acknowledgment
+
+  APP_DIGITAL_CONFIRM_TS        TIMESTAMP       Digital confirmation timestamp
+
+  APP_SESSION_ID                VARCHAR(50)     Portal session ID at time of
+                                                submission
+
+  ADDR_RESIDENCE                TEXT            Address as entered/confirmed on
+                                                application
+
+  ADDR_MAILING                  TEXT            Mailing address if different
+
+  PHONE_PRIMARY                 VARCHAR(20)     Phone as confirmed on application
+
+  PHONE_CELL                    VARCHAR(20)     Cell phone
+
+  EMAIL_ADDR                    VARCHAR(100)    Email as confirmed
+
+  CREATE_DT                     TIMESTAMP       Record creation (first save of
+                                                draft)
+
+  CREATE_USER                   VARCHAR(30)     Member ID (for portal
+                                                submissions)
+
+  UPDATE_DT                     TIMESTAMP       Last modification
+
+  UPDATE_USER                   VARCHAR(30)     Last modifier (member or staff
+                                                ID)
+  ----------------------------- --------------- ---------------------------------
+
+4.2 APPLICATION_DOCUMENTS
+
+Tracks required and received documents for each application. Drives the
+document checklist visible to both member and staff.
+
+  ---------------- ------------- ----------------------------------------
+  **Column**       **Type**      **Description**
+
+  DOC_ID           SERIAL PK     Auto-increment
+
+  APP_ID           INTEGER FK    Reference to APPLICATION_SUBMISSION
+
+  DOC_TYPE         VARCHAR(30)   BIRTH_CERT_MEMBER, BIRTH_CERT_SPOUSE,
+                                 MARRIAGE_CERT, DIVORCE_DECREE,
+                                 MEDICARE_CARD, SPOUSAL_CONSENT,
+                                 INSURANCE_FORM, VOIDED_CHECK,
+                                 NOTARIZED_APP, SSA_ESTIMATE
+
+  DOC_REQUIRED     BOOLEAN       Whether this document is required for
+                                 this application
+
+  DOC_STATUS       VARCHAR(15)   PENDING, RECEIVED, WAIVED,
+                                 NOT_APPLICABLE
+
+  DOC_RECV_DT      DATE          Date document received by DERP
+
+  DOC_RECV_BY      VARCHAR(30)   Staff member who logged receipt
+
+  DOC_NOTES        TEXT          Notes about the document
+
+  CREATE_DT        TIMESTAMP     Row creation timestamp
+  ---------------- ------------- ----------------------------------------
+
+**Document Requirements Logic:** When an application is submitted, the
+system auto-generates the required document rows based on the member's
+situation. Birth certificate is always required for the member. Marriage
+certificate is required if married. Spousal consent is required if
+married and electing Maximum or J&S with non-spouse. Medicare card is
+required if age 65+. Health Insurance Election Form is required if
+APP_INSURANCE_ELECTION = 'YES'. This logic runs in the intelligence
+service using the same rules engine that drives workspace composition.
+
+4.3 APPLICATION_MESSAGES
+
+Bidirectional communication log between staff and member, scoped to a
+specific application.
+
+  --------------- ------------- ------------------------------------------
+  **Column**      **Type**      **Description**
+
+  MSG_ID          SERIAL PK     Auto-increment
+
+  APP_ID          INTEGER FK    Reference to APPLICATION_SUBMISSION
+
+  SENDER_TYPE     VARCHAR(10)   MEMBER or STAFF
+
+  SENDER_ID       VARCHAR(30)   Member ID or staff user ID
+
+  MSG_TEXT        TEXT          Message content
+
+  MSG_TS          TIMESTAMP     When message was sent
+
+  READ_TS         TIMESTAMP     When recipient read the message (null if
+                                unread)
+
+  MSG_TYPE        VARCHAR(20)   INFO, ACTION_REQUIRED, RESPONSE,
+                                STATUS_UPDATE
+  --------------- ------------- ------------------------------------------
+
+4.4 APPLICATION_STATUS_HISTORY
+
+Immutable log of every status change, providing the audit trail for the
+application lifecycle.
+
+  --------------- ------------- ------------------------------------------
+  **Column**      **Type**      **Description**
+
+  HIST_ID         SERIAL PK     Auto-increment
+
+  APP_ID          INTEGER FK    Reference to APPLICATION_SUBMISSION
+
+  OLD_STATUS      VARCHAR(20)   Previous status (null for initial
+                                creation)
+
+  NEW_STATUS      VARCHAR(20)   New status
+
+  CHANGED_BY      VARCHAR(30)   Who triggered the change
+
+  CHANGED_TS      TIMESTAMP     When the change occurred
+
+  CHANGE_REASON   TEXT          Optional explanation
+  --------------- ------------- ------------------------------------------
+
+4.5 Modifications to Existing Tables
+
+The existing CASE_HIST table is extended with one new column to link to
+the digital application:
+
+  ------------- ----------------------- --------------- ------------------------
+  **Table**     **New Column**          **Type**        **Description**
+
+  CASE_HIST     APP_ID                  INTEGER FK NULL Link to
+                                                        APPLICATION_SUBMISSION
+                                                        if originated from
+                                                        portal
+
+  CASE_HIST     MEMBER_VISIBLE_STATUS   VARCHAR(30)     Simplified status
+                                                        visible to member in
+                                                        portal
+
+  CASE_HIST     MEMBER_STATUS_DETAIL    VARCHAR(200)    Human-readable status
+                                                        description for member
+  ------------- ----------------------- --------------- ------------------------
+
+The TRANSACTION_LOG table requires no schema changes. Application events
+are logged using the existing structure with TXN_TYPE values like
+'APP_SUBMIT', 'APP_STATUS_CHG', 'APP_DOC_RECV', 'APP_MSG_SENT'.
+
+5\. Application Lifecycle State Model
+
+The application moves through defined states. Each state has an internal
+representation (used by staff and system logic) and a member-facing
+representation (simplified, non-technical language displayed in the
+portal).
+
+  -------------------- ----------------- ------------------------- ---------------
+  **Internal Status**  **Member-Facing   **Member-Facing Detail**  **Triggered
+                       Status**                                    By**
+
+  DRAFT                In Progress       You're still working on   Member starts
+                                         your application. It's    application
+                                         saved automatically.      
+
+  SUBMITTED            Submitted         We've received your       Member clicks
+                                         digital application.      Submit
+                                         Please print, sign before 
+                                         a notary, and submit the  
+                                         notarized copy.           
+
+  NOTARIZED_RECEIVED   Under Review      We've received your       Staff confirms
+                                         notarized application and receipt
+                                         have started our review.  
+
+  ELIGIBILITY_REVIEW   Under Review      We're verifying your      Staff begins
+                                         eligibility for           processing
+                                         retirement benefits.      
+
+  CALCULATION          Benefit           We're calculating your    Eligibility
+                       Calculation       retirement benefit based  confirmed
+                                         on your service and       
+                                         salary history.           
+
+  PENDING_INFO         Action Needed     We need additional        Staff requests
+                                         information from you.     info
+                                         Please check your         
+                                         messages.                 
+
+  SUPERVISOR_REVIEW    Final Review      Your benefit calculation  Analyst submits
+                                         is being reviewed by a    for review
+                                         supervisor for final      
+                                         approval.                 
+
+  APPROVED             Approved          Your retirement           Supervisor
+                                         application has been      approves
+                                         approved! Your first      
+                                         payment will be \[date\]. 
+
+  DENIED               Denied            We were unable to approve Staff denies
+                                         your application. Please  (rare)
+                                         check your messages for   
+                                         details.                  
+  -------------------- ----------------- ------------------------- ---------------
+
+5.1 State Transition Rules
+
+State transitions are governed by the process orchestrator. The
+following transitions are valid:
+
+  -------------------- -------------------- --------------------- -------------
+  **From**             **To**               **Condition**         **Actor**
+
+  DRAFT                SUBMITTED            All required fields   Member
+                                            complete, digital     
+                                            confirmation signed   
+
+  SUBMITTED            NOTARIZED_RECEIVED   Staff confirms        Staff
+                                            physical receipt of   
+                                            notarized application 
+
+  NOTARIZED_RECEIVED   ELIGIBILITY_REVIEW   Work item claimed by  Staff
+                                            analyst               
+
+  ELIGIBILITY_REVIEW   CALCULATION          Eligibility           System +
+                                            determination         Staff
+                                            complete, all         
+                                            criteria met          
+
+  ELIGIBILITY_REVIEW   DENIED               Member does not meet  Staff
+                                            eligibility           
+                                            requirements          
+
+  ELIGIBILITY_REVIEW   PENDING_INFO         Missing data or       Staff
+                                            documents needed      
+
+  CALCULATION          PENDING_INFO         Missing data or       Staff
+                                            documents needed      
+
+  CALCULATION          SUPERVISOR_REVIEW    Calculation complete, Staff
+                                            all documents         
+                                            received              
+
+  PENDING_INFO         ELIGIBILITY_REVIEW   Member provides       System
+                                            requested information 
+
+  PENDING_INFO         CALCULATION          Member provides       System
+                                            requested information 
+                                            (if already past      
+                                            eligibility)          
+
+  SUPERVISOR_REVIEW    APPROVED             Supervisor approves   Supervisor
+
+  SUPERVISOR_REVIEW    CALCULATION          Supervisor returns    Supervisor
+                                            with corrections      
+
+  Any                  DRAFT                Not valid             ---
+                                            (submissions are      
+                                            permanent)            
+  -------------------- -------------------- --------------------- -------------
+
+5.2 Progress Indicator for Member Portal
+
+The member portal displays a simplified progress bar with these stages.
+The internal state maps to a progress percentage and a highlighted step:
+
+  ---------- ------------------ --------------------- --------------------
+  **Portal   **Label**          **Internal States**   **Progress**
+  Step**                                              
+
+  1          Application        SUBMITTED             20%
+             Submitted                                
+
+  2          Notarized Copy     NOTARIZED_RECEIVED    35%
+             Received                                 
+
+  3          Eligibility        ELIGIBILITY_REVIEW    50%
+             Verification                             
+
+  4          Benefit            CALCULATION           70%
+             Calculation                              
+
+  5          Final Review       SUPERVISOR_REVIEW     85%
+
+  6          Approved           APPROVED              100%
+  ---------- ------------------ --------------------- --------------------
+
+PENDING_INFO overlays on the current step with an alert badge rather
+than advancing/retreating the progress bar. The member sees the progress
+bar at its last position plus an "Action Needed" indicator.
+
+6\. Member Portal Architecture
+
+6.1 Portal Entry Point and Authentication
+
+**For the POC:** Simulated authentication. The portal login screen
+offers a dropdown of the four demo case members (Robert Martinez,
+Jennifer Kim, David Washington, and Robert Martinez as a DRO variant).
+Selecting a member loads their portal session. No real authentication
+provider is integrated.
+
+**Architectural note:** In production, the member portal would integrate
+with the agency's identity provider (Active Directory, SAML, or the
+existing MyDERP.org authentication). The portal interface is designed as
+a standalone React application that communicates with the NoUI backend
+through the same API layer the staff interfaces use, with RBAC
+restricting the member to their own data.
+
+6.2 Portal Navigation Structure
+
+The member portal has three views for the POC:
+
+  ---------------- ------------------- ----------------------------------
+  **View**         **Purpose**         **Key Components**
+
+  Dashboard        Landing page after  Welcome message, retirement
+                   login               readiness summary, application
+                                       status card (if in progress),
+                                       quick actions
+
+  Retirement       Guided multi-step   Step-by-step wizard with
+  Application      form                save/resume, pre-populated fields,
+                                       real-time validation, payment
+                                       option calculator
+
+  Application      Track submitted     Progress bar, status detail,
+  Status           application         message thread, document checklist
+  ---------------- ------------------- ----------------------------------
+
+6.3 Retirement Application Wizard
+
+The digital application is presented as a multi-step wizard. Steps map
+to the paper form parts but are reorganized for a better digital
+experience. The member can navigate forward and backward freely; data is
+auto-saved to a DRAFT application record on every field change.
+
+  ---------- ------------------ ------------------ ----------------------------
+  **Step**   **Title**          **Maps to Form     **Key Interactions**
+                                Part(s)**          
+
+  1          Verify Your        Part A             Review pre-populated data,
+             Information                           confirm or request
+                                                   corrections, certify marital
+                                                   status
+
+  2          Choose Your        Part B             Interactive payment option
+             Benefit Option                        comparison with calculated
+                                                   amounts, beneficiary entry
+                                                   if J&S, spousal consent
+                                                   flagging
+
+  3          Death Benefit      Part C             Calculated amount shown,
+             Election                              installment choice, death
+                                                   benefit beneficiary
+
+  4          Payment & Tax      Parts D, E         Direct deposit entry, tax
+             Setup                                 withholding elections with
+                                                   guidance
+
+  5          Health Insurance   Part G             Insurance election with IPR
+                                                   calculation display
+
+  6          Acknowledgments    Parts F, H         Electronic communication and
+                                                   re-employment
+                                                   acknowledgments
+
+  7          Review & Submit    Part I             Complete summary, final
+                                                   confirmation, PDF generation
+  ---------- ------------------ ------------------ ----------------------------
+
+**Auto-Save Behavior:** Every field change triggers a debounced save
+(500ms delay) to the APPLICATION_SUBMISSION table via PATCH
+/api/v1/portal/applications/{id}. The member can close the browser and
+resume later. The DRAFT status persists until explicit submission.
+
+**Validation Strategy:** Field-level validation runs on blur (format,
+required). Step-level validation runs on "Continue" (cross-field rules
+like "beneficiary required if J&S selected"). Submission validation runs
+the full rules engine to verify eligibility and completeness before
+allowing final submit.
+
+7\. API Specifications
+
+All portal APIs follow the existing NoUI API conventions (JSON
+request/response, consistent error format, request_id in meta). Portal
+APIs are prefixed with /api/v1/portal/ and are restricted by RBAC to the
+authenticated member's own data.
+
+7.1 Member Portal APIs
+
+  ------------ -------------------------------------------------- ------------------- -----------------------------
+  **Method**   **Endpoint**                                       **Description**     **Database Effect**
+
+  GET          /api/v1/portal/member/profile                      Pre-populated       SELECT from MEMBER_MASTER,
+                                                                  member info for     EMPLOYMENT_HIST, BENEFICIARY
+                                                                  application         
+
+  GET          /api/v1/portal/member/retirement-readiness         Eligibility         Rules engine evaluation
+                                                                  summary, estimated  against member data
+                                                                  benefit             
+
+  POST         /api/v1/portal/applications                        Create new draft    INSERT into
+                                                                  application         APPLICATION_SUBMISSION
+                                                                                      (DRAFT), INSERT into
+                                                                                      CASE_HIST
+
+  GET          /api/v1/portal/applications/{id}                   Retrieve            SELECT from
+                                                                  application (draft  APPLICATION_SUBMISSION
+                                                                  or submitted)       
+
+  PATCH        /api/v1/portal/applications/{id}                   Auto-save field     UPDATE
+                                                                  updates to draft    APPLICATION_SUBMISSION,
+                                                                                      INSERT TRANSACTION_LOG
+
+  POST         /api/v1/portal/applications/{id}/submit            Submit completed    UPDATE status to SUBMITTED,
+                                                                  application         INSERT
+                                                                                      APPLICATION_STATUS_HISTORY,
+                                                                                      INSERT APPLICATION_DOCUMENTS,
+                                                                                      INSERT TRANSACTION_LOG,
+                                                                                      trigger work item routing
+
+  GET          /api/v1/portal/applications/{id}/status            Current status with SELECT from CASE_HIST,
+                                                                  member-facing       APPLICATION_STATUS_HISTORY
+                                                                  detail              
+
+  GET          /api/v1/portal/applications/{id}/documents         Document checklist  SELECT from
+                                                                  with statuses       APPLICATION_DOCUMENTS
+
+  GET          /api/v1/portal/applications/{id}/messages          Message thread for  SELECT from
+                                                                  this application    APPLICATION_MESSAGES
+
+  POST         /api/v1/portal/applications/{id}/messages          Send message to     INSERT into
+                                                                  staff               APPLICATION_MESSAGES, INSERT
+                                                                                      TRANSACTION_LOG
+
+  GET          /api/v1/portal/applications/{id}/benefit-options   Calculate all       Rules engine calculation
+                                                                  payment option      (read-only against
+                                                                  amounts             salary/service data)
+  ------------ -------------------------------------------------- ------------------- -----------------------------
+
+7.2 Staff-Side APIs (Additions)
+
+  ------------ ---------------------------------------------- ------------------- -----------------------------------
+  **Method**   **Endpoint**                                   **Description**     **Database Effect**
+
+  GET          /api/v1/cases/{id}/application                 Retrieve linked     SELECT from APPLICATION_SUBMISSION
+                                                              digital application WHERE CASE_ID = {id}
+
+  POST         /api/v1/cases/{id}/confirm-notarized           Confirm notarized   UPDATE APP_STATUS,
+                                                              document received   APP_NOTARIZED_RECV_TS; INSERT
+                                                                                  APPLICATION_STATUS_HISTORY,
+                                                                                  TRANSACTION_LOG
+
+  POST         /api/v1/cases/{id}/request-info                Send info request   UPDATE APP_STATUS to PENDING_INFO,
+                                                              to member           INSERT APPLICATION_MESSAGES,
+                                                                                  APPLICATION_STATUS_HISTORY
+
+  POST         /api/v1/cases/{id}/advance-stage               Move to next        UPDATE APP_STATUS, CASE_HIST;
+                                                              processing stage    INSERT APPLICATION_STATUS_HISTORY,
+                                                                                  TRANSACTION_LOG
+
+  POST         /api/v1/cases/{id}/documents/{docId}/receive   Mark document as    UPDATE
+                                                              received            APPLICATION_DOCUMENTS.DOC_STATUS,
+                                                                                  DOC_RECV_DT; INSERT TRANSACTION_LOG
+
+  POST         /api/v1/cases/{id}/messages                    Send message to     INSERT APPLICATION_MESSAGES; INSERT
+                                                              member              TRANSACTION_LOG
+  ------------ ---------------------------------------------- ------------------- -----------------------------------
+
+8\. Application-to-Work-Item Pipeline
+
+When a member submits their application, the system executes the
+following pipeline. Every step writes to the database.
+
+8.1 Submission Pipeline Steps
+
+  ---------- ------------------------------------------ --------------------------------------------
+  **Step**   **Action**                                 **Tables Affected**
+
+  1          Validate application completeness (all     None (validation only)
+             required fields, all acknowledgments)      
+
+  2          Update APPLICATION_SUBMISSION.APP_STATUS   APPLICATION_SUBMISSION
+             from DRAFT to SUBMITTED                    
+
+  3          Insert APPLICATION_STATUS_HISTORY row      APPLICATION_STATUS_HISTORY
+             (DRAFT → SUBMITTED)                        
+
+  4          Determine retirement type via rules engine APPLICATION_SUBMISSION.RETIREMENT_TYPE
+             (NORMAL, RULE_OF_75, RULE_OF_85, EARLY)    
+
+  5          Calculate required documents based on      APPLICATION_DOCUMENTS (batch INSERT)
+             member situation and elections             
+
+  6          Evaluate spousal consent requirement       APPLICATION_SUBMISSION.SPOUSAL_CONSENT_REQ
+
+  7          Create CASE_HIST work item (type=SVC_RET,  CASE_HIST
+             status=OPEN, priority=calculated)          
+
+  8          Link application to case: update           CASE_HIST, APPLICATION_SUBMISSION
+             CASE_HIST.APP_ID and                       
+             APPLICATION_SUBMISSION.CASE_ID             
+
+  9          Set member-visible status on case          CASE_HIST.MEMBER_VISIBLE_STATUS,
+                                                        MEMBER_STATUS_DETAIL
+
+  10         Log submission event                       TRANSACTION_LOG
+
+  11         Determine routing: assign to queue based   CASE_HIST.ASSIGNED_TO (queue, not
+             on tier, DRO presence, complexity          individual)
+  ---------- ------------------------------------------ --------------------------------------------
+
+8.2 Routing Rules
+
+For the POC, routing is deterministic (Tier 1). Work items are assigned
+to a general benefits analyst queue. The following routing signals are
+computed and stored on the case for future intelligent routing:
+
+  ------------------ ----------------------- ------------------------------
+  **Signal**         **Source**              **Impact**
+
+  Tier complexity    Member's tier from hire Tier 1 members have leave
+                     date                    payout, longer histories
+
+  DRO present        DRO_MASTER check        Cases with DRO require
+                                             additional calculation steps
+
+  Early retirement   Eligibility evaluation  Requires reduction
+                                             calculation, threshold
+                                             proximity check
+
+  Purchased service  SVC_CREDIT check        Must verify exclusion from
+                                             Rule of 75/85
+
+  Document           APPLICATION_DOCUMENTS   Cases with all documents ready
+  completeness                               are prioritized
+
+  Processing         15th-of-month cutoff    Cases close to cutoff get
+  deadline proximity                         priority boost
+  ------------------ ----------------------- ------------------------------
+
+8.3 Priority Calculation
+
+Priority is stored as an integer on CASE_HIST.PRIORITY (1 = highest).
+For the POC, priority is computed as: base priority of 3, minus 1 if
+processing deadline is within 5 business days, minus 1 if all documents
+are received (case is ready to work), plus 1 if in PENDING_INFO state
+(waiting on member, not actionable). This simple model demonstrates the
+concept; production would use the full intelligent prioritization
+described in the Dynamic Workspace UX Architecture.
+
+9\. Staff Workspace Integration
+
+When an analyst opens a work item that originated from the portal, the
+workspace composition includes additional components that display the
+digital submission. This is a Tier 2 composition rule: IF case.APP_ID IS
+NOT NULL, include digital application components.
+
+9.1 New Workspace Components
+
+  --------------------------- --------------------------- -----------------------------------
+  **Component**               **Purpose**                 **Data Source**
+
+  DigitalApplicationSummary   Displays all member         APPLICATION_SUBMISSION
+                              elections from the portal   
+                              submission in a structured, 
+                              print-ready format          
+
+  DocumentChecklist           Interactive checklist       APPLICATION_DOCUMENTS
+                              showing required/received   
+                              documents with ability to   
+                              mark received               
+
+  ApplicationTimeline         Visual timeline of all      APPLICATION_STATUS_HISTORY
+                              status changes with         
+                              timestamps and actors       
+
+  MemberMessages              Communication thread with   APPLICATION_MESSAGES
+                              ability to send messages    
+                              and info requests           
+
+  NotarizationConfirmation    Prominent action button to  APPLICATION_SUBMISSION.APP_STATUS
+                              confirm receipt of          
+                              notarized application       
+                              (shown only when status =   
+                              SUBMITTED)                  
+  --------------------------- --------------------------- -----------------------------------
+
+9.2 Workspace Composition Rules
+
+The composition engine evaluates the application status to determine
+which components appear and in what order:
+
+  -------------------- ------------------------------ ----------------------
+  **Application        **Additional Components**      **Component Order
+  Status**                                            Priority**
+
+  SUBMITTED (awaiting  NotarizationConfirmation       Notarization action
+  notarized)           (prominent),                   first
+                       DigitalApplicationSummary,     
+                       DocumentChecklist              
+
+  NOTARIZED_RECEIVED   DigitalApplicationSummary,     Standard processing
+                       DocumentChecklist,             order
+                       MemberMessages                 
+
+  ELIGIBILITY_REVIEW   DigitalApplicationSummary      Eligibility components
+                       (collapsed),                   primary
+                       DocumentChecklist, standard    
+                       eligibility components         
+
+  CALCULATION          DigitalApplicationSummary      Calculation components
+                       (collapsed),                   primary
+                       BenefitCalculationPanel        
+                       (primary),                     
+                       PaymentOptionsComparison       
+
+  PENDING_INFO         MemberMessages (prominent,     Communication first
+                       with compose open),            
+                       DocumentChecklist,             
+                       pending-reason indicator       
+
+  SUPERVISOR_REVIEW    Full case summary in read-only Approval actions
+                       mode with                      primary
+                       approve/reject/return actions  
+  -------------------- ------------------------------ ----------------------
+
+**Key insight:** The digital application data enables a qualitatively
+different analyst experience. Instead of transcribing from a scanned
+PDF, the analyst sees structured, validated data they can
+cross-reference against the system record. Discrepancies (like marital
+status differences) are flagged automatically. The analyst focuses on
+verification and judgment, not data entry.
+
+10\. Demo Case Integration
+
+Each of the four demo cases gets a specific demo script showing the
+portal-to-staff lifecycle. The primary walkthrough uses Case 1 (Robert
+Martinez). Cases 2--4 demonstrate variations.
+
+10.1 Case 1: Robert Martinez --- Full Lifecycle Walkthrough
+
+  -------- ------------ ------------------------ ---------------------------
+  **Demo   **Actor**    **Action**               **What the Audience Sees**
+  Step**                                         
+
+  1        Robert       Logs in, sees dashboard  Pre-populated: 28+ years
+           (portal)     with retirement          service, Rule of 75
+                        readiness summary        eligible, estimated benefit
+                                                 range
+
+  2        Robert       Starts retirement        Name, DOB, address from
+           (portal)     application, reviews     system. Certifies: married.
+                        pre-populated Part A     Last day: March 31, 2026.
+
+  3        Robert       Views payment options    All four options with real
+           (portal)     with calculated amounts  dollar amounts. 75% J&S
+                                                 selected, Elena designated.
+
+  4        Robert       Completes death benefit, Death benefit: \$5,000
+           (portal)     tax, insurance,          (Rule of 75). Elects DERP
+                        acknowledgments          insurance (IPR: \$359.38/mo
+                                                 calculated live).
+
+  5        Robert       Reviews summary and      Full summary of all
+           (portal)     submits                  elections. Clicks Submit.
+                                                 Told to print and notarize.
+
+  6        ---          Switch to analyst view   Audience sees new work item
+                                                 appear in queue: Martinez,
+                                                 SVC_RET, Tier 1, flags:
+                                                 Leave Payout, DRO (Case 4)
+
+  7        Analyst      Opens work item, sees    Structured data from
+           (staff)      digital application      Robert's submission.
+                        summary                  Notarization pending
+                                                 indicator.
+
+  8        Analyst      Clicks 'Confirm          Status advances.
+           (staff)      Notarized Application    Application timeline
+                        Received'                updates.
+
+  9        Analyst      Proceeds through         Standard existing demo
+           (staff)      eligibility, calculation flow, now with digital
+                                                 application context
+
+  10       ---          Switch back to Robert's  Robert sees progress bar at
+                        portal                   "Benefit Calculation"
+                                                 (70%). All steps so far
+                                                 have timestamps.
+  -------- ------------ ------------------------ ---------------------------
+
+10.2 Case 2: Jennifer Kim --- Scenario Modeling in Portal
+
+Jennifer's case demonstrates a critical portal feature: the benefit
+option display shows her early retirement reduction (30%,
+\$1,633.07/month) alongside a callout: **"If you wait until age 56,
+you'll meet the Rule of 75 and receive approximately \$2,518/month with
+no reduction --- a 54% increase."** This is the scenario modeler
+surfaced in the member portal. The system knows Jennifer is 0.83 points
+from the Rule of 75 threshold because it ran the rules engine against
+her data. This is a uniquely powerful POC moment: the system proactively
+helps members make better decisions.
+
+10.3 Case 3: David Washington --- Tier 3 Differences
+
+David's portal experience highlights Tier 3 differences: the 60-month
+AMS window (versus 36 for Tiers 1/2), the Rule of 85 instead of Rule of
+75, the 6% per year early retirement reduction instead of 3%, and the
+higher death benefit reduction (\$500/year instead of \$250). The portal
+adapts all calculations and explanatory text to his tier automatically.
+
+10.4 Case 4: Robert Martinez with DRO --- DRO Awareness
+
+When Robert (DRO variant) logs into the portal, the system detects the
+DRO record in DRO_MASTER and adds a prominent informational banner: **"A
+Domestic Relations Order is on file for your account. Your retirement
+benefit will be divided per the court order. The amounts shown below
+reflect your portion after the DRO division."** The payment option
+amounts shown in Step 2 reflect the post-DRO member share. This requires
+the portal's benefit calculation endpoint to integrate with the DRO
+calculation logic already built for the staff workspace.
+
+11\. Technical Implementation Notes for Claude Code
+
+11.1 Frontend Architecture
+
+The member portal is a separate route tree within the existing React
+application, not a separate deployment. It shares the component library,
+design system, and API client but has its own layout shell and
+navigation. The route structure:
+
+  --------------------- ----------------------------- -------------------------
+  **Route**             **Component**                 **Auth Requirement**
+
+  /portal               PortalLayout (shell)          Member session
+
+  /portal/dashboard     MemberDashboard               Member session
+
+  /portal/apply         RetirementApplicationWizard   Member session + active
+                                                      status
+
+  /portal/apply/:id     RetirementApplicationWizard   Member session + owns
+                        (resume)                      application
+
+  /portal/status/:id    ApplicationStatus             Member session + owns
+                                                      application
+
+  /staff/\*             Existing staff routes         Staff session (existing)
+  --------------------- ----------------------------- -------------------------
+
+11.2 Backend Service Changes
+
+Portal APIs are added to the existing service architecture. The
+connector service handles database reads/writes. The intelligence
+service handles rules evaluation and routing. The workspace service
+handles portal composition logic. No new services are introduced.
+
+  -------------- ---------------------------- ---------------------------------
+  **Service**    **New Endpoints**            **New Logic**
+
+  Connector      CRUD for                     Standard database access patterns
+                 APPLICATION_SUBMISSION,      following existing conventions
+                 APPLICATION_DOCUMENTS,       
+                 APPLICATION_MESSAGES,        
+                 APPLICATION_STATUS_HISTORY   
+
+  Intelligence   Benefit option calculation   Reuses existing rules engine;
+                 for portal, routing rules,   adds portal-facing response
+                 document requirement         formatting
+                 generation                   
+
+  Workspace      Portal composition endpoint  Tier-aware step adaptation (which
+                 for application wizard step  fields/explanations to show based
+                 configuration                on member tier)
+  -------------- ---------------------------- ---------------------------------
+
+11.3 Data Generation Updates
+
+The generate_derp_data.py script is extended to create pre-seeded
+application data for demo cases. For Cases 2, 3, and 4, applications
+exist in various lifecycle states to demonstrate the status tracking
+view without requiring live submission during every demo. Case 1 (Robert
+Martinez) is left **without** a pre-existing application so the full
+submission flow can be demonstrated live.
+
+  ------------------- ------------------- -------------------------------
+  **Demo Case**       **Pre-Seeded        **Demo Purpose**
+                      Application State** 
+
+  Case 1: Robert      No application      Live full-lifecycle walkthrough
+  Martinez            (clean slate)       
+
+  Case 2: Jennifer    SUBMITTED (awaiting Show portal status view,
+  Kim                 notarized)          scenario callout
+
+  Case 3: David       CALCULATION         Show progress bar at 70%, Tier
+  Washington          (mid-processing)    3 differences
+
+  Case 4: Robert      No application      Live submission showing DRO
+  Martinez DRO        (clean slate)       awareness
+  ------------------- ------------------- -------------------------------
+
+12\. Security Considerations
+
+The member portal introduces a new attack surface and a new user type.
+The following security controls apply, consistent with the NoUI Security
+Architecture.
+
+  ------------------ --------------------------- -------------------------
+  **Concern**        **Control**                 **POC Implementation**
+
+  Member can only    RBAC: portal role restricts Enforced at API layer;
+  see own data       all queries to WHERE MBR_ID all queries parameterized
+                     = authenticated_member      
+
+  Member cannot      Portal writes only to       Separate write
+  modify legacy      APPLICATION\_\* tables;     permissions per table
+  records            MEMBER_MASTER is read-only  
+                     from portal                 
+
+  SSN handling       SSN displayed as masked     Backend masks before
+                     (\*\*\*-\*\*-1234); full    serialization
+                     SSN never sent to portal    
+                     frontend                    
+
+  Beneficiary SSN in Encrypted at rest in        AES-256 column-level
+  application        APPLICATION_SUBMISSION;     encryption
+                     decrypted only for staff    
+                     view                        
+
+  Session security   POC: simulated sessions.    Session tokens with
+                     Production: integrate with  member ID binding
+                     agency IdP                  
+
+  Audit trail        All portal actions logged   Follows existing
+                     to TRANSACTION_LOG with     transaction logging
+                     session ID and IP           pattern
+
+  Rate limiting      Submission endpoint limited POC: basic rate limit;
+                     to prevent abuse            production: full WAF
+  ------------------ --------------------------- -------------------------
+
+13\. What This Document Is Not
+
+This document does not define the visual design of the member portal.
+Visual design follows the NoUI Design System and the Dynamic Workspace
+UX Architecture.
+
+This document does not define how the benefit calculation works.
+Calculation logic is defined in the rules engine and validated against
+the four demo case hand calculations.
+
+This document does not replace the Service Retirement Process
+Definition. That document defines the complete process stages. This
+document adds the portal as an input channel to Stage 1 (Application
+Intake).
+
+This document does not define production authentication. POC
+authentication is simulated. Production authentication architecture will
+be defined when a real agency deployment is planned.
+
+*End of Document*

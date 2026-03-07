@@ -1,0 +1,374 @@
+# =============================================================================
+# DERP Rule Definition Schema
+# =============================================================================
+# This file defines the canonical YAML schema for all DERP rule definitions.
+# Every rule file in this directory MUST conform to this schema.
+#
+# Schema Version: 1.0.0
+# Effective Date: 2026-03-02
+# Authority: DERP Plan Document & Restated Master Contract (RMC)
+# =============================================================================
+
+schema:
+  version: "1.0.0"
+  name: "DERP Rule Definition Schema"
+  description: >
+    Defines the structure, required fields, and validation constraints for
+    all DERP pension rule definitions used by the NoUI DERP POC engine.
+
+  governance:
+    owner: "DERP Rules Committee"
+    approved_by: "Plan Administrator"
+    approval_date: "2026-03-02"
+    review_cycle: "annual"
+    change_control: "All schema changes require Rules Committee approval"
+    audit_trail: true
+
+  # ---------------------------------------------------------------------------
+  # Top-level file structure
+  # ---------------------------------------------------------------------------
+  file_structure:
+    required_fields:
+      - field: "metadata"
+        type: "object"
+        description: "File-level metadata including domain, version, and governance info"
+      - field: "rules"
+        type: "list[rule]"
+        description: "Ordered list of rule definitions"
+
+  # ---------------------------------------------------------------------------
+  # Metadata block schema
+  # ---------------------------------------------------------------------------
+  metadata_schema:
+    required_fields:
+      - field: "domain"
+        type: "string"
+        description: "Functional domain (e.g., membership, eligibility, benefit-calculation)"
+        allowed_values:
+          - "membership"
+          - "service-credit"
+          - "eligibility"
+          - "benefit-calculation"
+          - "payment-options"
+          - "dro"
+          - "supplemental"
+          - "process"
+      - field: "version"
+        type: "string"
+        format: "semver"
+        description: "Semantic version of this rule file"
+      - field: "effective_date"
+        type: "date"
+        format: "YYYY-MM-DD"
+        description: "Date these rules became effective"
+      - field: "authority"
+        type: "string"
+        description: "Legal authority for these rules (e.g., RMC, Plan Document)"
+      - field: "governance"
+        type: "object"
+        description: "Governance tracking block"
+
+  # ---------------------------------------------------------------------------
+  # Governance block schema
+  # ---------------------------------------------------------------------------
+  governance_schema:
+    required_fields:
+      - field: "owner"
+        type: "string"
+        description: "Person or team responsible for this rule set"
+      - field: "approved_by"
+        type: "string"
+        description: "Person or body that approved the current version"
+      - field: "approval_date"
+        type: "date"
+        description: "Date of last approval"
+      - field: "review_cycle"
+        type: "string"
+        allowed_values: ["annual", "semi-annual", "quarterly", "on-change"]
+        description: "How often rules must be reviewed"
+      - field: "change_log"
+        type: "list[change_entry]"
+        description: "History of changes to this rule file"
+    optional_fields:
+      - field: "next_review_date"
+        type: "date"
+        description: "Scheduled date for next review"
+      - field: "audit_trail"
+        type: "boolean"
+        default: true
+        description: "Whether changes are tracked in audit log"
+
+  # ---------------------------------------------------------------------------
+  # Change log entry schema
+  # ---------------------------------------------------------------------------
+  change_entry_schema:
+    required_fields:
+      - field: "version"
+        type: "string"
+      - field: "date"
+        type: "date"
+      - field: "author"
+        type: "string"
+      - field: "description"
+        type: "string"
+
+  # ---------------------------------------------------------------------------
+  # Rule definition schema
+  # ---------------------------------------------------------------------------
+  rule_schema:
+    required_fields:
+      - field: "id"
+        type: "string"
+        pattern: "^RULE-[A-Z0-9-]+$"
+        description: "Unique rule identifier, must match RULE-XXX pattern"
+      - field: "name"
+        type: "string"
+        description: "Human-readable rule name"
+      - field: "description"
+        type: "string"
+        description: "Detailed description of what the rule does"
+      - field: "source_reference"
+        type: "object"
+        description: "Reference to authoritative source (RMC section, statute, etc.)"
+      - field: "applies_to"
+        type: "object"
+        description: "Scope of applicability (tiers, member types, etc.)"
+      - field: "inputs"
+        type: "list[input_field]"
+        description: "Required input fields for rule evaluation"
+      - field: "logic"
+        type: "object"
+        description: "Rule evaluation logic (conditions, formulas, tables)"
+      - field: "output"
+        type: "object"
+        description: "What the rule produces"
+      - field: "test_cases"
+        type: "list[test_case]"
+        min_items: 4
+        description: "At minimum: happy path, boundary, below-boundary, and negative test"
+      - field: "governance"
+        type: "object"
+        description: "Rule-level governance tracking"
+    optional_fields:
+      - field: "dependencies"
+        type: "list[string]"
+        description: "Other rule IDs this rule depends on"
+      - field: "priority"
+        type: "integer"
+        description: "Evaluation priority (lower = earlier)"
+      - field: "tags"
+        type: "list[string]"
+        description: "Classification tags for filtering and grouping"
+      - field: "notes"
+        type: "string"
+        description: "Implementation notes or caveats"
+
+  # ---------------------------------------------------------------------------
+  # Source reference schema
+  # ---------------------------------------------------------------------------
+  source_reference_schema:
+    required_fields:
+      - field: "document"
+        type: "string"
+        description: "Source document name (e.g., RMC, Plan Document)"
+      - field: "section"
+        type: "string"
+        description: "Section, article, or clause reference"
+    optional_fields:
+      - field: "page"
+        type: "string"
+        description: "Page number(s) if applicable"
+      - field: "url"
+        type: "string"
+        description: "URL to source document if available"
+      - field: "last_verified"
+        type: "date"
+        description: "Date the reference was last verified against source"
+
+  # ---------------------------------------------------------------------------
+  # Input field schema
+  # ---------------------------------------------------------------------------
+  input_field_schema:
+    required_fields:
+      - field: "name"
+        type: "string"
+        description: "Input field name (snake_case)"
+      - field: "type"
+        type: "string"
+        allowed_values: ["date", "number", "decimal", "string", "boolean", "enum", "list"]
+        description: "Data type of the input"
+      - field: "required"
+        type: "boolean"
+        description: "Whether this input is mandatory"
+    optional_fields:
+      - field: "description"
+        type: "string"
+      - field: "constraints"
+        type: "object"
+        description: "Validation constraints (min, max, pattern, enum_values)"
+      - field: "default"
+        type: "any"
+        description: "Default value if not provided"
+
+  # ---------------------------------------------------------------------------
+  # Logic block schema
+  # ---------------------------------------------------------------------------
+  logic_schema:
+    description: >
+      The logic block defines how the rule evaluates. It can contain conditions,
+      formulas, lookup tables, or procedural steps. IMPORTANT: For reductions
+      and death benefits, use STATUTORY LOOKUP TABLES, not formulas.
+    allowed_types:
+      - type: "conditional"
+        description: "If/then/else branching logic"
+        fields:
+          - "conditions"
+          - "default"
+      - type: "formula"
+        description: "Mathematical calculation"
+        fields:
+          - "expression"
+          - "variables"
+      - type: "lookup_table"
+        description: "Statutory table lookup (PREFERRED for reductions/death benefits)"
+        fields:
+          - "table"
+          - "key_field"
+          - "value_field"
+      - type: "procedural"
+        description: "Ordered steps to execute"
+        fields:
+          - "steps"
+
+  # ---------------------------------------------------------------------------
+  # Test case schema
+  # ---------------------------------------------------------------------------
+  test_case_schema:
+    required_fields:
+      - field: "name"
+        type: "string"
+        description: "Descriptive test case name"
+      - field: "type"
+        type: "string"
+        allowed_values: ["happy_path", "boundary", "below_boundary", "negative", "edge_case"]
+        description: "Classification of the test case"
+      - field: "inputs"
+        type: "object"
+        description: "Input values for this test"
+      - field: "expected"
+        type: "object"
+        description: "Expected output values"
+    optional_fields:
+      - field: "description"
+        type: "string"
+        description: "Why this test case matters"
+      - field: "demo_case_ref"
+        type: "string"
+        allowed_values:
+          - "Case 1: Robert Martinez - Tier 1"
+          - "Case 2: Jennifer Kim - Tier 2"
+          - "Case 3: David Washington - Tier 3"
+          - "Case 4: Robert Martinez DRO"
+        description: "Reference to one of the four demo cases"
+      - field: "notes"
+        type: "string"
+        description: "Additional notes about expected behavior"
+
+  # ---------------------------------------------------------------------------
+  # Rule governance tracking schema (rule-level)
+  # ---------------------------------------------------------------------------
+  rule_governance_schema:
+    required_fields:
+      - field: "status"
+        type: "string"
+        allowed_values: ["draft", "review", "approved", "deprecated"]
+        description: "Current lifecycle status"
+      - field: "last_reviewed"
+        type: "date"
+        description: "Date of last review"
+      - field: "reviewed_by"
+        type: "string"
+        description: "Person who last reviewed"
+    optional_fields:
+      - field: "hash"
+        type: "string"
+        description: "Content hash for change detection"
+      - field: "effective_date"
+        type: "date"
+        description: "When this rule version became effective"
+      - field: "sunset_date"
+        type: "date"
+        description: "When this rule version will be retired"
+
+  # ---------------------------------------------------------------------------
+  # Validation constraints
+  # ---------------------------------------------------------------------------
+  validation_rules:
+    - constraint: "All rule IDs must be globally unique across all rule files"
+    - constraint: "Every rule must have at least 4 test cases covering happy, boundary, below, and negative"
+    - constraint: "source_reference.section is required and must reference a valid RMC section"
+    - constraint: "Reduction factors MUST use lookup tables, NOT formulas"
+    - constraint: "Death benefit amounts MUST use lookup tables, NOT formulas"
+    - constraint: "Purchased service MUST NOT count toward Rule of 75/85 or IPR"
+    - constraint: "Leave payout ONLY applies to members hired before Jan 1, 2010"
+    - constraint: "DRO marital share split MUST occur BEFORE payment option application"
+    - constraint: "All monetary values must be rounded to 2 decimal places"
+    - constraint: "All percentage values must be expressed as decimals (e.g., 0.03 not 3%)"
+
+  # ---------------------------------------------------------------------------
+  # Demo case reference data
+  # ---------------------------------------------------------------------------
+  demo_cases:
+    - id: "Case 1"
+      name: "Robert Martinez"
+      tier: 1
+      scenario: "Rule of 75, leave payout eligible"
+      key_facts:
+        hire_date: "1998-06-15"
+        termination_date: null
+        birth_date: "1963-04-10"
+        retirement_age: 62
+        earned_service_years: 27.5
+        purchased_service_years: 0
+        leave_payout_eligible: true
+
+    - id: "Case 2"
+      name: "Jennifer Kim"
+      tier: 2
+      scenario: "Early retirement, purchased service, 30% reduction"
+      key_facts:
+        hire_date: "2005-03-01"
+        termination_date: null
+        birth_date: "1970-08-22"
+        retirement_age: 55
+        earned_service_years: 20.0
+        purchased_service_years: 3.0
+        leave_payout_eligible: false
+
+    - id: "Case 3"
+      name: "David Washington"
+      tier: 3
+      scenario: "Early retirement, 12% reduction"
+      key_facts:
+        hire_date: "2015-01-10"
+        termination_date: null
+        birth_date: "1975-11-30"
+        retirement_age: 62
+        earned_service_years: 11.0
+        purchased_service_years: 0
+        leave_payout_eligible: false
+
+    - id: "Case 4"
+      name: "Robert Martinez DRO"
+      tier: 1
+      scenario: "DRO variant of Case 1"
+      key_facts:
+        hire_date: "1998-06-15"
+        termination_date: null
+        birth_date: "1963-04-10"
+        retirement_age: 62
+        earned_service_years: 27.5
+        purchased_service_years: 0
+        marriage_start: "2000-01-15"
+        marriage_end: "2015-06-30"
+        dro_applicable: true

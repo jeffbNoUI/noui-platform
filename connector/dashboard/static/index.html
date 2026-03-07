@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NoUI Monitoring Dashboard</title>
+  <style>
+    :root {
+      --pass: #22c55e;
+      --warn: #f59e0b;
+      --fail: #ef4444;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --text-muted: #64748b;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+    header h1 { font-size: 1.5rem; }
+    #health-status { font-size: 0.875rem; color: var(--text-muted); }
+    #health-status .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+    #health-status .dot.ok { background: var(--pass); }
+    #health-status .dot.err { background: var(--fail); }
+
+    .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; text-align: center; }
+    .card .count { font-size: 2rem; font-weight: 700; }
+    .card .label { font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em; }
+    .card.total .count { color: var(--text); }
+    .card.pass .count { color: var(--pass); }
+    .card.warn .count { color: var(--warn); }
+    .card.fail .count { color: var(--fail); }
+
+    section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; }
+    section h2 { font-size: 1rem; margin-bottom: 1rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    th { text-align: left; padding: 0.5rem; border-bottom: 2px solid var(--border); color: var(--text-muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
+    td { padding: 0.5rem; border-bottom: 1px solid var(--border); }
+    tr:last-child td { border-bottom: none; }
+
+    .filters { display: flex; gap: 0.75rem; margin-bottom: 1rem; }
+    .filters select { padding: 0.375rem 0.75rem; border: 1px solid var(--border); border-radius: 4px; font-size: 0.875rem; background: white; }
+
+    .check-item { border: 1px solid var(--border); border-radius: 6px; margin-bottom: 0.5rem; }
+    .check-header { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; cursor: pointer; }
+    .check-header:hover { background: var(--bg); }
+    .badge { display: inline-block; padding: 0.125rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; color: white; }
+    .badge.pass { background: var(--pass); }
+    .badge.warn { background: var(--warn); }
+    .badge.fail { background: var(--fail); }
+    .check-name { font-weight: 600; }
+    .check-category { font-size: 0.75rem; color: var(--text-muted); background: var(--bg); padding: 0.125rem 0.5rem; border-radius: 4px; }
+    .check-msg { flex: 1; font-size: 0.875rem; color: var(--text-muted); text-align: right; }
+    .check-details { display: none; padding: 0.75rem 1rem; border-top: 1px solid var(--border); background: var(--bg); font-size: 0.875rem; }
+    .check-details.open { display: block; }
+    .detail-row { display: flex; gap: 2rem; margin-bottom: 0.25rem; }
+    .detail-label { color: var(--text-muted); min-width: 100px; }
+    .detail-list { margin-top: 0.5rem; padding-left: 1.25rem; color: var(--text-muted); }
+
+    .empty { text-align: center; padding: 2rem; color: var(--text-muted); }
+
+    body.embed-mode .container { padding: 0.75rem; }
+    body.embed-mode header { display: none; }
+    body.embed-mode .cards { gap: 0.5rem; margin-bottom: 1rem; }
+    body.embed-mode .card { padding: 0.75rem; }
+    body.embed-mode .card .count { font-size: 1.5rem; }
+    body.embed-mode section { padding: 1rem; margin-bottom: 1rem; }
+
+    @media (max-width: 768px) {
+      .cards { grid-template-columns: repeat(2, 1fr); }
+      .check-msg { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>NoUI Monitoring Dashboard</h1>
+      <div id="health-status"><span class="dot"></span>Connecting...</div>
+    </header>
+
+    <div class="cards">
+      <div class="card total"><div class="count" id="total-count">-</div><div class="label">Total Checks</div></div>
+      <div class="card pass"><div class="count" id="pass-count">-</div><div class="label">Passed</div></div>
+      <div class="card warn"><div class="count" id="warn-count">-</div><div class="label">Warnings</div></div>
+      <div class="card fail"><div class="count" id="fail-count">-</div><div class="label">Failed</div></div>
+    </div>
+
+    <section id="baselines-section">
+      <h2>Baseline Metrics</h2>
+      <table>
+        <thead><tr><th>Metric</th><th>Mean</th><th>Std Dev</th><th>Min</th><th>Max</th><th>Samples</th></tr></thead>
+        <tbody id="baselines-body"></tbody>
+      </table>
+    </section>
+
+    <section id="checks-section">
+      <h2>Check Results</h2>
+      <div class="filters">
+        <select id="status-filter">
+          <option value="">All Statuses</option>
+          <option value="pass">Pass</option>
+          <option value="warn">Warning</option>
+          <option value="fail">Fail</option>
+        </select>
+        <select id="category-filter">
+          <option value="">All Categories</option>
+          <option value="completeness">Completeness</option>
+          <option value="validity">Validity</option>
+          <option value="consistency">Consistency</option>
+          <option value="timeliness">Timeliness</option>
+        </select>
+      </div>
+      <div id="checks-list"></div>
+    </section>
+
+    <section id="history-section">
+      <h2>Run History</h2>
+      <table>
+        <thead><tr><th>Run At</th><th>Total</th><th>Pass</th><th>Warn</th><th>Fail</th></tr></thead>
+        <tbody id="history-body"></tbody>
+      </table>
+    </section>
+  </div>
+
+  <script>
+    const REFRESH_INTERVAL = 30000;
+
+    async function fetchJSON(path) {
+      const resp = await fetch(path);
+      if (!resp.ok) throw new Error(resp.status + ' ' + resp.statusText);
+      return resp.json();
+    }
+
+    function fmt(n) { return typeof n === 'number' ? n.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : n; }
+
+    function renderHealth(data) {
+      const el = document.getElementById('health-status');
+      const ok = data && data.status === 'ok';
+      el.innerHTML = '<span class="dot ' + (ok ? 'ok' : 'err') + '"></span>' +
+        (ok ? 'Online &middot; Uptime: ' + data.uptime : 'Offline');
+    }
+
+    function renderSummary(data) {
+      document.getElementById('total-count').textContent = data.summary.total_checks;
+      document.getElementById('pass-count').textContent = data.summary.passed;
+      document.getElementById('warn-count').textContent = data.summary.warnings;
+      document.getElementById('fail-count').textContent = data.summary.failed;
+    }
+
+    function renderBaselines(baselines) {
+      const tbody = document.getElementById('baselines-body');
+      if (!baselines || baselines.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">No baselines available</td></tr>';
+        return;
+      }
+      tbody.innerHTML = baselines.map(function(b) {
+        return '<tr><td>' + b.metric_name + '</td><td>' + fmt(b.mean) + '</td><td>' +
+          fmt(b.std_dev) + '</td><td>' + fmt(b.min) + '</td><td>' + fmt(b.max) +
+          '</td><td>' + b.sample_size + '</td></tr>';
+      }).join('');
+    }
+
+    function renderChecks(checks) {
+      var list = document.getElementById('checks-list');
+      if (!checks || checks.length === 0) {
+        list.innerHTML = '<div class="empty">No checks match the current filters</div>';
+        return;
+      }
+      list.innerHTML = checks.map(function(c, i) {
+        var details = '<div class="detail-row"><span class="detail-label">Expected</span><span>' + fmt(c.expected) + '</span></div>' +
+          '<div class="detail-row"><span class="detail-label">Actual</span><span>' + fmt(c.actual) + '</span></div>' +
+          '<div class="detail-row"><span class="detail-label">Deviation</span><span>' + fmt(c.deviation) + '%</span></div>';
+        if (c.details && c.details.length > 0) {
+          details += '<ul class="detail-list">' + c.details.map(function(d) { return '<li>' + d + '</li>'; }).join('') + '</ul>';
+        }
+        return '<div class="check-item">' +
+          '<div class="check-header" onclick="toggleDetails(' + i + ')">' +
+            '<span class="badge ' + c.status + '">' + c.status.toUpperCase() + '</span>' +
+            '<span class="check-name">' + c.check_name + '</span>' +
+            '<span class="check-category">' + c.category + '</span>' +
+            '<span class="check-msg">' + c.message + '</span>' +
+          '</div>' +
+          '<div class="check-details" id="detail-' + i + '">' + details + '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function toggleDetails(i) {
+      document.getElementById('detail-' + i).classList.toggle('open');
+    }
+
+    function renderHistory(history) {
+      var tbody = document.getElementById('history-body');
+      if (!history || history.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty">No history available</td></tr>';
+        return;
+      }
+      var rows = history.slice().reverse();
+      tbody.innerHTML = rows.map(function(h) {
+        var ts = h.run_at ? new Date(h.run_at).toLocaleString() : '-';
+        return '<tr><td>' + ts + '</td><td>' + h.total_checks + '</td><td>' +
+          h.passed + '</td><td>' + h.warnings + '</td><td>' + h.failed + '</td></tr>';
+      }).join('');
+    }
+
+    async function applyFilters() {
+      var status = document.getElementById('status-filter').value;
+      var category = document.getElementById('category-filter').value;
+      var url = '/api/v1/monitor/checks';
+      var params = [];
+      if (status) params.push('status=' + status);
+      if (category) params.push('category=' + category);
+      if (params.length) url += '?' + params.join('&');
+      try {
+        var checks = await fetchJSON(url);
+        renderChecks(checks);
+      } catch (e) { /* ignore filter errors */ }
+    }
+
+    async function refresh() {
+      try {
+        var results = await Promise.all([
+          fetchJSON('/api/v1/health'),
+          fetchJSON('/api/v1/monitor/summary'),
+          fetchJSON('/api/v1/monitor/baselines'),
+          fetchJSON('/api/v1/monitor/checks'),
+          fetchJSON('/api/v1/monitor/history')
+        ]);
+        renderHealth(results[0]);
+        renderSummary(results[1]);
+        renderBaselines(results[2]);
+        renderChecks(results[3]);
+        renderHistory(results[4]);
+      } catch (e) {
+        renderHealth(null);
+      }
+    }
+
+    document.getElementById('status-filter').addEventListener('change', applyFilters);
+    document.getElementById('category-filter').addEventListener('change', applyFilters);
+
+    // --- Embed mode support ---
+    var params = new URLSearchParams(window.location.search);
+    var isEmbedded = params.get('embed') === 'true';
+
+    if (isEmbedded) {
+      document.body.classList.add('embed-mode');
+    }
+
+    function notifyParent(type, data) {
+      if (window.parent !== window) {
+        window.parent.postMessage({ source: 'noui-dashboard', type: type, data: data }, '*');
+      }
+    }
+
+    window.addEventListener('message', function(event) {
+      if (!event.data || event.data.target !== 'noui-dashboard') return;
+      var cmd = event.data;
+      if (cmd.action === 'refresh') {
+        refresh();
+      } else if (cmd.action === 'setFilter') {
+        if (cmd.status !== undefined) {
+          document.getElementById('status-filter').value = cmd.status;
+        }
+        if (cmd.category !== undefined) {
+          document.getElementById('category-filter').value = cmd.category;
+        }
+        applyFilters();
+      }
+    });
+
+    // Enhanced refresh to notify parent after loading data.
+    var _origRefresh = refresh;
+    refresh = async function() {
+      await _origRefresh();
+      notifyParent('refreshed', { timestamp: new Date().toISOString() });
+    };
+
+    refresh();
+    setInterval(refresh, REFRESH_INTERVAL);
+  </script>
+</body>
+</html>

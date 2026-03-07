@@ -1,0 +1,823 @@
+NoUI Platform
+
+**Verification &**
+
+**Test Execution Framework**
+
+Layer 2 of 5: Defect Management System
+
+DERP Proof of Concept
+
+Version 1.0 --- February 2026
+
+Document Status: Draft for Review
+
+1\. Test Philosophy
+
+In pension administration, testing is not a quality gate---it is an
+ongoing proof obligation. Every benefit calculation that leaves this
+system will be relied upon by a retiree to pay their mortgage, buy
+groceries, and maintain their health insurance. The test framework
+exists to provide mathematical certainty that the system's outputs are
+correct, traceable, and reproducible.
+
+1.1 The Oracle Problem
+
+The central question in pension system testing is: what do you test
+against? Most replacement projects test against the legacy system's
+outputs. This is fundamentally wrong for one reason: the legacy system
+may itself contain errors. If NoUI reproduces a legacy defect, the test
+passes but the member gets the wrong benefit.
+
+NoUI solves the oracle problem by deriving expected values exclusively
+from governing documents. The test oracle is the statute, not the legacy
+database. This means:
+
+-   **Hand calculations are the gold standard.** Every expected value in
+    the test suite has a documented derivation showing each mathematical
+    step, traceable to a specific RMC section.
+
+-   **Legacy comparison is a discovery tool, not a correctness proof.**
+    When NoUI and legacy disagree, we trace both calculations to the
+    statute. The one that matches the statute is correct. The other is a
+    defect---regardless of which system produced it.
+
+-   **Assumptions are explicitly marked.** Where the governing document
+    is ambiguous (rounding method, partial-year proration), the
+    assumption is documented, the test uses the assumed value, and the
+    assumption is flagged for DERP confirmation.
+
+> *Principle P6 from Layer 1: Business rules derive from governing
+> documents, not from legacy system behavior. Legacy transactions are a
+> validation oracle, not a rule source.*
+
+1.2 Test Independence
+
+Tests must be independent of the system under test in three dimensions:
+
+-   **Oracle independence:** Expected values are derived from statute,
+    not from running the system and recording its output.
+
+-   **Data independence:** Test fixtures contain complete,
+    self-describing input data. Tests do not depend on database state
+    that could be modified by other tests or processes.
+
+-   **Execution independence:** Each test can run in isolation. No test
+    depends on another test's side effects or execution order.
+
+2\. Three-Tier Test Architecture
+
+Tests are organized into three tiers that correspond to the
+architectural layers they verify. Each tier has different scope, speed,
+frequency, and failure implications.
+
+  ----------------- ----------------- ------------- --------------- ------------------
+  **Tier**          **What It Tests** **Speed       **Frequency**   **Failure Means**
+                                      Target**                      
+
+  **Unit**          Individual rule   \< 10ms per   Every build     A specific rule is
+                    calculations,     test                          implemented
+                    eligibility                                     incorrectly
+                    determinations,                                 
+                    single formulas                                 
+
+  **Integration**   Data flow across  \< 500ms per  Every build     Data
+                    service           test                          transformation or
+                    boundaries                                      API contract is
+                    (Connector →                                    broken between
+                    Intelligence →                                  layers
+                    Workspace API)                                  
+
+  **Acceptance**    Complete member   \< 5s per     Every build +   The system
+                    scenarios         case          pre-deploy      produces wrong
+                    end-to-end,                                     benefits for a
+                    matching demo                                   real scenario.
+                    case hand                                       This is a Critical
+                    calculations to                                 defect.
+                    the penny                                       
+  ----------------- ----------------- ------------- --------------- ------------------
+
+2.1 Unit Tests: Rule-Level Verification
+
+Unit tests verify that each of the 52 business rules in the inventory
+produces correct outputs for known inputs. These tests are generated
+from the YAML rule definitions and their inline test cases.
+
+Test Case Pattern: Four Required Cases Per Rule
+
+Every rule must have at minimum four test cases, following the
+established pattern:
+
+  -------------- --------------------------- ------------------------------
+  **Case Type**  **Purpose**                 **Example (Rule of 75)**
+
+  **Happy Path** The normal case that        Martinez: age 63 + service
+                 clearly exercises the rule. 28.75 = 91.75 ≥ 75, min age 55
+                 Uses a demo case member if  ✓
+                 applicable.                 
+
+  **Boundary**   Exactly at the threshold.   Age 55 + service 20.00 =
+                 Tests whether the           exactly 75.00. Should pass.
+                 comparison is ≥ vs \>.      
+
+  **Just Below** One unit below threshold.   Age 55 + service 19.99 =
+                 Confirms the boundary is    74.99. Should fail.
+                 enforced.                   
+
+  **Negative**   A case where the rule       Kim: age 55 + earned service
+                 should clearly not fire.    18.17 = 73.17. Does not meet.
+  -------------- --------------------------- ------------------------------
+
+Beyond the four required cases, additional cases are generated for:
+
+-   **Cross-rule interactions:** Rules that commonly co-occur. For
+    example, testing that purchased service is included in benefit
+    calculation (RULE-BENEFIT-T2) but excluded from Rule of 75
+    (RULE-RULE-OF-75) in the same member scenario.
+
+-   **Temporal boundaries:** For effective-dated rules, verify correct
+    rule version applies before and after the effective date. Example:
+    member hired on September 1, 2004 exactly---which tier?
+
+-   **Assumption sensitivity:** For each assumption in the register
+    (Q-CALC-01 through Q-CALC-04), generate a case that maximizes the
+    impact of the assumption, so if the assumption is later corrected
+    the test immediately reveals the difference.
+
+Unit Test Structure (Go)
+
+Unit tests follow a consistent structure that makes the oracle explicit:
+
+> func TestRuleOf75_Martinez(t \*testing.T) {
+>
+> // Oracle: Hand calculation from case1-robert-martinez-calculation.md
+>
+> // Source: RMC §18-408(a)(1) --- Rule of 75
+>
+> input := RuleOf75Input{Tier: 1, Age: 63, EarnedService: 28.75}
+>
+> result := EvaluateRuleOf75(input)
+>
+> assert.True(t, result.Met)
+>
+> assert.Equal(t, 91.75, result.Sum)
+>
+> assert.True(t, result.MinAgeMet)
+>
+> }
+
+Key requirements for every unit test:
+
+-   Comment block identifying the oracle source (hand calculation file
+    or RMC section)
+
+-   Complete input construction---no hidden state, no database
+    dependency
+
+-   Assertion on every output field, not just the primary result
+
+-   For monetary values: assertion to the penny (\$0.01 tolerance, no
+    more)
+
+2.2 Integration Tests: Boundary Verification
+
+Integration tests verify that data flows correctly across service
+boundaries. In NoUI's four-layer architecture, the critical boundaries
+are:
+
+  ------------------ -------------------------- --------------------------
+  **Boundary**       **What Can Go Wrong**      **Test Approach**
+
+  **Database →       SQL query returns wrong    Seed known data, query
+  Connector**        columns, type coercion     through Connector API,
+                     loses precision, NULL      verify response matches
+                     handling differs from      seeded values exactly
+                     expectation                
+
+  **Connector →      Domain model               Call Intelligence with
+  Intelligence**     transformation drops       Connector output for demo
+                     fields, date format        case member, verify rules
+                     mismatch, service credit   engine receives correct
+                     calculation disagrees with inputs
+                     raw data                   
+
+  **Intelligence →   Calculation result         Full API chain for demo
+  Workspace**        serialized incorrectly,    case, verify workspace
+                     workspace composition      response contains correct
+                     receives wrong             components and values
+                     tier/eligibility           
+                     determination              
+
+  **Workspace →      JSON parsing error,        Render workspace for demo
+  Frontend**         component renders wrong    case, verify displayed
+                     field, display rounding    values match API response
+                     differs from calculation   
+                     rounding                   
+  ------------------ -------------------------- --------------------------
+
+Integration tests run against live services (Connector, Intelligence,
+Workspace) with a seeded test database. The test database contains the
+four demo case members plus synthetic edge cases. Integration tests
+begin on Days 4--5 of the build plan and run continuously from that
+point forward.
+
+2.3 Acceptance Tests: Demo Case Canaries
+
+The four demo cases are the ultimate acceptance criterion. Each case
+represents a complete member retirement scenario with hand-calculated
+expected values verified to the penny. These are not sample tests---they
+are the proof that the system works.
+
+  ---------- ------------ ----------- ------------------ ------------------------------------------
+  **Case**   **Member**   **Tier**    **Key Verification **Oracle Source**
+                                      Points**           
+
+  **1**      Robert       Tier 1,     AMS with leave     case1-robert-martinez-calculation.md,
+             Martinez     Rule of 75  payout, 2.0%       case1-robert-martinez-test-fixture.json
+                                      multiplier, 75%    
+                                      J&S factor,        
+                                      lump-sum death     
+                                      benefit \$5,000    
+
+  **2**      Jennifer Kim Tier 2,     Purchased service  case2-jennifer-kim-calculation.md,
+                          Early (30%) excluded from Rule case2-jennifer-kim-test-fixture.json
+                                      of 75, 3% × 10 yr  
+                                      reduction,         
+                                      unreduced          
+                                      \$2,332.96,        
+                                      reduced \$1,633.07 
+
+  **3**      David        Tier 3,     60-month AMS       case3-david-washington-calculation.md,
+             Washington   Early (12%) window, Rule of 85 case3-david-washington-test-fixture.json
+                                      failure, 6% × 2 yr 
+                                      reduction, death   
+                                      benefit \$4,000    
+
+  **4**      Martinez +   Tier 1,     Marital fraction   case4-robert-dro-calculation.md,
+             DRO          Rule of 75  18.25/28.75 =      case4-robert-dro-test-fixture.json
+                                      63.48%, 40% award, 
+                                      DRO impact on all  
+                                      payment options    
+  ---------- ------------ ----------- ------------------ ------------------------------------------
+
+Acceptance tests are the canary in the coal mine. If a demo case fails,
+it means a fundamental calculation or rule is wrong. A demo case failure
+is always a Critical-severity defect per the Layer 1 taxonomy, because
+the expected values are hand-calculated from statute. There is no
+ambiguity in what the right answer is.
+
+> *Acceptance test tolerance: \$0.00. Every monetary value must match
+> the hand calculation exactly. If there is a penny difference, it is
+> investigated---it may reveal a rounding strategy discrepancy that
+> affects thousands of members at scale.*
+
+3\. Test Oracle Management
+
+The test oracle---the source of expected values---is the most critical
+component of the test framework. If the oracle is wrong, every test that
+passes is a false assurance. Oracle management ensures the expected
+values are correct, traceable, and maintained as rules evolve.
+
+3.1 Oracle Sources
+
+  ---------------- --------------------------- ---------------------------
+  **Oracle Type**  **Used For**                **Maintenance Trigger**
+
+  **Hand           Demo case acceptance tests. Rule change affecting any
+  Calculations**   Complete step-by-step       demo case member's
+                   derivation documented in    scenario. Recalculate from
+                   case\*-calculation.md       scratch, do not patch.
+                   files. Every intermediate   
+                   value shown.                
+
+  **YAML Inline    Unit tests for individual   Rule definition change.
+  Cases**          rules. Expected values      Expected values regenerated
+                   derived from rule's formula as part of the Rule Change
+                   and governing document.     SDLC (Layer 1, Stage 3).
+                   Four required patterns per  
+                   rule.                       
+
+  **Test Fixtures  Integration and acceptance  Any change to the data
+  (JSON)**         tests. Structured           model, calculation formula,
+                   input/output pairs with     or rule that affects the
+                   complete member data and    fixture's expected outputs.
+                   all expected outputs.       
+
+  **Statutory      Early retirement reduction  Legislative change to the
+  Tables**         lookup tables (RMC          Revised Municipal Code.
+                   §18-409(b)). Implemented as These change very
+                   lookup, not formula, per    infrequently.
+                   CRITICAL-001 resolution.    
+  ---------------- --------------------------- ---------------------------
+
+3.2 Oracle Integrity Rules
+
+The following rules protect oracle integrity:
+
+1.  **Never record-then-assert.** Expected values are never generated by
+    running the system and recording its output. This circular approach
+    cannot detect defects.
+
+2.  **Never copy from legacy.** Legacy system outputs are comparison
+    data, not oracle data. A test that passes because it matches a
+    legacy defect is worse than a missing test.
+
+3.  **Recalculate, don't patch.** When a rule changes, the hand
+    calculation is redone from scratch for every affected case. Patching
+    a single intermediate value risks propagation errors.
+
+4.  **Two-person verification for new oracles.** Any new hand
+    calculation or expected value should be independently verified. At
+    minimum, AI generates and human verifies, or vice versa.
+
+5.  **Assumption traceability.** Every expected value that depends on an
+    assumption (Q-CALC-01 through Q-CALC-04) is tagged with the
+    assumption reference. When the assumption is confirmed or corrected
+    by DERP, all dependent expected values are recalculated.
+
+3.3 Test Fixture Schema
+
+Test fixtures use a structured JSON format that contains complete
+inputs, all expected outputs, and oracle metadata:
+
+> {
+>
+> \"case_id\": \"case1-robert-martinez\",
+>
+> \"oracle\": {
+>
+> \"source\": \"case1-robert-martinez-calculation.md\",
+>
+> \"verified_by\": \"Jeff (Technical Director)\",
+>
+> \"verified_date\": \"2026-02-21\",
+>
+> \"assumptions\": \[\"Q-CALC-01\", \"Q-CALC-04\"\]
+>
+> },
+>
+> \"inputs\": {
+>
+> \"member\": { \... complete member profile \... },
+>
+> \"employment\": \[ \... full history \... \],
+>
+> \"salary\": \[ \... all records \... \]
+>
+> },
+>
+> \"expected\": {
+>
+> \"tier\": 1,
+>
+> \"eligibility\": { \"type\": \"rule_of_75\", \... },
+>
+> \"ams\": { \"window_months\": 36, \"amount\": \... },
+>
+> \"benefit\": { \"unreduced\": \..., \"reduced\": \... },
+>
+> \"payment_options\": { \... all four \... },
+>
+> \"death_benefit\": { \"lump_sum\": 5000.00, \... }
+>
+> }
+>
+> }
+
+4\. Coverage Model
+
+Test coverage in NoUI is measured across four dimensions. Meeting
+percentage targets is necessary but not sufficient---coverage quality
+matters as much as quantity.
+
+4.1 Rule Coverage
+
+Every rule in the business rules inventory must have corresponding
+tests. Coverage is tracked at the rule level, not the code line level,
+because rule coverage directly maps to fiduciary completeness.
+
+  ------------------ -------------- ------------------ --------------------
+  **Coverage         **Target**     **Measurement**    **Gap Action**
+  Dimension**                                          
+
+  **Rule inventory   **100%**       52/52 rules with ≥ Any untested rule is
+  coverage**                        4 test cases each  a Critical finding
+                                                       in rule completeness
+                                                       audit
+
+  **Boundary         **100%**       Every rule with a  Missing boundary
+  coverage**                        numeric threshold  test is
+                                    has boundary +     High-severity gap
+                                    just-below tests   
+
+  **Cross-rule       All known      Documented         Undocumented
+  coverage**         interactions   interaction matrix interaction
+                                    (Section 4.2)      discovered = new
+                                    fully exercised    test + review of
+                                                       interaction matrix
+
+  **Tier coverage**  **100%**       Every              Tier gap is
+                                    tier-specific rule High-severity
+                                    tested in each     because it affects
+                                    applicable tier    an entire member
+                                                       population
+
+  **Demo case        **4/4 cases**  All four           Any demo case
+  coverage**                        acceptance tests   failure = immediate
+                                    passing on every   P0 STOP per Layer 1
+                                    build              priority matrix
+
+  **Assumption       All 4          Each Q-CALC        Unexercised
+  sensitivity**      assumptions    assumption has a   assumption = risk of
+                                    maximizing test    silent error when
+                                    case               assumption is
+                                                       corrected
+  ------------------ -------------- ------------------ --------------------
+
+4.2 Cross-Rule Interaction Matrix
+
+Certain rules interact in ways that can produce unexpected results. The
+interaction matrix identifies these combinations and ensures each is
+tested. The following are the known high-risk interactions for the DERP
+Service Retirement process:
+
+  ------------------------ --------------------- ------------------- ------------------
+  **Rule A**               **Rule B**            **Interaction       **Demo Case**
+                                                 Risk**              
+
+  RULE-SVC-PURCHASED       RULE-RULE-OF-75       Purchased service   Case 2 (Kim)
+                                                 excluded from       
+                                                 eligibility sum but 
+                                                 included in benefit 
+                                                 amount              
+
+  RULE-LEAVE-PAYOUT        RULE-AMS-CALC         Leave payout        Case 1 (Martinez)
+                                                 inflates final      
+                                                 month salary,       
+                                                 shifting AMS window 
+
+  RULE-DRO-MARITAL-SHARE   RULE-JS-75            DRO applied after   Case 4 (Martinez
+                                                 payment option      DRO)
+                                                 reduction; sequence 
+                                                 matters             
+
+  RULE-EARLY-REDUCE-T3     RULE-DEATH-EARLY-T3   Both use years      Case 3
+                                                 under 65 but with   (Washington)
+                                                 different per-year  
+                                                 amounts (\$500 vs   
+                                                 6%)                 
+
+  RULE-AMS-WINDOW          RULE-FURLOUGH         Furlough days       (Synthetic edge
+                                                 within AMS window   case)
+                                                 can depress         
+                                                 average; purchase   
+                                                 negates impact      
+
+  RULE-TIER-1/2/3          RULE-EARLY-RET-\*     Tier determination  Cases 2 + 3
+                                                 drives which early  together
+                                                 retirement rule     
+                                                 applies (different  
+                                                 ages, different     
+                                                 reduction rates)    
+  ------------------------ --------------------- ------------------- ------------------
+
+5\. Test Execution Pipeline
+
+Tests execute at three cadences, each serving a different detection
+purpose:
+
+5.1 Per-Build Execution (Continuous)
+
+Every code change triggers the full test suite. The pipeline stages
+execute in order; a failure at any stage halts progression:
+
+  -------- --------------- ------------------ ------------- -------------------
+  **\#**   **Stage**       **Tests Run**      **Pass        **On Failure**
+                                              Criteria**    
+
+  **1**    Compile + Lint  Go vet,            Zero errors,  Build blocked. Fix
+                           staticcheck,       zero warnings immediately.
+                           TypeScript strict                
+                           mode                             
+
+  **2**    Unit Tests      All rule-level     100% pass     Build blocked.
+                           tests across 8                   Specific rule
+                           categories (\~208+               failure identified.
+                           tests for 52 rules               Classified per
+                           × 4 cases)                       Layer 1 taxonomy.
+
+  **3**    Integration     API boundary tests 100% pass     Build blocked.
+           Tests           across all four                  Service boundary
+                           architectural                    issue classified as
+                           layers                           Integration Defect.
+
+  **4**    Acceptance      Four demo cases    4/4 pass,     P0 STOP. Critical
+           Tests           end-to-end         \$0.00        defect filed. All
+                                              tolerance     affected case types
+                                                            blocked.
+
+  **5**    Coverage Report Rule coverage      No regression Warning. Coverage
+                           analysis, boundary in coverage   gap logged as
+                           coverage check,                  Medium defect. Does
+                           interaction matrix               not block build.
+                           verification                     
+  -------- --------------- ------------------ ------------- -------------------
+
+5.2 Pre-Deployment Execution (Gate)
+
+Before any deployment to staging or production, an enhanced test run
+executes that goes beyond the per-build suite:
+
+-   **Full regression:** Every test in the repository, not just those
+    affected by the change. This catches unexpected side effects from
+    code changes that appear unrelated.
+
+-   **Data quality scan:** The Data Quality Engine runs its full suite
+    against the target database, verifying no data issues have emerged
+    since the last scan.
+
+-   **Assumption verification:** All four Q-CALC assumption-sensitive
+    tests run, and their results are logged with the assumption status
+    (CONFIRMED vs ASSUMED) so reviewers can assess residual risk.
+
+-   **Performance baseline:** Each acceptance test is timed. Any test
+    that exceeds 2× its historical average triggers a performance
+    investigation.
+
+5.3 Periodic Execution (Scheduled)
+
+On a defined schedule (initially weekly, adjustable based on operational
+tempo):
+
+-   **Historical comparison batch:** A stratified sample of legacy
+    transactions is processed through NoUI and compared. Every
+    difference is categorized per the Layer 1 taxonomy.
+
+-   **Rule completeness audit:** The RMC section index is
+    cross-referenced against the rules inventory. Any un-implemented
+    provision is flagged.
+
+-   **Synthetic stress tests:** Large-volume test runs (all 10,000+
+    synthetic members) to detect edge cases not covered by the four demo
+    cases.
+
+6\. Test Failure Handling
+
+Every test failure is a defect. It is never an inconvenience to be
+worked around, never a false positive to be ignored, and never an
+auto-resolution candidate. This is mandated by ADR-004: test failures
+are defects to investigate, not auto-resolve.
+
+6.1 Failure Classification
+
+When a test fails, the failure is immediately classified using the
+unified taxonomy from Layer 1:
+
+  ------------------ -------------------------- --------------------------
+  **Failure Type**   **Diagnosis**              **Action**
+
+  **Test is correct, Expected value traces to   Fix the code. Defect
+  code is wrong**    statute. Actual value does enters the prioritized
+                     not. This is a Calculation backlog per Layer 1
+                     Defect or Rule             severity/scope matrix.
+                     Interpretation Defect.     
+
+  **Code is correct, Code output traces to      Correct the oracle.
+  test is wrong**    statute correctly.         Recalculate from scratch
+                     Expected value in test has (not patch). Two-person
+                     an error. This is an       verification on the new
+                     Oracle Defect.             expected value.
+
+  **Both are wrong** Neither output matches     Return to Layer 1 Stage 2
+                     statute. This typically    (Rule Derivation).
+                     means a Rule               Re-derive from governing
+                     Interpretation Defect that document. Both code and
+                     infected both the          oracle rebuilt.
+                     implementation and the     
+                     test oracle.               
+
+  **Data is wrong**  Test fixture contains      Correct the fixture.
+                     incorrect input data       Verify no other fixtures
+                     (wrong salary record,      share the same data error.
+                     missing employment         
+                     period). Code and oracle   
+                     may both be correct.       
+
+  **Infrastructure   Test failed due to service Retry. If persistent,
+  failure**          unavailability, timeout,   investigate
+                     or environment issue. Not  infrastructure. Do not
+                     a logic defect.            suppress the test.
+  ------------------ -------------------------- --------------------------
+
+> *The diagnosis "code is correct, test is wrong" requires extra
+> scrutiny. It is the most common rationalization for suppressing
+> legitimate defects. Require statutory citation proving the code's
+> output is correct before modifying any oracle.*
+
+6.2 Failure Report Format
+
+Every test failure generates a structured report that feeds directly
+into the Layer 3 dashboard and Layer 4 backlog:
+
+  --------------------- -------------------------------------------------
+  **Field**             **Content**
+
+  **Test ID**           Unique identifier linking to rule ID (e.g.,
+                        RULE-BENEFIT-T1.happy_path)
+
+  **Rule Reference**    Business rules inventory ID and RMC section
+
+  **Test Tier**         Unit / Integration / Acceptance
+
+  **Input Summary**     Key input values that drove the test
+
+  **Expected Value**    Oracle value with source citation
+
+  **Actual Value**      System output
+
+  **Variance**          Difference (absolute and percentage for monetary
+                        values)
+
+  **Failure             Per Section 6.1 taxonomy
+  Classification**      
+
+  **Defect Category**   Per Layer 1 unified taxonomy (Calculation, Rule
+                        Interpretation, etc.)
+
+  **Severity**          Per Layer 1 severity classification
+
+  **Member Impact       Plan-Wide / Cohort / Individual
+  Scope**               
+
+  **Derived Priority**  Per Layer 1 priority matrix (P0--P4)
+
+  **Affected Demo       Which of the four demo cases exercise this same
+  Cases**               rule
+
+  **Recommended         Fix code / Correct oracle / Escalate to rule
+  Action**              review / Investigate data
+  --------------------- -------------------------------------------------
+
+7\. AI-Accelerated Test Generation
+
+AI plays a specific, bounded role in the test framework: generating
+draft test cases from certified rule definitions. AI does not determine
+what is correct---it proposes tests that humans verify. This aligns with
+ADR-002 (rules governance SDLC) and ADR-003 (AI learns orchestration,
+not rules).
+
+7.1 What AI Generates
+
+-   **Test case templates** from YAML rule definitions: given a rule's
+    conditions, formula, and tier applicability, AI proposes the four
+    required cases plus additional edge cases.
+
+-   **Boundary identification:** AI analyzes rule conditions to find all
+    numeric thresholds and generates boundary/just-below pairs for each.
+
+-   **Cross-rule scenarios:** AI reads the interaction matrix and
+    generates composite test cases that exercise multiple interacting
+    rules simultaneously.
+
+-   **Regression scope recommendations:** When a rule changes, AI
+    identifies which other rules depend on the changed rule and
+    recommends which test suites to include in regression.
+
+7.2 What AI Does Not Do
+
+-   **AI does not calculate expected values.** Expected values come from
+    hand calculations or statutory tables.
+
+-   **AI does not decide if a test passes.** Pass/fail is a
+    deterministic comparison against the oracle.
+
+-   **AI does not suppress or modify failing tests.** This would violate
+    ADR-004.
+
+-   **AI does not certify test cases.** AI drafts; humans certify. Same
+    as rule governance.
+
+7.3 Test Regeneration on Rule Change
+
+When a rule definition is updated through the governed SDLC:
+
+6.  **AI reads the new certified rule definition** and generates an
+    updated test suite proposal.
+
+7.  **The proposal includes:** new test cases, modified test cases (with
+    diff), deprecated test cases (no longer applicable), and unchanged
+    test cases.
+
+8.  **A human reviews the proposal** and provides or verifies expected
+    values for all new and modified cases.
+
+9.  **The updated test suite executes** against both the old and new
+    rule versions to verify temporal correctness.
+
+10. **Results are packaged** for human review as part of the complete
+    change package (Layer 1, Stage 5).
+
+> *AI generates tests; humans verify oracles; machines execute; humans
+> judge failures. This separation of concerns ensures no single point
+> can introduce and mask a defect simultaneously.*
+
+8\. Metrics and Reporting
+
+The test framework produces quantitative metrics that feed the Layer 3
+Defect Monitoring Dashboard. These metrics serve two purposes:
+operational health (is the system correct right now?) and trend analysis
+(is quality improving or degrading over time?).
+
+8.1 Operational Metrics (Real-Time)
+
+  ------------------ -------------------------- --------------------------
+  **Metric**         **Definition**             **Healthy Range**
+
+  **Build pass       Percentage of builds where 100% is target. \< 95%
+  rate**             all stages pass (compile   triggers process review.
+                     through acceptance)        
+
+  **Demo case        4/4 green, or              4/4 always. Any red = P0.
+  status**           identification of which    
+                     case(s) are red            
+
+  **Test count by    Total tests in unit,       Monotonically increasing.
+  tier**             integration, acceptance    Decreases require
+                     tiers                      justification.
+
+  **Rule coverage**  Rules with ≥ 4 test cases  52/52 (100%). Any gap =
+                     / total rules              Critical finding.
+
+  **Open test        Count of known test        0 is target. Any \> 0 must
+  failures**         failures not yet resolved  be in the prioritized
+                                                backlog with assigned SLA.
+  ------------------ -------------------------- --------------------------
+
+8.2 Trend Metrics (Weekly)
+
+  ------------------ -------------------------- --------------------------
+  **Metric**         **Definition**             **What It Reveals**
+
+  **Defect injection New test failures per      Rising rate signals design
+  rate**             build, averaged over the   review gaps (Layer 1
+                     week                       feedback).
+
+  **Defect escape    Defects found by           Rising rate signals unit
+  rate**             integration/acceptance     test coverage gaps or
+                     tests that unit tests      oracle quality issues.
+                     should have caught         
+
+  **Mean time to     Average time from test     Increasing MTTR signals
+  resolution**       failure to green build, by backlog congestion or
+                     severity                   growing system complexity.
+
+  **Historical       Percentage of legacy       Should converge toward
+  comparison delta** transactions where NoUI    100% (for NoUI-correct
+                     and legacy agree           outcomes). Divergence
+                                                reveals new defect
+                                                categories.
+
+  **Oracle           Number of times test       High rate signals oracle
+  correction rate**  oracles (expected values)  quality problems. Review
+                     were corrected, not the    hand calculation process.
+                     code                       
+  ------------------ -------------------------- --------------------------
+
+9\. Framework Governance
+
+9.1 Relationship to Other Layers
+
+  ------------------------ ----------------------------------------------
+  **Layer**                **Interface with This Framework**
+
+  **Layer 1: Prevention**  Feeds test case requirements via the Rule
+                           Change SDLC. Design review checklists require
+                           test plan before implementation begins. CIA
+                           identifies regression scope.
+
+  **Layer 3: Dashboard**   Consumes test execution results, coverage
+                           metrics, and failure reports. Displays
+                           real-time build status and trend analysis.
+
+  **Layer 4: Resolution**  Receives classified defects from failure
+                           handling. Provides resolution status back to
+                           re-run verification.
+
+  **Layer 5: Taxonomy**    Supplies the classification vocabulary used in
+                           failure reports. Receives new defect category
+                           proposals when failures don't fit existing
+                           categories.
+  ------------------------ ----------------------------------------------
+
+9.2 Document Series
+
+1.  **Prevention & Design Review Framework (Layer 1)** --- completed
+
+2.  **Verification & Test Execution Framework (Layer 2)** --- this
+    document
+
+3.  **Defect Monitoring Dashboard Specification (Layer 3)** --- next
+
+4.  **Defect Resolution & Prioritized Backlog Process (Layer 4)**
+
+5.  **Unified Defect Taxonomy & Metrics (Layer 5)**

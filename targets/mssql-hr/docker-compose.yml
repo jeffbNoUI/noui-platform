@@ -1,0 +1,22 @@
+# MSSQL HR target — validates connector MSSQL adapters
+# Uses Azure SQL Edge for ARM64/aarch64 compatibility (Docker Desktop on Apple Silicon / ARM WSL2)
+# Port 1434 to avoid conflicts with any local SQL Server (default 1433)
+services:
+  db:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "NoUI_Lab2026!"
+    ports:
+      - "1434:1433"
+    volumes:
+      - mssqldata:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import socket; s=socket.socket(); s.settimeout(3); s.connect(('localhost',1433)); s.close()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  mssqldata:

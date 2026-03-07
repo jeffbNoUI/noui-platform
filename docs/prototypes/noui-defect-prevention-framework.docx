@@ -1,0 +1,699 @@
+NoUI Platform
+
+**Defect Prevention &**
+
+**Design Review Framework**
+
+Layer 1 of 5: Defect Management System
+
+DERP Proof of Concept
+
+Version 1.0 --- February 2026
+
+Document Status: Draft for Review
+
+1\. Purpose
+
+This framework defines how NoUI prevents defects before they enter the
+codebase, the test suite, or production. In pension administration, a
+defect that reaches a member's benefit payment is not a software
+bug---it is a fiduciary breach, a legal exposure, and a direct financial
+harm to a retiree or their survivors. The cost of finding and fixing
+defects escalates dramatically at each stage: a rule misinterpretation
+caught during design review costs minutes to correct; the same error
+discovered during historical comparison costs hours; discovered after a
+benefit is paid, it costs the trust fund real money and erodes the
+board's confidence in the system.
+
+Prevention is therefore not an optional quality practice---it is the
+primary defect management strategy. The downstream layers (verification,
+execution, monitoring, resolution) exist as safety nets, not as the
+primary mechanism.
+
+1.1 Governing Principles
+
+This framework operates under six principles, each traceable to an
+existing Architecture Decision Record or project governance document:
+
+  --------------- ------------------------------- -------------------------
+  **Principle**   **Statement**                   **Authority**
+
+  **P1**          AI does not execute business    ADR-001, ADR-003
+                  rules. All benefit calculations 
+                  are deterministic and legally   
+                  defensible.                     
+
+  **P2**          All rule changes follow a full  ADR-002
+                  SDLC with human approval gates. 
+                  No rule reaches production      
+                  without human certification.    
+
+  **P3**          Every output is presented for   ADR-006
+                  human verification (Phase 1     
+                  Transparent). The system shows  
+                  its work, always.               
+
+  **P4**          Data quality findings require   ADR-005
+                  human resolution. No            
+                  auto-correction of data, ever.  
+
+  **P5**          Test failures are defects to    ADR-004
+                  investigate, never              
+                  auto-resolve. The system        
+                  prepares change packages for    
+                  human review.                   
+
+  **P6**          Business rules derive from      Architecture Reference,
+                  governing documents (statute),  Progressive Migration
+                  not from legacy system          
+                  behavior. Legacy transactions   
+                  are a validation oracle, not a  
+                  rule source.                    
+  --------------- ------------------------------- -------------------------
+
+2\. Unified Defect Taxonomy
+
+Every defect---whether discovered by automated testing, data quality
+scanning, manual QA, historical comparison, or user report---is
+classified using a single taxonomy. This ensures consistent language
+across the dashboard, backlog, and all resolution workflows.
+
+2.1 Defect Categories
+
+Defects are categorized by their origin, which determines the resolution
+path:
+
+  ------------------ --------------------------- ------------------------------
+  **Category**       **Definition**              **Resolution Path**
+
+  **Calculation      NoUI's calculated result    Fix in NoUI rules engine or
+  Defect**           does not match what the     calculation code. Retest. Full
+                     governing documents         regression.
+                     prescribe.                  
+
+  **Rule             The rule was implemented as Escalate to rule review.
+  Interpretation     designed, but the design    Correct interpretation.
+  Defect**           misinterprets the governing Re-derive rule. Full SDLC.
+                     document.                   
+
+  **Legacy Defect**  NoUI is correct per         Document finding. Report to
+                     statute; legacy system      agency as a value-add
+                     produces a different        discovery.
+                     result.                     
+
+  **Data Quality     Source data is              Surface to agency. Proposed
+  Defect**           inconsistent, erroneous, or correction with evidence.
+                     missing, causing incorrect  Await human approval
+                     outputs.                    (ADR-005).
+
+  **Ambiguous        Governing documents are     Escalate for policy
+  Interpretation**   unclear; multiple           clarification from plan
+                     interpretations are         counsel or board.
+                     defensible.                 
+
+  **UX/Composition   Workspace shows wrong       Fix in workspace composition
+  Defect**           components, wrong data, or  rules (Tier 1/2) or AI prompts
+                     misleading presentation for (Tier 3).
+                     a given context.            
+
+  **Integration      Data flows incorrectly      Fix in the affected service
+  Defect**           between layers (Connector → boundary. Integration test
+                     Intelligence → Workspace).  coverage gap.
+
+  **Rounding         Minor difference due to     Document if within tolerance
+  Variance**         rounding approach between   (±\$0.01). Investigate if
+                     systems.                    outside tolerance.
+  ------------------ --------------------------- ------------------------------
+
+2.2 Severity Classification
+
+Severity is assessed on two independent axes: technical severity (how
+broken is it?) and member impact scope (how many people does it
+affect?). The combination drives priority.
+
+  -------------- ------------------------- ----------------- -----------------
+  **Severity**   **Definition**            **Example**       **Response SLA**
+
+  **Critical**   Active benefit amount is  Tier 1 multiplier Immediate stop.
+                 wrong, or a determination coded as 1.5%     No further
+                 (eligibility, payment     instead of 2.0%   processing until
+                 option) is incorrect for                    resolved.
+                 a member currently being                    
+                 processed.                                  
+
+  **High**       Defect would produce      Rule of 85        Fix within 24
+                 wrong results for future  minimum age check hours. Block
+                 cases but has not yet     missing for Tier  affected case
+                 affected a live benefit.  3 early           types.
+                                           retirement        
+
+  **Medium**     Institutional risk:       Workspace shows   Fix within
+                 incorrect information     leave payout      current sprint.
+                 displayed, audit trail    panel for Tier 3  Document
+                 gaps, or compliance       members           workaround.
+                 concerns that don't       (irrelevant but   
+                 directly affect benefit   not harmful)      
+                 amounts.                                    
+
+  **Low**        Cosmetic, minor UX        Rounding display  Backlog. Fix when
+                 issues, or documentation  shows 4 decimal   capacity allows.
+                 gaps that don't affect    places instead of 
+                 accuracy or compliance.   2                 
+  -------------- ------------------------- ----------------- -----------------
+
+2.3 Member Impact Scope
+
+  ---------------- ---------------------------- ----------------------------
+  **Scope**        **Definition**               **Example**
+
+  **Plan-Wide**    Affects all members or all   Employer contribution rate
+                   members in a tier. Systemic  incorrect in all
+                   rule or calculation error.   calculations.
+
+  **Cohort**       Affects a defined subset:    Purchased service
+                   members with a specific      incorrectly included in Rule
+                   characteristic (DRO,         of 75 for Tier 2 members.
+                   purchased service, specific  
+                   hire date range).            
+
+  **Individual**   Affects a single member due  One member's salary record
+                   to data quality or edge      missing a pay period,
+                   case.                        deflating AMS.
+  ---------------- ---------------------------- ----------------------------
+
+2.4 Priority Matrix
+
+Priority is derived from the intersection of severity and scope. This
+matrix determines queue position in the defect backlog:
+
+  ----------------- ----------------- ----------------- -----------------
+  **Severity ↓ /    **Plan-Wide**     **Cohort**        **Individual**
+  Scope →**                                             
+
+  **Critical**      **P0 --- STOP**   **P0 --- STOP**   **P1 ---
+                                                        Immediate**
+
+  **High**          **P0 --- STOP**   **P1 ---          **P2 --- Urgent**
+                                      Immediate**       
+
+  **Medium**        **P1 ---          **P2 --- Urgent** **P3 ---
+                    Immediate**                         Standard**
+
+  **Low**           **P2 --- Urgent** **P3 ---          **P4 ---
+                                      Standard**        Backlog**
+  ----------------- ----------------- ----------------- -----------------
+
+> *P0 --- STOP means all processing of affected case types halts
+> immediately. No benefits are paid, no determinations are made for
+> affected members until the defect is resolved and verified. This is
+> the pension equivalent of a production outage.*
+
+3\. Change Types and Review Gates
+
+Not all changes carry equal risk. The design review process calibrates
+its rigor to the fiduciary weight of each change type. Every change to
+the NoUI system is classified into one of five types, each with a
+defined review gate.
+
+3.1 Change Type Classification
+
+  --------------- ------------------- ------------------- --------------------
+  **Change Type** **Description**     **Review Gate**     **Fiduciary Weight**
+
+  **Rule Change** New, modified, or   Full SDLC           Maximum. Directly
+                  retired business    (ADR-002): AI       affects benefit
+                  rule. Includes      drafts → human      amounts or
+                  eligibility         reviews → tests     eligibility
+                  criteria,           generated → tests   determinations.
+                  calculation         execute → human     
+                  formulas,           certifies →         
+                  derivation rules,   controlled          
+                  validation rules.   deployment.         
+
+  **Data Model    Schema              Impact assessment   High. Can silently
+  Change**        modification, new   required. Must      corrupt calculation
+                  entity, changed     document all rules  inputs.
+                  relationship,       and calculations    
+                  migration script.   that reference      
+                                      affected fields.    
+                                      Regression test all 
+                                      affected paths.     
+
+  **Composition   Workspace layout,   Review against      Medium. Wrong
+  Change**        component           role-workspace      information
+                  visibility rules    matrix. Verify      displayed can
+                  (Tier 1/2           correct/incorrect   mislead staff
+                  conditions), panel  component inclusion decisions.
+                  ordering, field     for each affected   
+                  display.            case type.          
+
+  **Integration   API contract        Contract-first      Medium-High. Data
+  Change**        modification,       review. Both        transformation
+                  service boundary    producer and        errors at boundaries
+                  change, data flow   consumer contracts  are hard to detect.
+                  alteration between  verified.           
+                  layers.             Integration test    
+                                      update required     
+                                      before merge.       
+
+  **UX/Style      Visual design,      Standard code       Low. Unless labeling
+  Change**        accessibility,      review.             change creates
+                  labeling, help      Accessibility check misinterpretation.
+                  text,               (Section 508). No   
+                  non-functional      calculation or rule 
+                  changes.            impact verification 
+                                      needed.             
+  --------------- ------------------- ------------------- --------------------
+
+3.2 The Rule Change SDLC (Detail)
+
+Rule changes carry maximum fiduciary weight and receive the most
+rigorous review. The following stages are mandatory for every rule
+change, with no exceptions:
+
+Stage 1: Governing Document Analysis
+
+Before any implementation begins, the change is traced to its
+authorizing source. The analyst (human or AI-assisted) identifies the
+specific statute section, board policy, or actuarial provision that
+authorizes or requires the change. The output is a Change Authorization
+Record that includes:
+
+-   **Source reference:** Exact RMC section (e.g., §18-408(b)(1)) or
+    board resolution number
+
+-   **Change description:** What the governing document says, in the
+    document's own terms
+
+-   **Effective date:** When the change takes effect (critical for
+    temporal rule versioning)
+
+-   **Affected population:** Which tiers, which member cohorts,
+    estimated count
+
+-   **Cross-rule impact:** Other rules that reference or depend on the
+    changing rule
+
+> *If a proposed change cannot be traced to a governing document, it
+> does not proceed. Period. This is non-negotiable under fiduciary
+> obligations.*
+
+Stage 2: Rule Derivation & Peer Review
+
+The rule is formally derived from the governing document. AI may draft
+the initial derivation, but a human with pension domain knowledge must
+review and certify that the derivation correctly interprets the statute.
+The derivation document includes:
+
+-   The exact statutory language being implemented
+
+-   The mathematical formula or logical condition extracted from that
+    language
+
+-   Explicit identification of any assumptions or interpretive choices
+
+-   Cross-reference to any related rules that interact with this one
+
+-   For ambiguous language: two or more candidate interpretations with a
+    recommendation and rationale
+
+Stage 3: Test Case Generation & Review
+
+From the certified derivation, test cases are generated. AI generates
+draft test cases; a human reviews them for completeness. The minimum
+test case set for any rule includes:
+
+-   **Standard case:** Typical member who clearly meets/triggers the
+    rule
+
+-   **Negative case:** Member who clearly does not meet/trigger the rule
+
+-   **Boundary cases:** Exactly at threshold, one unit below, one unit
+    above
+
+-   **Cross-rule case:** Interaction with the most commonly co-occurring
+    rules
+
+-   **Temporal case:** If effective-dated, verify correct rule applies
+    before and after effective date
+
+Every test case documents its expected value with a hand calculation
+showing the derivation step by step. Test expected values are never
+copied from legacy system output (Principle P6).
+
+Stage 4: Implementation & Verification
+
+Implementation proceeds only after test cases are reviewed and approved.
+The implementation must pass all generated tests. Any test failure
+triggers investigation---the test is not modified to match the
+implementation (Principle P5). After passing, full regression runs
+against all existing rules to detect unintended side effects.
+
+Stage 5: Human Certification
+
+The complete change package is presented for final human review. The
+package includes the Change Authorization Record, the derivation
+document, all test cases with results, the regression report, and a
+before/after comparison for any affected demo cases. Only after human
+certification is the change promoted to production on its effective
+date.
+
+4\. Design Review Checklists
+
+Each change type has a specific checklist that must be completed before
+implementation begins. These checklists are the primary prevention
+mechanism---they force structured thinking about downstream consequences
+before code is written.
+
+4.1 Rule Change Checklist
+
+  -------- ---------------------------------------- -------------------------
+  **\#**   **Review Item**                          **Verified By / Date**
+
+  1        Governing document section identified    
+           and quoted                               
+
+  2        Effective date confirmed (temporal       
+           versioning impact assessed)              
+
+  3        Affected tiers and member populations    
+           enumerated                               
+
+  4        Mathematical formula or logical          
+           condition derived and documented         
+
+  5        All assumptions and interpretive choices 
+           explicitly stated                        
+
+  6        Cross-rule dependencies identified       
+           (which other rules reference this one?)  
+
+  7        Rounding strategy defined (truncate,     
+           round half-up, banker's rounding,        
+           precision)                               
+
+  8        Test cases generated: standard,          
+           negative, boundary, cross-rule, temporal 
+
+  9        Expected values hand-calculated (not     
+           from legacy system)                      
+
+  10       Demo cases re-evaluated: do any of the   
+           four cases exercise this rule?           
+
+  11       Regression scope defined: which existing 
+           test suites must pass?                   
+
+  12       Rollback plan documented: how to revert  
+           if production issue discovered           
+  -------- ---------------------------------------- -------------------------
+
+4.2 Data Model Change Checklist
+
+  -------- ---------------------------------------- -------------------------
+  **\#**   **Review Item**                          **Verified By / Date**
+
+  1        All rules that reference affected        
+           fields/entities identified               
+
+  2        All calculations that use affected       
+           fields as inputs enumerated              
+
+  3        All workspace components that display    
+           affected fields listed                   
+
+  4        Migration script reviewed: does it       
+           preserve existing data integrity?        
+
+  5        Temporal versioning: does change require 
+           effective-dated schema?                  
+
+  6        Data Connector abstraction: does API     
+           contract change? (Breaking change =      
+           major version)                           
+
+  7        Data quality rules updated: new          
+           validation rules for changed fields?     
+
+  8        Backward compatibility: can previous     
+           version of data still be processed?      
+  -------- ---------------------------------------- -------------------------
+
+4.3 Composition Change Checklist
+
+  -------- ---------------------------------------- -------------------------
+  **\#**   **Review Item**                          **Verified By / Date**
+
+  1        Component inclusion/exclusion verified   
+           against all four demo cases              
+
+  2        Role-workspace matrix consulted: does    
+           this change affect multiple roles?       
+
+  3        Negative case verified: component does   
+           NOT appear where it shouldn't            
+
+  4        Tier-specific rendering confirmed (Tier  
+           1 vs 2 vs 3 variations)                  
+
+  5        DRO/non-DRO variant tested               
+
+  6        Accessibility check: new/modified        
+           components meet Section 508              
+
+  7        Graceful degradation: workspace still    
+           functional if AI service unavailable     
+           (ADR-007)                                
+
+  8        Progressive disclosure: information      
+           hierarchy reviewed for cognitive load    
+  -------- ---------------------------------------- -------------------------
+
+4.4 Integration Change Checklist
+
+  -------- ---------------------------------------- -------------------------
+  **\#**   **Review Item**                          **Verified By / Date**
+
+  1        API contract change documented           
+           (request/response schema diff)           
+
+  2        Both producer and consumer updated and   
+           tested against new contract              
+
+  3        Data transformation at boundary          
+           verified: no silent type coercion or     
+           precision loss                           
+
+  4        Error handling: what happens when the    
+           other service is unavailable?            
+
+  5        Degradation level impact assessed per    
+           ADR-007 hierarchy                        
+
+  6        Structured logging updated: can the full 
+           request/response chain be traced?        
+
+  7        Performance: does the change add latency 
+           that affects user experience?            
+  -------- ---------------------------------------- -------------------------
+
+5\. Change Impact Assessment
+
+Every change that passes the design review checklist produces a Change
+Impact Assessment (CIA) before implementation begins. The CIA is the
+bridge between "we reviewed the design" and "we understand the blast
+radius." It answers one question: if this change has an undetected
+defect, what is the worst-case member impact?
+
+5.1 CIA Template
+
+  --------------------- -------------------------------------------------
+  **Field**             **Content**
+
+  **Change ID**         Auto-generated unique identifier (e.g.,
+                        CHG-2026-0042)
+
+  **Change Type**       Rule / Data Model / Composition / Integration /
+                        UX
+
+  **Requested By**      Source of the change request (statute update,
+                        board resolution, defect fix, enhancement)
+
+  **Governing Document  RMC section, board resolution, or "N/A" for
+  Ref**                 non-rule changes
+
+  **Description**       Plain-language summary of what is changing and
+                        why
+
+  **Affected Tiers**    Tier 1 / Tier 2 / Tier 3 / All
+
+  **Affected Member     Plan-Wide / Cohort (define) / Individual
+  Scope**               (identify)
+
+  **Estimated Affected  Number of members whose outputs could change
+  Count**               
+
+  **Worst-Case Impact** If this change has an undetected defect, what is
+                        the maximum financial exposure per member and in
+                        aggregate?
+
+  **Cross-Rule          List of rules that reference or are referenced by
+  Dependencies**        the changing element
+
+  **Demo Case Impact**  Which of the four demo cases (if any) exercise
+                        the changing logic?
+
+  **Test Strategy**     What tests are being added/modified? What
+                        regression scope is required?
+
+  **Rollback Plan**     How to revert this change if a problem is
+                        discovered post-deployment
+
+  **Reviewer**          Name of human who reviewed and approved the CIA
+
+  **Review Date**       Date the CIA was approved
+  --------------------- -------------------------------------------------
+
+> *The CIA is a living document. If implementation reveals that the
+> blast radius is larger than originally assessed, the CIA is updated
+> and the review gate re-engaged before proceeding.*
+
+6\. Proactive Defect Detection
+
+Prevention is not only about reviewing proposed changes. It also means
+actively looking for latent defects that may already exist in the
+system, in the data, or in the rules themselves. The following proactive
+mechanisms run continuously or on a defined schedule:
+
+6.1 Data Quality Engine (Continuous)
+
+The Data Quality Engine runs four categories of checks against the
+database, surfacing findings for human review:
+
+-   **Structural checks:** Valid formats, reasonable ranges, date logic,
+    field constraints. Example: hire date after retirement date.
+
+-   **Consistency checks:** Cross-table validation, status/date
+    alignment, balance reconciliation. Example: member status is
+    "Active" but last contribution is 3+ years ago.
+
+-   **Calculation verification:** Re-run benefit calculations for
+    retired members and compare to stored payment amounts. Any
+    discrepancy is a finding.
+
+-   **Pattern detection:** Anomalous clusters, impossible values,
+    systematic errors. Example: all members hired on a specific date
+    have identical salary records.
+
+6.2 Historical Comparison (Periodic)
+
+As defined in the Progressive Migration Architecture, historical
+comparison samples completed legacy transactions, runs them through
+NoUI, and categorizes every difference. This is a powerful defect
+prevention tool because it surfaces rule interpretation gaps before they
+affect new cases. Each comparison cycle should target a stratified
+sample across tiers, case types, and time periods.
+
+6.3 Rule Completeness Audit (On-Demand)
+
+A systematic check that every provision in the governing documents has a
+corresponding implemented rule with test coverage. This catches "rules
+we forgot to implement"---a category of defect that no amount of testing
+will find because there is nothing to test. The audit cross-references
+the RMC section index against the rules inventory and flags gaps.
+
+6.4 Demo Case Regression (Every Build)
+
+The four demo cases (Martinez Tier 1, Kim Tier 2, Washington Tier 3,
+Martinez DRO) run automatically on every build. These are the canary in
+the coal mine---if a demo case fails, something fundamental has changed.
+Because the expected values are hand-calculated to the penny, any
+variance is immediately meaningful.
+
+7\. Controlled Deployment Process
+
+The prevention framework extends through deployment. A fix that is
+correct in the test environment but deployed incorrectly can introduce
+the very defects it was meant to resolve. Every deployment follows a
+controlled process:
+
+1.  **Test environment certification:** The fix is applied in a
+    dedicated test environment with a copy of production data (or
+    representative synthetic data). All affected test cases pass. Full
+    regression completes clean.
+
+2.  **Change package assembly:** The deployment package includes the
+    code change, the CIA, all test results, the regression report, and a
+    deployment runbook with explicit verification steps.
+
+3.  **Human approval gate:** The complete package is reviewed and
+    approved by a human with authority to release. For rule changes,
+    this is the same certifier from Stage 5 of the Rule Change SDLC.
+
+4.  **Staged deployment:** Changes deploy to a staging environment
+    first. The four demo cases run against staging. Only after staging
+    passes does the change promote to production.
+
+5.  **Post-deployment verification:** After production deployment, the
+    affected test cases run against production. Additionally, a sample
+    of real member records is spot-checked to verify the fix produces
+    correct results in the live environment.
+
+6.  **Monitoring window:** For the first 24--48 hours after deployment,
+    the Data Quality Engine runs an enhanced scan focused on the
+    affected rules/data to catch any regression that tests missed.
+
+> *At any stage, a failure means the deployment stops and the change
+> returns to the appropriate review gate. There is no "ship it and fix
+> it later" in pension administration.*
+
+8\. Framework Governance
+
+This document is itself subject to change control. Modifications to the
+defect prevention framework require review by the Technical Director and
+must be reflected in the Architecture Reference and CLAUDE.md governance
+files. The framework version is incremented with each change.
+
+8.1 Related Documents
+
+  ---------------------------------------- ----------------------------------------
+  **Document**                             **Relationship**
+
+  noui-architecture-decisions.docx         ADR-001 through ADR-006: governing
+                                           principles referenced throughout this
+                                           framework
+
+  ADR-007-Graceful-Degradation.docx        Degradation hierarchy referenced in
+                                           integration change reviews
+
+  progressive-migration-architecture.md    Historical comparison methodology and
+                                           difference categories
+
+  derp-business-rules-inventory.docx       52 rules across 8 categories; rule
+                                           completeness audit baseline
+
+  noui-roles-workspace-architecture.docx   Role-workspace matrix for composition
+                                           change reviews
+
+  ARCHITECTURE_REFERENCE.md                AI-accelerated change management
+                                           workflow
+  ---------------------------------------- ----------------------------------------
+
+8.2 Next Document in Series
+
+This framework (Layer 1: Prevention) is the first of five documents in
+the Defect Management System:
+
+1.  **Prevention & Design Review Framework** --- this document
+
+2.  **Verification & Test Execution Framework** --- test case
+    architecture, execution pipeline, oracle management
+
+3.  **Defect Monitoring Dashboard Specification** --- unified dashboard
+    design, data sources, alerting
+
+4.  **Defect Resolution & Prioritized Backlog Process** --- SLAs,
+    escalation paths, fix verification workflow
+
+5.  **Unified Defect Taxonomy & Metrics** --- cross-cutting taxonomy
+    (Section 2 of this doc, expanded), KPIs, reporting

@@ -1,0 +1,742 @@
+**PUBLIC PENSION ADMINISTRATION**
+
+**Domain Knowledge Research**
+
+*Comprehensive Industry Analysis for NoUI Platform Development*
+
+February 2026
+
+**Executive Summary**
+
+This document consolidates research on public pension administration in
+the United States, covering the \$4.5 trillion public pension market
+serving over 20 million public employees. The research addresses
+governance standards, technology modernization challenges, operational
+workflows, regulatory requirements, and industry trends relevant to
+building pension administration solutions.
+
+Key findings indicate that the industry faces significant technology
+modernization pressures, with many systems operating on decades-old
+infrastructure. Industry associations like NASRA, NCPERS, GFOA, and
+PRISM provide governance frameworks and best practices. The shift toward
+cloud-native platforms, AI-enabled analytics, and self-service member
+portals represents the current modernization trajectory.
+
+**1. Industry Overview**
+
+**1.1 Market Structure**
+
+The U.S. public pension market consists of state and local government
+retirement systems covering teachers, police officers, firefighters,
+municipal workers, and other public servants. Key statistics:
+
+**Total Assets:** Approximately \$4-6 trillion across all public pension
+systems
+
+**Member Population:** Over 20 million active and retired participants
+
+**Plan Types:** Approximately 85% of state/local employees participate
+in defined benefit plans
+
+**Funding Status:** Average funding ratio around 70-85%, with \$1.34
+trillion in aggregate unfunded liabilities
+
+**1.2 Key Industry Associations**
+
+**NASRA - National Association of State Retirement Administrators**
+
+Represents state and territorial public retirement systems. Provides
+resources on actuarial standards, plan design, investment practices, and
+governance. Maintains the Public Fund Survey with comprehensive data on
+public pension plans.
+
+**NCPERS - National Conference on Public Employee Retirement Systems**
+
+The largest trade association for public pensions, representing
+approximately 650 pension funds managing \$6 trillion in assets.
+Provides education, advocacy, research, and networking. Hosts annual
+conferences and offers resources including the PensionX digital
+platform.
+
+**GFOA - Government Finance Officers Association**
+
+Established best practices for pension governance, funding policies,
+investment management, and plan design. Key publications include best
+practices on sustainable funding, defined benefit plan design, and
+governance standards.
+
+**PRISM - Public Retirement Information Systems Management**
+
+IT-focused organization formed in 1988 for information technology
+managers of public pension funds. Hosts annual conferences covering
+technology modernization, cybersecurity, AI adoption, and digital
+transformation. Membership includes funds from across the US, Canada,
+and the UN Joint Staff Pension Fund.
+
+**NCTR - National Council on Teacher Retirement**
+
+Represents 68 state, territorial, and local pension systems serving over
+18 million active and retired teachers with combined assets exceeding
+\$1.8 trillion.
+
+**Public Pension Coordinating Council (PPCC)**
+
+Coalition of NASRA, NCTR, and NCPERS that establishes Public Pension
+Standards as minimum expectations for public retirement system
+management and administration. Awards Recognition Certificates for
+Administrative and Funding Standards compliance.
+
+**2. Governance and Regulatory Framework**
+
+**2.1 Fiduciary Standards**
+
+Pension board trustees and administrators have fiduciary duties
+including:
+
+**Duty of Loyalty:** Administer the plan for the exclusive benefit of
+plan members
+
+**Duty of Prudence:** Act with reasonable standards of prudence
+regardless of other government duties
+
+**Duty of Disclosure:** Maintain transparency with comprehensive
+governance manuals
+
+**2.2 GASB Accounting Standards**
+
+The Governmental Accounting Standards Board (GASB) sets accounting
+guidance for state and local government pension reporting:
+
+**GASB Statement 67**
+
+Financial Reporting for Pension Plans - requires two financial
+statements: statement of fiduciary net position and statement of changes
+in fiduciary net position. Effective for fiscal years beginning after
+June 15, 2013.
+
+**GASB Statement 68**
+
+Accounting and Financial Reporting for Pensions - requires governments
+to report their net pension liability on balance sheets. Breaks the link
+between funding and financial reporting. Effective for fiscal years
+beginning after June 15, 2014.
+
+**Key GASB Concepts**
+
+**Net Pension Liability:** The difference between total pension
+liability and plan fiduciary net position
+
+**Blended Discount Rate:** Uses expected return on investments for
+funded portion, municipal bond rate for unfunded portion
+
+**Cost-Sharing Plans:** Multiple employers pool obligations; each
+reports proportionate share
+
+**Agent Plans:** Assets segregated for each employer within a larger
+system
+
+**2.3 Actuarial Standards**
+
+Actuarial Standards of Practice (ASOPs) govern pension valuations:
+
+**ASOP 4:** Measuring Pension Obligations - includes new
+Low-Default-Risk Obligation Measure (LDROM) disclosure requirements
+
+**Valuation Frequency:** Most systems require annual actuarial
+valuations
+
+**Experience Studies:** Typically conducted every 3-5 years to review
+demographic and economic assumptions
+
+**2.4 Public Pension Standards**
+
+PPCC Recognition Award requirements include five areas of assessment:
+
+1\. Comprehensive Benefit Program - service retirement, death benefits,
+disability, vesting, COLA provisions
+
+2\. Actuarial - valuations at least every two years using accepted
+principles
+
+3\. Audit - unqualified opinion from independent audit following
+government auditing standards
+
+4\. Investments - written investment policies and fiduciary standards
+with annual performance evaluation
+
+5\. Governance - clear structure for board operations and oversight
+
+**3. Plan Design and Benefit Structure**
+
+**3.1 Defined Benefit Plan Formula**
+
+Most public pension benefits are calculated using the formula: Benefit =
+Multiplier x Final Average Salary x Years of Service
+
+**Formula Components**
+
+**Multiplier (Accrual Rate):** Typically 1.5% to 2.5% per year of
+service
+
+**Final Average Salary:** Usually highest 3-5 consecutive years of
+compensation
+
+**Service Credit:** Years and months of qualifying employment
+
+**3.2 Common Plan Provisions**
+
+**Retirement Eligibility**
+
+**Normal Retirement:** Typically age 65 with 5 years of service
+
+**Rule of 75/80/85:** Combined age plus service equals threshold (varies
+by plan)
+
+**Early Retirement:** Often age 55-60 with minimum service, subject to
+actuarial reduction
+
+**Reduction Factors:** Commonly 6% per year before normal retirement age
+
+**Vesting**
+
+Most plans require 5-10 years of service for benefit eligibility.
+Non-vested members may receive refund of employee contributions with
+interest.
+
+**Service Purchase**
+
+Many plans allow members to purchase additional service credit for
+military service, prior public employment, or other qualifying periods.
+Purchased service typically counts for benefit calculation but may be
+excluded from Rule of 75/85 eligibility.
+
+**Cost-of-Living Adjustments (COLAs)**
+
+COLAs help retirees maintain purchasing power. Approaches vary:
+automatic percentage (1-3%), CPI-linked, ad hoc board-approved, or no
+automatic adjustment.
+
+**3.3 Benefit Tiers**
+
+Many systems have implemented multiple benefit tiers based on hire date,
+typically with newer tiers having:
+
+\- Lower multipliers (e.g., 1.5% vs 2.0%)
+
+\- Longer final average salary periods (5 years vs 3 years)
+
+\- Higher retirement ages or more stringent eligibility rules
+
+\- Modified COLA provisions
+
+**3.4 Payment Options**
+
+Common annuity options at retirement:
+
+**Single Life Annuity:** Maximum benefit, ends at retiree death
+
+**Joint and Survivor:** Reduced benefit continues to named beneficiary
+(100%, 75%, 50% options)
+
+**Period Certain:** Guarantees payments for specified period
+
+**Pop-up Provision:** Benefit increases if beneficiary predeceases
+retiree
+
+**3.5 Disability Benefits**
+
+Service-connected and non-service-connected disability programs with
+varying eligibility requirements. Some plans have Original and Revised
+disability plans based on membership date. Rehabilitative services may
+be offered to help disabled members return to work.
+
+**3.6 Survivor Benefits**
+
+Death benefits for survivors of active members and retirees, including:
+
+\- Lump sum refund of contributions
+
+\- Monthly benefits for qualifying survivors (spouse, minor children)
+
+\- Continuation of joint and survivor annuity payments
+
+**4. Domestic Relations Orders**
+
+**4.1 QDRO Overview**
+
+A Qualified Domestic Relations Order (QDRO) is a court judgment that
+creates rights for an alternate payee (typically former spouse) to
+receive all or portion of a participant\'s retirement benefits.
+
+**4.2 Required QDRO Elements**
+
+\- Name and address of participant and alternate payee
+
+\- Name of each pension plan affected
+
+\- Dollar amount or percentage to be paid
+
+\- Number of payments or time period
+
+\- Compliance with plan rules (cannot require benefits not available
+under the plan)
+
+**4.3 Division Methods**
+
+**Separate Interest:** Alternate payee receives actuarially equivalent
+separate benefit
+
+**Shared Payment:** Participant and alternate payee share each payment
+
+**Marital Share:** Percentage based on service during marriage vs total
+service
+
+**4.4 Administrative Process**
+
+1\. Receive domestic relations order from court
+
+2\. Notify participant and alternate payee
+
+3\. Place hold on account during determination period
+
+4\. Review order against plan requirements
+
+5\. Determine if order is qualified
+
+6\. Notify parties of determination
+
+7\. Process benefits according to QDRO terms
+
+Note: Public plans may use different terminology (DRO vs QDRO) since
+ERISA technical requirements may not apply, but similar principles
+govern division.
+
+**5. Technology and Administration**
+
+**5.1 Legacy System Challenges**
+
+Public pension systems face significant technology challenges:
+
+**Aging Infrastructure:** Many systems running on 1980s-1990s mainframe
+technology with COBOL code
+
+**Maintenance Costs:** 70-80% of IT budgets consumed by legacy system
+maintenance
+
+**Staff Attrition:** Retiring IT staff taking institutional knowledge of
+legacy systems
+
+**Integration Difficulties:** Legacy systems lack modern APIs for
+integration
+
+**Security Vulnerabilities:** Outdated platforms lacking modern security
+features
+
+**5.2 Modernization Approaches**
+
+**Cloud Migration**
+
+Cloud-based deployments represent 60% of 2024 pension administration
+software market. Benefits include reduced infrastructure costs, improved
+scalability, and access to specialized talent. Sovereign cloud offerings
+address data localization concerns.
+
+**Incremental Modernization**
+
+**Strangler Pattern:** Gradually replace legacy components while
+maintaining system operation
+
+**Self-Contained Systems:** Modular architecture allowing independent
+deployment of features
+
+**API Layers:** Create abstraction between legacy systems and modern
+interfaces
+
+**5.3 Digital Transformation Trends**
+
+**Member Self-Service Portals**
+
+Modern portals provide 24/7 access to:
+
+\- Account balance and service credit information
+
+\- Benefit estimates and retirement calculators
+
+\- Beneficiary management
+
+\- Document upload and download (1099-R, statements)
+
+\- Address and contact information updates
+
+\- Retirement application submission
+
+**Mobile Applications**
+
+Only 7% of public pension systems currently offer mobile apps,
+representing significant opportunity. Modern apps enable secure access
+to pension information anywhere.
+
+**Employer Portals**
+
+Online employer contribution reporting with real-time validation, error
+checking, and automatic penalty calculation for late submissions.
+
+**5.4 AI Applications in Pension Administration**
+
+Emerging AI applications include:
+
+**Intelligent Triage:** Auto-classification of cases for
+straight-through processing
+
+**Predictive Analytics:** Identifying bottlenecks, training needs, and
+service issues
+
+**Conversational Assistants:** Member-facing chatbots for common
+questions
+
+**Document Intelligence:** Automated extraction from uploaded documents
+
+**Anomaly Detection:** Flagging irregularities before they affect
+payments
+
+Key constraint: AI must maintain auditability and cannot replace
+deterministic benefit calculations required for fiduciary compliance.
+
+**5.5 Pension Administration Software Market**
+
+Market reached \$4.93 billion in 2025, projected to grow to \$7.43
+billion by 2030 (8.6% CAGR). Growth drivers include regulatory pressure,
+legacy replacement, and cloud adoption. Public entities hold 43% market
+share.
+
+**6. Employer Engagement**
+
+**6.1 Employer Responsibilities**
+
+Participating employers must:
+
+\- Submit accurate and timely contribution reports
+
+\- Remit employee and employer contributions by due dates
+
+\- Maintain accurate employee records
+
+\- Report status changes (hires, terminations, salary changes)
+
+\- Provide required documentation for member benefit calculations
+
+**6.2 Contribution Reporting**
+
+Typical employer reporting requirements:
+
+**Report Frequency:** Monthly or per pay period
+
+**Submission Method:** Electronic submission through employer portal
+
+**Contents:** Employee identification, earnings, contribution amounts,
+hours worked
+
+**Validation:** Real-time error checking with immediate feedback
+
+**Penalties:** Up to 5% for late or incorrect submissions
+
+**6.3 Data Quality Requirements**
+
+Accurate employer data is critical for:
+
+\- Correct benefit calculations at retirement
+
+\- GASB 68 employer allocation reporting
+
+\- Actuarial valuations
+
+\- Census data audits
+
+**7. Operational Workflows**
+
+**7.1 Retirement Processing**
+
+Typical service retirement workflow:
+
+1\. Member requests benefit estimate
+
+2\. Member submits retirement application (often 30-90 days before
+retirement date)
+
+3\. Staff verifies service credit and salary history
+
+4\. System calculates benefit options
+
+5\. Member selects payment option and beneficiary
+
+6\. Spousal consent obtained if required
+
+7\. Final benefit calculated and verified
+
+8\. First payment processed (may include retroactive adjustment)
+
+**7.2 Member Services Functions**
+
+Common member service activities:
+
+\- Benefit estimates and retirement counseling
+
+\- Address and beneficiary updates
+
+\- Contribution inquiries
+
+\- Service purchase calculations
+
+\- Document requests (verification letters, statements)
+
+\- Death notification processing
+
+\- Survivor benefit applications
+
+**7.3 Key Staff Roles**
+
+**Executive Director:** Overall system leadership and board relations
+
+**Chief Investment Officer:** Investment strategy and portfolio
+management
+
+**Member Services Director:** Member-facing operations and service
+quality
+
+**IT Director:** Technology systems and security
+
+**Benefits Analyst:** Individual case processing and calculations
+
+**Employer Services:** Employer relations and contribution processing
+
+**8. Industry Pain Points**
+
+**8.1 Technical Debt**
+
+Accumulated costs of maintaining legacy systems including:
+
+\- Mainframe dependencies with limited available expertise
+
+\- Custom code that only retiring staff understand
+
+\- Integration challenges with modern systems
+
+\- Security vulnerabilities in outdated platforms
+
+**8.2 Talent Shortages**
+
+Finding and retaining IT talent is a major challenge:
+
+\- Legacy technology skills (COBOL, mainframe) increasingly rare
+
+\- Competition with private sector for modern technology skills
+
+\- Specialized roles (cybersecurity, cloud architecture) difficult to
+fill
+
+\- 60% of pensions report staffing as current or emerging problem
+
+**8.3 Data Quality Issues**
+
+Common data problems include:
+
+\- Unreported participant deaths leading to overpayments
+
+\- Outdated addresses causing returned mail
+
+\- Missing or incomplete service records
+
+\- Employer reporting errors affecting benefit calculations
+
+\- Historical data inconsistencies from system migrations
+
+**8.4 Funding Challenges**
+
+Many plans face persistent underfunding:
+
+\- \$1.34 trillion in aggregate unfunded liabilities
+
+\- Contribution rates have nearly doubled since 2007
+
+\- Negative cash flow as retirees exceed active members
+
+\- Interest on unfunded liabilities grows faster than contributions
+
+**8.5 Member Engagement**
+
+Challenges in member communication include:
+
+\- Reaching members who don\'t actively engage with their pension
+
+\- Simplifying complex benefit information
+
+\- Multi-generational communication preferences
+
+\- Digital divide among member populations
+
+**9. Best Practices**
+
+**9.1 Governance Best Practices (GFOA)**
+
+\- Establish written governance manual with board policies
+
+\- Implement trustee orientation and continuing education
+
+\- Maintain written investment policy statement
+
+\- Develop succession planning for leadership continuity
+
+\- Conduct regular actuarial audits
+
+\- Establish code of conduct for board and staff
+
+**9.2 Funding Best Practices**
+
+\- Make actuarially determined contributions annually
+
+\- Avoid contribution holidays or insufficient contributions
+
+\- Target 100% funding ratio
+
+\- Review plan design periodically for long-term viability
+
+\- Establish dedicated funding sources where possible
+
+**9.3 Administration Best Practices**
+
+\- Prepare Summary Plan Description for all participants
+
+\- Provide retirement education programs
+
+\- Establish clear procedures for QDRO processing
+
+\- Implement proactive participant data management
+
+\- Conduct regular death audits and address verification
+
+\- Maintain comprehensive audit trails for all transactions
+
+**9.4 Technology Best Practices**
+
+\- Develop documented modernization roadmap
+
+\- Implement cybersecurity frameworks (NIST)
+
+\- Use phased modernization approaches to reduce risk
+
+\- Maintain business continuity and disaster recovery plans
+
+\- Ensure data governance and quality management
+
+**10. Key Resources and Publications**
+
+**10.1 Industry Associations**
+
+NASRA: www.nasra.org - Research, data, and policy resources
+
+NCPERS: www.ncpers.org - Education, advocacy, and networking
+
+GFOA: www.gfoa.org - Best practices and financial policies
+
+PRISM: www.prism-assoc.org - IT and technology focus
+
+NIRS: www.nirsonline.org - Research and policy analysis
+
+**10.2 Key Publications**
+
+\- GFOA Best Practices (Pension Policy, Governance, and Management)
+
+\- NASRA Public Fund Survey
+
+\- NCPERS Public Retirement Systems Study
+
+\- NCPERS Public Pension Compensation Survey
+
+\- DOL Reporting and Disclosure Guide for Employee Benefit Plans
+
+\- ASOP 4 Toolkit: Measuring Pension Obligations and LDROM
+
+**10.3 Regulatory References**
+
+\- GASB Statements 67, 68, 73, 74, 75
+
+\- IRS Publication 5411 (Retirement Plans Reporting and Disclosure)
+
+\- DOL QDRO Guide
+
+\- PBGC Guidelines (for PBGC-covered plans)
+
+**10.4 Conferences**
+
+\- NCPERS Annual Conference & Exhibition
+
+\- PRISM Annual Conference (IT focus)
+
+\- NASRA Annual Conference
+
+\- GFOA Annual Conference
+
+**11. Implications for NoUI Development**
+
+**11.1 Market Positioning**
+
+NoUI addresses critical industry needs:
+
+\- Legacy system modernization without full replacement
+
+\- Rules derivation from governing documents (not legacy behavior)
+
+\- Transparent, auditable calculations required for fiduciary compliance
+
+\- Middleware approach reduces risk compared to system replacement
+
+**11.2 Key Differentiators**
+
+\- AI assists configuration but never executes business rules
+
+\- Calculations verifiable to the penny against hand calculations
+
+\- Progressive schema mapping grows with deployment scope
+
+\- Multi-tier benefit structures handled through rules engine
+
+**11.3 Trust Building**
+
+Industry context emphasizes need for trust:
+
+\- Pension boards have been burned by technology vendors
+
+\- Fiduciary obligations require deterministic, auditable systems
+
+\- Tiered access model (offline analysis → read-only → transactional)
+builds confidence
+
+\- Show work transparency addresses regulatory scrutiny
+
+**11.4 Technical Considerations**
+
+Research confirms NoUI technical approach:
+
+\- Legacy systems often lack modern APIs (Data Connector value
+proposition)
+
+\- Cloud-native architecture aligns with industry direction (60%+ cloud
+adoption)
+
+\- Schema Intelligence addresses data quality challenges
+
+\- Self-service portal expectations align with Dynamic Workspace concept
+
+**11.5 Sales and Implementation Priorities**
+
+Prioritize demonstrating:
+
+\- Calculation accuracy and transparency
+
+\- Rules traceability to governing documents
+
+\- Data quality discovery capabilities
+
+\- Minimal disruption to current operations
+
+\- Compliance with GASB and actuarial requirements

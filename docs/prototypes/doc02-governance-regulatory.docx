@@ -1,0 +1,408 @@
+NoUI Training Document Series
+
+**Public Pension Domain Knowledge**
+
+Document 2: Governance and Regulatory Framework
+
+Version 1.0 \| February 2026
+
+*Understanding the legal, regulatory, and fiduciary frameworks governing
+public pension administration*
+
+Executive Summary
+
+Public pension systems operate within a complex governance framework
+combining statutory requirements, fiduciary obligations, accounting
+standards, and regulatory oversight. Unlike private sector pension plans
+governed by ERISA, public plans are exempt from federal regulation and
+instead operate under state constitutions, statutes, municipal charters,
+and board policies.
+
+This document examines the legal and regulatory framework for public
+pensions, fiduciary duties of trustees and administrators, GASB
+accounting standards, board governance structures, actuarial oversight
+mechanisms, and audit requirements. Understanding these frameworks is
+essential for developing technology solutions that support compliant
+pension administration.
+
+1\. Legal Framework for Public Pensions
+
+1.1 ERISA Exemption
+
+The Employee Retirement Income Security Act of 1974 (ERISA) provides
+comprehensive federal regulation of private sector employee benefit
+plans. However, governmental plans---those established by state or local
+governments for their employees---are explicitly exempted from ERISA\'s
+requirements.
+
+Key consequences of the ERISA exemption include:
+
+-   No federal minimum funding standards; funding requirements
+    determined by state law or plan provisions
+
+-   Pension Benefit Guaranty Corporation (PBGC) does not insure public
+    pension benefits
+
+-   ERISA fiduciary standards do not apply, though similar state-law
+    duties typically exist
+
+-   ERISA disclosure and reporting requirements do not apply, though
+    GASB standards impose comparable obligations
+
+-   Federal courts generally lack jurisdiction over public pension
+    disputes
+
+1.2 State Constitutional Protections
+
+Many state constitutions contain provisions protecting public employee
+pension benefits. These protections vary significantly in scope and
+strength:
+
+**Contract Clause Protections:** Some states treat pension benefits as
+contractual obligations that cannot be impaired by subsequent
+legislation. This interpretation, rooted in the U.S. Constitution\'s
+Contract Clause, provides strong protection against benefit reductions.
+
+**Explicit Constitutional Provisions:** States like Illinois and New
+York have explicit constitutional provisions protecting pension
+benefits. Illinois\'s Constitution states that benefits \'shall not be
+diminished or impaired,\' creating one of the strongest protections
+nationwide.
+
+**Gratuity Doctrine States:** A minority of states treat pensions as
+gratuities that may be modified by the legislature, allowing more
+flexibility in adjusting benefits.
+
+1.3 Statutory Authority
+
+State statutes establish the basic framework for public pension systems,
+defining plan provisions, governance structures, benefit formulas, and
+funding requirements. For locally-administered systems, enabling
+legislation may establish baseline requirements while allowing local
+variation.
+
+The Denver Employees Retirement Plan is governed by Sections 18-391
+through 18-430.7 of the Revised Municipal Code. Any technology platform
+serving DERP must implement these specific provisions exactly as written
+in the governing code.
+
+2\. Fiduciary Duties and Responsibilities
+
+Public pension trustees and administrators owe fiduciary duties to plan
+participants and beneficiaries. These duties derive from state law and
+impose obligations of prudence, loyalty, and care in managing plan
+assets and administering benefits.
+
+2.1 Core Fiduciary Principles
+
+**Duty of Loyalty:** Fiduciaries must act solely in the interest of plan
+participants and beneficiaries. This prohibits conflicts of interest and
+requires putting member interests ahead of personal, political, or
+employer interests.
+
+**Duty of Prudence:** Fiduciaries must act with the care, skill,
+prudence, and diligence that a prudent person would use. This applies to
+investment decisions, vendor selection, administrative procedures, and
+technology implementations.
+
+**Duty to Follow Plan Documents:** Fiduciaries must administer the plan
+according to governing documents. Benefits must be calculated exactly as
+specified in statutes and plan documents.
+
+**Duty of Impartiality:** Fiduciaries must treat all participants
+fairly. Technology systems must apply rules uniformly across all
+members.
+
+2.2 Technology Implications of Fiduciary Duty
+
+Technology decisions carry fiduciary implications. Platforms must
+support fiduciary obligations through:
+
+-   Accurate Calculations: Every calculation verifiable against
+    governing documents
+
+-   Complete Audit Trails: All transactions logged with sufficient
+    detail for review
+
+-   Rule Transparency: Logic implementing plan provisions traceable to
+    governing documents
+
+-   Data Security: Member data protected with appropriate security
+    measures
+
+-   Business Continuity: Critical operations continue during system
+    disruptions
+
+3\. GASB Accounting Standards
+
+The Governmental Accounting Standards Board (GASB) establishes
+accounting and financial reporting standards for state and local
+governments, including pension plans. GASB standards significantly
+influence how pension liabilities are measured and reported.
+
+3.1 GASB Statement No. 67
+
+GASB 67 establishes financial reporting requirements for pension plans
+administered through trusts. Key requirements include:
+
+-   Net pension liability calculated as total pension liability minus
+    plan fiduciary net position
+
+-   Single discount rate blending expected return on investments with
+    municipal bond rate for unfunded portions
+
+-   Detailed note disclosures including demographic and economic
+    assumptions
+
+-   Required supplementary information including ten-year schedules of
+    liability changes
+
+3.2 GASB Statement No. 68
+
+GASB 68 revolutionized how employers report pension obligations. For the
+first time, employers must recognize a liability on their balance sheet
+for their proportionate share of the net pension liability. This
+requirement affected government financial statements significantly, with
+substantial liabilities appearing on balance sheets.
+
+3.3 GASB Statement No. 82
+
+GASB 82 clarified that covered payroll should be defined as compensation
+on which contributions are based, rather than total compensation. This
+affects how pension expense and required supplementary information are
+presented.
+
+Key GASB Standards Summary
+
+  -------------- -------------------------- ------------------------------
+  **Standard**   **Applies To**             **Key Requirement**
+
+  GASB 67        Pension plan reporting     Net pension liability with
+                                            blended discount rate
+
+  GASB 68        Employer reporting         Balance sheet recognition of
+                                            pension liability
+
+  GASB 82        Payroll measures           Covered payroll = contribution
+                                            base
+  -------------- -------------------------- ------------------------------
+
+4\. Board Governance Structures
+
+Public pension systems are typically governed by boards of trustees with
+fiduciary responsibility for plan administration and investments. Board
+composition, selection methods, and authority vary significantly.
+
+4.1 Board Composition
+
+**Employee Representatives:** Active employees elected by plan members.
+These representatives bring direct knowledge of member concerns and
+workplace realities.
+
+**Retiree Representatives:** Retired members elected by annuitants,
+ensuring benefit recipients have voice in governance, particularly
+regarding COLAs and healthcare benefits.
+
+**Employer/Government Representatives:** Appointed officials
+representing contributing employers. They bring perspective on funding
+sustainability and fiscal impact.
+
+**Independent/Public Members:** External experts appointed to provide
+independent perspective. Often have backgrounds in finance, investments,
+law, or actuarial science.
+
+4.2 Board Responsibilities
+
+-   Investment Policy: Establishing asset allocation, guidelines, and
+    risk parameters
+
+-   Manager Selection: Hiring and monitoring external investment
+    managers
+
+-   Actuarial Oversight: Selecting actuaries, reviewing valuations,
+    approving assumptions
+
+-   Benefit Administration: Ensuring proper calculation and payment of
+    benefits
+
+-   Budget and Operations: Approving administrative budgets and staffing
+
+-   Policy Recommendations: Recommending benefit changes to legislative
+    bodies
+
+4.3 Trustee Education
+
+Effective pension governance requires trustees who understand pension
+fundamentals, investment principles, and fiduciary duties. Many
+jurisdictions mandate trustee education within specified timeframes
+after joining the board. Professional associations like IFEBP, NCPERS,
+and NASRA provide educational programs.
+
+5\. Actuarial Standards and Oversight
+
+Actuaries play a critical role in public pension governance, providing
+valuations that determine funding requirements and assess financial
+health. Actuarial work is governed by professional standards.
+
+5.1 Actuarial Standards of Practice
+
+**ASOP No. 4 - Measuring Pension Obligations:** Guidance on measuring
+obligations and determining costs. Addresses actuarial cost methods,
+asset valuation methods, and treatment of plan provisions.
+
+**ASOP No. 27 - Selection of Economic Assumptions:** Guides selection of
+investment return, discount rate, salary increases, and inflation
+assumptions. Requires assumptions be reasonable based on professional
+judgment.
+
+**ASOP No. 35 - Selection of Demographic Assumptions:** Addresses
+mortality, disability, termination, and retirement rate assumptions.
+Must reflect expected experience of the plan population.
+
+**ASOP No. 41 - Actuarial Communications:** Requirements for valuation
+reports including disclosure requirements and information needed for
+users to understand results.
+
+5.2 Experience Studies
+
+Pension plans periodically conduct experience studies comparing actual
+experience to actuarial assumptions. These studies examine mortality
+rates, retirement patterns, salary increases, and other demographic
+factors. Results inform assumption revisions to keep valuations aligned
+with actual experience.
+
+Experience studies are typically conducted every three to five years.
+Resulting assumption changes can significantly affect calculated
+liabilities and required contributions.
+
+5.3 Mortality Tables
+
+Mortality assumptions significantly affect pension liabilities. Public
+plans commonly use tables developed for public employee populations,
+such as the Pub-2010 tables from the Society of Actuaries. Modern
+mortality assumptions include projection scales (like MP-2021) that
+account for expected future longevity improvements.
+
+6\. State Oversight Mechanisms
+
+While public pension plans are exempt from federal ERISA regulation,
+many states have established oversight mechanisms for
+locally-administered systems.
+
+6.1 Types of State Oversight
+
+**Registration Requirements:** Some states require local plans to
+register with a state agency and provide annual reports, creating
+visibility into operations and financial condition.
+
+**Minimum Funding Standards:** States may establish minimum funding
+requirements specifying how much employers must contribute relative to
+actuarial requirements.
+
+**Actuarial Review:** Some states review actuarial valuations for local
+plans, providing quality assurance and identifying potential issues.
+
+**Benefit Design Standards:** States may establish parameters for
+benefit design, limiting certain provisions or requiring specific
+features.
+
+6.2 Colorado\'s Framework
+
+Colorado\'s Division of Insurance oversees fire and police pension funds
+under FPPA. For locally-administered plans like DERP, governance
+authority rests primarily with the local board under the city\'s
+municipal code, with limited direct state oversight.
+
+The Colorado General Assembly has enacted legislation affecting public
+pensions statewide, including PERA reforms following funding challenges.
+These legislative actions demonstrate how state policy can affect
+operations even where day-to-day oversight rests with local boards.
+
+7\. Audit and Reporting Requirements
+
+7.1 Financial Statement Audits
+
+Public pension plans are subject to annual financial statement audits by
+independent auditors. These audits examine whether financial statements
+fairly present the plan\'s financial position according to GAAP/GASB
+standards.
+
+Key audit areas include:
+
+-   Investment valuations and existence of assets
+
+-   Contribution receipts and proper recording
+
+-   Benefit payments and proper calculation
+
+-   Internal controls over financial reporting
+
+-   Compliance with plan provisions and applicable laws
+
+7.2 Annual Comprehensive Financial Reports
+
+Many pension systems produce Annual Comprehensive Financial Reports
+(ACFRs), going beyond basic financial statements to include detailed
+information about investments, actuarial status, administrative
+operations, and statistical trends.
+
+GFOA\'s Certificate of Achievement for Excellence in Financial Reporting
+program recognizes high-quality ACFRs. Earning this certificate
+demonstrates commitment to transparency and comprehensive reporting.
+
+7.3 Actuarial Audit
+
+Some jurisdictions require periodic actuarial audits where an
+independent actuary reviews the plan actuary\'s work. These audits
+examine assumptions, methods, and calculations to ensure valuations are
+reasonable and comply with professional standards.
+
+8\. Implications for NoUI Development
+
+8.1 Compliance Requirements
+
+-   All calculations must exactly implement statutory provisions---no
+    approximations
+
+-   Complete audit trails required for all transactions and calculations
+
+-   Rule logic must be traceable to governing documents
+
+-   System must support fiduciary oversight and verification
+
+8.2 Governance Support
+
+-   Reporting capabilities must align with GASB disclosure requirements
+
+-   Support board oversight through clear, accurate reporting
+
+-   Enable actuarial review by providing accessible data and
+    calculations
+
+-   Facilitate audit processes through organized documentation
+
+8.3 Flexibility Requirements
+
+-   Accommodate varying governance structures across systems
+
+-   Support different state regulatory frameworks
+
+-   Adapt to statutory changes without code modifications
+
+-   Handle multiple benefit tiers with different provisions
+
+Conclusion
+
+The governance and regulatory framework for public pensions creates both
+constraints and opportunities for technology development. Systems must
+support precise compliance with statutory requirements, enable fiduciary
+oversight, and facilitate transparent reporting while adapting to varied
+governance structures.
+
+NoUI\'s emphasis on transparency, explainability, and rule-based
+calculations aligns with these requirements. By deriving business rules
+from governing documents rather than legacy system behavior, and by
+making every calculation verifiable, the platform supports the fiduciary
+obligations that pension boards must fulfill.
+
+*--- End of Document 2 ---*

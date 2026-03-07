@@ -1,0 +1,866 @@
+**NoUI Platform**
+
+Pension Administration Roles
+
+& Specialized Workspace Architecture
+
+DERP Proof of Concept
+
+February 2026
+
+*DRAFT --- Working Architecture Document*
+
+**1. Purpose and Architectural Gap**
+
+The NoUI Dynamic Workspace UX Architecture (companion document) defines
+a queue-driven interaction model where work items flow to workers
+through an intelligently prioritized queue. This model serves the
+majority of pension administration tasks well: a benefits analyst claims
+a retirement application from their queue, the system assembles the
+correct workspace, and work proceeds.
+
+However, this model assumes the worker knows *what they are doing*
+before they see any member data. Several critical pension administration
+roles operate from the opposite entry point: a person or situation
+arrives first, and the worker must orient to context rapidly before
+determining what action to take. The most common example is a Customer
+Service Representative receiving a phone call, but the pattern extends
+to supervisors conducting case reviews, employer services staff
+processing contribution reports, and compliance officers performing
+targeted audits.
+
+This document defines the complete set of roles in a pension
+administration office, analyzes their interaction patterns, and
+specifies the specialized workspace variants each role requires. It also
+addresses the monitoring, validation, and failover architecture needed
+when AI-driven workspace composition operates in a mission-critical
+system.
+
++-----------------------------------------------------------------------+
+| **Relationship to Existing Architecture**                             |
+|                                                                       |
+| *This document extends the Dynamic Workspace UX Architecture. It does |
+| not replace it. The queue-driven model remains the primary            |
+| interaction pattern. The role-based workspace variants defined here   |
+| are alternative entry points that ultimately connect to the same      |
+| composition engine, the same component library, and the same          |
+| degradation hierarchy (ADR-007).*                                     |
++-----------------------------------------------------------------------+
+
+**2. Pension Administration Role Taxonomy**
+
+Public pension agencies vary in size from under 10 staff (small
+municipal plans like DERP) to hundreds (large state systems like
+CalPERS). Despite scale differences, the functional roles are remarkably
+consistent. What changes is whether one person fills multiple roles or
+each role has a dedicated team.
+
+The following taxonomy organizes roles by their primary interaction
+pattern with the administration system, which directly determines their
+workspace requirements.
+
+**2.1 Member-Facing Roles**
+
+**Customer Service Representative (CSR)**
+
+**Primary pattern:** Reactive, member-initiated. A person calls, walks
+in, or emails. The CSR must orient to the member's full context in
+seconds and navigate across the breadth of that member's relationship
+with the plan.
+
+**Key tasks:**
+
+-   Answer benefit estimate inquiries ("What will my pension be?")
+
+-   Respond to contribution and service credit questions ("How many
+    years do I have?")
+
+-   Process address, phone, email, and banking changes
+
+-   Accept and route beneficiary change requests
+
+-   Initiate retirement application intake when member calls to begin
+    process
+
+-   Log death notifications and initiate survivor benefit workflows
+
+-   Provide status updates on in-flight processes ("Where is my
+    retirement application?")
+
+-   Generate and mail verification letters, 1099-R reissues, and benefit
+    confirmation letters
+
+-   Schedule and conduct retirement counseling sessions (pre-retirement
+    education)
+
+**Critical need:** Member lookup as primary entry point, not work queue.
+Rapid navigation across all member data domains. Ability to see what's
+in flight for any member without claiming a work item.
+
+**Interaction cadence:** High volume, short duration. A busy CSR may
+handle 40--60 calls per day, averaging 5--10 minutes each. Speed to
+context is the primary UX metric.
+
+**Retirement Counselor / Benefits Counselor**
+
+**Primary pattern:** Scheduled, consultative. Members book appointments
+(in-person, virtual, or phone) to discuss retirement planning. Longer,
+deeper interactions than CSR calls.
+
+**Key tasks:**
+
+-   Conduct pre-retirement planning sessions (DERP's "RetireStrong"
+    seminars)
+
+-   Run multiple benefit estimate scenarios ("What if I retire at 60 vs.
+    62 vs. 65?")
+
+-   Explain payment option trade-offs (Maximum vs. J&S options) with
+    spouse present
+
+-   Model service purchase impact on benefit amount
+
+-   Explain IPR (Insurance Premium Reduction) and coordinate with health
+    insurance
+
+-   Guide members through the retirement application process end to end
+
+**Critical need:** Scenario modeling as the centerpiece, not a secondary
+panel. Side-by-side comparison of retirement dates, payment options, and
+financial projections. Ability to share screen or print a summary for
+the member to take home.
+
+**2.2 Case Processing Roles**
+
+**Benefits Analyst / Retirement Analyst**
+
+**Primary pattern:** Queue-driven, task-focused. This is the primary
+role the current Dynamic Workspace UX Architecture is designed for. The
+analyst claims work items and processes them through defined stages.
+
+**Key tasks:**
+
+-   Verify service credit and salary history against source documents
+
+-   Calculate benefits across all tiers and payment options
+
+-   Process retirement applications through multi-stage workflow
+
+-   Process DRO (Domestic Relations Order) applications
+
+-   Calculate and process service purchase requests
+
+-   Process refund applications for non-vested members
+
+-   Process survivor benefit applications following member death
+
+-   Resolve data quality findings surfaced by the data quality engine
+
+**Critical need:** The existing queue-driven workspace serves this role
+well. Deep, focused workspaces assembled per task type and member
+situation.
+
+**Death and Survivor Benefits Specialist**
+
+**Primary pattern:** Event-triggered, multi-party. A death notification
+initiates a complex workflow involving multiple external parties
+(surviving spouse, estate representatives, other pension systems, Social
+Security, insurance providers).
+
+**Key tasks:**
+
+-   Receive and verify death notifications (from family, employer,
+    Social Security death match, or return mail)
+
+-   Suspend active benefit payments immediately upon confirmed death
+
+-   Calculate final payment (prorated to date of death) and any
+    overpayment recovery
+
+-   Determine survivor benefit eligibility based on payment option
+    elected at retirement
+
+-   Process survivor benefit applications and establish recurring
+    payments
+
+-   Coordinate with the estate for lump-sum death benefits when no
+    survivor annuity applies
+
+-   Handle pre-retirement death cases (active employee death ---
+    different rules than retiree death)
+
+-   Issue 1099-R forms for final year of deceased and first year of
+    survivor
+
+**Critical need:** A workflow that spans multiple parties and extended
+timelines (survivor cases can take months). Document tracking for death
+certificates, marriage certificates, court documents. Clear visibility
+into which steps are awaiting external input vs. internal processing.
+
+**2.3 Supervisory and Quality Roles**
+
+**Benefits Supervisor / Processing Supervisor**
+
+**Primary pattern:** Oversight, review, and approval. Supervisors do not
+typically process cases directly but review work, approve high-value
+determinations, manage team workload, and handle escalations.
+
+**Key tasks:**
+
+-   Review and approve benefit calculations before final payment
+    authorization
+
+-   Review high-value cases (benefits exceeding configured threshold
+    require senior review)
+
+-   Handle escalated cases from analysts and CSRs
+
+-   Manage team queue: assign cases, balance workload, reassign when
+    staff are absent
+
+-   Monitor processing times and identify bottlenecks
+
+-   Resolve interpretation questions when analyst encounters ambiguous
+    situations
+
+-   Conduct periodic quality reviews of completed cases
+
+**Critical need:** Team-level visibility, not just individual case view.
+Aggregate queue dashboard showing case counts by type, age, and status
+across the team. Approval workflow that shows the analyst's work with
+ability to annotate and send back. Operational metrics dashboard.
+
+**Quality Assurance / Compliance Analyst**
+
+**Primary pattern:** Audit-driven, retrospective. QA staff review
+completed work for accuracy, sample cases for compliance verification,
+and investigate discrepancies.
+
+**Key tasks:**
+
+-   Conduct statistical sampling of completed benefit calculations for
+    accuracy
+
+-   Review data quality findings and track resolution through to
+    completion
+
+-   Verify calculation methodology against governing document provisions
+
+-   Prepare documentation for external auditors (annual financial audit,
+    actuarial audit)
+
+-   Investigate overpayments and underpayments, determine root cause,
+    initiate corrections
+
+-   Conduct death audits (cross-reference member rolls against death
+    databases)
+
+-   Track regulatory compliance metrics and prepare board reports
+
+**Critical need:** Cross-case analysis tools. Ability to pull a random
+sample of N completed cases by type, run comparative analysis, and flag
+outliers. Deep audit trail access showing every calculation input,
+formula, and who approved what. Integration with the data quality
+dashboard for tracking resolution over time.
+
+**2.4 Employer-Facing Roles**
+
+**Employer Services Representative**
+
+**Primary pattern:** Employer-centric rather than member-centric. This
+role works with the City's payroll and HR departments to ensure
+contribution reporting is accurate and timely.
+
+**Key tasks:**
+
+-   Validate employer contribution reports (monthly or per pay period)
+
+-   Reconcile contribution amounts against reported salaries and
+    contribution rates
+
+-   Process new hire enrollments and status changes (transfers,
+    terminations, leave)
+
+-   Investigate and resolve reporting discrepancies with employer
+    payroll staff
+
+-   Ensure salary history is complete and accurate for future benefit
+    calculations
+
+-   Support annual census data submission for actuarial valuations
+
+-   Track and enforce late filing penalties when contribution reports
+    are not timely
+
+**Critical need:** Employer-level view showing all members employed by a
+specific department, contribution batches with validation status,
+exception lists (missing members, salary discrepancies, duplicate
+reports). Batch processing tools for bulk operations, not individual
+member workspaces.
+
+**2.5 Financial and Actuarial Roles**
+
+**Finance / Accounting Staff**
+
+**Primary pattern:** Aggregate financial operations. Works with payment
+runs, reconciliation, and financial reporting rather than individual
+member cases.
+
+**Key tasks:**
+
+-   Authorize and execute monthly pension payment runs
+
+-   Process retroactive adjustments and recalculations
+
+-   Reconcile bank transactions against payment records
+
+-   Generate and distribute 1099-R forms annually
+
+-   Prepare financial data for GASB 67/68 reporting
+
+-   Support annual financial audit (provide data, respond to auditor
+    requests)
+
+-   Track and report employer contribution receipts
+
+**Critical need:** Aggregate financial dashboards and batch operation
+tools. Payment run preview, approval, and execution workflow.
+Reconciliation screens comparing expected vs. actual payment amounts.
+This role rarely needs individual member workspaces but needs powerful
+filtering, grouping, and export capabilities.
+
+**2.6 Executive and Board Roles**
+
+**Executive Director / Plan Administrator**
+
+**Primary pattern:** Strategic oversight. Needs high-level operational
+health indicators without being required to navigate individual cases.
+
+**Key information needs:**
+
+-   Operational dashboard: cases in progress by type and stage, average
+    processing times, aging cases
+
+-   Data quality summary: open findings by severity, resolution trends
+    over time
+
+-   Staff productivity metrics (sensitively presented --- system aids
+    workers, not surveils them)
+
+-   System health status (degradation level, AI service availability,
+    uptime metrics)
+
+-   Board report preparation: key metrics, notable cases, policy
+    questions requiring board action
+
+**Critical need:** Read-only executive dashboard. Not a workspace for
+processing work, but a lens into how the operation is performing.
+Exportable for board presentations.
+
+**3. Interaction Pattern Matrix**
+
+The following matrix maps each role to its primary entry point,
+navigation pattern, data scope, and composition requirements. This
+drives the workspace variant architecture in Section 4.
+
+  ---------------- ----------- ------------------ ------------- -------------- ----------------
+  **Role**         **Entry     **Navigation**     **Data        **Cadence**    **AI
+                   Point**                        Scope**                      Composition**
+
+  **CSR**          Member      Broad, rapid       Full member   5--10 min      Card relevance
+                   lookup                         context                      ordering
+
+  **Counselor**    Scheduled   Deep,              Member +      30--60 min     Scenario layout
+                   appt        scenario-focused   projections                  optimization
+
+  **Benefits       Work queue  Task-focused, deep Single case   15--45 min     Full Tier 1+2+3
+  Analyst**                                                                    composition
+
+  **Survivor       Work queue  Multi-party,       Deceased +    Weeks          Document + party
+  Specialist**                 extended           survivors                    tracking
+
+  **Supervisor**   Team        Oversight,         Team          Continuous     Priority signals
+                   dashboard   drill-down         aggregate                    
+
+  **QA /           Audit       Cross-case,        Sample sets   Per audit      Anomaly
+  Compliance**     selector    comparative                                     highlighting
+
+  **Employer Svc** Employer    Batch, aggregate   Employer +    Monthly        Batch exception
+                   lookup                         members                      flagging
+
+  **Finance**      Payment     Aggregate, batch   Financial     Monthly        Reconciliation
+                   dashboard                      aggregate                    signals
+
+  **Executive**    Exec        Top-down, drill-in Operational   Daily/weekly   Trend analysis
+                   dashboard                      KPIs                         
+  ---------------- ----------- ------------------ ------------- -------------- ----------------
+
+**4. Workspace Variant Architecture**
+
+Based on the interaction patterns identified above, NoUI requires five
+distinct workspace variants beyond the existing queue-driven task
+workspace. Each variant shares the same underlying component library,
+composition engine, and degradation hierarchy --- what differs is the
+entry point, the layout shell, and the composition logic.
+
+**4.1 Member Context Hub (CSR Workspace)**
+
+The Member Context Hub is an alternative primary entry point that serves
+member-facing roles. After member lookup (by name, SSN, member ID, or
+partial match), the CSR lands on a contextual overview organized into
+three zones.
+
+**Zone 1: Member Identity + Active Situation**
+
+An expanded version of the existing MemberBanner that surfaces dynamic
+context beyond static identity. In addition to name, tier, status,
+department, and service credit, it displays whether the member has any
+in-flight processes (retirement application at calculation stage,
+pending DRO, unresolved data quality finding), the most recent
+significant event (last salary change, last beneficiary update), and any
+active alerts (approaching Rule of 75/85 eligibility, upcoming vesting
+date).
+
+**Zone 2: Navigation Cards**
+
+A set of cards arranged by relevance to this specific member, each
+serving as a doorway into a focused interaction. Card composition
+follows the same three-tier model as task workspaces.
+
+  ------------------- --------------------------- ---------------------------
+  **Card**            **Content**                 **Answers**
+
+  **Open Tasks**      In-flight work items with   "What's currently happening
+                      stage indicators            with my case?"
+
+  **Recent Activity** Last N transactions/events, "When was my last salary
+                      most recent first           update posted?"
+
+  **Benefit           Quick calculation or most   "What will my pension be?"
+  Estimate**          recent saved estimate       
+
+  **Service Credit**  Earned, purchased, gaps,    "How many years do I have?"
+                      total                       
+
+  **Contributions**   Employee/employer history,  "How much have I paid in?"
+                      running balance             
+
+  **Beneficiary       Current designations, last  "Who is my beneficiary?"
+  Info**              change date                 
+
+  **Contact /         Address, phone, email,      "I need to update my
+  Demographics**      banking on file             address"
+
+  **Documents**       Uploaded/scanned documents, "Do you have my marriage
+                      correspondence              certificate on file?"
+
+  **DRO**             DRO status, marital period, "What is the status of my
+                      split details               DRO?" (conditional: only
+                                                  shown if DRO exists)
+  ------------------- --------------------------- ---------------------------
+
+**Zone 3: Quick Actions**
+
+Common CSR actions that do not require opening a full task workspace:
+initiate address change, request benefit estimate, schedule callback,
+log the interaction. These generate work items that enter the normal
+queue for processing if they require analyst review.
+
+**Card Relevance and Composition**
+
+**Tier 1 (Deterministic):** Every member gets the same base set of
+cards. This set is defined by configuration and does not change.
+
+**Tier 2 (Rule-Based):** Card ordering and visual emphasis shift based
+on the member's situation. If there is an open retirement application,
+that card surfaces first with a status badge. If the member has a DRO,
+the DRO card appears. If the member is non-vested, a Refund Eligibility
+card surfaces. If the member is deceased and a survivor case is open,
+the survivor card replaces the benefit estimate card.
+
+**Tier 3 (AI Augmentation):** Based on call patterns and operational
+learning, the system may promote cards likely to be relevant. For
+example, during open enrollment season, the beneficiary card may be
+promoted based on learned seasonal patterns. This is advisory and the
+CSR can always access any card regardless of ordering.
+
++-----------------------------------------------------------------------+
+| **Degradation Behavior**                                              |
+|                                                                       |
+| *At Level 1 (AI Degraded) or Level 2 (AI Unavailable), the Member     |
+| Context Hub renders all cards in a default deterministic order. Every |
+| card is still functional. The experience is less optimized but never  |
+| broken.*                                                              |
++-----------------------------------------------------------------------+
+
+**4.2 Scenario Workspace (Counselor Workspace)**
+
+The Counselor Workspace is a variant of the Member Context Hub optimized
+for extended consultative sessions. It shares the same member lookup
+entry point but assembles a workspace centered on the Scenario Modeler
+component rather than navigation cards.
+
+**Key differences from CSR Hub:**
+
+-   Scenario Modeler is the primary panel, occupying the majority of
+    screen space
+
+-   Side-by-side comparison of multiple retirement dates and payment
+    options
+
+-   Print-friendly summary generation for the member to take home
+
+-   Service purchase impact modeling ("If I purchase 3 years, how does
+    that change my benefit?")
+
+-   IPR calculator integrated alongside benefit estimates to show net
+    income impact
+
+**4.3 Team Dashboard (Supervisor Workspace)**
+
+The Supervisor Workspace is not a member-centric view at all. It is an
+operational management view showing the state of the team's work.
+
+**Primary panels:**
+
+-   Team queue aggregate: case counts by type, stage, and age, grouped
+    by assigned analyst
+
+-   Aging cases alert: cases exceeding processing time thresholds,
+    highlighted by severity
+
+-   Approval queue: cases awaiting supervisor review, with one-click
+    access to the full workspace (read-only view with
+    approve/reject/return-with-notes actions)
+
+-   Workload distribution: visual representation of case load per
+    analyst, supporting reassignment
+
+-   Processing metrics: average completion times by case type, trend
+    lines, exception rates
+
+-   Data quality summary: open findings assigned to this team,
+    resolution progress
+
+Supervisors can drill down from any aggregate view into individual
+cases, which opens the standard task workspace in read-only mode with
+approval controls.
+
+**4.4 Audit Workspace (QA/Compliance)**
+
+The Audit Workspace is designed for cross-case analysis rather than
+individual case processing. It provides tools for statistical sampling,
+comparative review, and systematic verification.
+
+**Primary panels:**
+
+-   Audit selector: define sample parameters (N cases, case type, date
+    range, tier, random or stratified)
+
+-   Comparative view: selected cases displayed in tabular format with
+    key calculation parameters side by side
+
+-   Calculation re-verification: re-run any historical calculation
+    against current rules to confirm accuracy
+
+-   Audit trail viewer: complete history of who accessed, modified,
+    calculated, and approved each case
+
+-   Data quality tracking: all findings with resolution status, aging,
+    and root cause classification
+
+-   Report generation: exportable audit reports for external auditors
+    and board presentations
+
+**4.5 Employer Dashboard (Employer Services)**
+
+The Employer Dashboard uses employer (department) as the primary lookup
+entity rather than individual member. This is a fundamentally different
+data axis than all other workspaces.
+
+**Primary panels:**
+
+-   Contribution batch status: current and historical contribution
+    reports with validation results
+
+-   Exception list: members with reporting discrepancies (missing from
+    report, salary mismatch, duplicate entry)
+
+-   Department roster: all active members in a department with key
+    status indicators
+
+-   Enrollment processing: new hire enrollments, terminations, status
+    changes awaiting processing
+
+-   Census data preparation: tools for annual actuarial census
+    submission, with data validation and completeness checks
+
+**5. Composition Integrity Monitoring**
+
+When AI-driven workspace composition operates in a mission-critical
+fiduciary system, the consequences of incorrect composition extend
+beyond poor UX. A missing DRO panel could lead to a benefit calculation
+that ignores a court-ordered division. A misclassified tier could
+present the wrong AMS window. The monitoring architecture must detect
+these failures before they affect member outcomes.
+
+**5.1 The Third Failure State**
+
+ADR-007 defines a six-level degradation hierarchy that handles two
+failure classes: AI is slow (Level 1) and AI is unavailable (Level 2).
+But there is a third failure state not currently addressed: **AI is
+responding but composing the wrong workspace.** The system shows a DRO
+panel for a member without a DRO. Or omits the leave payout calculator
+for a Tier 1 member hired before 2010 who is clearly eligible.
+
+This failure is harder to detect than an outage because the system looks
+like it is working correctly. It requires two layers of protection.
+
+**5.2 Layer 1: Composition Validation**
+
+After the composition engine assembles a workspace (whether Tier 1+2
+only or including Tier 3 AI augmentation), a deterministic validator
+checks the result against known rules. The validator operates on the
+same rule definitions that drive the rules engine.
+
+  ----------------------- -------------------------- -----------------------
+  **Condition**           **Expected Component**     **Violation**
+
+  Member has DRO record   DROImpactPanel present     Critical: DRO panel
+                                                     missing
+
+  Tier 3 member           60-month AMS window in     Critical: Wrong AMS
+                          SalaryTable                window
+
+  Tier 1, hired before    LeavePayoutCalculator      High: Leave calculator
+  2010                    present                    missing
+
+  Tier 3 member           No LeavePayoutCalculator   High: Wrong component
+                                                     shown
+
+  Early retirement (under EarlyRetirementReduction   Critical: Reduction
+  65, Rule not met)       present                    calculator missing
+
+  Purchased service       Purchased service          High: Missing
+  present                 exclusion callout          eligibility warning
+
+  Married member          Spousal consent indicator  Medium: Missing consent
+                                                     tracking
+  ----------------------- -------------------------- -----------------------
+
+When validation detects a violation, the system falls back to
+deterministic Tier 1 + Tier 2 composition for that specific workspace,
+not for the entire system. The incident is logged and monitoring is
+alerted. The user may see a brief recomposition, but receives a correct
+result. This is a surgical response: isolating the failure to the
+specific composition that went wrong, rather than dropping the whole
+system to a degraded level.
+
+**5.3 Layer 2: Composition Telemetry and Drift Detection**
+
+Every workspace composition is logged with its full context: member
+situation (tier, status, flags), task context (type, stage), and the
+composition result (which components, ordering, initial state). Over
+time, this builds a baseline model of expected compositions per
+situation type.
+
+**Drift detection triggers:**
+
+-   A composition for a well-known situation type produces significantly
+    fewer or more components than the baseline
+
+-   Component ordering deviates substantially from established patterns
+    for that situation
+
+-   A new component appears in compositions where it has never appeared
+    before
+
+-   The AI augmentation layer (Tier 3) begins consistently overriding
+    Tier 2 decisions
+
+Drift detection catches subtler errors than validation: not wrong
+components, but unusual or missing components that warrant
+investigation.
+
+**5.4 Calculation Verification (Continuous)**
+
+Separate from composition monitoring, a scheduled process periodically
+re-verifies that the rules engine produces expected results against the
+test oracle. This catches the scenario where a deployment corrupts a
+rule configuration but the workspace still looks correct. The
+calculation verification runs against certified test cases, not
+production data, to maintain isolation between test and production
+paths.
+
+**6. Static Fallback Workspace Architecture**
+
+ADR-007 specifies that static fallback workspaces must exist for when
+composition services are degraded or unavailable. With the expanded
+role-based workspace variants, the fallback architecture must cover more
+than just the task workspace.
+
+**6.1 Fallback Strategy Per Workspace Variant**
+
+  --------------- --------------------------- ---------------------------
+  **Workspace**   **Fallback Behavior**       **What Staff Sees**
+
+  **Task          Tier 1+2 composition only.  Complete workspace with all
+  Workspace**     All potentially relevant    panels visible. May include
+                  panels rendered in default  panels not needed for this
+                  order. System functional,   specific case. No
+                  less optimized.             AI-suggested emphasis.
+
+  **Member Hub    All cards displayed in      All cards visible
+  (CSR)**         fixed default order. Member regardless of member
+                  lookup and card navigation  situation. DRO card shows
+                  fully functional.           for all members (empty if
+                                              no DRO). Ordering is
+                                              generic, not contextual.
+
+  **Scenario      Scenario Modeler rendered   Full scenario modeling
+  (Counselor)**   with all calculation        capability. Less intuitive
+                  options. No AI-optimized    layout but all
+                  layout. Full calculation    functionality available.
+                  accuracy.                   
+
+  **Team          Static aggregate views from Stale data possible
+  Dashboard**     most recent cache. No       (staleness indicator
+                  intelligent prioritization  shown). All drill-down
+                  signals. Manual refresh     navigation works.
+                  required.                   Assignment and approval
+                                              functions work.
+
+  **Audit         Full audit functionality    Manual analysis required
+  Workspace**     available. No AI-driven     where AI would normally
+                  anomaly highlighting. All   flag outliers. All data
+                  calculation re-verification access and export works.
+                  works.                      
+
+  **Employer      Full batch processing and   All contribution validation
+  Dashboard**     validation. No AI-driven    and reconciliation works.
+                  exception prioritization.   Exception list is not
+                                              prioritized by likely
+                                              severity.
+  --------------- --------------------------- ---------------------------
+
++-----------------------------------------------------------------------+
+| **Key Principle (Reinforced)**                                        |
+|                                                                       |
+| *No workspace variant requires AI to function correctly. AI improves  |
+| the experience through intelligent ordering, contextual emphasis, and |
+| anomaly detection. At every degradation level, the data is accurate,  |
+| the calculations are correct, and the functions work. What changes is |
+| how efficiently information is organized and presented.*              |
++-----------------------------------------------------------------------+
+
+**7. Role-Based Access Control Implications**
+
+Each workspace variant requires specific RBAC permissions. The security
+architecture (noui-security-architecture.md) defines RBAC + ABAC
+controls; this section maps workspace variants to permission
+requirements.
+
+  ---------------- --------------------- ------------------ -----------------
+  **Workspace**    **Read Permissions**  **Write            **Special
+                                         Permissions**      Access**
+
+  **CSR Hub**      All member data       Contact info       Member search by
+                   (excluding            changes,           any identifier
+                   medical/disability)   interaction        
+                                         logging, work item 
+                                         creation           
+
+  **Counselor**    All member data +     Saved estimates,   Scenario model
+                   estimate history      appointment notes  parameters
+
+  **Benefits       Assigned case data    Case processing,   Claim/unclaim
+  Analyst**        only                  calculations,      work items
+                                         determinations     
+
+  **Supervisor**   All team cases +      Approve, reject,   Team queue
+                   operational metrics   reassign, annotate management
+
+  **QA /           All cases             Audit findings,    Cross-case
+  Compliance**     (historical), full    quality notes      queries, sampling
+                   audit trails                             
+
+  **Employer       Employer data, member Contribution batch Employer-level
+  Services**       roster (non-PII)      processing         search
+
+  **Finance**      Financial aggregates, Payment            Batch payment
+                   payment records       authorization,     operations
+                                         adjustments        
+
+  **Executive**    Operational KPIs,     None (read-only    Drill-down to
+                   aggregate data only   dashboard)         anonymized
+                                                            details
+  ---------------- --------------------- ------------------ -----------------
+
+**Critical note:** The Benefits Analyst role has the most restrictive
+data scope by design. Analysts see only their assigned cases, not the
+full member database. This prevents unauthorized browsing and supports
+audit trail integrity. The CSR role has broader read access because they
+must respond to any member who calls, but has narrower write access
+(limited to contact changes and work item creation, not case
+processing).
+
+**8. POC Scope and Phasing**
+
+The DERP POC cannot implement all workspace variants simultaneously. The
+following phasing aligns with the existing build plan.
+
+**8.1 POC Deliverables (In Scope)**
+
+-   **Task Workspace** --- Already the primary focus. The four demo
+    cases prove composition for the Benefits Analyst role.
+
+-   **Member Context Hub (CSR) --- Prototype** --- Demonstrate the
+    alternative entry point with member lookup and navigation cards. Use
+    the four demo cases to show how cards adapt per member situation.
+
+-   **Composition Validation** --- Implement the deterministic validator
+    for service retirement compositions. Demonstrate that incorrect
+    compositions are caught and corrected.
+
+-   **Static Fallback** --- Demonstrate degradation from composed
+    workspace to static fallback for both Task and Hub variants.
+
+**8.2 Post-POC Roadmap**
+
+-   Scenario Workspace (Counselor variant) --- First post-POC addition,
+    high member impact
+
+-   Team Dashboard (Supervisor variant) --- Required for production
+    operational management
+
+-   Audit Workspace (QA/Compliance) --- Required before SOC 2 readiness
+
+-   Employer Dashboard --- Phase 2, when employer integration is added
+
+-   Executive Dashboard --- Phase 2, alongside operational analytics
+
+-   Composition drift detection --- Requires production volume for
+    baseline establishment
+
+**9. What This Document Is Not**
+
+This document does not define the visual design of any workspace
+variant. Visual design language is defined in the Dynamic Workspace UX
+Architecture document and applies consistently across all variants.
+
+This document does not define the component library. Components
+(MemberBanner, SalaryTable, BenefitCalculationPanel, etc.) are defined
+in the Architecture Reference and are shared across all workspace
+variants.
+
+This document does not replace ADR-007. The degradation hierarchy
+remains the governing specification for failure handling. This document
+extends it with composition integrity monitoring and role-specific
+fallback definitions.
+
+This document does not define process workflows. How a retirement
+application moves through stages is defined by the Process Orchestrator.
+This document defines how different roles interact with those processes
+through their specialized workspace variants.
+
+*End of Document*

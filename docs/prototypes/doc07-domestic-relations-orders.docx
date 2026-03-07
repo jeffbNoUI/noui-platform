@@ -1,0 +1,610 @@
+NoUI Training Document Series
+
+**Public Pension Domain Knowledge**
+
+Document 7: Domestic Relations Orders
+
+Version 1.0 \| February 2026
+
+*Division of pension benefits in divorce: legal requirements,
+calculation methods, and administrative processes*
+
+Executive Summary
+
+Domestic Relations Orders (DROs) divide pension benefits between a
+member and a former spouse (or other alternate payee) pursuant to a
+divorce decree or legal separation. Public pension plans use DROs rather
+than the QDROs (Qualified Domestic Relations Orders) that apply to
+ERISA-covered private plans, though the concepts are similar.
+
+DRO administration is among the most complex aspects of pension
+operations, requiring coordination between legal documents, benefit
+calculations, and payment processing. This document examines DRO legal
+requirements, division methodologies, calculation approaches, and
+administrative workflows essential for accurate implementation.
+
+1\. Legal Framework
+
+1.1 DRO vs. QDRO
+
+Public pension plans are exempt from ERISA and therefore do not use
+Qualified Domestic Relations Orders (QDROs). Instead, they operate under
+state law provisions for Domestic Relations Orders (DROs):
+
+  ----------------------- ----------------------- -----------------------
+  **Aspect**              **QDRO (Private         **DRO (Public Plans)**
+                          Plans)**                
+
+  Governing Law           ERISA / IRC 414(p)      State statutes
+
+  Federal Requirements    Must meet IRC criteria  Not applicable
+
+  Plan Authority          Limited by ERISA        Per state/plan rules
+
+  Model Orders            IRS guidance available  Plan-specific models
+  ----------------------- ----------------------- -----------------------
+
+1.2 State Law Variations
+
+DRO requirements vary by state and by individual plan. Key variations
+include:
+
+-   Whether the plan accepts DROs at all
+
+-   Required content and format of orders
+
+-   Division methods permitted
+
+-   Timing of payments to alternate payee
+
+-   Survivor benefit requirements
+
+-   Whether alternate payee can receive benefits before member retires
+
+1.3 DERP DRO Provisions
+
+DERP accepts Domestic Relations Orders that divide benefits earned
+during marriage. Key provisions:
+
+-   Division by percentage or fixed dollar amount
+
+-   Covers benefits earned while employed during the marriage
+
+-   Alternate payee payments begin when member retires
+
+-   Plan-specific language requirements must be followed
+
+-   Pre-approval process available before final court order
+
+2\. Key Terminology
+
+2.1 Parties
+
+**Member (Participant):** The pension plan member whose benefit is being
+divided. Also called the \'employee\' or \'plan participant.\'
+
+**Alternate Payee:** The person entitled to receive a portion of the
+member\'s benefit under the DRO. Typically the former spouse, though may
+include children or other dependents in some jurisdictions.
+
+**Plan Administrator:** The pension plan official responsible for
+reviewing and implementing DROs.
+
+2.2 Benefit Concepts
+
+**Marital Portion:** The share of the pension benefit earned during the
+marriage while the member was employed with the covered employer. This
+is the portion subject to division.
+
+**Coverture Period:** The period of marriage during which the member was
+employed and earning pension benefits. Used to calculate the marital
+fraction.
+
+**Marital Fraction (Time Rule):** The ratio of service during marriage
+to total service at retirement. Used to determine the marital portion of
+the benefit.
+
+**Separate Property:** Benefits earned before marriage or after
+divorce/separation. Generally not subject to division.
+
+2.3 Division Methods
+
+**Shared Payment:** Both member and alternate payee receive portions of
+the same calculated benefit. Payments to alternate payee are contingent
+on member\'s retirement and benefit status.
+
+**Separate Interest:** Alternate payee\'s share is converted to an
+independent benefit that is not tied to member\'s elections. Less common
+in public plans.
+
+3\. Marital Share Calculation
+
+The most common approach to dividing public pension benefits uses a
+marital share (or \'time rule\') methodology that determines what
+portion of the benefit was earned during the marriage.
+
+3.1 The Time Rule Formula
+
+**Marital Fraction = Months of Service During Marriage ÷ Total Months of
+Service at Retirement**
+
+**Marital Share = Total Benefit × Marital Fraction**
+
+**Alternate Payee Amount = Marital Share × Award Percentage**
+
+3.2 Defining the Coverture Period
+
+The coverture period---the time during which service counts toward the
+marital share---requires precise definition:
+
+**Start Date:** Typically the later of marriage date or employment date.
+If member was already employed when married, coverture begins at
+marriage.
+
+**End Date:** Typically the earlier of divorce date (or separation date
+if specified) or employment termination. If divorce occurs before
+retirement, coverture ends at divorce.
+
+3.3 Worked Example: Case 4 (Robert Martinez with DRO)
+
+Given Information:
+
+-   Marriage Date: August 15, 1999
+
+-   Divorce Date: November 3, 2017
+
+-   Employment Start: June 15, 1997
+
+-   Retirement Date: April 1, 2026
+
+-   DRO Award: 40% of marital share to Patricia
+
+Step 1: Determine Coverture Period
+
+-   Coverture Start: August 15, 1999 (marriage date, after employment
+    began)
+
+-   Coverture End: November 3, 2017 (divorce date, before retirement)
+
+-   Coverture Duration: 18 years, 2 months, 19 days ≈ 18.25 years
+
+Step 2: Calculate Total Service at Retirement
+
+-   Employment: June 15, 1997 to April 1, 2026
+
+-   Total Service: 28 years, 9 months, 17 days ≈ 28.75 years
+
+Step 3: Calculate Marital Fraction
+
+-   Marital Fraction = 18.25 ÷ 28.75 = 0.6348 (63.48%)
+
+Step 4: Calculate Marital Share
+
+-   Total Benefit (Maximum): \$5,999.17 (illustrative)
+
+-   Marital Share = \$5,999.17 × 0.6348 = \$3,808.27
+
+Step 5: Calculate Alternate Payee Amount
+
+-   DRO Award: 40% of marital share
+
+-   Patricia\'s Monthly Benefit = \$3,808.27 × 0.40 = \$1,523.31
+
+Step 6: Calculate Member\'s Remaining Benefit
+
+-   Robert\'s Benefit = \$5,999.17 - \$1,523.31 = \$4,475.86
+
+4\. Division Methods in Detail
+
+4.1 Percentage of Marital Share
+
+Most DROs award the alternate payee a percentage of the marital share
+rather than a fixed dollar amount:
+
+-   Typical awards: 50% of marital share (equal division)
+
+-   May be other percentages based on settlement negotiations
+
+-   Percentage applies to marital portion only, not entire benefit
+
+-   Final dollar amount not known until member retires
+
+4.2 Fixed Dollar Amount
+
+Some DROs specify a fixed monthly dollar amount:
+
+-   Provides certainty to both parties
+
+-   Does not adjust with cost-of-living increases
+
+-   Must ensure amount does not exceed marital share
+
+-   Less common approach in public plans
+
+4.3 Present Value Offset
+
+Rather than dividing the pension directly, parties may agree to offset
+the pension value against other assets:
+
+-   Member keeps entire pension
+
+-   Alternate payee receives other assets of equivalent value
+
+-   Requires actuarial valuation of pension
+
+-   No ongoing DRO administration required
+
+-   Risk shifts to party receiving the offset
+
+4.4 Comparison of Approaches
+
+  ----------------- ----------------- ----------------- -----------------
+  **Method**        **Pros**          **Cons**          **Best For**
+
+  \% of Marital     Fair sharing of   Uncertain amount  Most cases
+                    risk                                
+
+  Fixed Dollar      Certain amount    No COLA sharing   Short marriages
+
+  Present Value     Clean break       Valuation         Ample other
+                                      disputes          assets
+  ----------------- ----------------- ----------------- -----------------
+
+5\. Payment Timing and Conditions
+
+5.1 When Alternate Payee Receives Benefits
+
+In most public plans using the shared payment approach:
+
+-   Payments to alternate payee begin when member retires
+
+-   Alternate payee cannot force early distribution
+
+-   If member delays retirement, alternate payee must wait
+
+-   Alternate payee has no control over member\'s retirement timing
+
+5.2 DERP Payment Rules
+
+Under DERP, the alternate payee\'s benefit:
+
+-   Begins when member retires and starts receiving benefits
+
+-   Is calculated based on member\'s actual benefit at retirement
+
+-   Continues for alternate payee\'s lifetime (if structured as survivor
+    benefit)
+
+-   May terminate upon alternate payee\'s death or remarriage (depending
+    on order)
+
+5.3 If Member Dies Before Retirement
+
+DRO provisions must address what happens if member dies before retiring:
+
+-   Alternate payee may receive portion of pre-retirement survivor
+    benefit
+
+-   Some orders award portion of contribution refund
+
+-   Benefits may be lost if no survivor benefit exists
+
+-   DRO should explicitly address this scenario
+
+5.4 If Alternate Payee Dies First
+
+Orders should specify what happens if alternate payee predeceases
+member:
+
+-   Share may revert to member (most common)
+
+-   Share may continue to alternate payee\'s estate (rare)
+
+-   May affect member\'s payment option choices
+
+6\. Interaction with Payment Options
+
+6.1 DRO and Member\'s Election
+
+The member\'s payment option election affects DRO calculations:
+
+-   DRO typically based on Maximum (single life) benefit
+
+-   If member elects J&S with current spouse, DRO still based on Maximum
+
+-   Member bears cost of J&S reduction from their remaining share
+
+-   Alternate payee amount usually not affected by member\'s option
+    choice
+
+6.2 Survivor Benefits for Alternate Payee
+
+DROs may provide survivor protection for the alternate payee:
+
+-   Order may require member to elect alternate payee as J&S beneficiary
+
+-   Alternate payee\'s portion may be structured as separate survivor
+    benefit
+
+-   Plan must be able to administer required survivor provision
+
+-   May require actuarial adjustment to alternate payee\'s share
+
+6.3 Example: Robert Martinez Case 4
+
+Robert elects 75% J&S with current spouse Elena:
+
+-   Maximum benefit: \$5,999.17
+
+-   Patricia\'s DRO share (calculated on Maximum): \$1,523.31
+
+-   Remaining before J&S reduction: \$5,999.17 - \$1,523.31 = \$4,475.86
+
+-   Robert\'s benefit with 75% J&S factor (0.89): \$4,475.86 × 0.89 =
+    \$3,983.52
+
+-   Patricia receives \$1,523.31 (unaffected by Robert\'s J&S election)
+
+-   If Robert dies, Elena receives 75% of \$3,983.52 = \$2,987.64
+
+7\. DRO Administrative Process
+
+7.1 Pre-Approval Review
+
+Many plans offer pre-approval review of draft orders:
+
+-   Attorneys submit draft DRO before court filing
+
+-   Plan reviews for compliance with plan provisions
+
+-   Identifies language problems before order is final
+
+-   Reduces likelihood of rejected final orders
+
+-   Does not guarantee final approval (circumstances may change)
+
+7.2 Required DRO Content
+
+DROs must typically contain:
+
+-   Full legal names of member and alternate payee
+
+-   Dates of birth and Social Security numbers
+
+-   Marriage and divorce/separation dates
+
+-   Clear specification of benefit division method
+
+-   Percentage or amount awarded to alternate payee
+
+-   Provisions for death of either party
+
+-   Whether COLAs are shared
+
+-   Plan name and identification
+
+7.3 Review and Qualification Process
+
+**Step 1 - Receipt:** Plan receives certified copy of court order
+
+**Step 2 - Initial Review:** Verify parties, plan coverage, required
+elements
+
+**Step 3 - Legal Review:** Legal counsel reviews for compliance with
+plan terms
+
+**Step 4 - Determination:** Order accepted or rejected with explanation
+
+**Step 5 - Notification:** Both parties notified of determination
+
+**Step 6 - Implementation:** Accepted order entered into system, flagged
+for payment
+
+7.4 Common Rejection Reasons
+
+DROs are frequently rejected for:
+
+-   Missing required elements (dates, SSNs, etc.)
+
+-   Language not conforming to plan requirements
+
+-   Attempting to divide more than marital share
+
+-   Requiring benefits the plan does not provide
+
+-   Incorrect plan name or references
+
+-   Conflicting or ambiguous provisions
+
+8\. Ongoing DRO Administration
+
+8.1 Member Account Flag
+
+Once a DRO is accepted, the member\'s account must be flagged:
+
+-   Prevents retirement processing without DRO consideration
+
+-   Alerts staff to calculate alternate payee share
+
+-   Ensures proper payment splitting
+
+-   Triggers alternate payee communications at retirement
+
+8.2 Benefit Estimates
+
+When providing benefit estimates to members with DROs:
+
+-   Show total benefit before DRO
+
+-   Calculate and show DRO deduction
+
+-   Display member\'s net benefit after DRO
+
+-   Note that final amounts depend on retirement date
+
+8.3 Payment Processing
+
+At retirement, payment processing must:
+
+-   Calculate total benefit
+
+-   Calculate marital share using retirement-date service
+
+-   Apply DRO percentage to marital share
+
+-   Establish separate payment records for each payee
+
+-   Process payments to each party according to their elections
+
+8.4 COLA Administration
+
+If the DRO specifies that COLAs are shared:
+
+-   Apply COLA percentage to both portions
+
+-   Alternate payee share increases proportionally
+
+-   Track cumulative COLAs on both payment streams
+
+If COLAs are not shared (fixed dollar amount):
+
+-   Only member\'s portion receives COLA increases
+
+-   Alternate payee amount remains constant
+
+9\. Multiple DROs and Complex Situations
+
+9.1 Multiple Former Spouses
+
+Members may have DROs from multiple marriages:
+
+-   Each DRO covers only the marital period for that marriage
+
+-   Marital fractions do not overlap
+
+-   Combined awards cannot exceed total benefit
+
+-   Each alternate payee\'s share calculated independently
+
+9.2 Overlapping Service Periods
+
+Careful tracking is required when:
+
+-   Member remarried before divorcing (rare but possible)
+
+-   Service periods have complex breaks
+
+-   Multiple employers involved
+
+9.3 DRO Modifications
+
+Courts may modify DROs after initial issuance:
+
+-   Plan must receive certified amended order
+
+-   Original order should be superseded, not supplemented
+
+-   Clear effective dates required
+
+-   May affect payments already in progress
+
+9.4 Death After DRO, Before Retirement
+
+If member dies after DRO is entered but before retirement:
+
+-   Alternate payee rights depend on DRO language
+
+-   May be entitled to portion of pre-retirement survivor benefit
+
+-   May receive portion of contribution refund
+
+-   Must coordinate with primary beneficiary rights
+
+10\. Implications for NoUI Development
+
+10.1 Data Model Requirements
+
+DRO administration requires tracking:
+
+-   DRO status flag on member record
+
+-   Multiple DRO records per member (for multiple divorces)
+
+-   For each DRO: order date, marriage dates, divorce date, award
+    percentage
+
+-   Alternate payee information (name, SSN, DOB, address)
+
+-   COLA sharing indicator
+
+-   Payment status and history for each alternate payee
+
+10.2 Calculation Engine Requirements
+
+-   Calculate marital fraction using precise date arithmetic
+
+-   Apply award percentage to marital share
+
+-   Support both percentage and fixed dollar awards
+
+-   Handle multiple DROs with non-overlapping coverture periods
+
+-   Integrate DRO calculations with payment option processing
+
+10.3 Workflow Support
+
+-   DRO receipt and tracking
+
+-   Review checklist for required elements
+
+-   Approval/rejection workflow with notifications
+
+-   Flag accounts with pending or approved DROs
+
+-   Block retirement processing until DRO addressed
+
+10.4 Reporting and Transparency
+
+-   Show DRO impact on benefit estimates
+
+-   Document marital fraction calculation
+
+-   Generate alternate payee benefit statements
+
+-   Provide clear breakdown of payments
+
+-   Audit trail for all DRO-related actions
+
+10.5 Payment Processing
+
+-   Establish separate payee records
+
+-   Generate separate payment vouchers
+
+-   Track payments to each party
+
+-   Handle tax reporting for each payee
+
+-   Process COLA adjustments appropriately
+
+Conclusion
+
+Domestic Relations Orders add significant complexity to pension
+administration, requiring careful attention to legal requirements,
+precise calculations, and ongoing coordination between member and
+alternate payee benefits. The marital share methodology must be
+implemented with exact date arithmetic, and the interaction between DROs
+and payment options must be correctly managed.
+
+Case 4 (Robert Martinez with DRO) demonstrates the calculation flow:
+determine coverture period, calculate marital fraction, apply award
+percentage, and coordinate with the member\'s payment option election.
+NoUI must implement these calculations with full transparency, showing
+each step so that both parties can verify the division.
+
+The administrative workflow---from initial receipt through qualification
+review to ongoing payment processing---must be systematic and
+well-documented. DRO errors can result in legal liability, so robust
+validation and audit trails are essential.
+
+*--- End of Document 7 ---*

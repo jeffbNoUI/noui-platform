@@ -1,0 +1,385 @@
+# =============================================================================
+# DERP Service Credit Rules
+# =============================================================================
+# Domain: service-credit
+# Rules: RULE-SVC-EARNED, RULE-SVC-PURCHASED, RULE-SVC-SEPARATION
+# Authority: DERP Restated Master Contract (RMC)
+# =============================================================================
+
+metadata:
+  domain: "service-credit"
+  version: "1.0.0"
+  effective_date: "2026-03-02"
+  authority: "DERP Restated Master Contract (RMC)"
+  description: >
+    Defines how service credit is earned, how purchased service is treated,
+    and how service is calculated upon separation from employment.
+  governance:
+    owner: "DERP Rules Committee"
+    approved_by: "Plan Administrator"
+    approval_date: "2026-03-02"
+    review_cycle: "annual"
+    next_review_date: "2027-03-02"
+    audit_trail: true
+    change_log:
+      - version: "1.0.0"
+        date: "2026-03-02"
+        author: "Rules Committee"
+        description: "Initial service credit rule definitions for DERP NoUI POC"
+
+rules:
+  # ===========================================================================
+  # RULE-SVC-EARNED: Earned Service Credit
+  # ===========================================================================
+  - id: "RULE-SVC-EARNED"
+    name: "Earned Service Credit Calculation"
+    description: >
+      Earned service credit is based on actual employment. One year of service
+      credit is earned for each full year of continuous employment. Partial years
+      are prorated by month. Earned service counts toward ALL plan provisions:
+      vesting, Rule of 75/85, benefit calculation, and IPR eligibility.
+    source_reference:
+      document: "RMC"
+      section: "Section 4.01 - Earned Service Credit"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "hire_date"
+        type: "date"
+        required: true
+        description: "Member's original hire date"
+      - name: "calculation_date"
+        type: "date"
+        required: true
+        description: "Date to calculate service credit through (retirement or termination date)"
+      - name: "unpaid_leave_months"
+        type: "number"
+        required: false
+        default: 0
+        description: "Total months of unpaid leave to deduct"
+    logic:
+      type: "formula"
+      expression: >
+        total_months = months_between(hire_date, calculation_date) - unpaid_leave_months;
+        earned_service_years = total_months / 12.0;
+        earned_service_years = round(earned_service_years, 4)
+      variables:
+        months_between: "function calculating calendar months between two dates"
+    output:
+      name: "earned_service"
+      type: "object"
+      fields:
+        - name: "earned_service_years"
+          type: "decimal"
+          precision: 4
+        - name: "earned_service_months"
+          type: "integer"
+        - name: "counts_toward"
+          type: "list"
+          values: ["vesting", "rule_of_75_85", "benefit_calculation", "ipr"]
+    tags: ["service-credit", "earned", "calculation"]
+    test_cases:
+      - name: "Happy path - Robert Martinez 27+ years earned service"
+        type: "happy_path"
+        demo_case_ref: "Case 1: Robert Martinez - Tier 1"
+        description: "Tier 1 member hired 1998-06-15, retiring ~2026, no unpaid leave"
+        inputs:
+          hire_date: "1998-06-15"
+          calculation_date: "2025-12-15"
+          unpaid_leave_months: 0
+        expected:
+          earned_service_years: 27.5
+          earned_service_months: 330
+          counts_toward:
+            - "vesting"
+            - "rule_of_75_85"
+            - "benefit_calculation"
+            - "ipr"
+      - name: "Boundary - exactly 5 years (vesting threshold)"
+        type: "boundary"
+        description: "Member with exactly 5.0 years of service meets vesting"
+        inputs:
+          hire_date: "2020-01-01"
+          calculation_date: "2025-01-01"
+          unpaid_leave_months: 0
+        expected:
+          earned_service_years: 5.0
+          earned_service_months: 60
+      - name: "Below boundary - just under 5 years"
+        type: "below_boundary"
+        description: "Member with 4 years 11 months does NOT meet vesting"
+        inputs:
+          hire_date: "2020-02-01"
+          calculation_date: "2025-01-01"
+          unpaid_leave_months: 0
+        expected:
+          earned_service_years: 4.9167
+          earned_service_months: 59
+      - name: "Negative - calculation date before hire date"
+        type: "negative"
+        description: "System should reject when calculation date is before hire date"
+        inputs:
+          hire_date: "2025-01-01"
+          calculation_date: "2020-01-01"
+          unpaid_leave_months: 0
+        expected:
+          error: "INVALID_DATE_RANGE"
+          message: "calculation_date must be on or after hire_date"
+      - name: "Edge case - unpaid leave reduces service"
+        type: "edge_case"
+        description: "6 months of unpaid leave deducted from service"
+        inputs:
+          hire_date: "2015-01-10"
+          calculation_date: "2026-01-10"
+          unpaid_leave_months: 6
+        expected:
+          earned_service_years: 10.5
+          earned_service_months: 126
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-SVC-PURCHASED: Purchased Service Credit
+  # ===========================================================================
+  - id: "RULE-SVC-PURCHASED"
+    name: "Purchased Service Credit Treatment"
+    description: >
+      Members may purchase additional service credit. CRITICAL: Purchased service
+      counts ONLY for BENEFIT CALCULATION. It does NOT count toward:
+      - Rule of 75/85 eligibility
+      - IPR (Insurance Premium Reimbursement) eligibility
+      - Vesting
+      This distinction is essential for correct benefit computation.
+    source_reference:
+      document: "RMC"
+      section: "Section 4.03 - Purchased Service Credit"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "purchased_service_years"
+        type: "decimal"
+        required: true
+        description: "Number of years of purchased service credit"
+        constraints:
+          min: 0
+          max: 10
+      - name: "earned_service_years"
+        type: "decimal"
+        required: true
+        description: "Member's earned service years (for context)"
+    logic:
+      type: "procedural"
+      steps:
+        - step: 1
+          action: "Validate purchased_service_years >= 0 and <= 10"
+        - step: 2
+          action: "Calculate total_service_for_benefit = earned_service_years + purchased_service_years"
+        - step: 3
+          action: "Set total_service_for_rule_of_n = earned_service_years (EXCLUDE purchased)"
+        - step: 4
+          action: "Set total_service_for_ipr = earned_service_years (EXCLUDE purchased)"
+        - step: 5
+          action: "Set total_service_for_vesting = earned_service_years (EXCLUDE purchased)"
+      critical_note: >
+        PURCHASED SERVICE IS EXCLUDED from Rule of 75/85, IPR, and vesting.
+        Only earned service counts for those provisions.
+    output:
+      name: "service_credit_allocation"
+      type: "object"
+      fields:
+        - name: "total_service_for_benefit"
+          type: "decimal"
+          description: "Earned + Purchased (used in benefit formula)"
+        - name: "total_service_for_rule_of_n"
+          type: "decimal"
+          description: "Earned ONLY (used for Rule of 75/85)"
+        - name: "total_service_for_ipr"
+          type: "decimal"
+          description: "Earned ONLY (used for IPR calculation)"
+        - name: "total_service_for_vesting"
+          type: "decimal"
+          description: "Earned ONLY (used for vesting)"
+    tags: ["service-credit", "purchased", "critical-distinction"]
+    notes: >
+      THIS IS A COMMON ERROR SOURCE. Many calculations incorrectly include purchased
+      service in Rule of 75/85 or IPR. The engine MUST enforce the separation.
+    test_cases:
+      - name: "Happy path - Jennifer Kim with 3 years purchased"
+        type: "happy_path"
+        demo_case_ref: "Case 2: Jennifer Kim - Tier 2"
+        description: "Tier 2 member with 20 earned + 3 purchased years"
+        inputs:
+          purchased_service_years: 3.0
+          earned_service_years: 20.0
+        expected:
+          total_service_for_benefit: 23.0
+          total_service_for_rule_of_n: 20.0
+          total_service_for_ipr: 20.0
+          total_service_for_vesting: 20.0
+      - name: "Boundary - maximum purchased service (10 years)"
+        type: "boundary"
+        description: "Member purchasing the maximum allowed 10 years"
+        inputs:
+          purchased_service_years: 10.0
+          earned_service_years: 15.0
+        expected:
+          total_service_for_benefit: 25.0
+          total_service_for_rule_of_n: 15.0
+          total_service_for_ipr: 15.0
+      - name: "Below boundary - zero purchased service"
+        type: "below_boundary"
+        description: "Member with no purchased service; all totals equal earned"
+        inputs:
+          purchased_service_years: 0.0
+          earned_service_years: 27.5
+        expected:
+          total_service_for_benefit: 27.5
+          total_service_for_rule_of_n: 27.5
+          total_service_for_ipr: 27.5
+      - name: "Negative - exceeds maximum purchased service"
+        type: "negative"
+        description: "System should reject purchase exceeding 10-year maximum"
+        inputs:
+          purchased_service_years: 11.0
+          earned_service_years: 20.0
+        expected:
+          error: "EXCEEDS_MAX_PURCHASE"
+          message: "purchased_service_years cannot exceed 10"
+      - name: "Negative - negative purchased service"
+        type: "negative"
+        description: "System should reject negative purchased service"
+        inputs:
+          purchased_service_years: -2.0
+          earned_service_years: 20.0
+        expected:
+          error: "INVALID_INPUT"
+          message: "purchased_service_years must be >= 0"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"
+
+  # ===========================================================================
+  # RULE-SVC-SEPARATION: Service at Separation
+  # ===========================================================================
+  - id: "RULE-SVC-SEPARATION"
+    name: "Service Credit at Separation"
+    description: >
+      Calculates final service credit values at the point of separation from
+      employment (retirement, termination, or death). Combines earned and
+      purchased service and determines which totals apply to which provisions.
+    source_reference:
+      document: "RMC"
+      section: "Section 4.05 - Service at Separation"
+      last_verified: "2026-03-01"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "hire_date"
+        type: "date"
+        required: true
+      - name: "separation_date"
+        type: "date"
+        required: true
+      - name: "unpaid_leave_months"
+        type: "number"
+        required: false
+        default: 0
+      - name: "purchased_service_years"
+        type: "decimal"
+        required: false
+        default: 0.0
+    logic:
+      type: "procedural"
+      steps:
+        - step: 1
+          action: "Calculate earned_service using RULE-SVC-EARNED"
+          depends_on: "RULE-SVC-EARNED"
+        - step: 2
+          action: "Apply purchased service allocation using RULE-SVC-PURCHASED"
+          depends_on: "RULE-SVC-PURCHASED"
+        - step: 3
+          action: "Return final service credit breakdown"
+    dependencies:
+      - "RULE-SVC-EARNED"
+      - "RULE-SVC-PURCHASED"
+    output:
+      name: "separation_service"
+      type: "object"
+      fields:
+        - name: "earned_service_years"
+          type: "decimal"
+        - name: "purchased_service_years"
+          type: "decimal"
+        - name: "total_benefit_service"
+          type: "decimal"
+        - name: "total_eligibility_service"
+          type: "decimal"
+    tags: ["service-credit", "separation", "composite"]
+    test_cases:
+      - name: "Happy path - Robert Martinez separation service"
+        type: "happy_path"
+        demo_case_ref: "Case 1: Robert Martinez - Tier 1"
+        description: "Tier 1, 27.5 earned, 0 purchased, retiring"
+        inputs:
+          hire_date: "1998-06-15"
+          separation_date: "2025-12-15"
+          unpaid_leave_months: 0
+          purchased_service_years: 0.0
+        expected:
+          earned_service_years: 27.5
+          purchased_service_years: 0.0
+          total_benefit_service: 27.5
+          total_eligibility_service: 27.5
+      - name: "Boundary - Jennifer Kim with purchased service"
+        type: "boundary"
+        demo_case_ref: "Case 2: Jennifer Kim - Tier 2"
+        description: "Tier 2, 20 earned + 3 purchased; benefit vs eligibility differ"
+        inputs:
+          hire_date: "2005-03-01"
+          separation_date: "2025-03-01"
+          unpaid_leave_months: 0
+          purchased_service_years: 3.0
+        expected:
+          earned_service_years: 20.0
+          purchased_service_years: 3.0
+          total_benefit_service: 23.0
+          total_eligibility_service: 20.0
+      - name: "Below boundary - short service member"
+        type: "below_boundary"
+        description: "Member with less than 5 years, not vested"
+        inputs:
+          hire_date: "2022-01-01"
+          separation_date: "2025-06-01"
+          unpaid_leave_months: 0
+          purchased_service_years: 0.0
+        expected:
+          earned_service_years: 3.4167
+          purchased_service_years: 0.0
+          total_benefit_service: 3.4167
+          total_eligibility_service: 3.4167
+      - name: "Negative - separation before hire"
+        type: "negative"
+        description: "System should reject separation date before hire date"
+        inputs:
+          hire_date: "2025-01-01"
+          separation_date: "2020-01-01"
+          unpaid_leave_months: 0
+          purchased_service_years: 0.0
+        expected:
+          error: "INVALID_DATE_RANGE"
+          message: "separation_date must be on or after hire_date"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-02"
+      reviewed_by: "Plan Administrator"
+      effective_date: "2026-03-02"

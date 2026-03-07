@@ -1,0 +1,605 @@
+NoUI Training Document Series
+
+**Public Pension Domain Knowledge**
+
+Document 8: Service Credit & Purchases
+
+Version 1.0 \| February 2026
+
+*Understanding how service credit is earned, calculated, purchased, and
+applied to benefits*
+
+Executive Summary
+
+Service credit is one of the three fundamental components of the pension
+benefit formula. It represents the time worked that counts toward
+retirement benefits. While most service credit is earned through regular
+employment, many plans allow members to purchase additional service
+credit for qualifying periods such as military service, prior public
+employment, or leaves of absence.
+
+This document examines how service credit is earned and calculated, the
+types of service that can be purchased, cost calculation methodologies,
+and the critical distinctions between service credit for benefit
+calculation versus service credit for eligibility determination. The
+Jennifer Kim demo case (Case 2) illustrates these concepts, showing how
+purchased service increases benefits while not counting toward Rule of
+75 eligibility.
+
+1\. Types of Service Credit
+
+1.1 Earned Service
+
+Earned service credit accumulates through actual employment with a
+covered employer. This is the primary form of service credit and
+typically counts for all purposes:
+
+-   Vesting determination
+
+-   Benefit calculation
+
+-   Rule of years eligibility (Rule of 75/85)
+
+-   Early retirement eligibility
+
+-   Insurance Premium Reimbursement (IPR)
+
+1.2 Purchased Service
+
+Purchased service credit is acquired through payment rather than
+employment. Common categories include:
+
+-   Military service buyback
+
+-   Prior public employment with another system
+
+-   Redeposit of previously refunded contributions
+
+-   Leave of absence periods
+
+-   Part-time service not previously credited
+
+1.3 Transferred Service
+
+Transferred service comes from another public retirement system through
+reciprocity or portability agreements:
+
+-   Service remains in original system for benefit calculation there
+
+-   May count toward eligibility in current system
+
+-   Coordination rules vary by agreement
+
+-   No payment typically required for transfer
+
+1.4 DERP Service Credit Summary
+
+  ----------------- ------------- ------------- ------------- -------------
+  **Service Type**  **Benefit     **Rule        **Vesting**   **IPR**
+                    Calc**        75/85**                     
+
+  Earned            Yes           Yes           Yes           Yes
+
+  Purchased         Yes           No            No            No
+
+  Military (if      Yes           No            No            No
+  purchased)                                                  
+  ----------------- ------------- ------------- ------------- -------------
+
+2\. Calculating Earned Service
+
+2.1 Service Calculation Methods
+
+Plans use various methods to calculate earned service:
+
+**Elapsed Time Method:** Calculates service as elapsed calendar time
+from hire date to termination/retirement date. Simple but may overstate
+service for part-time employees.
+
+**Hours of Service Method:** Tracks actual hours worked and converts to
+service credit. Common in plans covering part-time employees. Typically
+2,080 hours equals one year.
+
+**Days of Service Method:** Counts actual days worked. Often used for
+educational employees with academic calendars.
+
+2.2 Handling Employment Breaks
+
+Service calculations must account for breaks in employment:
+
+-   Authorized leaves may be credited (paid or purchased)
+
+-   Unauthorized absences typically not credited
+
+-   Breaks in service may reset vesting (depending on plan rules)
+
+-   Rehired employees may have multiple service periods
+
+2.3 Part-Time Service
+
+Part-time employees may earn service credit differently:
+
+-   Full credit: Some plans credit full service regardless of hours
+
+-   Prorated credit: Service prorated based on hours vs. full-time
+
+-   Hours threshold: Must work minimum hours to receive any credit
+
+Example: Employee working 20 hours/week (50% of full-time) might earn
+0.5 years of service credit per calendar year.
+
+2.4 Service Calculation Example
+
+Robert Martinez (Demo Case 1):
+
+-   Hire Date: June 15, 1997
+
+-   Retirement Date: April 1, 2026
+
+-   Employment: Continuous, full-time
+
+-   Calculation using elapsed time:
+
+-   From June 15, 1997 to June 15, 2025 = 28 years
+
+-   From June 15, 2025 to April 1, 2026 = 9 months, 17 days
+
+-   Total: 28 years, 9 months, 17 days
+
+-   Decimal equivalent: 28.75 years (using 9/12 months)
+
+3\. Purchasable Service Categories
+
+3.1 Military Service
+
+Military service purchases (often called military buyback) allow
+veterans to receive pension credit for active duty military service:
+
+-   Must have qualifying active duty service
+
+-   May require honorable discharge documentation
+
+-   May have time limits for purchase (e.g., within 5 years of hire)
+
+-   Federal USERRA law may provide additional protections
+
+-   Cost varies by plan methodology
+
+3.2 Prior Public Employment
+
+Service with other public employers may be purchasable:
+
+-   Previous state or local government employment
+
+-   May be limited to service within same state
+
+-   May require that prior service was with a pension-eligible position
+
+-   Documentation requirements vary
+
+3.3 Redeposit of Refunded Contributions
+
+Members who previously withdrew their contributions may be able to
+restore that service:
+
+-   Must repay withdrawn contributions plus interest
+
+-   Interest may be compounded from withdrawal date
+
+-   Restores service credit that was forfeited
+
+-   May restore vesting status if applicable
+
+3.4 Leave of Absence
+
+Certain leaves may be purchasable:
+
+-   Unpaid leaves (FMLA, personal, educational)
+
+-   Workers\' compensation periods
+
+-   Union leave
+
+-   Cost typically based on salary at time of leave
+
+3.5 Other Purchasable Categories
+
+Plans may allow purchase of:
+
+-   Air time (additional service with no corresponding employment)
+
+-   Furlough days (to offset AMS impact)
+
+-   Seasonal or temporary service not previously credited
+
+-   Prior private sector service (rare in public plans)
+
+4\. Service Purchase Cost Calculation
+
+The cost to purchase service credit varies based on plan methodology and
+timing. Understanding cost calculations is essential for advising
+members on purchase decisions.
+
+4.1 Actuarial Cost Method
+
+The most precise (and typically most expensive) method calculates the
+present value of the additional benefit the purchased service will
+provide:
+
+**Cost = Present Value of Additional Benefit**
+
+Factors affecting actuarial cost:
+
+-   Member\'s current age
+
+-   Expected retirement age
+
+-   Current salary (affects benefit amount)
+
+-   Amount of service being purchased
+
+-   Plan\'s actuarial assumptions (mortality, discount rate)
+
+Actuarial cost increases significantly with age because:
+
+-   Fewer years until retirement means less time for contributions to
+    earn returns
+
+-   Longer expected benefit payout period
+
+-   Higher current salary means larger benefit increase
+
+4.2 Contribution-Based Method
+
+Some plans use a simpler calculation based on contributions:
+
+**Cost = Salary × Contribution Rate × Years Purchased**
+
+May include:
+
+-   Employee contribution rate only
+
+-   Combined employee + employer rate
+
+-   Interest from when service would have been earned
+
+4.3 Cost Comparison Example
+
+For Jennifer Kim purchasing 3 years of service:
+
+Contribution-Based (Illustrative)
+
+-   Average salary during purchase period: \$55,000
+
+-   Employee contribution rate: 8.45%
+
+-   Base cost: \$55,000 × 8.45% × 3 = \$13,942
+
+-   Plus interest (varies by plan): approximately \$3,000
+
+-   Total: approximately \$17,000
+
+Actuarial Cost (Illustrative)
+
+-   Additional monthly benefit from 3 years: approximately \$330
+
+-   Present value at age 55: approximately \$55,000
+
+Note: Actual costs vary significantly based on plan provisions and
+member circumstances.
+
+4.4 Payment Options for Purchases
+
+Plans typically offer multiple payment methods:
+
+**Lump Sum:** Pay full amount immediately. May be from personal savings,
+rollover from other retirement accounts, or other sources.
+
+**Payroll Deduction:** Pay over time through additional payroll
+withholdings. May include interest on unpaid balance.
+
+**Rollover:** Transfer funds from 401(k), IRA, or other eligible
+retirement accounts. Tax-advantaged approach.
+
+**Combination:** Partial lump sum with remainder through payroll
+deduction.
+
+4.5 Tax Implications
+
+Service purchase payments may have tax implications:
+
+-   After-tax payments: Contribution basis tracks for future tax-free
+    return
+
+-   Pre-tax rollovers: Entire amount taxable upon distribution
+
+-   Plans must track contribution sources separately
+
+-   Members should consult tax advisors
+
+5\. Service Credit for Different Purposes
+
+A critical concept in pension administration is that service credit may
+count for some purposes but not others. This creates complexity that
+must be carefully managed.
+
+5.1 DERP Service Credit Rules
+
+In DERP, purchased service counts for benefit calculation but NOT for:
+
+-   Rule of 75 (Tier 1 and 2) determination
+
+-   Rule of 85 (Tier 3) determination
+
+-   Vesting (5-year requirement)
+
+-   Insurance Premium Reimbursement (IPR)
+
+This distinction is critical because a member with significant purchased
+service may have a substantial benefit but still face early retirement
+reductions if they don\'t meet the rule of years with earned service
+alone.
+
+5.2 Impact Demonstration: Jennifer Kim (Case 2)
+
+Jennifer Kim illustrates the practical impact of service credit
+restrictions:
+
+Service Credit Summary
+
+-   Earned service: 18 years, 2 months (18.17 years)
+
+-   Purchased service: 3 years
+
+-   Total for benefit calculation: 21.17 years
+
+-   Service for Rule of 75: 18.17 years (earned only)
+
+Eligibility Analysis at Age 55
+
+-   Rule of 75 check: 55 + 18.17 = 73.17 \< 75
+
+-   Result: Does NOT meet Rule of 75
+
+-   Early retirement: Age 55 ≥ 55 ✓, Service 18.17 ≥ 5 ✓
+
+-   Reduction: 10 years under 65 × 3% = 30%
+
+Benefit Calculation
+
+-   Uses total service: 1.5% × 21.17 × \$7,346 = \$2,332.96 unreduced
+
+-   After 30% reduction: \$1,633.07
+
+Key Insight
+
+Jennifer\'s purchased service increases her benefit by about \$330/month
+(the value of 3 additional years in the formula), but it cannot help her
+avoid the 30% early retirement reduction because it doesn\'t count
+toward Rule of 75.
+
+5.3 Threshold Proximity Analysis
+
+Understanding the interaction between purchased and earned service is
+critical for threshold proximity analysis:
+
+Jennifer Kim - One Year Later (Age 56)
+
+-   Earned service: 19.17 years
+
+-   Rule of 75: 56 + 19.17 = 75.17 ≥ 75 ✓
+
+-   Result: Meets Rule of 75, NO reduction
+
+-   Benefit: 1.5% × 22.17 × \$7,500 (est.) = \$2,493.56
+
+Comparison
+
+-   Retire at 55: \$1,633.07/month (30% reduction)
+
+-   Wait to 56: \$2,493.56/month (no reduction)
+
+-   Difference: \$860/month = \$10,320/year
+
+-   Over 25-year retirement: \$258,000 more by waiting one year
+
+This analysis demonstrates why threshold proximity detection is so
+valuable. Members with purchased service may not realize that waiting a
+short time to accumulate enough earned service can dramatically increase
+their lifetime benefits.
+
+6\. Service Purchase Process
+
+6.1 Eligibility Determination
+
+Before a member can purchase service, eligibility must be established:
+
+-   Is the service type purchasable under plan rules?
+
+-   Does the member meet any prerequisite requirements?
+
+-   Is the member within any time limits for purchase?
+
+-   Can the service be documented adequately?
+
+6.2 Documentation Requirements
+
+Service purchases require documentation proving the qualifying service:
+
+**Military Service:** DD-214 or equivalent discharge documentation
+showing dates and character of service.
+
+**Prior Public Employment:** Official records from prior employer
+showing dates of employment, positions held, and salary history.
+
+**Redeposit:** Plan records showing original service, contribution
+withdrawal, and amounts.
+
+**Leave of Absence:** Employer records showing approved leave dates and
+type.
+
+6.3 Cost Quote Process
+
+Once eligibility and documentation are confirmed:
+
+**Step 1:** Calculate amount of service credit available for purchase
+
+**Step 2:** Apply cost calculation methodology
+
+**Step 3:** Generate cost quote with payment options
+
+**Step 4:** Provide expiration date for quote (costs increase with age)
+
+**Step 5:** Explain impact on benefits and eligibility
+
+6.4 Purchase Completion
+
+To complete a service purchase:
+
+-   Member elects payment method
+
+-   Payment received or payroll deduction begins
+
+-   Service credit added to member record
+
+-   Type of service (purchased) properly coded
+
+-   Documentation retained in member file
+
+7\. Special Situations
+
+7.1 Partial Purchases
+
+Members may be allowed to purchase less than the full amount of
+available service:
+
+-   May purchase in increments (e.g., whole years only)
+
+-   May have minimum purchase amounts
+
+-   Partial purchases may have different cost implications
+
+-   Need to track what has been purchased vs. available
+
+7.2 Purchase Deadlines
+
+Many plans impose time limits on service purchases:
+
+-   Military: May need to purchase within X years of hire
+
+-   Prior service: May have window after hire date
+
+-   Redeposit: May have deadline after rehire
+
+-   Cost quotes: Usually expire within 30-90 days
+
+7.3 Purchase and DRO Interaction
+
+Purchased service may affect DRO calculations:
+
+-   Service purchased during marriage may be marital property
+
+-   Purchase timing relative to divorce matters
+
+-   Community property states have specific rules
+
+-   DRO may need to address service purchases
+
+7.4 Purchase Refunds
+
+What happens if a member purchases service but never uses it:
+
+-   If member terminates non-vested: May receive refund
+
+-   If member takes contribution refund: Purchase typically refunded
+
+-   If member retires: No refund; purchase is in benefit
+
+-   If member dies before retirement: Rules vary
+
+8\. Implications for NoUI Development
+
+8.1 Data Model Requirements
+
+Service credit tracking requires:
+
+-   Multiple service credit records per member
+
+-   Service type classification (earned, purchased, transferred)
+
+-   Effective dates for each service credit segment
+
+-   Source documentation references
+
+-   Cost and payment information for purchases
+
+-   Clear separation for eligibility calculations
+
+8.2 Calculation Engine Requirements
+
+-   Calculate total service for benefit formula
+
+-   Calculate earned-only service for eligibility rules
+
+-   Support service credit aggregation across periods
+
+-   Handle partial years and months correctly
+
+-   Apply service to appropriate tier rules
+
+8.3 Service Purchase Support
+
+-   Eligibility determination for purchase types
+
+-   Cost calculation using plan methodology
+
+-   Quote generation with expiration dates
+
+-   Payment tracking and application
+
+-   Service credit posting upon payment
+
+8.4 Reporting and Transparency
+
+-   Clear display of service credit breakdown by type
+
+-   Show which service counts for which purposes
+
+-   Benefit impact analysis for potential purchases
+
+-   Threshold proximity including purchase scenarios
+
+-   Documentation of all service credit sources
+
+8.5 Member Self-Service
+
+-   View current service credit summary
+
+-   Request purchase cost estimates
+
+-   Track purchase payment progress
+
+-   Understand service credit restrictions
+
+Conclusion
+
+Service credit is fundamental to pension benefit determination, but its
+proper administration requires understanding the distinctions between
+service types and their applicability to different purposes. The DERP
+rule that purchased service counts for benefit calculation but not for
+eligibility determination creates scenarios where members may have
+significant benefits but face substantial reductions.
+
+Jennifer Kim\'s case (Case 2) demonstrates this clearly: her 3 years of
+purchased service add approximately \$330/month to her benefit, but they
+cannot help her meet Rule of 75. By waiting one additional year to
+accumulate enough earned service, she could avoid a 30% reduction and
+receive over \$850/month more.
+
+NoUI must implement service credit tracking with precision, clearly
+distinguishing service types and applying them correctly to both benefit
+calculations and eligibility determinations. The threshold proximity
+analysis that identifies opportunities like Jennifer\'s situation
+provides enormous value to members making retirement timing decisions.
+
+*--- End of Document 8 ---*

@@ -1,0 +1,545 @@
+**NoUI Public Pension Domain Knowledge**
+
+Document Series for AI Training and Business Development
+
+Document 1 of 14
+
+**INDUSTRY OVERVIEW & MARKET STRUCTURE**
+
+Comprehensive Analysis of the U.S. Public Pension Landscape
+
+Version 1.0 --- February 2026
+
+**1. Executive Summary**
+
+The U.S. public pension system represents one of the largest pools of
+institutional capital in the world, managing approximately \$5.99
+trillion in assets as of 2024. This system provides retirement security
+for over 36 million current and former state and local government
+employees, including teachers, police officers, firefighters, and
+general municipal workers.
+
+The public pension landscape is characterized by remarkable diversity.
+Unlike the private sector, where ERISA provides a uniform federal
+framework, public plans operate under a patchwork of state
+constitutions, statutes, and local ordinances. This creates both
+challenges and opportunities for technology providers seeking to serve
+this market.
+
+Key characteristics of the current market include total assets of \$5.99
+trillion across all state and local pension systems, an average funded
+ratio of 80.2% with significant variation across plans, total unfunded
+liability of approximately \$1.37 trillion, over 6,000 individual
+pension plans with 253 major systems holding the vast majority of
+assets, legacy technology infrastructure often dating to the 1970s and
+1980s, and growing pressure for modernization driven by member
+expectations and regulatory requirements.
+
+The pension administration software market reached \$4.93 billion in
+2025 and is projected to grow to \$7.43 billion by 2030, representing an
+8.60% compound annual growth rate. This growth is driven by the urgent
+need to replace aging systems, increasing regulatory complexity, and
+rising member expectations for digital self-service capabilities.
+
+**2. The U.S. Public Pension System**
+
+**2.1 Historical Context**
+
+Public employee pension systems in the United States have their origins
+in the late 19th century, when municipal governments began offering
+retirement benefits to attract and retain qualified workers. The first
+major public pension system was established for New York City police
+officers in 1857, followed by similar plans for firefighters and
+teachers.
+
+The modern era of public pensions began after World War II, when state
+and local governments expanded rapidly to meet the needs of a growing
+population. By the 1970s, most government employees had access to
+defined benefit pension plans, creating the infrastructure that largely
+persists today.
+
+A critical distinction emerged in 1974 with the passage of the Employee
+Retirement Income Security Act (ERISA), which established comprehensive
+federal regulation of private-sector pension plans. Significantly, ERISA
+explicitly exempted governmental plans from its requirements, leaving
+public pension oversight to state and local governments. This exemption
+means that public plans operate without federal minimum funding
+standards, PBGC insurance, or standardized reporting requirements.
+
+**2.2 Current Structure**
+
+Today\'s public pension landscape comprises multiple layers of
+organization including statewide systems covering state employees,
+teachers, and often local government workers; large municipal systems
+serving major cities such as New York, Los Angeles, and Chicago; county
+and regional systems particularly in states without mandatory statewide
+coverage; special district systems for fire protection, water, and other
+special-purpose governments; and standalone systems for specific
+employee groups like judges, legislators, and public safety personnel.
+
+The fragmentation of public pensions creates substantial administrative
+complexity. While a private-sector employer typically participates in
+one or two pension arrangements, a mid-sized state may have dozens of
+separate pension systems, each with its own governing board, benefit
+structure, and administrative infrastructure.
+
+**2.3 Governance Structure**
+
+Public pension systems are typically governed by boards of trustees that
+include a combination of appointed officials, elected employee
+representatives, and ex-officio members such as the state treasurer or
+comptroller. Board responsibilities include setting investment policy
+and selecting investment managers, adopting actuarial assumptions used
+in funding calculations, approving administrative policies and
+procedures, certifying contribution rates for participating employers,
+and ensuring compliance with applicable laws and regulations.
+
+The Government Finance Officers Association (GFOA) has established best
+practices for pension governance, emphasizing the importance of clear
+roles, regular communication, appropriate expertise, and transparent
+reporting. Many systems have adopted these guidelines, though
+implementation varies significantly.
+
+**3. Market Size and Financial Position**
+
+**3.1 Asset Values and Growth**
+
+As of fiscal year 2024, state and local pension systems collectively
+hold approximately \$5.99 trillion in assets, representing a 9.24%
+increase from the prior year\'s \$5.48 trillion. This growth reflects
+strong investment returns during 2024, with the average public pension
+fund achieving a 10.33% return.
+
+  ----------------- ----------------- ----------------- -----------------
+  **Year**          **Total Assets**  **YoY Change**    **Avg Return**
+
+  2019              \$4.35 Trillion   +6.8%             6.79%
+
+  2020              \$4.51 Trillion   +3.7%             3.14%
+
+  2021              \$5.47 Trillion   +21.3%            26.35%
+
+  2022              \$4.82 Trillion   -11.9%            -6.27%
+
+  2023              \$5.48 Trillion   +13.7%            7.45%
+
+  2024              \$5.99 Trillion   +9.3%             10.33%
+  ----------------- ----------------- ----------------- -----------------
+
+**3.2 Funded Status**
+
+The funded ratio---the proportion of accrued liabilities covered by plan
+assets---is the primary measure of a pension system\'s financial health.
+As of 2024, the average funded ratio across all public plans is 80.2%,
+up from 75.5% in 2023. However, this average masks substantial
+variation. Funded ratios range from below 30% for the most troubled
+systems to over 100% for the best-funded plans.
+
+Key observations about funding status include that public pension funded
+ratios have remained below 90% for 17 consecutive years, total unfunded
+liability across all systems is approximately \$1.37 trillion, the
+largest unfunded liabilities are concentrated in a relatively small
+number of systems, and funding levels vary dramatically by state with
+some maintaining healthy systems while others face severe stress.
+
+**3.3 Contributors to Funding Challenges**
+
+Research by the RAND Corporation has identified six common contributors
+to pension funding crises:
+
+1.  Incorrect actuarial assumptions: Overly optimistic assumptions about
+    investment returns, salary growth, or mortality have caused many
+    systems to underfund their obligations
+
+2.  Institutional constraints: Legal and constitutional protections for
+    pension benefits limit the ability to adjust accrued benefits even
+    when necessary
+
+3.  Poor governance: Inadequate board oversight, conflicts of interest,
+    and political interference have contributed to funding shortfalls
+
+4.  Lack of expertise: Board members and decision-makers may lack the
+    technical knowledge to evaluate complex actuarial and investment
+    issues
+
+5.  Adversarial political culture: Pension funding often becomes
+    politicized, with contributions deferred to address short-term
+    budget pressures
+
+6.  Conflicting incentives: Various stakeholders have different
+    interests that may not align with long-term funding
+
+**4. Plan Types and Classifications**
+
+**4.1 Benefit Structure Classifications**
+
+**4.1.1 Defined Benefit (DB) Plans**
+
+The traditional defined benefit plan remains the predominant structure
+in public employment. Under a DB plan, the employer promises a specific
+monthly benefit at retirement, typically calculated as a percentage of
+final average salary multiplied by years of service. The employer bears
+the investment risk and is responsible for ensuring sufficient funds to
+pay promised benefits.
+
+Key characteristics of public DB plans include benefit formula typically
+based on final average salary and years of service, employer
+contribution rates that fluctuate based on investment returns and
+actuarial experience, vesting periods typically ranging from 5 to 10
+years, early retirement options with actuarial reductions, and survivor
+benefit options for spouses and dependents.
+
+**4.1.2 Defined Contribution (DC) Plans**
+
+Some jurisdictions have adopted defined contribution plans, similar to
+401(k) plans in the private sector. Under a DC plan, both employer and
+employee make specified contributions to individual accounts, and the
+employee bears the investment risk. The retirement benefit depends on
+account balances at retirement. DC plans are more common in states that
+have recently reformed their pension systems, often as part of hybrid
+arrangements.
+
+**4.1.3 Hybrid Plans**
+
+Hybrid plans combine features of both defined benefit and defined
+contribution structures. Common hybrid designs include cash balance
+plans where the benefit is expressed as a hypothetical account balance,
+stacked hybrids where participants receive both a reduced DB benefit and
+a DC account, and choice hybrids where employees choose between DB and
+DC options at hire.
+
+**4.2 Administrative Classifications**
+
+For accounting and administrative purposes, public plans are classified
+based on their relationship to participating employers. Single-employer
+plans cover employees of one governmental entity, with the simplest
+administrative structure but potential challenges related to limited
+participant base. Agent multiple-employer plans provide coverage for
+employees of multiple employers but maintain separate accounts for each
+employer, with each having its own contribution rate based on its own
+actuarial experience. Cost-sharing multiple-employer plans pool all
+participating employers together with a single contribution rate applied
+to all regardless of individual experience, requiring complex allocation
+methodologies for GASB reporting purposes.
+
+**5. Participant Demographics**
+
+**5.1 Participant Categories**
+
+Public pension systems serve multiple categories of participants. Active
+members are current employees accruing service credit and making
+contributions, representing the youngest segment who will receive
+benefits at some future date. Retired members are former employees
+currently receiving monthly pension benefits, including service
+retirees, disability retirees, and survivor beneficiaries. Inactive
+vested members have left public employment before retirement but have
+earned a vested right to future benefits. Inactive non-vested members
+who left before vesting are typically entitled only to a refund of their
+own contributions, though many never claim these refunds.
+
+**5.2 Demographic Trends**
+
+Several demographic trends are shaping the public pension landscape. The
+aging workforce means the average age of public employees has increased
+as baby boomers delay retirement. Reduced hiring indicates government
+employment has not kept pace with population growth, reducing the ratio
+of active workers to retirees. Increased longevity through improved
+mortality has extended the period over which benefits are paid. Career
+pattern changes with shorter average careers in public employment
+increase the population of inactive vested members.
+
+These trends have significant implications for pension funding and
+administration. Systems must adapt their assumptions, contribution
+policies, and administrative processes to address changing demographics.
+
+**6. Funding Status and Challenges**
+
+**6.1 Measuring Funded Status**
+
+The funded ratio is calculated by dividing plan assets by plan
+liabilities. However, both numerator and denominator involve significant
+judgment. Asset valuation can be at market value or actuarial value,
+with the latter typically involving smoothing market fluctuations over
+five years to reduce contribution rate volatility. While smoothing
+provides stability, it can mask the true financial position.
+
+Liability measurement uses actuarial methods that depend heavily on the
+discount rate---the assumed rate of investment return. Higher discount
+rates produce lower measured liabilities. Most public plans use discount
+rates between 6.5% and 7.5%, though economists generally argue these
+rates are too high given the guaranteed nature of pension promises.
+
+**6.2 Funding Policies**
+
+Pension funding involves complex policy choices including actuarial cost
+method (Entry Age Normal being most common), amortization period for
+unfunded liabilities typically 15-30 years, asset smoothing usually over
+5 years, and contribution policy determining how actuarially determined
+amounts translate to actual payments.
+
+**6.3 States of Concern**
+
+Several states face particularly severe pension funding challenges.
+Systems in Illinois, New Jersey, Kentucky, and Connecticut have funded
+ratios below 50%, meaning assets cover less than half of accrued
+obligations. These systems face difficult choices including dramatically
+increased contributions straining government budgets, benefit reductions
+that may face legal challenges, service cuts in other government
+functions, and tax increases that may drive residents and businesses
+away. Conversely, states like Wisconsin, South Dakota, and Tennessee
+maintain well-funded systems that demonstrate successful pension
+management is achievable.
+
+**7. Revenue Sources and Cash Flow**
+
+**7.1 Revenue Components**
+
+Public pension systems receive revenue from three primary sources.
+Investment earnings represent the largest revenue source for mature
+pension systems, typically comprising about 63% of total revenue on a
+long-term basis, including dividends, interest, and capital gains.
+Investment returns are inherently volatile, creating challenges for
+planning and budgeting.
+
+Employer contributions are the second-largest revenue source and have
+increased substantially, rising from an average of 9.41% of payroll in
+2001 to 31.65% in 2024. This increase reflects efforts to address
+unfunded liabilities. For many governments, pension contributions now
+represent a significant portion of personnel costs and total budget.
+
+Employee contributions, typically ranging from 5% to 10% of salary,
+provide a stable, predictable revenue stream that partially insulates
+systems from investment volatility. These may be made pre-tax under IRC
+Section 414(h) arrangements or after-tax depending on plan design.
+
+**7.2 Cash Flow Concerns**
+
+Pension systems must manage cash flow carefully to ensure ability to
+meet benefit obligations. Key considerations include timing of
+contribution receipts relative to benefit payments, liquidity of
+investment portfolio, impact of contribution timing on investment
+returns, and risk of forced asset sales during market downturns. A
+system becomes mature when benefit payments approach or exceed
+contributions, requiring investment returns to cover the difference.
+
+**8. Major State and Local Systems**
+
+**8.1 Largest Systems by Assets**
+
+A relatively small number of systems hold the majority of public pension
+assets:
+
+  -------------------------- --------------- --------------- --------------
+  **System**                 **Assets**      **Members**     **Funded**
+
+  CalPERS (California)       \$475B+         2.0M+           75%
+
+  CalSTRS (California)       \$320B+         1.0M+           74%
+
+  New York State Common      \$250B+         1.1M+           92%
+
+  Florida RS                 \$200B+         1.1M+           82%
+
+  Texas Teachers             \$190B+         1.8M+           78%
+
+  Wisconsin RS               \$140B+         0.6M+           100%
+
+  Ohio PERS                  \$115B+         0.7M+           82%
+  -------------------------- --------------- --------------- --------------
+
+**8.2 Regional Variations**
+
+Pension systems vary significantly by region. Western states tend to
+have larger statewide systems with consolidated administration.
+Northeastern states often have multiple separate systems and higher
+benefit levels. Southern states generally have lower benefits but better
+funded systems. Midwestern states show wide variation in both benefits
+and funding.
+
+**8.3 Local Systems**
+
+While statewide systems receive the most attention, thousands of local
+pension systems serve municipal employees. Colorado provides an example
+of local pension complexity with 61 separate locally-administered
+pension plans in addition to the statewide PERA system. These local
+plans vary widely in size, benefit structure, and administrative
+sophistication, facing unique challenges including limited staff
+resources, difficulty attracting actuarial expertise, and governance
+structures that may lack appropriate checks and balances.
+
+**9. Market Trends and Evolution**
+
+**9.1 Benefit Design Evolution**
+
+Many states have implemented tier systems providing different benefits
+based on hire date. Newer employees typically receive lower benefits
+than predecessors, with changes including reduced accrual rates, longer
+final average salary periods, later retirement ages, and lower
+cost-of-living adjustments. The Denver Employees Retirement Plan
+exemplifies this with three tiers based on hire date.
+
+Several states have adopted hybrid plans combining defined benefit and
+defined contribution elements, including Virginia\'s optional hybrid
+plan, Tennessee\'s mandatory hybrid for new hires since 2014, and
+Utah\'s hybrid design. Some systems have implemented risk-sharing
+mechanisms that adjust benefits or contributions based on plan
+experience.
+
+**9.2 Contribution Trends**
+
+Employer contribution rates have increased dramatically from an average
+of 9.41% of payroll in 2001 to 31.65% in 2024. Some distressed systems
+require contributions exceeding 40% of payroll. Rising pension costs
+have crowded out other public spending, with pension contributions
+increasingly competing with education, infrastructure, and services.
+
+**9.3 Investment Strategy Evolution**
+
+Public pension investment strategies have evolved with shift from bonds
+to equities during the 1980s and 1990s, increased allocation to
+alternative investments including private equity, real estate, and hedge
+funds, growing emphasis on environmental, social, and governance
+factors, and ongoing debate over active versus passive management.
+
+**10. Technology and Administration Market**
+
+**10.1 Market Size and Growth**
+
+The pension administration software market reached \$4.93 billion in
+2025 and is projected to grow to \$7.43 billion by 2030, representing an
+8.60% compound annual growth rate. This growth is driven by urgent need
+to replace aging legacy systems, regulatory pressure for real-time
+reporting and transparency, rising member expectations for digital
+self-service, and government modernization mandates with dedicated
+funding.
+
+**10.2 Deployment Trends**
+
+Cloud-based deployments have become dominant, representing 60.40% of the
+market in 2024 and growing at a 12.80% CAGR. The shift to cloud is
+driven by reduced capital expenditure requirements, easier system
+updates and maintenance, improved disaster recovery capabilities, and
+better scalability. However, on-premises deployments persist in
+jurisdictions with data localization requirements.
+
+**10.3 Legacy System Challenges**
+
+A striking feature of the public pension technology landscape is the
+prevalence of legacy systems. Government at all levels remains dependent
+on legacy systems, which consume 70-80% of IT budgets for maintenance
+rather than innovation. Many pension systems continue to operate on
+platforms developed in the 1970s and 1980s with COBOL-based mainframe
+applications, critical business logic embedded in undocumented code,
+difficult and expensive integration with modern systems, staff with
+legacy expertise retiring, and incomplete or nonexistent documentation.
+
+**10.4 Modernization Approaches**
+
+Pension systems considering modernization face several strategic
+choices: complete system replacement with modern commercial software,
+rehosting to modern infrastructure without code changes, refactoring by
+rewriting using modern languages and architectures, encapsulating legacy
+systems with modern interfaces, and integrating legacy systems to modern
+front-ends and analytics. Large-scale pension system replacements are
+notoriously risky, with numerous high-profile failures including the
+California PERS 21st Century project abandoned in 2012 after spending
+over \$250 million.
+
+**10.5 Self-Service Portal Growth**
+
+Member self-service portals are expanding rapidly, growing at a 12.50%
+CAGR. Modern portals allow members to view account balances and
+projected benefits, run benefit estimates with different retirement
+scenarios, update personal information and beneficiary designations,
+submit retirement applications online, and access tax documents and
+payment history.
+
+**11. Key Industry Organizations**
+
+**11.1 Professional Associations**
+
+Several professional organizations serve the public pension community.
+The National Association of State Retirement Administrators (NASRA) is
+the primary association for state and local government pension
+administrators, providing research, education, and advocacy. The
+National Council on Teacher Retirement (NCTR) represents public pension
+systems serving teachers and education employees. The Government Finance
+Officers Association (GFOA) provides best practices guidance for
+government finance including pension administration and accounting. The
+Conference of Consulting Actuaries (CCA) represents actuaries providing
+consulting services to public pension plans.
+
+**11.2 Research Organizations**
+
+Key research organizations include the Equable Institute providing
+detailed funding analysis for 253 major public pension systems, the
+Center for Retirement Research at Boston College conducting academic
+research on retirement security, the Reason Foundation performing policy
+analysis with focus on pension reform, RAND Corporation researching
+pension funding and reform strategies, and the Urban Institute analyzing
+pension policy and state/local fiscal issues.
+
+**11.3 Standard-Setting Bodies**
+
+Standard-setting bodies include the Governmental Accounting Standards
+Board (GASB) setting accounting and reporting standards for state and
+local governments including pensions, the Actuarial Standards Board
+(ASB) issuing Actuarial Standards of Practice governing pension
+actuarial work, and the American Academy of Actuaries (AAA) as the
+professional organization setting qualification standards for actuaries.
+
+**12. Implications for NoUI**
+
+**12.1 Market Opportunity**
+
+The public pension landscape presents significant opportunities for
+NoUI\'s approach to modernization. Vast legacy infrastructure creates
+urgent need for modernization. Failed replacement projects have made
+systems wary of big-bang approaches. The middleware approach addresses
+risk concerns while enabling progressive improvement. Split architecture
+with cloud AI and on-premises data addresses security and compliance
+requirements. Local plans like Colorado\'s 61 locally-administered
+systems are underserved by enterprise vendors.
+
+**12.2 Competitive Landscape**
+
+NoUI\'s approach differs from traditional vendors. Enterprise vendors
+like Sagitec, Vitech, and CPAS focus on complete system replacement.
+Consulting firms often recommend multi-year transformation projects.
+NoUI\'s middleware approach enables value without replacing existing
+systems. AI-driven workspace composition is unique in the market.
+
+**12.3 Key Success Factors**
+
+Based on this industry analysis, NoUI should emphasize calculation
+accuracy as pension systems require absolute precision, transparency by
+showing all work since systems have been burned by black-box solutions,
+auditability ensuring every calculation is traceable to governing
+documents, incremental deployment enabling value without full system
+replacement, legacy integration working with existing databases rather
+than requiring migration, and compliance awareness understanding GASB,
+IRS, and state-specific requirements.
+
+**12.4 Denver POC Strategic Value**
+
+The Denver Employees Retirement Plan POC provides an ideal demonstration
+platform. Its three-tier structure demonstrates handling of benefit
+complexity. Local administration reflects target market characteristics.
+Colorado\'s 61 local plans provide immediate expansion opportunity.
+Moderate size enables comprehensive demonstration without overwhelming
+scope. DERP\'s challenges including multiple tiers, DROs, and purchased
+service are representative of industry complexity.
+
+**12.5 Long-Term Vision**
+
+NoUI\'s market position should emphasize progressive modernization
+without operational disruption. The platform should be positioned as the
+safest path to modernization for risk-averse pension systems, a solution
+preserving institutional knowledge while enabling new capabilities, an
+approach delivering value in months not years, and a platform growing
+more intelligent through cross-system learning while maintaining strict
+data isolation.
+
+*--- End of Document 1 ---*
+
+Next: Document 2 --- Governance & Regulatory Framework

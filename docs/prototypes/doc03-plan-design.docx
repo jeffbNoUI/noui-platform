@@ -1,0 +1,580 @@
+NoUI Training Document Series
+
+**Public Pension Domain Knowledge**
+
+Document 3: Plan Design Fundamentals
+
+Version 1.0 \| February 2026
+
+*Understanding defined benefit plan structures, benefit formulas, and
+design elements*
+
+Executive Summary
+
+Public pension plan design encompasses the rules, formulas, and
+structures that determine how retirement benefits are earned,
+calculated, and paid. Understanding these design elements is fundamental
+to pension administration, as they form the basis for every calculation,
+eligibility determination, and benefit payment.
+
+This document examines the core components of defined benefit plan
+design: benefit formulas and their variables, vesting requirements,
+contribution structures, and the increasingly common multi-tier designs
+that reflect legislative reforms over time. The Denver Employees
+Retirement Plan (DERP) serves as a concrete example throughout,
+illustrating how these concepts apply in practice.
+
+1\. Types of Retirement Plans
+
+1.1 Defined Benefit Plans
+
+A defined benefit (DB) plan promises participants a specific benefit at
+retirement, calculated according to a formula specified in plan
+documents. The benefit amount is \'defined\' by the formula rather than
+by account balances or contributions. The employer bears the investment
+risk and is responsible for ensuring sufficient assets to pay promised
+benefits.
+
+Key characteristics of defined benefit plans include:
+
+-   Benefit determined by formula, typically based on salary and service
+
+-   Employer bears investment risk and funding responsibility
+
+-   Benefits paid as lifetime annuities (monthly payments for life)
+
+-   Professional investment management of pooled assets
+
+-   Actuarial valuations determine required contributions
+
+1.2 Defined Contribution Plans
+
+A defined contribution (DC) plan specifies the contributions made to
+individual accounts rather than the ultimate benefit. Common examples
+include 401(k), 403(b), and 457 plans. The employee bears investment
+risk, as the retirement benefit depends on contributions made and
+investment returns earned.
+
+While most public pension plans remain defined benefit, many
+jurisdictions have added defined contribution components, either as
+supplements to DB plans or as alternatives for certain employee groups.
+
+1.3 Hybrid Plans
+
+Hybrid plans combine elements of defined benefit and defined
+contribution designs. Common hybrid structures include:
+
+**Cash Balance Plans:** Maintain notional individual accounts with
+guaranteed interest credits. At retirement, the account balance converts
+to an annuity. Provides DB-style security with DC-style portability.
+
+**Pension Equity Plans:** Credit a percentage of final average salary
+for each year of service. Accumulated percentages determine a lump sum
+that can convert to an annuity.
+
+**Stacked Hybrids:** Combine a reduced DB benefit with a mandatory DC
+component. Common in recent public pension reforms.
+
+2\. The Benefit Formula
+
+The benefit formula is the mathematical expression that determines a
+member\'s retirement benefit. For most public defined benefit plans,
+this formula multiplies three core variables: an accrual rate
+(multiplier), years of service, and average salary.
+
+2.1 The Standard Formula
+
+The most common benefit formula in public pensions follows this pattern:
+
+**Annual Benefit = Accrual Rate × Years of Service × Final Average
+Salary**
+
+Each component of this formula has significant implications for benefit
+amounts and plan costs:
+
+Accrual Rate (Multiplier)
+
+The accrual rate determines what percentage of salary a member earns as
+an annual pension benefit for each year of service. Common accrual rates
+in public plans range from 1.5% to 2.5%, though some plans (particularly
+for public safety) may exceed 3%.
+
+For example, with a 2.0% accrual rate, each year of service earns a
+benefit equal to 2% of the member\'s final average salary. After 30
+years, the member has earned 60% of their final average salary as an
+annual pension benefit.
+
+Years of Service
+
+Service credit represents the time worked that counts toward the benefit
+calculation. Service is typically measured in years and months, though
+some plans use days or hours. Important considerations include:
+
+-   How service is counted (calendar time vs. hours worked)
+
+-   Treatment of partial years and part-time service
+
+-   Maximum service limits (some plans cap creditable service)
+
+-   Distinction between service for benefit calculation vs. eligibility
+
+Final Average Salary (FAS)
+
+Final average salary represents the compensation base used in the
+benefit formula. Most public plans use the average of the highest
+consecutive years of salary, though specific definitions vary:
+
+-   Averaging period: Typically 3 to 5 years (DERP Tier 1/2: 36 months;
+    Tier 3: 60 months)
+
+-   Definition of compensation: Base salary only vs. inclusion of
+    overtime, bonuses, etc.
+
+-   Consecutive requirement: Whether averaging period must be
+    consecutive years
+
+-   Anti-spiking provisions: Limits on year-over-year salary increases
+    counted in FAS
+
+2.2 Formula Variations
+
+While the basic formula structure is consistent, plans implement
+numerous variations:
+
+**Career Average vs. Final Average:** Some plans use career average
+salary instead of final average. Career average formulas average
+compensation over the entire career, typically producing lower benefits
+than final average formulas but with more predictable costs.
+
+**Flat Dollar Formulas:** A few plans provide a flat dollar amount per
+year of service rather than a percentage of salary. For example, \$50
+per month for each year of service. These formulas are simpler but do
+not reflect salary differences.
+
+**Variable Accrual Rates:** Some plans use different accrual rates for
+different service periods. For example, 1.5% for the first 20 years and
+2.0% for service beyond 20 years.
+
+**Step-Rate Formulas:** The accrual rate may vary based on salary level,
+with higher-paid employees earning at a lower rate on compensation above
+certain thresholds.
+
+2.3 DERP Benefit Formulas
+
+The Denver Employees Retirement Plan illustrates how formula elements
+vary across benefit tiers:
+
+  ----------------- ----------------- ----------------- -----------------
+  **Element**       **Tier 1**        **Tier 2**        **Tier 3**
+
+  Accrual Rate      2.0%              1.5%              1.5%
+
+  AMS Period        36 months         36 months         60 months
+
+  Hire Date         Before 9/1/2004   9/1/2004 -        On/after 7/1/2011
+                                      6/30/2011         
+
+  Early Ret.        3%/year under 65  3%/year under 65  6%/year under 65
+  Reduction                                             
+
+  Rule Threshold    Rule of 75        Rule of 75        Rule of 85
+  ----------------- ----------------- ----------------- -----------------
+
+These differences create significant variation in benefits for employees
+with similar service but different hire dates, requiring careful tier
+determination and formula application.
+
+3\. Vesting Requirements
+
+Vesting refers to an employee\'s right to receive a pension benefit
+after meeting specified service requirements. Before vesting, an
+employee who leaves public employment may only receive a refund of their
+own contributions; after vesting, they have a legal right to a future
+pension benefit.
+
+3.1 Vesting Structures
+
+**Cliff Vesting:** Members become fully vested after completing a
+specified period of service. This is the most common structure in public
+plans. DERP requires 5 years of service for vesting.
+
+**Graded Vesting:** Members vest incrementally over time. For example,
+20% after 2 years, increasing to 100% after 6 years. Less common in
+public defined benefit plans.
+
+**Immediate Vesting:** Members are vested from their first day of
+employment. Rare in defined benefit plans but common in defined
+contribution plans.
+
+3.2 Service Counted for Vesting
+
+Plans may define vesting service differently than benefit service.
+Important distinctions include:
+
+-   Purchased service typically does NOT count toward vesting (DERP
+    follows this rule)
+
+-   Military service may or may not count depending on plan provisions
+
+-   Part-time service may be prorated or counted differently
+
+-   Leave without pay may or may not count toward vesting
+
+3.3 Consequences of Vesting Status
+
+Vesting status determines what happens when a member terminates
+employment:
+
+**Vested Member:** Entitled to a future pension benefit at retirement
+age. May choose between a deferred benefit or a refund of contributions
+(though refund forfeits the pension).
+
+**Non-Vested Member:** Entitled only to a refund of their own
+contributions plus interest. No right to employer contributions or a
+future pension benefit.
+
+4\. Contribution Structure
+
+Public pension funding derives from employee contributions, employer
+contributions, and investment earnings. Contribution structures vary by
+plan but typically involve mandatory participation.
+
+4.1 Employee Contributions
+
+Most public pension plans require employee contributions, typically a
+fixed percentage of salary deducted from each paycheck. DERP requires
+employee contributions of 8.45% of pensionable compensation, made on a
+pre-tax basis.
+
+Key characteristics of employee contributions include:
+
+-   Mandatory vs. voluntary: Most public DB plans require mandatory
+    contributions
+
+-   Tax treatment: Usually pre-tax under IRC Section 414(h) pickup
+    provisions
+
+-   Rate changes: May be adjusted by legislation or collective
+    bargaining
+
+-   Refundability: Contributions plus interest typically refundable upon
+    termination
+
+4.2 Employer Contributions
+
+Employer contributions fund the portion of benefits not covered by
+employee contributions and investment earnings. In DERP, the employer
+contribution rate is 17.95% of payroll.
+
+Employer contribution rates may be:
+
+-   Fixed rate: Set by statute or plan document (DERP uses this
+    approach)
+
+-   Actuarially determined: Calculated annually to meet funding
+    requirements
+
+-   Cost-sharing: Adjusted based on plan funding status or other factors
+
+4.3 Interest on Contributions
+
+Most plans credit interest on employee contributions at a rate specified
+in plan documents. This interest accrues whether the member remains
+employed or terminates, and is paid if the member elects a refund rather
+than a pension. Interest crediting rates and methods vary by plan.
+
+5\. Multi-Tier Plan Design
+
+Most public pension systems now operate multiple benefit tiers for
+different employee cohorts. Legislative reforms, particularly following
+the 2008 financial crisis, created new tiers with reduced benefits for
+newly hired employees while preserving benefits for existing members.
+
+5.1 Reasons for Tier Creation
+
+New benefit tiers are typically created to:
+
+-   Reduce long-term plan costs by lowering benefits for future hires
+
+-   Address funding challenges without affecting current members\'
+    accrued benefits
+
+-   Respond to political pressure about pension costs
+
+-   Navigate constitutional protections that prevent reducing existing
+    benefits
+
+5.2 Common Tier Differences
+
+Elements that commonly differ across tiers include:
+
+-   Accrual rates: Lower rates for newer tiers (DERP: 2.0% vs. 1.5%)
+
+-   Final average salary periods: Longer averaging periods for newer
+    tiers (DERP: 36 vs. 60 months)
+
+-   Normal retirement age: Higher ages for newer tiers
+
+-   Early retirement provisions: Stricter eligibility or larger
+    reductions
+
+-   Rule of years thresholds: Higher thresholds for newer tiers (DERP:
+    75 vs. 85)
+
+-   COLA provisions: Reduced or eliminated automatic adjustments
+
+5.3 Tier Determination
+
+A member\'s benefit tier is typically determined by their hire date or
+plan entry date. Accurate tier determination is critical because it
+affects every aspect of benefit calculation. Systems must:
+
+-   Correctly identify the tier-determining date from employment records
+
+-   Handle re-hired employees who may have different tier status
+
+-   Apply tier-specific rules consistently throughout all calculations
+
+-   Display tier information clearly in member communications
+
+5.4 Administrative Complexity
+
+Multi-tier designs create significant administrative challenges:
+
+-   Systems must track and apply different rules for each tier
+
+-   Staff must understand multiple sets of provisions
+
+-   Member communications must accurately explain tier-specific benefits
+
+-   Benefit estimators must handle all tier variations correctly
+
+-   Testing must verify calculations across all tiers and scenarios
+
+6\. Special Provisions and Features
+
+6.1 Rule of Years
+
+Many public plans include \'Rule of\' provisions that allow unreduced
+retirement before normal retirement age when age plus service equals a
+specified number. DERP uses Rule of 75 for Tiers 1 and 2 (minimum age
+55) and Rule of 85 for Tier 3 (minimum age 60).
+
+Important rule of years considerations:
+
+-   Minimum age requirements must be met even if the rule is satisfied
+
+-   Purchased service typically does NOT count toward rule satisfaction
+
+-   Rule satisfaction eliminates early retirement reduction penalties
+
+6.2 Leave Payout Provisions
+
+Some plans allow unused leave (sick, vacation, compensatory time) to be
+included in pension calculations. DERP allows leave payouts to be
+treated as salary for pension purposes for members hired before January
+1, 2010.
+
+Leave payout provisions can significantly affect final benefits:
+
+-   Payouts boost the final month\'s salary included in AMS calculation
+
+-   May push members into higher AMS if payout month is in the averaging
+    period
+
+-   Eligibility typically depends on hire date, not benefit tier
+
+6.3 Anti-Spiking Provisions
+
+Anti-spiking rules limit the impact of late-career salary increases on
+pension benefits. These provisions address concerns about artificial
+salary inflation near retirement to boost pensions. Common approaches
+include:
+
+-   Caps on year-over-year salary increases counted in AMS (e.g., 110%
+    of prior year)
+
+-   Exclusion of certain compensation types from pensionable salary
+
+-   Requirements for salary history verification
+
+6.4 Maximum Benefit Provisions
+
+Some plans cap the maximum benefit a member can receive, either as a
+dollar amount or as a percentage of final salary. Maximum benefit
+provisions may apply to:
+
+-   Total annual benefit amount
+
+-   Percentage of final average salary
+
+-   Creditable service (e.g., maximum 35 years)
+
+-   Compensation included in calculations
+
+7\. Membership Categories
+
+7.1 Active Members
+
+Active members are currently employed and earning service credit. They
+make regular contributions and accrue benefits according to plan
+provisions. Active member records require:
+
+-   Current employment information
+
+-   Salary history for AMS calculations
+
+-   Service credit tracking
+
+-   Beneficiary designations
+
+7.2 Inactive/Deferred Members
+
+Inactive or deferred members have terminated employment but left their
+contributions in the plan to receive a future benefit. These vested
+terminated members:
+
+-   No longer earn service credit
+
+-   Have a locked-in benefit based on service and salary at termination
+
+-   Will receive benefits upon reaching retirement eligibility
+
+-   May have options to receive benefits earlier with reductions
+
+7.3 Retired Members (Annuitants)
+
+Retired members receive monthly benefit payments. Their records include:
+
+-   Payment amount and form
+
+-   Beneficiary information for survivor benefits
+
+-   Tax withholding elections
+
+-   Direct deposit information
+
+-   COLA history and current adjustments
+
+7.4 Beneficiaries
+
+Beneficiaries include survivors receiving benefits after a member\'s
+death and alternate payees under domestic relations orders. Each
+beneficiary type has specific payment rules and administrative
+requirements.
+
+8\. Governing Documents
+
+Plan design is documented in a hierarchy of governing documents that
+establish legal authority for all provisions:
+
+8.1 Document Hierarchy
+
+**State Constitution:** May contain pension protection provisions.
+Highest authority; other documents cannot conflict.
+
+**State Statutes:** Enabling legislation establishing the plan. Define
+core benefit provisions, governance structure, and funding requirements.
+
+**Municipal Code/Charter:** For locally-administered plans, local laws
+may provide additional specificity. DERP is governed by the Revised
+Municipal Code of Denver.
+
+**Plan Document/Trust Agreement:** Formal plan document incorporating
+statutory provisions and operational details.
+
+**Board Policies:** Administrative policies adopted by the board within
+statutory authority. May address operational procedures, investment
+guidelines, and member services.
+
+**Administrative Procedures:** Staff-level procedures implementing board
+policies. Must be consistent with higher-level documents.
+
+8.2 Document Interpretation
+
+When documents conflict or are ambiguous, interpretation follows
+established principles:
+
+-   Higher-level documents control over lower-level documents
+
+-   Specific provisions control over general provisions
+
+-   Later-enacted provisions may supersede earlier provisions
+
+-   Ambiguities may be resolved in favor of members (in some
+    jurisdictions)
+
+8.3 Technology Implications
+
+Technology systems implementing plan provisions must:
+
+-   Derive all business rules from authoritative governing documents
+
+-   Maintain traceability from calculations to document sources
+
+-   Support amendments as documents are updated
+
+-   Handle effective dating when provisions change over time
+
+9\. Implications for NoUI Development
+
+9.1 Rules Engine Requirements
+
+-   Support multiple benefit formulas across tiers
+
+-   Handle complex eligibility rules with multiple conditions
+
+-   Apply tier-specific provisions correctly based on hire dates
+
+-   Calculate AMS using appropriate averaging periods per tier
+
+-   Implement rule of years logic with minimum age requirements
+
+9.2 Data Model Requirements
+
+-   Track tier-determining dates accurately
+
+-   Maintain complete salary history for AMS calculations
+
+-   Record service credit with appropriate precision
+
+-   Support multiple membership categories and status transitions
+
+-   Store beneficiary information with relationship details
+
+9.3 Calculation Transparency
+
+-   Show formula components and their sources
+
+-   Display intermediate calculation steps
+
+-   Reference governing document sections for each rule applied
+
+-   Enable verification of every calculation to the penny
+
+9.4 Configuration Flexibility
+
+-   Externalize plan-specific parameters from code
+
+-   Support new tier creation without code changes
+
+-   Handle retroactive amendments when provisions change
+
+-   Enable parallel calculations for what-if scenarios
+
+Conclusion
+
+Plan design fundamentals form the foundation of pension administration.
+Every calculation, eligibility determination, and benefit payment
+derives from the design elements documented in governing provisions.
+Technology systems must implement these elements with precision while
+maintaining the flexibility to accommodate plan-specific variations.
+
+The multi-tier landscape of modern public pensions adds complexity but
+also highlights the importance of systematic, rules-based approaches. By
+deriving business rules from governing documents rather than legacy
+system behavior, NoUI ensures that calculations reflect authoritative
+plan provisions while remaining adaptable to the inevitable changes that
+pension legislation brings.
+
+*--- End of Document 3 ---*

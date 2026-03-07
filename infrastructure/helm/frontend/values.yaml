@@ -1,0 +1,26 @@
+replicaCount: 1
+
+image:
+  repository: noui/derp-frontend
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+service:
+  type: NodePort
+  port: 80
+  nodePort: 30000
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 128Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+livenessProbe:
+  httpGet:
+    path: /
+    port: 80
+  initialDelaySeconds: 5
+  periodSeconds: 10

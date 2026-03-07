@@ -1,0 +1,112 @@
+NoUI Platform
+
+Knowledge Governance Framework
+
+Version 1.0 - February 2026
+
+1\. Purpose
+
+This framework establishes how project knowledge is organized,
+maintained, and accessed across the NoUI development effort. It ensures
+continuity across development sessions, prevents knowledge
+fragmentation, and maintains consistency between governing documents and
+active development.
+
+2\. Three-Tier Knowledge Architecture
+
+  ----------------- ------------------ ------------------ ------------------
+  **Tier**          **Contents**       **Volatility**     **Update Process**
+
+  **Tier 1:         Architecture       Lowest (changes    Formal review,
+  Governing         decisions,         rarely)            version control
+  Documents**       principles,                           
+                    policies, business                    
+                    plan                                  
+
+  **Tier 2: Build   BUILD_PLAN,        Medium (changes    Update as
+  Artifacts**       BUILD_HISTORY,     per session)       development
+                    CLAUDE.md, test                       proceeds
+                    fixtures                              
+
+  **Tier 3: Active  Chat sessions,     Highest (changes   Summarize and
+  Conversations**   working decisions, constantly)        promote to Tier 2
+                    exploration                           
+  ----------------- ------------------ ------------------ ------------------
+
+3\. Chat Naming Convention
+
+All development chats follow this naming pattern:
+
+\[Domain Code\] - \[Topic/Phase\] (v#)
+
+Domain Codes
+
+**ARCH:** Architecture and design decisions
+
+**BUILD:** Active development sessions
+
+**DATA:** Database, schema, seed data
+
+**RULES:** Business rules and calculations
+
+**TEST:** Testing and validation
+
+**DEMO:** Demo preparation and cases
+
+**GOV:** Governance and documentation
+
+Examples
+
+BUILD - Database Schema (v1)
+
+RULES - Service Retirement Calculations (v2)
+
+DEMO - Case 1 Robert Martinez (v1)
+
+4\. Succession Protocol
+
+When a chat reaches context limits or a natural breakpoint:
+
+**1. Summarize:** Create a summary of decisions made, artifacts
+produced, and open items
+
+**2. Promote:** Update BUILD_HISTORY.md with decisions; update relevant
+Tier 2 documents
+
+**3. Handoff:** Create successor chat with (v#) incremented and summary
+in first message
+
+**4. Archive:** Original chat remains for reference but is no longer
+active
+
+5\. Knowledge Governance Agent Protocol
+
+When operating as a knowledge governance agent, Claude should:
+
+**Before making changes:** Read all Tier 1 governing documents to
+understand constraints
+
+**During development:** Check proposed changes against governing
+principles
+
+**After significant work:** Update BUILD_HISTORY.md with decisions and
+rationale
+
+**When conflicts arise:** Flag inconsistencies between documents for
+human resolution
+
+6\. Document Hierarchy
+
+When documents conflict, precedence is:
+
+1\. noui-architecture-decisions.docx (highest authority)
+
+2\. ADR-007 and other numbered ADRs
+
+3\. Policy documents (data governance, knowledge governance)
+
+4\. CLAUDE.md and BUILD_PLAN.md
+
+5\. BUILD_HISTORY.md (record of decisions, not authority)
+
+6\. Active chat sessions (lowest, must be promoted to persist)
