@@ -1,5 +1,30 @@
 # noui-platform — Build History
 
+## Planning: Full-Stack Integration (2026-03-08)
+
+**Decision:** Connect frontend to all 6 Go backend services via Docker Compose, replacing in-memory demo data with live PostgreSQL-backed API calls.
+
+**Current state assessed:**
+- Member data + benefit calc hooks already call real APIs (dataaccess :8081, intelligence :8082)
+- CRM, correspondence, and data quality hooks use demo data despite real API clients existing
+- All Docker infrastructure in place: Dockerfiles, compose, nginx proxy, seed data for all 6 services
+- Zero blockers identified for Docker smoke test
+
+**Plan:** 5 phases across multiple sessions:
+1. Docker smoke test — boot all services, fix issues
+2. CRM integration — switch from `crmDemoData.ts` to live CRM API
+3. Correspondence integration — switch from `DEMO_CORRESPONDENCE` to live API
+4. Data quality integration — switch from `DEMO_DQ_ISSUES` to live API
+5. Full verification — end-to-end testing, cleanup, documentation
+
+**Artifacts created:**
+- `docs/INTEGRATION_PLAN.md` — master plan with tasks, decisions, file lists
+- `.claude/prompts/integration-phase{1-5}-*.md` — session starter prompts for each phase
+
+**Status:** Planning complete. Ready for Phase 1 (Docker smoke test).
+
+---
+
 ## Migration: Repository Consolidation (2026-03-07)
 
 **Decision:** Consolidated two tangled repositories (`noui-derp-poc` + `noui-connector-lab`) into a single production-ready monorepo.
