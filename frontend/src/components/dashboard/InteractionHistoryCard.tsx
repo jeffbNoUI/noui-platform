@@ -1,51 +1,16 @@
 import type { ContactTimeline } from '@/types/CRM';
+import { CHANNEL_ICONS, CHANNEL_LABELS, OUTCOME_STYLES } from '@/lib/channelMeta';
 
 interface InteractionHistoryCardProps {
   timeline?: ContactTimeline;
   isLoading: boolean;
+  onSelectInteraction?: (interactionId: string, rect: DOMRect) => void;
 }
-
-const CHANNEL_ICONS: Record<string, string> = {
-  phone_inbound: '\ud83d\udcde',
-  phone_outbound: '\ud83d\udcde',
-  secure_message: '\ud83d\udcac',
-  email_inbound: '\ud83d\udce7',
-  email_outbound: '\ud83d\udce7',
-  walk_in: '\ud83d\udeb6',
-  portal_activity: '\ud83c\udf10',
-  mail_inbound: '\u2709\ufe0f',
-  mail_outbound: '\u2709\ufe0f',
-  internal_handoff: '\ud83d\udd04',
-  system_event: '\u2699\ufe0f',
-  fax: '\ud83d\udce0',
-};
-
-const CHANNEL_LABELS: Record<string, string> = {
-  phone_inbound: 'Inbound Call',
-  phone_outbound: 'Outbound Call',
-  secure_message: 'Secure Message',
-  email_inbound: 'Email Received',
-  email_outbound: 'Email Sent',
-  walk_in: 'Walk-in',
-  portal_activity: 'Portal Activity',
-  mail_inbound: 'Mail Received',
-  mail_outbound: 'Mail Sent',
-  internal_handoff: 'Internal Handoff',
-  system_event: 'System Event',
-  fax: 'Fax',
-};
-
-const OUTCOME_STYLES: Record<string, string> = {
-  resolved: 'text-emerald-600',
-  escalated: 'text-red-600',
-  callback_scheduled: 'text-amber-600',
-  info_provided: 'text-blue-600',
-  in_progress: 'text-amber-600',
-};
 
 export default function InteractionHistoryCard({
   timeline,
   isLoading,
+  onSelectInteraction,
 }: InteractionHistoryCardProps) {
   const entries = timeline?.timelineEntries ?? [];
 
@@ -69,7 +34,16 @@ export default function InteractionHistoryCard({
       {entries.length > 0 && (
         <div className="divide-y divide-gray-100">
           {entries.slice(0, 10).map((entry) => (
-            <div key={entry.interactionId} className="px-5 py-3">
+            <button
+              key={entry.interactionId}
+              className="w-full text-left px-5 py-3 cursor-pointer hover:bg-gray-50 transition-colors focus:outline-none focus:bg-gray-50"
+              onClick={(e) => {
+                if (onSelectInteraction) {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  onSelectInteraction(entry.interactionId, rect);
+                }
+              }}
+            >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-sm" title={CHANNEL_LABELS[entry.channel] || entry.channel}>
@@ -108,7 +82,7 @@ export default function InteractionHistoryCard({
                   </span>
                 )}
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}

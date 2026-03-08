@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useMemberDashboard } from '@/hooks/useMemberDashboard';
 import MemberBanner from '@/components/MemberBanner';
+import InteractionDetailPanel from '@/components/dashboard/InteractionDetailPanel';
 import MemberSummaryCard from '@/components/dashboard/MemberSummaryCard';
 import ActiveWorkCard from '@/components/dashboard/ActiveWorkCard';
 import InteractionHistoryCard from '@/components/dashboard/InteractionHistoryCard';
@@ -22,6 +24,11 @@ export default function MemberDashboard({
   onOpenCase,
   onChangeView,
 }: MemberDashboardProps) {
+  const [selectedInteraction, setSelectedInteraction] = useState<{
+    id: string;
+    rect: DOMRect;
+  } | null>(null);
+
   const {
     member,
     serviceCredit,
@@ -110,7 +117,11 @@ export default function MemberDashboard({
                   onOpenCase={onOpenCase}
                 />
 
-                <InteractionHistoryCard timeline={timeline} isLoading={isLoadingSecondary} />
+                <InteractionHistoryCard
+                  timeline={timeline}
+                  isLoading={isLoadingSecondary}
+                  onSelectInteraction={(id, rect) => setSelectedInteraction({ id, rect })}
+                />
 
                 <CorrespondenceHistoryCard correspondence={correspondence} />
               </div>
@@ -138,6 +149,14 @@ export default function MemberDashboard({
           </>
         )}
       </main>
+
+      {selectedInteraction && (
+        <InteractionDetailPanel
+          interactionId={selectedInteraction.id}
+          sourceRect={selectedInteraction.rect}
+          onClose={() => setSelectedInteraction(null)}
+        />
+      )}
     </div>
   );
 }
