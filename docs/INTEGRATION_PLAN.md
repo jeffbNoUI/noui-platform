@@ -1,7 +1,7 @@
 # Full-Stack Integration Plan
 
 **Created:** 2026-03-08
-**Status:** Phase 0 complete (planning). Ready for Phase 1.
+**Status:** All 5 phases complete. Full-stack integration verified end-to-end.
 
 ## Goal
 
@@ -237,6 +237,6 @@ Connect the React frontend to all 6 Go backend services through Docker Compose, 
 | Phase 0: Planning | **Complete** | 2026-03-08 | This document created |
 | Phase 1: Docker Smoke Test | **Complete** | 2026-03-08 | All 7 images build, all 10 PG init scripts run, all 6 health endpoints OK, member data verified, nginx proxy works. Only issue: port conflict with prior worktree stack (resolved by stopping it). |
 | Phase 2: CRM Integration | **Complete** | 2026-03-08 | 3 portal hooks switched from demo to real API. Fixed URL mismatch (contacts/legacy → contacts-by-legacy). Fixed case mismatch (Go UPPERCASE → JS lowercase lookups). All 43 tests pass. |
-| Phase 3: Correspondence Integration | Not started | — | — |
-| Phase 4: Data Quality Integration | Not started | — | — |
-| Phase 5: Full Verification | Not started | — | — |
+| Phase 3: Correspondence Integration | **Complete** | 2026-03-08 | Created `useCorrespondenceHistory()` hook. Added 4 seed correspondence history records. Hard-switch to API (no demo fallback). 43 tests pass. |
+| Phase 4: Data Quality Integration | **Complete** | 2026-03-08 | Created `useDataQuality.ts` with `useDQScore` and `useMemberDQIssues` hooks. Hybrid layout: org-wide score + per-member issues. Added 4 member-specific DQ seed records. 43 tests pass. |
+| Phase 5: Full Verification | **Complete** | 2026-03-08 | All 43 frontend tests pass. All 6 Go service tests pass. UI walkthrough verified all 8 dashboard cards for members 10001-10003. Removed dead demo data (DEMO_CORRESPONDENCE, DEMO_DQ_ISSUES). |

@@ -1,5 +1,10 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// CRM Demo Data — In-memory data store for portal-integrated CRM demos.
+// CRM Demo Data — In-memory data store for portal messaging demos.
+//
+// NOTE: The Member Dashboard CRM hooks (contact lookup, timeline, commitments)
+// now use the live CRM API (port 8084). This file is still used by the
+// cross-portal messaging system (conversations, staff notes, member messages)
+// which has not yet been migrated to the live API.
 //
 // All portals share this store. Mutations in one portal (e.g., member sends a
 // message) are visible in others (e.g., staff journal) because React Query
@@ -315,7 +320,8 @@ export const DEMO_INTERACTIONS: Interaction[] = [
     direction: 'inbound',
     startedAt: '2026-02-20T10:15:00Z',
     messageSubject: 'Retirement Timeline & Next Steps',
-    summary: 'Hi, I\'d like to understand the timeline for my retirement application. My husband Robert (member 10001) is planning to retire in April. What steps do we need to complete, and when should we start?',
+    summary:
+      "Hi, I'd like to understand the timeline for my retirement application. My husband Robert (member 10001) is planning to retire in April. What steps do we need to complete, and when should we start?",
     visibility: 'public',
     createdAt: '2026-02-20T10:15:00Z',
     createdBy: 'C-1003',
@@ -330,7 +336,8 @@ export const DEMO_INTERACTIONS: Interaction[] = [
     interactionType: 'follow_up',
     direction: 'outbound',
     startedAt: '2026-02-20T14:30:00Z',
-    summary: 'Thank you for reaching out, Maria. For Robert\'s April retirement, here\'s the timeline:\n\n1. **Now**: Ensure beneficiary designation is current\n2. **By March 1**: Submit retirement application\n3. **March 15**: Final benefit calculation completed\n4. **April 1**: Retirement effective date\n\nI see Robert\'s beneficiary form may need updating. I\'ll start a separate thread for that. Please don\'t hesitate to reach out with any questions.',
+    summary:
+      "Thank you for reaching out, Maria. For Robert's April retirement, here's the timeline:\n\n1. **Now**: Ensure beneficiary designation is current\n2. **By March 1**: Submit retirement application\n3. **March 15**: Final benefit calculation completed\n4. **April 1**: Retirement effective date\n\nI see Robert's beneficiary form may need updating. I'll start a separate thread for that. Please don't hesitate to reach out with any questions.",
     visibility: 'public',
     createdAt: '2026-02-20T14:30:00Z',
     createdBy: 'agent-sarah',
@@ -345,14 +352,16 @@ export const DEMO_INTERACTIONS: Interaction[] = [
     interactionType: 'status_update',
     direction: 'internal',
     startedAt: '2026-02-20T14:35:00Z',
-    summary: 'Flagged beneficiary form for review. Robert\'s current designation lists Maria as sole beneficiary — need to confirm this is still accurate before retirement processing.',
+    summary:
+      "Flagged beneficiary form for review. Robert's current designation lists Maria as sole beneficiary — need to confirm this is still accurate before retirement processing.",
     visibility: 'internal',
     notes: [
       {
         noteId: 'NOTE-8001',
         interactionId: 'INT-5003',
         category: 'retirement',
-        summary: 'Beneficiary form flagged for review before retirement processing. Current designation may need update.',
+        summary:
+          'Beneficiary form flagged for review before retirement processing. Current designation may need update.',
         outcome: 'work_item_created',
         nextStep: 'Send beneficiary form to Maria for confirmation',
         sentiment: 'neutral',
@@ -376,7 +385,8 @@ export const DEMO_INTERACTIONS: Interaction[] = [
     interactionType: 'follow_up',
     direction: 'inbound',
     startedAt: '2026-02-28T09:00:00Z',
-    summary: 'Thank you Sarah! That timeline is really helpful. Robert submitted the application yesterday. When will my benefit calculation be complete?',
+    summary:
+      'Thank you Sarah! That timeline is really helpful. Robert submitted the application yesterday. When will my benefit calculation be complete?',
     visibility: 'public',
     createdAt: '2026-02-28T09:00:00Z',
     createdBy: 'C-1003',
@@ -393,7 +403,8 @@ export const DEMO_INTERACTIONS: Interaction[] = [
     interactionType: 'notification',
     direction: 'outbound',
     startedAt: '2026-02-15T09:00:00Z',
-    summary: 'Hi Maria, as part of Robert\'s retirement preparation, we need to confirm the beneficiary designation form is up to date. Could you please review and return the attached form? You can upload it through this secure message thread.',
+    summary:
+      "Hi Maria, as part of Robert's retirement preparation, we need to confirm the beneficiary designation form is up to date. Could you please review and return the attached form? You can upload it through this secure message thread.",
     visibility: 'public',
     createdAt: '2026-02-15T09:00:00Z',
     createdBy: 'agent-sarah',
@@ -407,7 +418,8 @@ export const DEMO_INTERACTIONS: Interaction[] = [
     interactionType: 'document_receipt',
     direction: 'inbound',
     startedAt: '2026-02-22T11:00:00Z',
-    summary: 'Here is the completed beneficiary designation form. I\'ve confirmed everything is correct — I remain the sole primary beneficiary. Let me know if anything else is needed.',
+    summary:
+      "Here is the completed beneficiary designation form. I've confirmed everything is correct — I remain the sole primary beneficiary. Let me know if anything else is needed.",
     visibility: 'public',
     createdAt: '2026-02-22T11:00:00Z',
     createdBy: 'C-1003',
@@ -422,7 +434,8 @@ export const DEMO_INTERACTIONS: Interaction[] = [
     interactionType: 'status_update',
     direction: 'outbound',
     startedAt: '2026-02-25T11:00:00Z',
-    summary: 'Thank you Maria. The beneficiary designation form has been received and processed. Robert\'s record is now up to date. This thread is resolved — feel free to message us anytime if you need anything else.',
+    summary:
+      "Thank you Maria. The beneficiary designation form has been received and processed. Robert's record is now up to date. This thread is resolved — feel free to message us anytime if you need anything else.",
     visibility: 'public',
     createdAt: '2026-02-25T11:00:00Z',
     createdBy: 'agent-sarah',
@@ -438,7 +451,8 @@ export const DEMO_INTERACTIONS: Interaction[] = [
     interactionType: 'inquiry',
     direction: 'inbound',
     startedAt: '2026-02-22T13:00:00Z',
-    summary: 'I just submitted my retirement application for April 1. Could you provide an updated benefit estimate? I want to make sure the numbers line up with what I\'ve been seeing on my portal dashboard.',
+    summary:
+      "I just submitted my retirement application for April 1. Could you provide an updated benefit estimate? I want to make sure the numbers line up with what I've been seeing on my portal dashboard.",
     visibility: 'public',
     createdAt: '2026-02-22T13:00:00Z',
     createdBy: 'C-1001',
@@ -453,7 +467,8 @@ export const DEMO_INTERACTIONS: Interaction[] = [
     interactionType: 'follow_up',
     direction: 'outbound',
     startedAt: '2026-02-23T09:30:00Z',
-    summary: 'Hi Robert, thanks for submitting your application. I\'ve queued a final benefit calculation for your April 1 retirement date. Based on your Tier 1 status and 26 years of service, your estimated monthly benefit is approximately $4,847. The final number will be confirmed once the calculation is complete — typically within 5 business days.',
+    summary:
+      "Hi Robert, thanks for submitting your application. I've queued a final benefit calculation for your April 1 retirement date. Based on your Tier 1 status and 26 years of service, your estimated monthly benefit is approximately $4,847. The final number will be confirmed once the calculation is complete — typically within 5 business days.",
     visibility: 'public',
     createdAt: '2026-02-23T09:30:00Z',
     createdBy: 'agent-mike',
@@ -468,14 +483,16 @@ export const DEMO_INTERACTIONS: Interaction[] = [
     interactionType: 'process_event',
     direction: 'internal',
     startedAt: '2026-02-23T09:35:00Z',
-    summary: 'Retirement application received for member 10001. Final benefit calculation queued. Estimated completion: 2026-02-28. Application stage: CALCULATION_PENDING.',
+    summary:
+      'Retirement application received for member 10001. Final benefit calculation queued. Estimated completion: 2026-02-28. Application stage: CALCULATION_PENDING.',
     visibility: 'internal',
     notes: [
       {
         noteId: 'NOTE-8002',
         interactionId: 'INT-5022',
         category: 'benefits',
-        summary: 'Retirement application received and queued for final benefit calculation. Tier 1, 26 yrs service.',
+        summary:
+          'Retirement application received and queued for final benefit calculation. Tier 1, 26 yrs service.',
         outcome: 'in_progress',
         nextStep: 'Monitor calculation completion by 2026-02-28',
         sentiment: 'positive',
@@ -502,7 +519,8 @@ export const DEMO_INTERACTIONS: Interaction[] = [
     interactionType: 'process_event',
     direction: 'internal',
     startedAt: '2026-02-27T15:00:00Z',
-    summary: 'Application stage updated: CALCULATION_PENDING → CALCULATION_COMPLETE. Final monthly benefit: $4,847.32.',
+    summary:
+      'Application stage updated: CALCULATION_PENDING → CALCULATION_COMPLETE. Final monthly benefit: $4,847.32.',
     visibility: 'public',
     createdAt: '2026-02-27T15:00:00Z',
     createdBy: 'system',
@@ -518,7 +536,8 @@ export const DEMO_INTERACTIONS: Interaction[] = [
     interactionType: 'inquiry',
     direction: 'inbound',
     startedAt: '2026-02-26T08:00:00Z',
-    summary: 'I work for Denver Public Safety and I\'m trying to understand my retirement eligibility under Tier 3. I\'ve been with DPS for about 7 years. Am I eligible for early retirement?',
+    summary:
+      "I work for Denver Public Safety and I'm trying to understand my retirement eligibility under Tier 3. I've been with DPS for about 7 years. Am I eligible for early retirement?",
     visibility: 'public',
     createdAt: '2026-02-26T08:00:00Z',
     createdBy: 'C-1004',
@@ -533,7 +552,8 @@ export const DEMO_INTERACTIONS: Interaction[] = [
     interactionType: 'follow_up',
     direction: 'outbound',
     startedAt: '2026-02-26T16:00:00Z',
-    summary: 'Hi David, thanks for reaching out. For Tier 3 members, early retirement requires either:\n\n- **Rule of 85**: Age + years of service ≥ 85 (minimum age 60)\n- **Early retirement**: Age 55 with at least 5 years of service (reduced benefit)\n\nWith 7 years of service, you\'re past the vesting requirement. I\'ll pull up your detailed eligibility and get back to you with specific dates.',
+    summary:
+      "Hi David, thanks for reaching out. For Tier 3 members, early retirement requires either:\n\n- **Rule of 85**: Age + years of service ≥ 85 (minimum age 60)\n- **Early retirement**: Age 55 with at least 5 years of service (reduced benefit)\n\nWith 7 years of service, you're past the vesting requirement. I'll pull up your detailed eligibility and get back to you with specific dates.",
     visibility: 'public',
     createdAt: '2026-02-26T16:00:00Z',
     createdBy: 'agent-sarah',
@@ -550,7 +570,8 @@ export const DEMO_INTERACTIONS: Interaction[] = [
     interactionType: 'inquiry',
     direction: 'inbound',
     startedAt: '2026-02-10T09:00:00Z',
-    summary: 'We\'re preparing Q1 2026 contribution reports. Can you confirm the updated reporting format? We had some changes in employee classifications last month that may affect the upload template.',
+    summary:
+      "We're preparing Q1 2026 contribution reports. Can you confirm the updated reporting format? We had some changes in employee classifications last month that may affect the upload template.",
     visibility: 'public',
     createdAt: '2026-02-10T09:00:00Z',
     createdBy: 'C-2001',
@@ -565,7 +586,8 @@ export const DEMO_INTERACTIONS: Interaction[] = [
     interactionType: 'follow_up',
     direction: 'outbound',
     startedAt: '2026-02-12T10:00:00Z',
-    summary: 'Hi Lisa, the Q1 2026 reporting template is unchanged from Q4. For the employee classification changes, you\'ll need to update the position codes in column G. I\'ve attached the updated code reference sheet. Let me know if you run into any issues during the upload.',
+    summary:
+      "Hi Lisa, the Q1 2026 reporting template is unchanged from Q4. For the employee classification changes, you'll need to update the position codes in column G. I've attached the updated code reference sheet. Let me know if you run into any issues during the upload.",
     visibility: 'public',
     createdAt: '2026-02-12T10:00:00Z',
     createdBy: 'agent-mike',
@@ -580,7 +602,8 @@ export const DEMO_INTERACTIONS: Interaction[] = [
     interactionType: 'follow_up',
     direction: 'inbound',
     startedAt: '2026-02-28T10:00:00Z',
-    summary: 'Thanks Mike. We uploaded the January and February reports with the updated codes. Can you confirm they were received and processed correctly? We want to make sure the contribution amounts reconcile before the March filing deadline.',
+    summary:
+      'Thanks Mike. We uploaded the January and February reports with the updated codes. Can you confirm they were received and processed correctly? We want to make sure the contribution amounts reconcile before the March filing deadline.',
     visibility: 'public',
     createdAt: '2026-02-28T10:00:00Z',
     createdBy: 'C-2001',
@@ -596,7 +619,8 @@ export const DEMO_INTERACTIONS: Interaction[] = [
     interactionType: 'process_event',
     direction: 'internal',
     startedAt: '2026-02-05T10:00:00Z',
-    summary: 'New hire enrollment batch received from Denver Public Safety. 12 new hires pending processing.',
+    summary:
+      'New hire enrollment batch received from Denver Public Safety. 12 new hires pending processing.',
     visibility: 'public',
     createdAt: '2026-02-05T10:00:00Z',
     createdBy: 'system',
@@ -611,7 +635,8 @@ export const DEMO_INTERACTIONS: Interaction[] = [
     interactionType: 'notification',
     direction: 'outbound',
     startedAt: '2026-02-10T14:00:00Z',
-    summary: 'The February new hire batch is being processed. 10 of 12 records are clean. Two records have missing Social Security numbers — please resend corrected records for badge numbers DPS-2026-011 and DPS-2026-012.',
+    summary:
+      'The February new hire batch is being processed. 10 of 12 records are clean. Two records have missing Social Security numbers — please resend corrected records for badge numbers DPS-2026-011 and DPS-2026-012.',
     visibility: 'public',
     createdAt: '2026-02-10T14:00:00Z',
     createdBy: 'agent-sarah',
@@ -625,7 +650,8 @@ export const DEMO_INTERACTIONS: Interaction[] = [
     interactionType: 'document_receipt',
     direction: 'inbound',
     startedAt: '2026-02-15T09:00:00Z',
-    summary: 'Corrected records attached for DPS-2026-011 and DPS-2026-012. Sorry for the incomplete submission.',
+    summary:
+      'Corrected records attached for DPS-2026-011 and DPS-2026-012. Sorry for the incomplete submission.',
     visibility: 'public',
     createdAt: '2026-02-15T09:00:00Z',
     createdBy: 'C-2001',
@@ -640,7 +666,8 @@ export const DEMO_INTERACTIONS: Interaction[] = [
     interactionType: 'process_event',
     direction: 'internal',
     startedAt: '2026-02-20T16:00:00Z',
-    summary: 'All 12 new hire enrollments processed successfully for Denver Public Safety February batch.',
+    summary:
+      'All 12 new hire enrollments processed successfully for Denver Public Safety February batch.',
     visibility: 'public',
     createdAt: '2026-02-20T16:00:00Z',
     createdBy: 'system',
@@ -774,9 +801,9 @@ export function getContact(contactId: string): Contact | undefined {
 }
 
 export function getPublicTimeline(contactId: string): ContactTimeline {
-  const interactions = DEMO_INTERACTIONS
-    .filter((i) => i.contactId === contactId && i.visibility === 'public')
-    .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+  const interactions = DEMO_INTERACTIONS.filter(
+    (i) => i.contactId === contactId && i.visibility === 'public',
+  ).sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
 
   const entries = interactions.map(toTimelineEntry);
   const channels = [...new Set(interactions.map((i) => i.channel))];
@@ -794,9 +821,9 @@ export function getPublicTimeline(contactId: string): ContactTimeline {
 }
 
 export function getFullTimeline(contactId: string): ContactTimeline {
-  const interactions = DEMO_INTERACTIONS
-    .filter((i) => i.contactId === contactId)
-    .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+  const interactions = DEMO_INTERACTIONS.filter((i) => i.contactId === contactId).sort(
+    (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
+  );
 
   const entries = interactions.map(toTimelineEntry);
   const channels = [...new Set(interactions.map((i) => i.channel))];
@@ -814,27 +841,27 @@ export function getFullTimeline(contactId: string): ContactTimeline {
 }
 
 export function getMemberConversations(contactId: string): Conversation[] {
-  return DEMO_CONVERSATIONS
-    .filter((c) => c.anchorType === 'contact' && c.anchorId === contactId)
-    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  return DEMO_CONVERSATIONS.filter(
+    (c) => c.anchorType === 'contact' && c.anchorId === contactId,
+  ).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 }
 
 export function getPublicConversationInteractions(conversationId: string): Interaction[] {
-  return DEMO_INTERACTIONS
-    .filter((i) => i.conversationId === conversationId && i.visibility === 'public')
-    .sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
+  return DEMO_INTERACTIONS.filter(
+    (i) => i.conversationId === conversationId && i.visibility === 'public',
+  ).sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
 }
 
 export function getAllConversationInteractions(conversationId: string): Interaction[] {
-  return DEMO_INTERACTIONS
-    .filter((i) => i.conversationId === conversationId)
-    .sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
+  return DEMO_INTERACTIONS.filter((i) => i.conversationId === conversationId).sort(
+    (a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime(),
+  );
 }
 
 export function getEmployerConversations(orgId: string): Conversation[] {
-  return DEMO_CONVERSATIONS
-    .filter((c) => c.anchorType === 'organization' && c.anchorId === orgId)
-    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  return DEMO_CONVERSATIONS.filter(
+    (c) => c.anchorType === 'organization' && c.anchorId === orgId,
+  ).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 }
 
 export function getConversation(conversationId: string): Conversation | undefined {
@@ -846,9 +873,9 @@ export function getDemoInteraction(interactionId: string): Interaction | undefin
 }
 
 export function getContactCommitments(contactId: string): Commitment[] {
-  return DEMO_COMMITMENTS
-    .filter((c) => c.contactId === contactId)
-    .sort((a, b) => new Date(a.targetDate).getTime() - new Date(b.targetDate).getTime());
+  return DEMO_COMMITMENTS.filter((c) => c.contactId === contactId).sort(
+    (a, b) => new Date(a.targetDate).getTime() - new Date(b.targetDate).getTime(),
+  );
 }
 
 export function getOrganization(orgId: string): Organization | undefined {
