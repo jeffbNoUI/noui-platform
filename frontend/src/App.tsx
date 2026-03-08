@@ -15,16 +15,40 @@ import CRMWorkspace from '@/components/CRMWorkspace';
 import EmployerPortal from '@/components/portal/EmployerPortal';
 import StaffPortal from '@/components/StaffPortal';
 import RetirementApplication from '@/components/RetirementApplication';
+import MemberDashboard from '@/components/dashboard/MemberDashboard';
 import CommandPalette from '@/components/CommandPalette';
 import VendorPortal from '@/components/portal/VendorPortal';
 
-type ViewMode = 'staff' | 'portal' | 'workspace' | 'crm' | 'employer' | 'vendor' | 'retirement-app';
+type ViewMode =
+  | 'staff'
+  | 'portal'
+  | 'workspace'
+  | 'crm'
+  | 'employer'
+  | 'vendor'
+  | 'retirement-app'
+  | 'member-dashboard';
 
 // Demo case members with their retirement dates
 const DEMO_CASES = [
-  { id: 10001, name: 'Robert Martinez', retDate: '2026-04-01', label: 'Case 1: Tier 1, Rule of 75' },
-  { id: 10002, name: 'Jennifer Kim', retDate: '2026-05-01', label: 'Case 2: Tier 2, Early Retirement' },
-  { id: 10003, name: 'David Washington', retDate: '2026-04-01', label: 'Case 3: Tier 3, Early Retirement' },
+  {
+    id: 10001,
+    name: 'Robert Martinez',
+    retDate: '2026-04-01',
+    label: 'Case 1: Tier 1, Rule of 75',
+  },
+  {
+    id: 10002,
+    name: 'Jennifer Kim',
+    retDate: '2026-05-01',
+    label: 'Case 2: Tier 2, Early Retirement',
+  },
+  {
+    id: 10003,
+    name: 'David Washington',
+    retDate: '2026-04-01',
+    label: 'Case 3: Tier 3, Early Retirement',
+  },
   { id: 10001, name: 'Robert Martinez (DRO)', retDate: '2026-04-01', label: 'Case 4: Tier 1, DRO' },
 ];
 
@@ -56,7 +80,9 @@ function TopNav({
               </div>
               <div>
                 <div className="text-sm font-bold text-iw-navy font-display leading-none">NoUI</div>
-                <div className="text-[9px] text-gray-400 tracking-widest uppercase font-semibold">DERP POC</div>
+                <div className="text-[9px] text-gray-400 tracking-widest uppercase font-semibold">
+                  DERP POC
+                </div>
               </div>
             </div>
 
@@ -80,9 +106,7 @@ function TopNav({
             </div>
           </div>
 
-          <div className="text-xs text-gray-400">
-            Phase 1: Transparent
-          </div>
+          <div className="text-xs text-gray-400">Phase 1: Transparent</div>
         </div>
       </div>
     </nav>
@@ -104,12 +128,23 @@ export default function App() {
   const [caseRetDate, setCaseRetDate] = useState('2026-04-01');
   const [caseFlagsState, setCaseFlagsState] = useState<string[]>([]);
 
-  const handleOpenCase = useCallback((caseId: string, memberId: number, retDate: string, flags?: string[]) => {
-    setActiveCaseId(caseId);
-    setCaseMemberId(memberId);
-    setCaseRetDate(retDate);
-    setCaseFlagsState(flags || []);
-    setViewMode('retirement-app');
+  // Member dashboard state
+  const [dashboardMemberId, setDashboardMemberId] = useState(0);
+
+  const handleOpenCase = useCallback(
+    (caseId: string, memberId: number, retDate: string, flags?: string[]) => {
+      setActiveCaseId(caseId);
+      setCaseMemberId(memberId);
+      setCaseRetDate(retDate);
+      setCaseFlagsState(flags || []);
+      setViewMode('retirement-app');
+    },
+    [],
+  );
+
+  const handleViewMember = useCallback((memberId: number) => {
+    setDashboardMemberId(memberId);
+    setViewMode('member-dashboard');
   }, []);
 
   const handleChangeView = useCallback((mode: string) => {
@@ -129,28 +164,115 @@ export default function App() {
   }, []);
 
   // Command palette commands
-  const commands = useMemo(() => [
-    { id: 'search-member', label: 'Search Member', icon: '🔍', shortcut: 'G M', category: 'Navigation', action: () => setViewMode('staff') },
-    { id: 'open-queue', label: 'My Work Queue', icon: '📋', shortcut: 'G Q', category: 'Navigation', action: () => setViewMode('staff') },
-    { id: 'run-calc', label: 'Run Calculation', icon: '🧮', category: 'Actions', action: () => setViewMode('workspace') },
-    { id: 'open-crm', label: 'Open CRM', icon: '💬', shortcut: 'G C', category: 'Navigation', action: () => setViewMode('crm') },
-    { id: 'member-portal', label: 'Member Portal', icon: '👤', category: 'Navigation', action: () => setViewMode('portal') },
-    { id: 'employer-portal', label: 'Employer Portal', icon: '🏢', category: 'Navigation', action: () => setViewMode('employer') },
-    { id: 'vendor-portal', label: 'Vendor Portal', icon: '\ud83c\udfe5', category: 'Navigation', action: () => setViewMode('vendor') },
-    { id: 'case-robert', label: 'Open Case: Robert Martinez', icon: '📂', category: 'Cases', action: () => handleOpenCase('RET-2026-0147', 10001, '2026-04-01', ['leave-payout']) },
-    { id: 'case-jennifer', label: 'Open Case: Jennifer Kim', icon: '📂', category: 'Cases', action: () => handleOpenCase('RET-2026-0152', 10002, '2026-05-01', ['early-retirement', 'purchased-service']) },
-  ], [handleOpenCase]);
+  const commands = useMemo(
+    () => [
+      {
+        id: 'search-member',
+        label: 'Search Member',
+        icon: '🔍',
+        shortcut: 'G M',
+        category: 'Navigation',
+        action: () => setViewMode('staff'),
+      },
+      {
+        id: 'open-queue',
+        label: 'My Work Queue',
+        icon: '📋',
+        shortcut: 'G Q',
+        category: 'Navigation',
+        action: () => setViewMode('staff'),
+      },
+      {
+        id: 'run-calc',
+        label: 'Run Calculation',
+        icon: '🧮',
+        category: 'Actions',
+        action: () => setViewMode('workspace'),
+      },
+      {
+        id: 'open-crm',
+        label: 'Open CRM',
+        icon: '💬',
+        shortcut: 'G C',
+        category: 'Navigation',
+        action: () => setViewMode('crm'),
+      },
+      {
+        id: 'member-portal',
+        label: 'Member Portal',
+        icon: '👤',
+        category: 'Navigation',
+        action: () => setViewMode('portal'),
+      },
+      {
+        id: 'employer-portal',
+        label: 'Employer Portal',
+        icon: '🏢',
+        category: 'Navigation',
+        action: () => setViewMode('employer'),
+      },
+      {
+        id: 'vendor-portal',
+        label: 'Vendor Portal',
+        icon: '\ud83c\udfe5',
+        category: 'Navigation',
+        action: () => setViewMode('vendor'),
+      },
+      {
+        id: 'case-robert',
+        label: 'Open Case: Robert Martinez',
+        icon: '📂',
+        category: 'Cases',
+        action: () => handleOpenCase('RET-2026-0147', 10001, '2026-04-01', ['leave-payout']),
+      },
+      {
+        id: 'case-jennifer',
+        label: 'Open Case: Jennifer Kim',
+        icon: '📂',
+        category: 'Cases',
+        action: () =>
+          handleOpenCase('RET-2026-0152', 10002, '2026-05-01', [
+            'early-retirement',
+            'purchased-service',
+          ]),
+      },
+    ],
+    [handleOpenCase],
+  );
 
   // ── Staff Portal (default landing) ──────────────────────────────────────
 
   // Command palette is global across all views
-  const cmdPalette = <CommandPalette commands={commands} isOpen={cmdPaletteOpen} onClose={() => setCmdPaletteOpen(false)} />;
+  const cmdPalette = (
+    <CommandPalette
+      commands={commands}
+      isOpen={cmdPaletteOpen}
+      onClose={() => setCmdPaletteOpen(false)}
+    />
+  );
 
   if (viewMode === 'staff') {
     return (
       <>
         {cmdPalette}
         <StaffPortal
+          onOpenCase={handleOpenCase}
+          onViewMember={handleViewMember}
+          onChangeView={handleChangeView}
+        />
+      </>
+    );
+  }
+
+  // ── Member Dashboard (from member lookup) ──────────────────────────────
+
+  if (viewMode === 'member-dashboard') {
+    return (
+      <>
+        {cmdPalette}
+        <MemberDashboard
+          memberId={dashboardMemberId}
+          onBack={() => setViewMode('staff')}
           onOpenCase={handleOpenCase}
           onChangeView={handleChangeView}
         />
@@ -181,14 +303,14 @@ export default function App() {
   if (viewMode === 'portal') {
     return (
       <>
-      {cmdPalette}
-      <MemberPortal
-        memberID={memberID}
-        retirementDate={retirementDate}
-        onSwitchToWorkspace={() => setViewMode('workspace')}
-        onSwitchToCRM={() => setViewMode('crm')}
-        onChangeView={handleChangeView}
-      />
+        {cmdPalette}
+        <MemberPortal
+          memberID={memberID}
+          retirementDate={retirementDate}
+          onSwitchToWorkspace={() => setViewMode('workspace')}
+          onSwitchToCRM={() => setViewMode('crm')}
+          onChangeView={handleChangeView}
+        />
       </>
     );
   }
@@ -208,27 +330,42 @@ export default function App() {
   // ── Employer Portal view ──────────────────────────────────────────────
 
   if (viewMode === 'employer') {
-    return <>{cmdPalette}<EmployerPortal onChangeView={handleChangeView} /></>;
+    return (
+      <>
+        {cmdPalette}
+        <EmployerPortal onChangeView={handleChangeView} />
+      </>
+    );
   }
 
   // ── Vendor Portal view ──────────────────────────────────────────────
 
   if (viewMode === 'vendor') {
-    return <>{cmdPalette}<VendorPortal onChangeView={handleChangeView} /></>;
+    return (
+      <>
+        {cmdPalette}
+        <VendorPortal onChangeView={handleChangeView} />
+      </>
+    );
   }
 
   // ── Agent Workspace view (calculations) ───────────────────────────────
 
-  return <>{cmdPalette}<AgentWorkspace
-    memberID={memberID}
-    setMemberID={setMemberID}
-    retirementDate={retirementDate}
-    setRetirementDate={setRetirementDate}
-    memberIDInput={memberIDInput}
-    setMemberIDInput={setMemberIDInput}
-    viewMode={viewMode}
-    setViewMode={handleChangeView}
-  /></>;
+  return (
+    <>
+      {cmdPalette}
+      <AgentWorkspace
+        memberID={memberID}
+        setMemberID={setMemberID}
+        retirementDate={retirementDate}
+        setRetirementDate={setRetirementDate}
+        memberIDInput={memberIDInput}
+        setMemberIDInput={setMemberIDInput}
+        viewMode={viewMode}
+        setViewMode={handleChangeView}
+      />
+    </>
+  );
 }
 
 // ── Agent Workspace (split out for clarity) ──────────────────────────────────
@@ -255,7 +392,10 @@ function AgentWorkspace({
   const { data: member, isLoading: memberLoading, error: memberError } = useMember(memberID);
   const { data: employment } = useEmployment(memberID);
   const { data: svcCreditData } = useServiceCredit(memberID);
-  const { data: calculation, isLoading: calcLoading } = useBenefitCalculation(memberID, retirementDate);
+  const { data: calculation, isLoading: calcLoading } = useBenefitCalculation(
+    memberID,
+    retirementDate,
+  );
 
   const scenarioDates = [
     retirementDate,
@@ -317,9 +457,10 @@ function AgentWorkspace({
                   setRetirementDate(dc.retDate);
                 }}
                 className={`rounded-full px-3 py-1 text-xs font-medium transition-colors
-                  ${memberID === dc.id && retirementDate === dc.retDate
-                    ? 'bg-iw-sage text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  ${
+                    memberID === dc.id && retirementDate === dc.retDate
+                      ? 'bg-iw-sage text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
               >
                 {dc.label}
@@ -380,17 +521,15 @@ function AgentWorkspace({
               </>
             )}
 
-            {employment && employment.length > 0 && (
-              <EmploymentTimeline events={employment} />
-            )}
+            {employment && employment.length > 0 && <EmploymentTimeline events={employment} />}
           </>
         )}
 
         <footer className="rounded-lg bg-gray-100 px-6 py-4 text-center text-xs text-gray-500">
           <p className="font-medium">Phase 1: Transparent</p>
           <p>
-            The system shows its work. Every calculation is transparent and verifiable.
-            The deterministic rules engine executes certified plan provisions.
+            The system shows its work. Every calculation is transparent and verifiable. The
+            deterministic rules engine executes certified plan provisions.
           </p>
         </footer>
       </main>

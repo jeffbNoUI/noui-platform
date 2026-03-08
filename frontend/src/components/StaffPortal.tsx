@@ -6,86 +6,25 @@ import CSRContextHub from '@/components/staff/CSRContextHub';
 import ServiceMap from '@/components/admin/ServiceMap';
 import DataQualityPanel from '@/components/admin/DataQualityPanel';
 import CorrespondencePanel from '@/components/workflow/CorrespondencePanel';
+import { WORK_QUEUE, STAGES } from '@/lib/demoData';
 
 interface StaffPortalProps {
   onOpenCase: (caseId: string, memberId: number, retDate: string, flags?: string[]) => void;
+  onViewMember: (memberId: number) => void;
   onChangeView: (mode: string) => void;
 }
 
-type StaffTab = 'queue' | 'search' | 'supervisor' | 'executive' | 'csr' | 'service-map' | 'dq' | 'correspondence';
+type StaffTab =
+  | 'queue'
+  | 'search'
+  | 'supervisor'
+  | 'executive'
+  | 'csr'
+  | 'service-map'
+  | 'dq'
+  | 'correspondence';
 
-const WORK_QUEUE = [
-  {
-    caseId: 'RET-2026-0147',
-    memberId: 10001,
-    name: 'Robert Martinez',
-    tier: 1,
-    dept: 'Public Works',
-    retDate: '2026-04-01',
-    stage: 'Benefit Calculation',
-    stageIdx: 4,
-    priority: 'standard' as const,
-    sla: 'on-track' as const,
-    daysOpen: 5,
-    flags: ['leave-payout'],
-    assignedTo: 'Sarah Chen',
-  },
-  {
-    caseId: 'RET-2026-0152',
-    memberId: 10002,
-    name: 'Jennifer Kim',
-    tier: 2,
-    dept: 'Finance',
-    retDate: '2026-05-01',
-    stage: 'Eligibility Review',
-    stageIdx: 2,
-    priority: 'high' as const,
-    sla: 'at-risk' as const,
-    daysOpen: 12,
-    flags: ['early-retirement', 'purchased-service'],
-    assignedTo: 'Sarah Chen',
-  },
-  {
-    caseId: 'RET-2026-0159',
-    memberId: 10003,
-    name: 'David Washington',
-    tier: 3,
-    dept: 'Parks & Rec',
-    retDate: '2026-04-01',
-    stage: 'Document Verification',
-    stageIdx: 1,
-    priority: 'standard' as const,
-    sla: 'on-track' as const,
-    daysOpen: 3,
-    flags: ['early-retirement'],
-    assignedTo: 'Sarah Chen',
-  },
-  {
-    caseId: 'DRO-2026-0031',
-    memberId: 10001,
-    name: 'Robert Martinez (DRO)',
-    tier: 1,
-    dept: 'Public Works',
-    retDate: '2026-04-01',
-    stage: 'Marital Share Calculation',
-    stageIdx: 3,
-    priority: 'urgent' as const,
-    sla: 'urgent' as const,
-    daysOpen: 18,
-    flags: ['leave-payout', 'dro'],
-    assignedTo: 'Sarah Chen',
-  },
-];
-
-const STAGES = [
-  'Application Intake',
-  'Document Verification',
-  'Eligibility Review',
-  'Marital Share Calculation',
-  'Benefit Calculation',
-  'Election Recording',
-  'Certification',
-];
+// WORK_QUEUE and STAGES imported from '@/lib/demoData'
 
 const PRIORITY_STYLES = {
   urgent: 'bg-red-50 text-red-700 border-red-200',
@@ -112,12 +51,22 @@ const SIDEBAR_NAV = [
   { key: 'supervisor' as StaffTab, label: 'Supervisor', icon: '\ud83d\udcca', shortcut: 'G S' },
   { key: 'executive' as StaffTab, label: 'Executive', icon: '\ud83d\udcc8', shortcut: 'G E' },
   { key: 'csr' as StaffTab, label: 'CSR Hub', icon: '\ud83d\udcde', shortcut: 'G C' },
-  { key: 'service-map' as StaffTab, label: 'Service Map', icon: '\ud83d\uddfa\ufe0f', shortcut: 'G P' },
+  {
+    key: 'service-map' as StaffTab,
+    label: 'Service Map',
+    icon: '\ud83d\uddfa\ufe0f',
+    shortcut: 'G P',
+  },
   { key: 'dq' as StaffTab, label: 'Data Quality', icon: '\ud83d\udee1\ufe0f', shortcut: 'G D' },
-  { key: 'correspondence' as StaffTab, label: 'Correspondence', icon: '\u2709\ufe0f', shortcut: 'G X' },
+  {
+    key: 'correspondence' as StaffTab,
+    label: 'Correspondence',
+    icon: '\u2709\ufe0f',
+    shortcut: 'G X',
+  },
 ];
 
-export default function StaffPortal({ onOpenCase, onChangeView }: StaffPortalProps) {
+export default function StaffPortal({ onOpenCase, onViewMember, onChangeView }: StaffPortalProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<StaffTab>('queue');
 
@@ -125,7 +74,7 @@ export default function StaffPortal({ onOpenCase, onChangeView }: StaffPortalPro
     (item) =>
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.caseId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.dept.toLowerCase().includes(searchQuery.toLowerCase())
+      item.dept.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const stats = {
@@ -136,10 +85,7 @@ export default function StaffPortal({ onOpenCase, onChangeView }: StaffPortalPro
   };
 
   const handleMemberSelect = (memberId: number) => {
-    const match = WORK_QUEUE.find((w) => w.memberId === memberId);
-    if (match) {
-      onOpenCase(match.caseId, match.memberId, match.retDate, match.flags);
-    }
+    onViewMember(memberId);
   };
 
   return (
@@ -154,7 +100,9 @@ export default function StaffPortal({ onOpenCase, onChangeView }: StaffPortalPro
             </div>
             <div>
               <div className="text-sm font-bold text-iw-navy font-display leading-none">NoUI</div>
-              <div className="text-[9px] text-gray-400 tracking-widest uppercase font-semibold">Staff Portal</div>
+              <div className="text-[9px] text-gray-400 tracking-widest uppercase font-semibold">
+                Staff Portal
+              </div>
             </div>
           </div>
         </div>
@@ -219,7 +167,18 @@ export default function StaffPortal({ onOpenCase, onChangeView }: StaffPortalPro
         {/* Top bar with search */}
         <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
           <h1 className="text-sm font-bold text-gray-700">
-            {{ queue: 'My Work Queue', search: 'Member / Employer Lookup', supervisor: 'Supervisor Dashboard', executive: 'Executive Dashboard', csr: 'CSR Context Hub', 'service-map': 'Platform Service Map', dq: 'Data Quality', correspondence: 'Correspondence' }[activeTab]}
+            {
+              {
+                queue: 'My Work Queue',
+                search: 'Member / Employer Lookup',
+                supervisor: 'Supervisor Dashboard',
+                executive: 'Executive Dashboard',
+                csr: 'CSR Context Hub',
+                'service-map': 'Platform Service Map',
+                dq: 'Data Quality',
+                correspondence: 'Correspondence',
+              }[activeTab]
+            }
           </h1>
           {activeTab === 'queue' && (
             <input
@@ -240,19 +199,27 @@ export default function StaffPortal({ onOpenCase, onChangeView }: StaffPortalPro
               {/* Stats row */}
               <div className="grid grid-cols-4 gap-4 mb-6">
                 <div className="bg-white rounded-lg border border-gray-200 p-4">
-                  <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Active Cases</div>
+                  <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">
+                    Active Cases
+                  </div>
                   <div className="text-2xl font-bold text-iw-navy mt-1">{stats.total}</div>
                 </div>
                 <div className="bg-white rounded-lg border border-gray-200 p-4">
-                  <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Urgent</div>
+                  <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">
+                    Urgent
+                  </div>
                   <div className="text-2xl font-bold text-red-600 mt-1">{stats.urgent}</div>
                 </div>
                 <div className="bg-white rounded-lg border border-gray-200 p-4">
-                  <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">SLA At Risk</div>
+                  <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">
+                    SLA At Risk
+                  </div>
                   <div className="text-2xl font-bold text-amber-600 mt-1">{stats.atRisk}</div>
                 </div>
                 <div className="bg-white rounded-lg border border-gray-200 p-4">
-                  <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Avg Days Open</div>
+                  <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">
+                    Avg Days Open
+                  </div>
                   <div className="text-2xl font-bold text-gray-700 mt-1">{stats.avgDays}</div>
                 </div>
               </div>
@@ -276,16 +243,22 @@ export default function StaffPortal({ onOpenCase, onChangeView }: StaffPortalPro
                     className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-gray-100 hover:bg-iw-sageLight/30 cursor-pointer transition-colors items-center"
                   >
                     <div className="col-span-1">
-                      <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${PRIORITY_STYLES[item.priority]}`}>
+                      <span
+                        className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${PRIORITY_STYLES[item.priority]}`}
+                      >
                         {item.priority}
                       </span>
                     </div>
                     <div className="col-span-2">
-                      <span className="text-sm font-mono font-semibold text-iw-navy">{item.caseId}</span>
+                      <span className="text-sm font-mono font-semibold text-iw-navy">
+                        {item.caseId}
+                      </span>
                     </div>
                     <div className="col-span-3">
                       <div className="flex items-center gap-2">
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${TIER_STYLES[item.tier]}`}>
+                        <span
+                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${TIER_STYLES[item.tier]}`}
+                        >
                           T{item.tier}
                         </span>
                         <div>
@@ -304,15 +277,17 @@ export default function StaffPortal({ onOpenCase, onChangeView }: StaffPortalPro
                               idx < item.stageIdx
                                 ? 'bg-iw-sage'
                                 : idx === item.stageIdx
-                                ? 'bg-iw-sage animate-pulse'
-                                : 'bg-gray-200'
+                                  ? 'bg-iw-sage animate-pulse'
+                                  : 'bg-gray-200'
                             }`}
                           />
                         ))}
                       </div>
                     </div>
                     <div className="col-span-1">
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${SLA_STYLES[item.sla].className}`}>
+                      <span
+                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${SLA_STYLES[item.sla].className}`}
+                      >
                         {SLA_STYLES[item.sla].label}
                       </span>
                     </div>
@@ -322,7 +297,10 @@ export default function StaffPortal({ onOpenCase, onChangeView }: StaffPortalPro
                     <div className="col-span-2">
                       <div className="flex flex-wrap gap-1">
                         {item.flags.map((flag) => (
-                          <span key={flag} className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 border border-gray-200">
+                          <span
+                            key={flag}
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 border border-gray-200"
+                          >
                             {flag}
                           </span>
                         ))}
@@ -344,7 +322,9 @@ export default function StaffPortal({ onOpenCase, onChangeView }: StaffPortalPro
           {activeTab === 'search' && (
             <div className="max-w-2xl mx-auto">
               <div className="mb-6">
-                <h2 className="text-sm font-semibold text-gray-700 mb-2">Search for a member or employer</h2>
+                <h2 className="text-sm font-semibold text-gray-700 mb-2">
+                  Search for a member or employer
+                </h2>
                 <MemberSearch onSelect={handleMemberSelect} />
               </div>
               <div className="text-xs text-gray-400 text-center">
@@ -374,7 +354,8 @@ export default function StaffPortal({ onOpenCase, onChangeView }: StaffPortalPro
           <footer className="mt-6 rounded-lg bg-gray-100 px-6 py-4 text-center text-xs text-gray-500">
             <p className="font-medium">NoUI Staff Portal</p>
             <p>
-              AI-composed workspace. Cases are routed and prioritized based on member context, SLA status, and case complexity.
+              AI-composed workspace. Cases are routed and prioritized based on member context, SLA
+              status, and case complexity.
             </p>
           </footer>
         </main>
