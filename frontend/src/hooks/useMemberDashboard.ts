@@ -19,7 +19,7 @@ export function useMemberDashboard(memberId: number) {
   const serviceCredit = useServiceCredit(memberId);
   const beneficiaries = useBeneficiaries(memberId);
 
-  // ─── CRM data (demo layer) ────────────────────────────────────────────────
+  // ─── CRM data (live API via CRM service) ──────────────────────────────────
   const contact = useContactByMemberId(String(memberId));
   const contactId = contact.data?.contactId ?? '';
   const timeline = useFullTimeline(contactId);

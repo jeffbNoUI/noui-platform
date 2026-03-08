@@ -235,8 +235,8 @@ Connect the React frontend to all 6 Go backend services through Docker Compose, 
 | Phase | Status | Session Date | Notes |
 |-------|--------|-------------|-------|
 | Phase 0: Planning | **Complete** | 2026-03-08 | This document created |
-| Phase 1: Docker Smoke Test | Not started | — | — |
-| Phase 2: CRM Integration | Not started | — | — |
+| Phase 1: Docker Smoke Test | **Complete** | 2026-03-08 | All 7 images build, all 10 PG init scripts run, all 6 health endpoints OK, member data verified, nginx proxy works. Only issue: port conflict with prior worktree stack (resolved by stopping it). |
+| Phase 2: CRM Integration | **Complete** | 2026-03-08 | 3 portal hooks switched from demo to real API. Fixed URL mismatch (contacts/legacy → contacts-by-legacy). Fixed case mismatch (Go UPPERCASE → JS lowercase lookups). All 43 tests pass. |
 | Phase 3: Correspondence Integration | Not started | — | — |
 | Phase 4: Data Quality Integration | Not started | — | — |
 | Phase 5: Full Verification | Not started | — | — |
