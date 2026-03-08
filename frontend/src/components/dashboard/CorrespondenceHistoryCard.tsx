@@ -1,13 +1,14 @@
-import type { DemoCorrespondence } from '@/lib/demoData';
+import type { Correspondence } from '@/types/Correspondence';
 
 interface CorrespondenceHistoryCardProps {
-  correspondence: DemoCorrespondence[];
+  correspondence: Correspondence[];
 }
 
 const STATUS_STYLES: Record<string, string> = {
   sent: 'bg-emerald-50 text-emerald-700',
+  final: 'bg-blue-50 text-blue-700',
   draft: 'bg-gray-100 text-gray-600',
-  returned: 'bg-red-50 text-red-700',
+  void: 'bg-red-50 text-red-700',
 };
 
 export default function CorrespondenceHistoryCard({
@@ -37,7 +38,7 @@ export default function CorrespondenceHistoryCard({
                 </span>
               </div>
               <div className="text-xs text-gray-400">
-                {item.templateName}
+                {item.generatedBy}
                 {item.sentAt ? (
                   <>
                     {' '}

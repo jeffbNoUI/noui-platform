@@ -1,14 +1,15 @@
 import { useMemo } from 'react';
 import { useMember, useEmployment, useServiceCredit, useBeneficiaries } from '@/hooks/useMember';
 import { useContactByMemberId, useFullTimeline, useContactCommitments } from '@/hooks/useCRM';
-import { WORK_QUEUE, DEMO_CORRESPONDENCE, DEMO_DQ_ISSUES } from '@/lib/demoData';
+import { useCorrespondenceHistory } from '@/hooks/useCorrespondence';
+import { WORK_QUEUE, DEMO_DQ_ISSUES } from '@/lib/demoData';
 import { generateMemberSummary, type ActiveCaseItem } from '@/lib/memberSummary';
 
 /**
  * Aggregating hook for the Member Dashboard.
  *
- * Composes data from multiple platform services (dataaccess, CRM) and demo data
- * (work queue, correspondence, data quality) into a single object for the dashboard.
+ * Composes data from multiple platform services (dataaccess, CRM, correspondence)
+ * and demo data (work queue, data quality) into a single object for the dashboard.
  *
  * Uses existing hooks — no new API endpoints needed.
  */
@@ -39,11 +40,9 @@ export function useMemberDashboard(memberId: number) {
     [activeCases],
   );
 
-  // ─── Correspondence (demo data) ──────────────────────────────────────────
-  const correspondence = useMemo(
-    () => DEMO_CORRESPONDENCE.filter((c) => c.memberId === memberId),
-    [memberId],
-  );
+  // ─── Correspondence (live API via correspondence service) ────────────────
+  const correspondenceQuery = useCorrespondenceHistory(memberId);
+  const correspondence = correspondenceQuery.data ?? [];
 
   // ─── Data quality (demo data) ─────────────────────────────────────────────
   const dqIssues = useMemo(() => DEMO_DQ_ISSUES.filter((i) => i.memberId === memberId), [memberId]);
@@ -111,7 +110,11 @@ export function useMemberDashboard(memberId: number) {
 
     // State
     isLoading,
-    isLoadingSecondary: employment.isLoading || serviceCredit.isLoading || contact.isLoading,
+    isLoadingSecondary:
+      employment.isLoading ||
+      serviceCredit.isLoading ||
+      contact.isLoading ||
+      correspondenceQuery.isLoading,
     error,
   };
 }
