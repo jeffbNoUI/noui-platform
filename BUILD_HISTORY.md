@@ -1,5 +1,46 @@
 # noui-platform — Build History
 
+## Phase 2: CRM Integration — DONE (2026-03-08)
+
+**Result:** Member Dashboard CRM data now flows from PostgreSQL via CRM Go service instead of in-memory demo data.
+
+**Changes made:**
+- `frontend/src/lib/crmApi.ts` — Fixed URL: `contacts/legacy/` → `contacts-by-legacy/` (matched Go route)
+- `frontend/src/hooks/useCRM.ts` — Switched 3 portal hooks from `demo.*` to `crmAPI.*`
+- `frontend/src/components/dashboard/InteractionHistoryCard.tsx` — `.toLowerCase()` for enum lookups (Go=UPPERCASE)
+- `frontend/src/hooks/useMemberDashboard.ts` — Updated comment
+
+**Design decision:** Hard-switch to API only (no demo fallback).
+
+**Issues found & fixed:** URL mismatch, case mismatch (Go UPPERCASE vs JS lowercase), type mismatch on commitments response.
+
+**Status:** Phase 2 complete. 43 frontend tests pass. Ready for Phase 3.
+
+---
+
+## Phase 1: Docker Smoke Test — PASSED (2026-03-08)
+
+**Result:** All 6 backend services + PostgreSQL + nginx frontend boot and respond correctly via Docker Compose.
+
+**What happened:**
+- All 7 Docker images built successfully (6 Go services + nginx frontend)
+- PostgreSQL initialized all 10 init scripts (5 schema + 5 seed) without errors
+- All 6 health endpoints returned `{"status":"ok"}`:
+  - dataaccess `:8081`, intelligence `:8082`, crm `:8084`, correspondence `:8085`, dataquality `:8086`, knowledgebase `:8087`
+- Real data verified: `GET /api/v1/members/10001` → Robert Martinez (Senior Engineer, Public Works)
+- Nginx proxy verified: `GET localhost:3000/api/v1/members/10001` → same response proxied through nginx
+
+**Issues found:**
+1. **Port conflict** — Previous worktree (`gallant-varahamihira`) had a Docker stack running on the same ports (5432, 3000, 8081, 8084-8087). Resolved by stopping the old stack with `docker compose -p gallant-varahamihira down -v`.
+2. **`version` attribute warning** — `docker-compose.yml` uses deprecated `version: '3.8'` attribute. Non-blocking, cosmetic only.
+3. **Frontend npm install required** — `tsc` not found on host without `npm install` first. Not an issue in Docker (uses `npm ci`).
+
+**No code changes required.** The entire stack worked on first boot after clearing port conflicts.
+
+**Status:** Phase 1 complete. Ready for Phase 2 (CRM Integration).
+
+---
+
 ## Planning: Full-Stack Integration (2026-03-08)
 
 **Decision:** Connect frontend to all 6 Go backend services via Docker Compose, replacing in-memory demo data with live PostgreSQL-backed API calls.

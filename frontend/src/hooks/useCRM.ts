@@ -26,7 +26,12 @@ import type {
   ConversationListParams,
   OrgListParams,
 } from '@/types/CRM';
-import type { CreatePortalMessageData, CreateConversationData, CreateStaffNoteData, CreateStructuredNoteData } from '@/lib/crmDemoData';
+import type {
+  CreatePortalMessageData,
+  CreateConversationData,
+  CreateStaffNoteData,
+  CreateStructuredNoteData,
+} from '@/lib/crmDemoData';
 
 // ─── Query hooks ─────────────────────────────────────────────────────────────
 
@@ -202,7 +207,11 @@ export function useCreateConversation() {
 
 export function useUpdateConversation() {
   const queryClient = useQueryClient();
-  return useMutation<Conversation, Error, { conversationId: string; req: UpdateConversationRequest }>({
+  return useMutation<
+    Conversation,
+    Error,
+    { conversationId: string; req: UpdateConversationRequest }
+  >({
     mutationFn: ({ conversationId, req }) => crmAPI.updateConversation(conversationId, req),
     onSuccess: (_data, { conversationId }) => {
       queryClient.invalidateQueries({ queryKey: ['crm', 'conversation', conversationId] });
@@ -241,7 +250,7 @@ export function useUpdateOutreach() {
 export function useContactByMemberId(memberId: string) {
   return useQuery<Contact | undefined>({
     queryKey: ['crm', 'portal', 'contact-by-member', memberId],
-    queryFn: () => demo.getContactByMemberId(memberId),
+    queryFn: () => crmAPI.getContactByLegacyId(memberId),
     enabled: memberId.length > 0,
   });
 }
@@ -266,7 +275,7 @@ export function usePublicTimeline(contactId: string) {
 export function useFullTimeline(contactId: string) {
   return useQuery<ContactTimeline>({
     queryKey: ['crm', 'portal', 'full-timeline', contactId],
-    queryFn: () => demo.getFullTimeline(contactId),
+    queryFn: () => crmAPI.getContactTimeline(contactId),
     enabled: contactId.length > 0,
   });
 }
@@ -322,7 +331,7 @@ export function useDemoInteraction(interactionId: string) {
 export function useContactCommitments(contactId: string) {
   return useQuery<Commitment[]>({
     queryKey: ['crm', 'portal', 'commitments', contactId],
-    queryFn: () => demo.getContactCommitments(contactId),
+    queryFn: () => crmAPI.listCommitments({ contactId }) as unknown as Promise<Commitment[]>,
     enabled: contactId.length > 0,
   });
 }

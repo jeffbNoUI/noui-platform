@@ -1,15 +1,16 @@
 import { useMemo } from 'react';
 import { useMember, useEmployment, useServiceCredit, useBeneficiaries } from '@/hooks/useMember';
 import { useContactByMemberId, useFullTimeline, useContactCommitments } from '@/hooks/useCRM';
+import { useCorrespondenceHistory } from '@/hooks/useCorrespondence';
 import { useDQScore, useMemberDQIssues } from '@/hooks/useDataQuality';
-import { WORK_QUEUE, DEMO_CORRESPONDENCE } from '@/lib/demoData';
+import { WORK_QUEUE } from '@/lib/demoData';
 import { generateMemberSummary, type ActiveCaseItem } from '@/lib/memberSummary';
 
 /**
  * Aggregating hook for the Member Dashboard.
  *
- * Composes data from multiple platform services (dataaccess, CRM) and demo data
- * (work queue, correspondence, data quality) into a single object for the dashboard.
+ * Composes data from multiple platform services (dataaccess, CRM, correspondence)
+ * and demo data (work queue, data quality) into a single object for the dashboard.
  *
  * Uses existing hooks — no new API endpoints needed.
  */
@@ -20,7 +21,7 @@ export function useMemberDashboard(memberId: number) {
   const serviceCredit = useServiceCredit(memberId);
   const beneficiaries = useBeneficiaries(memberId);
 
-  // ─── CRM data (demo layer) ────────────────────────────────────────────────
+  // ─── CRM data (live API via CRM service) ──────────────────────────────────
   const contact = useContactByMemberId(String(memberId));
   const contactId = contact.data?.contactId ?? '';
   const timeline = useFullTimeline(contactId);
@@ -40,11 +41,9 @@ export function useMemberDashboard(memberId: number) {
     [activeCases],
   );
 
-  // ─── Correspondence (demo data) ──────────────────────────────────────────
-  const correspondence = useMemo(
-    () => DEMO_CORRESPONDENCE.filter((c) => c.memberId === memberId),
-    [memberId],
-  );
+  // ─── Correspondence (live API via correspondence service) ────────────────
+  const correspondenceQuery = useCorrespondenceHistory(memberId);
+  const correspondence = correspondenceQuery.data ?? [];
 
   // ─── Data quality (live API) ──────────────────────────────────────────────
   const dqScore = useDQScore();
@@ -118,6 +117,7 @@ export function useMemberDashboard(memberId: number) {
       employment.isLoading ||
       serviceCredit.isLoading ||
       contact.isLoading ||
+      correspondenceQuery.isLoading ||
       dqScore.isLoading ||
       memberDQIssues.isLoading,
     error,

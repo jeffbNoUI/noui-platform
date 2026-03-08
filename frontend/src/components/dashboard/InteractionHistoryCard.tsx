@@ -72,12 +72,15 @@ export default function InteractionHistoryCard({
             <div key={entry.interactionId} className="px-5 py-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm" title={CHANNEL_LABELS[entry.channel] || entry.channel}>
-                    {CHANNEL_ICONS[entry.channel] || '\ud83d\udccc'}
+                  <span
+                    className="text-sm"
+                    title={CHANNEL_LABELS[entry.channel.toLowerCase()] || entry.channel}
+                  >
+                    {CHANNEL_ICONS[entry.channel.toLowerCase()] || '\ud83d\udccc'}
                   </span>
                   <div>
                     <div className="text-sm text-gray-800">
-                      {CHANNEL_LABELS[entry.channel] || entry.channel}
+                      {CHANNEL_LABELS[entry.channel.toLowerCase()] || entry.channel}
                     </div>
                     {entry.summary && (
                       <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{entry.summary}</p>
@@ -88,9 +91,9 @@ export default function InteractionHistoryCard({
                   <div className="text-xs text-gray-400">{formatTimelineDate(entry.startedAt)}</div>
                   {entry.outcome && (
                     <div
-                      className={`text-[10px] font-medium ${OUTCOME_STYLES[entry.outcome] || 'text-gray-500'}`}
+                      className={`text-[10px] font-medium ${OUTCOME_STYLES[entry.outcome.toLowerCase()] || 'text-gray-500'}`}
                     >
-                      {entry.outcome.replace(/_/g, ' ')}
+                      {entry.outcome.toLowerCase().replace(/_/g, ' ')}
                     </div>
                   )}
                 </div>
