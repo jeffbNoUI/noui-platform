@@ -76,4 +76,20 @@ VALUES
     ('b0000000-0000-0000-0000-000000000004', 'a0000000-0000-0000-0000-000000000011', 'd0000000-0000-0000-0000-000000000005', '00000000-0000-0000-0000-000000000001',
      'warning', 'MEMBER_MASTER', '1501', 'SSN', '12-345-6789', 'XXX-XX-XXXX', 'Member 1501 SSN format incorrect (missing digit grouping)', 'open');
 
+-- ============================================================
+-- MEMBER-SPECIFIC ISSUES (for demo member dashboard integration)
+-- record_id matches demo member IDs: 10001, 10002, 10003
+-- ============================================================
+
+INSERT INTO dq_issue (issue_id, result_id, check_id, tenant_id, severity, record_table, record_id, field_name, current_value, expected_pattern, description, status)
+VALUES
+    ('b0000000-0000-0000-0000-000000000005', 'a0000000-0000-0000-0000-000000000007', 'd0000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001',
+     'critical', 'MEMBER_MASTER', '10001', 'DOB', NULL, 'YYYY-MM-DD', 'Date of birth is missing from member record', 'open'),
+    ('b0000000-0000-0000-0000-000000000006', 'a0000000-0000-0000-0000-000000000009', 'd0000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000001',
+     'warning', 'EMPLOYMENT_HISTORY', '10002', 'total_service_years', '18.5', 'Sum=17.8', 'Total service years (18.5) does not match employment period sum (17.8)', 'open'),
+    ('b0000000-0000-0000-0000-000000000007', 'a0000000-0000-0000-0000-000000000011', 'd0000000-0000-0000-0000-000000000005', '00000000-0000-0000-0000-000000000001',
+     'warning', 'MEMBER_MASTER', '10002', 'SSN', '123-4-56789', 'XXX-XX-XXXX', 'SSN format incorrect (4-digit middle group)', 'open'),
+    ('b0000000-0000-0000-0000-000000000008', 'a0000000-0000-0000-0000-000000000008', 'd0000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001',
+     'info', 'MEMBER_MASTER', '10003', 'PHONE', '3035551234', '(XXX)XXX-XXXX', 'Phone number in non-standard format', 'open');
+
 COMMIT;

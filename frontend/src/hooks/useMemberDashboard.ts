@@ -2,7 +2,8 @@ import { useMemo } from 'react';
 import { useMember, useEmployment, useServiceCredit, useBeneficiaries } from '@/hooks/useMember';
 import { useContactByMemberId, useFullTimeline, useContactCommitments } from '@/hooks/useCRM';
 import { useCorrespondenceHistory } from '@/hooks/useCorrespondence';
-import { WORK_QUEUE, DEMO_DQ_ISSUES } from '@/lib/demoData';
+import { useDQScore, useMemberDQIssues } from '@/hooks/useDataQuality';
+import { WORK_QUEUE } from '@/lib/demoData';
 import { generateMemberSummary, type ActiveCaseItem } from '@/lib/memberSummary';
 
 /**
@@ -44,8 +45,9 @@ export function useMemberDashboard(memberId: number) {
   const correspondenceQuery = useCorrespondenceHistory(memberId);
   const correspondence = correspondenceQuery.data ?? [];
 
-  // ─── Data quality (demo data) ─────────────────────────────────────────────
-  const dqIssues = useMemo(() => DEMO_DQ_ISSUES.filter((i) => i.memberId === memberId), [memberId]);
+  // ─── Data quality (live API) ──────────────────────────────────────────────
+  const dqScore = useDQScore();
+  const memberDQIssues = useMemberDQIssues(memberId);
 
   // ─── AI summary ──────────────────────────────────────────────────────────
   const summary = useMemo(() => {
@@ -67,7 +69,7 @@ export function useMemberDashboard(memberId: number) {
       recentInteractionCount: entries.length,
       lastInteractionDate: lastEntry?.startedAt,
       correspondenceCount: correspondence.length,
-      dataQualityIssueCount: dqIssues.length,
+      dataQualityIssueCount: memberDQIssues.data.length,
     });
   }, [
     member.data,
@@ -77,7 +79,7 @@ export function useMemberDashboard(memberId: number) {
     commitments.data,
     timeline.data,
     correspondence.length,
-    dqIssues.length,
+    memberDQIssues.data.length,
   ]);
 
   // ─── Loading & error states ───────────────────────────────────────────────
@@ -103,7 +105,8 @@ export function useMemberDashboard(memberId: number) {
 
     // Correspondence & DQ
     correspondence,
-    dqIssues,
+    dqScore: dqScore.data,
+    dqIssues: memberDQIssues.data,
 
     // Generated
     summary,
@@ -114,7 +117,9 @@ export function useMemberDashboard(memberId: number) {
       employment.isLoading ||
       serviceCredit.isLoading ||
       contact.isLoading ||
-      correspondenceQuery.isLoading,
+      correspondenceQuery.isLoading ||
+      dqScore.isLoading ||
+      memberDQIssues.isLoading,
     error,
   };
 }
