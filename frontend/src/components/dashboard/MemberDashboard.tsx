@@ -33,6 +33,7 @@ export default function MemberDashboard({
     commitments,
     activeCases,
     correspondence,
+    dqScore,
     dqIssues,
     summary,
     isLoading,
@@ -134,7 +135,11 @@ export default function MemberDashboard({
 
                 <BeneficiaryCard beneficiaries={beneficiaries} isLoading={isLoadingSecondary} />
 
-                <DataQualityCard issues={dqIssues} />
+                <DataQualityCard
+                  score={dqScore}
+                  memberIssues={dqIssues}
+                  isLoading={isLoadingSecondary}
+                />
               </div>
             </div>
 
