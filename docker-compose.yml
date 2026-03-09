@@ -135,6 +135,16 @@ services:
       postgres:
         condition: service_healthy
 
+  connector:
+    build:
+      context: ./connector
+      dockerfile: Dockerfile
+    ports:
+      - "8090:8090"
+    environment:
+      PORT: "8090"
+      CORS_ORIGIN: "http://localhost:3000"
+
   frontend:
     build:
       context: ./frontend
