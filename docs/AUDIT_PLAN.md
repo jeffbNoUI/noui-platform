@@ -18,71 +18,21 @@ These are one-line or one-file fixes that can be done in a single pass.
 ### 1.3 ✅ Add .env.example
 **Status:** Done (PR #11, commit c2dd8f5)
 
-### 1.4 Fix dataaccess health check service name
-**File:** `platform/dataaccess/api/handlers.go` line 45
-**Change:** `Service: "connector"` → `Service: "dataaccess"`
-**Why:** Health check reports wrong service name to monitoring dashboards. Same copy-paste origin as the Dockerfile bug.
-**Time:** 2 minutes
+### 1.4 ✅ Fix dataaccess health check service name
+**Status:** Done (PR #11, commit 3baf68f)
 
-### 1.5 Standardize Dockerfile binary names
-**Files:** 4 Dockerfiles need updates
+### 1.5 ✅ Standardize Dockerfile binary names
+**Status:** Done (PR #11, commit 3baf68f)
 
-| Service | Current Binary | Should Be | Also Missing |
-|---------|---------------|-----------|--------------|
-| `platform/crm/Dockerfile` | `/crm-service` | `/crm` | `-ldflags="-s -w"` |
-| `platform/correspondence/Dockerfile` | `/corr-service` | `/correspondence` | `-ldflags="-s -w"` |
-| `platform/dataquality/Dockerfile` | `/dq-service` | `/dataquality` | `-ldflags="-s -w"` |
-| `platform/knowledgebase/Dockerfile` | `/kb-service` | `/knowledgebase` | `-ldflags="-s -w"` |
-
-**Pattern to follow:** `platform/intelligence/Dockerfile` and `platform/dataaccess/Dockerfile` (both use full service name + `-ldflags="-s -w"` for smaller binaries).
-
-**For each file, update three lines:**
-- `RUN ... go build -ldflags="-s -w" -o /{servicename} .`
-- `COPY --from=builder /{servicename} /{servicename}`
-- `ENTRYPOINT ["/{servicename}"]`
-
-**Time:** 15 minutes
-
-### 1.6 Add .dockerignore files to all service directories
-**Files to create:** 8 identical `.dockerignore` files:
-- `connector/.dockerignore`
-- `platform/dataaccess/.dockerignore`
-- `platform/crm/.dockerignore`
-- `platform/intelligence/.dockerignore`
-- `platform/correspondence/.dockerignore`
-- `platform/dataquality/.dockerignore`
-- `platform/knowledgebase/.dockerignore`
-- `frontend/.dockerignore`
-
-**Content for Go services:**
-```
-.git
-.env
-*_test.go
-**/*_test.go
-README.md
-CLAUDE.md
-.vscode
-```
-
-**Content for frontend:**
-```
-.git
-.env
-node_modules
-dist
-coverage
-.vscode
-```
-
-**Why:** Without .dockerignore, Docker copies everything including .git, .env (with potential secrets), test files, and IDE configs into the build context. This slows builds and risks credential exposure.
-**Time:** 15 minutes
+### 1.6 ✅ Add .dockerignore files to all service directories
+**Status:** Done (PR #11, commit 3baf68f)
 
 ---
 
-## Phase 2: Type Safety (2-3 hours)
+## Phase 2: Type Safety ✅
 
-### 2.1 Replace `any` types in workflow stage props
+### 2.1 ✅ Replace `any` types in workflow stage props
+**Status:** Done (PR #11, commit 76a2e7c). Created `Member` and `BenefitCalculation` interfaces in `frontend/src/types/`, replaced all 16 `any` annotations across 7 stage components.
 **Location:** `frontend/src/components/workflow/stages/`
 **Scope:** 16 instances of `: any` across 7 files
 
@@ -112,9 +62,10 @@ coverage
 
 ---
 
-## Phase 3: Test Coverage (2-3 sessions)
+## Phase 3: Test Coverage (partial)
 
-### 3.1 Add dataaccess API handler tests
+### 3.1 ✅ Add dataaccess API handler tests
+**Status:** Done (PR #12, commit 59c29a2)
 **File to create:** `platform/dataaccess/api/handlers_test.go`
 **Endpoints to test (8 total):**
 1. `GET /healthz` — returns correct service name and status
@@ -132,11 +83,8 @@ coverage
 **Critical test:** Service credit must test earned-only vs total service credit (CLAUDE.md "Service Purchase Exclusion" rule).
 **Time:** 4-6 hours
 
-### 3.2 Add CRM API handler tests
-**File to create:** `platform/crm/api/handlers_test.go`
-**Endpoints to test (20+):** contacts CRUD, conversations, interactions, commitments, audit trail
-**Pattern:** Same as 3.1 — use httptest, mock DB layer
-**Time:** 6-8 hours
+### 3.2 ✅ Add CRM API handler tests
+**Status:** Done (PR #12, commit 59c29a2)
 
 ### 3.3 Add workflow stage component tests
 **Files to create:** Test files in `frontend/src/components/workflow/stages/`
@@ -146,94 +94,82 @@ coverage
 
 ---
 
-## Phase 4: Frontend Architecture (2-3 hours)
+## Phase 4: Frontend Architecture ✅
 
-### 4.1 Configure Vite code splitting
-**File:** `frontend/vite.config.ts`
+### 4.1 ✅ Configure Vite code splitting
+**Status:** Done (this PR). Added `manualChunks` for vendor-react and vendor-query in `vite.config.ts`. Converted 7 portal components to `React.lazy()` with `Suspense` fallbacks in `App.tsx`.
+**Result:** Single 510 KB chunk → 16 chunks, largest 134 KB. Initial index.js dropped to 42 KB.
 
-**Strategy:**
-```typescript
-build: {
-  rollupOptions: {
-    output: {
-      manualChunks: {
-        'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-        'vendor-ui': ['lucide-react'],
-        // Lazy-load portals as separate chunks
-      }
-    }
-  }
-}
-```
+### 4.2 ✅ Add React Error Boundary
+**Status:** Done (this PR). Created `ErrorBoundary.tsx` class component. Wraps each portal's `Suspense` in App.tsx with named error boundaries for structured error logging.
 
-Plus add `React.lazy()` for the three portal entry points: `StaffPortal`, `MemberPortal`, `RetirementApplication`.
-
-**Why:** Currently all 88 components ship as a single chunk. A staff user loads all member portal code and vice versa. Code splitting reduces initial load by ~40-60%.
-**Time:** 2 hours
-
-### 4.2 Add React Error Boundary
-**File to create:** `frontend/src/components/ErrorBoundary.tsx`
-**Wrap:** Each portal's root with an error boundary
-**Behavior:** Catch unhandled exceptions, show user-friendly error state, log error details to console
-**Time:** 1 hour
-
-### 4.3 Improve API error handling
-**File:** `frontend/src/lib/api.ts` (and per-service API clients)
-**Changes:**
-- Stop swallowing errors silently (empty catch blocks)
-- Add structured error logging
-- Surface user-facing error messages
-- Add retry logic for transient failures (503, network errors)
-**Time:** 2 hours
+### 4.3 ✅ Improve API error handling
+**Status:** Done (this PR). Created shared `apiClient.ts` module consolidating 5 duplicate `fetchAPI`/`postAPI`/`patchAPI`/`putAPI` helpers. Adds:
+- `APIError` class with status, requestId, URL
+- X-Request-ID header on every request (also covers Phase 5.2)
+- Retry with exponential backoff on 502/503/504 and network errors (max 2 retries)
+- Structured `console.error` / `console.warn` logging
+- Fixed silent catch in `ExecutiveDashboard.tsx`
 
 ---
 
-## Phase 5: Infrastructure Hardening (1-2 hours)
+## Phase 5: Infrastructure Hardening ✅
 
-### 5.1 Improve CORS middleware
-**Files:** `main.go` in all 6 platform services
-**Changes:**
-- Add `Access-Control-Allow-Credentials: true`
-- Add `Access-Control-Max-Age: 86400`
-- Add `Access-Control-Expose-Headers: X-Request-ID`
-- Extract to shared middleware package or ensure consistency
+### 5.1 ✅ Improve CORS middleware
+**Status:** Done (this PR). Standardized all 6 platform services to identical CORS config:
+- Methods: `GET, POST, PUT, PATCH, DELETE, OPTIONS`
+- Headers: `Content-Type, Authorization, X-Tenant-ID, X-Request-ID`
+- Added `Access-Control-Allow-Credentials: true`
+- Added `Access-Control-Max-Age: 86400` on preflight responses
+- Added `Access-Control-Expose-Headers: X-Request-ID`
 
-**Note:** All 6 services have copy-pasted CORS middleware. Consider extracting to a shared file, but this must NOT violate layer boundaries (platform services are independent Go modules). Each service keeps its own copy; changes should be applied consistently.
-**Time:** 30 minutes
+### 5.2 ✅ Add X-Request-ID propagation in frontend
+**Status:** Done (this PR, combined with Phase 4.3). Shared `apiClient.ts` generates UUID via `crypto.randomUUID()` and sends as `X-Request-ID` header on every request.
 
-### 5.2 Add X-Request-ID propagation in frontend
-**File:** `frontend/src/lib/api.ts`
-**Change:** Generate UUID for each API call, send as `X-Request-ID` header
-**Why:** Enables end-to-end request tracing across frontend → backend
-**Time:** 30 minutes
-
-### 5.3 Align connector lib/pq dependency
-**File:** `connector/go.mod`
-**Change:** `github.com/lib/pq v1.11.2` — verify this is intentionally newer than platform's `v1.10.9`, or align them. The connector uses Go 1.26 so it may have picked up a newer compatible version.
-**Action:** Check release notes for lib/pq v1.10.9 → v1.11.2 for any breaking changes or security fixes.
-**Time:** 15 minutes
+### 5.3 ✅ Align connector lib/pq dependency — reviewed, no action needed
+**Status:** Reviewed. Connector uses `v1.11.2` (Go 1.26), platform uses `v1.10.9` (Go 1.22). Both are within semver v1.x — no breaking changes. Different Go module versions are expected since these are separate modules per layer boundary rules. No security advisories between versions.
 
 ---
 
 ## Priority Summary
 
-| Phase | Effort | Impact | When |
-|-------|--------|--------|------|
-| **Phase 1: Quick Fixes** | 30 min | High — eliminates copy-paste bugs, adds security (.dockerignore) | Next session |
-| **Phase 2: Type Safety** | 2-3 hrs | Critical — fiduciary components need type safety | Next session |
-| **Phase 3: Test Coverage** | 2-3 sessions | Critical — zero-test services are a deployment risk | Spread across sessions |
-| **Phase 4: Frontend Arch** | 2-3 hrs | High — bundle size, error handling | Dedicated session |
-| **Phase 5: Infra Hardening** | 1-2 hrs | Medium — consistency and observability | Can batch with any session |
+| Phase | Status | Notes |
+|-------|--------|-------|
+| **Phase 1: Quick Fixes** | ✅ Complete | PR #11, commit 3baf68f |
+| **Phase 2: Type Safety** | ✅ Complete | PR #11, commit 76a2e7c |
+| **Phase 3: Test Coverage** | Partial | 3.1 + 3.2 done (PR #12). 3.3 (workflow stage component tests) remains |
+| **Phase 4: Frontend Arch** | ✅ Complete | This PR |
+| **Phase 5: Infra Hardening** | ✅ Complete | This PR |
 
 ---
 
-## Already Completed (PR #11)
+## Already Completed
 
+### PR #11 (claude/angry-galileo → main)
 | Item | Commit |
 |------|--------|
-| Align codebase with Boris Cherny best practices | edc6d24 |
+| Align codebase with Boris Cherny best practices | 431ba95 |
 | Fix tsc hook (tsconfig.app.json) | edc6d24 |
 | Fix dataaccess Dockerfile binary name | c2dd8f5 |
 | Create connector Dockerfile | c2dd8f5 |
 | Add connector to docker-compose.yml | c2dd8f5 |
 | Add .env.example | c2dd8f5 |
+| Fix health check name, standardize Dockerfiles, add .dockerignore | 3baf68f |
+| Replace 16 `any` types in workflow stages with proper interfaces | 76a2e7c |
+
+### PR #12 (claude/heuristic-kare → angry-galileo)
+| Item | Commit |
+|------|--------|
+| Add dataaccess + CRM API handler tests (Phase 3.1-3.2) | 59c29a2 |
+
+### This PR (Phases 4-5)
+| Item | Files |
+|------|-------|
+| Vite code splitting + React.lazy() for 7 portals | `vite.config.ts`, `App.tsx` |
+| ErrorBoundary component wrapping each portal | `ErrorBoundary.tsx`, `App.tsx` |
+| Shared API client with retry, logging, X-Request-ID | `apiClient.ts`, `api.ts`, `crmApi.ts`, `correspondenceApi.ts`, `dqApi.ts`, `kbApi.ts` |
+| CORS middleware standardized across 6 services | `platform/*/main.go` |
+
+## Remaining Work
+
+- **Phase 3.3**: Workflow stage component tests (7 components, Vitest + RTL)
