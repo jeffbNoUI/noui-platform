@@ -1,4 +1,6 @@
 import { Field, Callout, fmt } from '../shared';
+import type { Member } from '../../../types/Member';
+import type { BenefitCalcResult } from '../../../types/BenefitCalculation';
 
 export default function SubmitStage({
   member,
@@ -7,8 +9,8 @@ export default function SubmitStage({
   completedStages,
   totalStages,
 }: {
-  member: any;
-  calculation: any;
+  member?: Member;
+  calculation?: BenefitCalcResult;
   retirementDate: string;
   completedStages: number;
   totalStages: number;
@@ -18,7 +20,8 @@ export default function SubmitStage({
   const ipr = calculation?.ipr;
   const deathBenefit = calculation?.death_benefit;
   const dro = calculation?.dro;
-  const monthlyBenefit = reduction?.reduced_benefit || calc?.gross_benefit || calculation?.maximum_benefit;
+  const monthlyBenefit =
+    reduction?.reduced_benefit || calc?.gross_benefit || calculation?.maximum_benefit;
   const allComplete = completedStages >= totalStages - 1; // All stages except submit itself
 
   return (
@@ -39,9 +42,13 @@ export default function SubmitStage({
       <Field label="Member" value={member ? `${member.first_name} ${member.last_name}` : '—'} />
       <Field
         label="Effective Date"
-        value={retirementDate
-          ? new Date(retirementDate.includes('T') ? retirementDate : retirementDate + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-          : '—'}
+        value={
+          retirementDate
+            ? new Date(
+                retirementDate.includes('T') ? retirementDate : retirementDate + 'T00:00:00',
+              ).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+            : '—'
+        }
       />
       <Field label="Tier" value={`Tier ${member?.tier_code || member?.tier || '—'}`} />
       <Field label="Monthly Benefit" value={fmt(monthlyBenefit)} highlight />
@@ -55,7 +62,10 @@ export default function SubmitStage({
         </>
       )}
 
-      <Field label="IPR Eligible" value={ipr ? `${fmt(ipr.non_medicare_monthly || ipr.monthly_amount)}/mo` : '—'} />
+      <Field
+        label="IPR Eligible"
+        value={ipr ? `${fmt(ipr.non_medicare_monthly || ipr.monthly_amount)}/mo` : '—'}
+      />
       <Field label="Death Benefit" value={fmt(deathBenefit?.amount)} />
 
       {/* Certify button */}
@@ -75,7 +85,8 @@ export default function SubmitStage({
         </button>
         {allComplete && (
           <div className="text-[10px] text-gray-400 mt-2">
-            Per RMC § 18-601 — Certification affirms all data verified and benefit correctly calculated.
+            Per RMC § 18-601 — Certification affirms all data verified and benefit correctly
+            calculated.
           </div>
         )}
       </div>

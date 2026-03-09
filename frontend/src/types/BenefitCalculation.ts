@@ -5,10 +5,15 @@ export interface EligibilityResult {
   tier: number;
   tier_source: string;
   vested: boolean;
+  is_vested?: boolean;
+  eligible_normal?: boolean;
+  rule_of_75_sum?: number;
+  rule_of_85_sum?: number;
   service_credit: ServiceCreditData;
   evaluations: RuleEvaluation[];
   best_eligible_type: string;
   reduction_pct: number;
+  reduction_percentage?: number;
   reduction_factor: number;
 }
 
@@ -89,11 +94,15 @@ export interface PaymentOptions {
   js_100: JSOption;
   js_75: JSOption;
   js_50: JSOption;
+  joint_survivor_100?: JSOption;
+  joint_survivor_75?: JSOption;
+  joint_survivor_50?: JSOption;
   disclaimer: string;
 }
 
 export interface JSOption {
   member_amount: number;
+  monthly_amount?: number;
   survivor_amount: number;
   survivor_pct: number;
   factor: number;
@@ -112,6 +121,9 @@ export interface DROCalcResult {
   alt_payee_amount: number;
   member_benefit_after_dro: number;
   division_method: string;
+  division_value?: number;
+  alt_payee_first_name?: string;
+  alt_payee_last_name?: string;
 }
 
 export interface DeathBenefitDetail {
@@ -125,6 +137,7 @@ export interface DeathBenefitDetail {
 export interface IPRDetail {
   earned_service_years: number;
   non_medicare_monthly: number;
+  monthly_amount?: number;
   medicare_monthly: number;
   source_reference: string;
 }
