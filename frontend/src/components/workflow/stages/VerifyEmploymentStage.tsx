@@ -1,13 +1,14 @@
 import { Field, Callout } from '../shared';
+import type { Member, EmploymentEvent, ServiceCreditResponse } from '../../../types/Member';
 
 export default function VerifyEmploymentStage({
   member,
   employment,
   serviceCredit,
 }: {
-  member: any;
-  employment: any;
-  serviceCredit: any;
+  member?: Member;
+  employment?: EmploymentEvent[];
+  serviceCredit?: ServiceCreditResponse;
   retirementDate?: string;
 }) {
   const svc = serviceCredit?.summary;
@@ -16,9 +17,13 @@ export default function VerifyEmploymentStage({
     <div>
       <Field
         label="Hire Date"
-        value={member?.hire_date
-          ? new Date(member.hire_date.includes('T') ? member.hire_date : member.hire_date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-          : '—'}
+        value={
+          member?.hire_date
+            ? new Date(
+                member.hire_date.includes('T') ? member.hire_date : member.hire_date + 'T00:00:00',
+              ).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+            : '—'
+        }
       />
       <Field label="Department" value={member?.dept_name || member?.department || '—'} />
       <Field label="Position" value={member?.pos_title || member?.job_title || '—'} />
@@ -34,9 +39,7 @@ export default function VerifyEmploymentStage({
       />
       <Field
         label="Purchased Service"
-        value={svc && svc.purchased_years > 0
-          ? `${svc.purchased_years.toFixed(2)} years`
-          : 'None'}
+        value={svc && svc.purchased_years > 0 ? `${svc.purchased_years.toFixed(2)} years` : 'None'}
       />
 
       {svc && svc.purchased_years > 0 && (
