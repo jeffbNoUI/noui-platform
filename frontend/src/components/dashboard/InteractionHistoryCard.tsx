@@ -1,53 +1,36 @@
-import type { ContactTimeline } from '@/types/CRM';
+import { useRef } from 'react';
+import type { ContactTimeline, TimelineEntry } from '@/types/CRM';
+import { CHANNEL_ICONS, CHANNEL_LABELS, OUTCOME_STYLES } from '@/lib/channelMeta';
+
+export interface InteractionRowClickData {
+  interactionId: string;
+  entry: TimelineEntry;
+  sourceRect: DOMRect;
+}
 
 interface InteractionHistoryCardProps {
   timeline?: ContactTimeline;
   isLoading: boolean;
+  onSelectInteraction?: (data: InteractionRowClickData) => void;
 }
-
-const CHANNEL_ICONS: Record<string, string> = {
-  phone_inbound: '\ud83d\udcde',
-  phone_outbound: '\ud83d\udcde',
-  secure_message: '\ud83d\udcac',
-  email_inbound: '\ud83d\udce7',
-  email_outbound: '\ud83d\udce7',
-  walk_in: '\ud83d\udeb6',
-  portal_activity: '\ud83c\udf10',
-  mail_inbound: '\u2709\ufe0f',
-  mail_outbound: '\u2709\ufe0f',
-  internal_handoff: '\ud83d\udd04',
-  system_event: '\u2699\ufe0f',
-  fax: '\ud83d\udce0',
-};
-
-const CHANNEL_LABELS: Record<string, string> = {
-  phone_inbound: 'Inbound Call',
-  phone_outbound: 'Outbound Call',
-  secure_message: 'Secure Message',
-  email_inbound: 'Email Received',
-  email_outbound: 'Email Sent',
-  walk_in: 'Walk-in',
-  portal_activity: 'Portal Activity',
-  mail_inbound: 'Mail Received',
-  mail_outbound: 'Mail Sent',
-  internal_handoff: 'Internal Handoff',
-  system_event: 'System Event',
-  fax: 'Fax',
-};
-
-const OUTCOME_STYLES: Record<string, string> = {
-  resolved: 'text-emerald-600',
-  escalated: 'text-red-600',
-  callback_scheduled: 'text-amber-600',
-  info_provided: 'text-blue-600',
-  in_progress: 'text-amber-600',
-};
 
 export default function InteractionHistoryCard({
   timeline,
   isLoading,
+  onSelectInteraction,
 }: InteractionHistoryCardProps) {
   const entries = timeline?.timelineEntries ?? [];
+  const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  const handleRowClick = (entry: TimelineEntry) => {
+    const el = rowRefs.current.get(entry.interactionId);
+    if (!el || !onSelectInteraction) return;
+    onSelectInteraction({
+      interactionId: entry.interactionId,
+      entry,
+      sourceRect: el.getBoundingClientRect(),
+    });
+  };
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
@@ -69,15 +52,26 @@ export default function InteractionHistoryCard({
       {entries.length > 0 && (
         <div className="divide-y divide-gray-100">
           {entries.slice(0, 10).map((entry) => (
-            <div key={entry.interactionId} className="px-5 py-3">
+            <div
+              key={entry.interactionId}
+              ref={(el) => {
+                if (el) rowRefs.current.set(entry.interactionId, el);
+                else rowRefs.current.delete(entry.interactionId);
+              }}
+              onClick={() => handleRowClick(entry)}
+              className={`px-5 py-3 ${onSelectInteraction ? 'cursor-pointer hover:bg-gray-50 transition-colors' : ''}`}
+            >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm" title={CHANNEL_LABELS[entry.channel] || entry.channel}>
-                    {CHANNEL_ICONS[entry.channel] || '\ud83d\udccc'}
+                  <span
+                    className="text-sm"
+                    title={CHANNEL_LABELS[entry.channel.toLowerCase()] || entry.channel}
+                  >
+                    {CHANNEL_ICONS[entry.channel.toLowerCase()] || '\ud83d\udccc'}
                   </span>
                   <div>
                     <div className="text-sm text-gray-800">
-                      {CHANNEL_LABELS[entry.channel] || entry.channel}
+                      {CHANNEL_LABELS[entry.channel.toLowerCase()] || entry.channel}
                     </div>
                     {entry.summary && (
                       <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{entry.summary}</p>
@@ -88,9 +82,9 @@ export default function InteractionHistoryCard({
                   <div className="text-xs text-gray-400">{formatTimelineDate(entry.startedAt)}</div>
                   {entry.outcome && (
                     <div
-                      className={`text-[10px] font-medium ${OUTCOME_STYLES[entry.outcome] || 'text-gray-500'}`}
+                      className={`text-[10px] font-medium ${OUTCOME_STYLES[entry.outcome.toLowerCase()] || 'text-gray-500'}`}
                     >
-                      {entry.outcome.replace(/_/g, ' ')}
+                      {entry.outcome.toLowerCase().replace(/_/g, ' ')}
                     </div>
                   )}
                 </div>

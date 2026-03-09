@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { useMemberDashboard } from '@/hooks/useMemberDashboard';
 import MemberBanner from '@/components/MemberBanner';
 import MemberSummaryCard from '@/components/dashboard/MemberSummaryCard';
 import ActiveWorkCard from '@/components/dashboard/ActiveWorkCard';
 import InteractionHistoryCard from '@/components/dashboard/InteractionHistoryCard';
+import type { InteractionRowClickData } from '@/components/dashboard/InteractionHistoryCard';
+import InteractionDetailPanel from '@/components/dashboard/InteractionDetailPanel';
 import CorrespondenceHistoryCard from '@/components/dashboard/CorrespondenceHistoryCard';
 import MemberDetailsCard from '@/components/dashboard/MemberDetailsCard';
 import ServiceCreditCard from '@/components/dashboard/ServiceCreditCard';
@@ -30,12 +33,17 @@ export default function MemberDashboard({
     commitments,
     activeCases,
     correspondence,
+    dqScore,
     dqIssues,
     summary,
     isLoading,
     isLoadingSecondary,
     error,
   } = useMemberDashboard(memberId);
+
+  const [selectedInteraction, setSelectedInteraction] = useState<InteractionRowClickData | null>(
+    null,
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -110,7 +118,11 @@ export default function MemberDashboard({
                   onOpenCase={onOpenCase}
                 />
 
-                <InteractionHistoryCard timeline={timeline} isLoading={isLoadingSecondary} />
+                <InteractionHistoryCard
+                  timeline={timeline}
+                  isLoading={isLoadingSecondary}
+                  onSelectInteraction={setSelectedInteraction}
+                />
 
                 <CorrespondenceHistoryCard correspondence={correspondence} />
               </div>
@@ -123,7 +135,11 @@ export default function MemberDashboard({
 
                 <BeneficiaryCard beneficiaries={beneficiaries} isLoading={isLoadingSecondary} />
 
-                <DataQualityCard issues={dqIssues} />
+                <DataQualityCard
+                  score={dqScore}
+                  memberIssues={dqIssues}
+                  isLoading={isLoadingSecondary}
+                />
               </div>
             </div>
 
@@ -138,6 +154,16 @@ export default function MemberDashboard({
           </>
         )}
       </main>
+
+      {/* Interaction detail overlay */}
+      {selectedInteraction && (
+        <InteractionDetailPanel
+          interactionId={selectedInteraction.interactionId}
+          entry={selectedInteraction.entry}
+          sourceRect={selectedInteraction.sourceRect}
+          onClose={() => setSelectedInteraction(null)}
+        />
+      )}
     </div>
   );
 }

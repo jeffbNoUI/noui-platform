@@ -90,21 +90,17 @@ export const crmAPI = {
   // ── Contacts ─────────────────────────────────────────────────────────────
 
   searchContacts: (params: ContactSearchParams) =>
-    fetchAPI<PaginatedResponse<Contact>>(
-      `${CRM_URL}/v1/crm/contacts${toQueryString(params)}`,
-    ),
+    fetchAPI<PaginatedResponse<Contact>>(`${CRM_URL}/v1/crm/contacts${toQueryString(params)}`),
 
-  getContact: (contactId: string) =>
-    fetchAPI<Contact>(`${CRM_URL}/v1/crm/contacts/${contactId}`),
+  getContact: (contactId: string) => fetchAPI<Contact>(`${CRM_URL}/v1/crm/contacts/${contactId}`),
 
-  createContact: (req: CreateContactRequest) =>
-    postAPI<Contact>(`${CRM_URL}/v1/crm/contacts`, req),
+  createContact: (req: CreateContactRequest) => postAPI<Contact>(`${CRM_URL}/v1/crm/contacts`, req),
 
   updateContact: (contactId: string, req: UpdateContactRequest) =>
     patchAPI<Contact>(`${CRM_URL}/v1/crm/contacts/${contactId}`, req),
 
   getContactByLegacyId: (legacyMbrId: string) =>
-    fetchAPI<Contact>(`${CRM_URL}/v1/crm/contacts/legacy/${legacyMbrId}`),
+    fetchAPI<Contact>(`${CRM_URL}/v1/crm/contacts-by-legacy/${legacyMbrId}`),
 
   // ── Timeline / Interactions ──────────────────────────────────────────────
 
@@ -137,8 +133,7 @@ export const crmAPI = {
 
   // ── Notes ────────────────────────────────────────────────────────────────
 
-  createNote: (req: CreateNoteRequest) =>
-    postAPI<Note>(`${CRM_URL}/v1/crm/notes`, req),
+  createNote: (req: CreateNoteRequest) => postAPI<Note>(`${CRM_URL}/v1/crm/notes`, req),
 
   // ── Commitments ──────────────────────────────────────────────────────────
 
@@ -156,9 +151,7 @@ export const crmAPI = {
   // ── Outreach ─────────────────────────────────────────────────────────────
 
   listOutreach: (params: OutreachListParams) =>
-    fetchAPI<PaginatedResponse<Outreach>>(
-      `${CRM_URL}/v1/crm/outreach${toQueryString(params)}`,
-    ),
+    fetchAPI<PaginatedResponse<Outreach>>(`${CRM_URL}/v1/crm/outreach${toQueryString(params)}`),
 
   createOutreach: (req: CreateOutreachRequest) =>
     postAPI<Outreach>(`${CRM_URL}/v1/crm/outreach`, req),
