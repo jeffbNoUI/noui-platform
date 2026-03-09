@@ -1,13 +1,15 @@
 import { Field, Callout } from '../shared';
+import type { Member, ServiceCreditResponse } from '../../../types/Member';
+import type { BenefitCalcResult } from '../../../types/BenefitCalculation';
 
 export default function EligibilityStage({
   member,
   calculation,
   serviceCredit,
 }: {
-  member: any;
-  calculation: any;
-  serviceCredit: any;
+  member?: Member;
+  calculation?: BenefitCalcResult;
+  serviceCredit?: ServiceCreditResponse;
 }) {
   const elig = calculation?.eligibility;
   const svc = serviceCredit?.summary;
@@ -24,22 +26,28 @@ export default function EligibilityStage({
         value={`Tier ${tier}`}
         badge={{
           text: tier === 1 ? 'Pre-2004' : tier === 2 ? '2004-2010' : 'Post-2010',
-          className: tier === 1 ? 'bg-blue-50 text-blue-700' : tier === 2 ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700',
+          className:
+            tier === 1
+              ? 'bg-blue-50 text-blue-700'
+              : tier === 2
+                ? 'bg-amber-50 text-amber-700'
+                : 'bg-emerald-50 text-emerald-700',
         }}
       />
       <Field
         label="Vested"
-        value={elig?.is_vested || elig?.vested ? `Yes — ${svc?.earned_years?.toFixed(2) || '—'} years` : 'No'}
+        value={
+          elig?.is_vested || elig?.vested
+            ? `Yes — ${svc?.earned_years?.toFixed(2) || '—'} years`
+            : 'No'
+        }
         badge={
           elig?.is_vested || elig?.vested
             ? { text: 'Met', className: 'bg-emerald-50 text-emerald-700' }
             : { text: 'Not Met', className: 'bg-red-50 text-red-700' }
         }
       />
-      <Field
-        label="Normal Retirement (65)"
-        value={elig?.eligible_normal ? 'Yes' : 'Not yet'}
-      />
+      <Field label="Normal Retirement (65)" value={elig?.eligible_normal ? 'Yes' : 'Not yet'} />
       <Field
         label={ruleLabel}
         value={elig ? `${ruleSum.toFixed(2)} ≥ ${ruleThreshold}` : `— ≥ ${ruleThreshold}`}

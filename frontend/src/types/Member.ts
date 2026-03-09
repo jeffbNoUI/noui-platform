@@ -11,10 +11,13 @@ export interface Member {
   rehire_date?: string;
   status_code: string;
   tier_code: number;
+  tier?: number;
   dept_code?: string;
   dept_name?: string;
+  department?: string;
   pos_code?: string;
   pos_title?: string;
+  job_title?: string;
   medicare_flag?: string;
   email?: string;
 }
@@ -91,4 +94,8 @@ export interface ContributionSummary {
   current_ee_balance: number;
   current_er_balance: number;
   period_count: number;
+}
+
+export interface ServiceCreditResponse {
+  summary: ServiceCreditSummary;
 }

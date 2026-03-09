@@ -1,10 +1,7 @@
 import { Field, Callout, fmt } from '../shared';
+import type { BenefitCalcResult } from '../../../types/BenefitCalculation';
 
-export default function DROStage({
-  calculation,
-}: {
-  calculation: any;
-}) {
+export default function DROStage({ calculation }: { calculation?: BenefitCalcResult }) {
   const dro = calculation?.dro;
 
   if (!dro) {
@@ -27,14 +24,22 @@ export default function DROStage({
       />
 
       <div className="mt-4">
-        <Field label="Former Spouse" value={`${dro.alt_payee_first_name || 'Alt'} ${dro.alt_payee_last_name || 'Payee'}`} />
+        <Field
+          label="Former Spouse"
+          value={`${dro.alt_payee_first_name || 'Alt'} ${dro.alt_payee_last_name || 'Payee'}`}
+        />
         <Field
           label="Marriage Period"
-          value={dro.marriage_date && dro.divorce_date
-            ? `${new Date(dro.marriage_date).toLocaleDateString('en-US')} — ${new Date(dro.divorce_date).toLocaleDateString('en-US')}`
-            : '—'}
+          value={
+            dro.marriage_date && dro.divorce_date
+              ? `${new Date(dro.marriage_date).toLocaleDateString('en-US')} — ${new Date(dro.divorce_date).toLocaleDateString('en-US')}`
+              : '—'
+          }
         />
-        <Field label="Service During Marriage" value={`${(dro.marital_service_years || 0).toFixed(2)} years`} />
+        <Field
+          label="Service During Marriage"
+          value={`${(dro.marital_service_years || 0).toFixed(2)} years`}
+        />
         <Field label="Total Service" value={`${(dro.total_service_years || 0).toFixed(2)} years`} />
       </div>
 
@@ -49,9 +54,10 @@ export default function DROStage({
             className="h-full rounded-full transition-all duration-500"
             style={{
               width: `${Math.min(maritalFraction * 100, 100)}%`,
-              background: maritalFraction > 0.5
-                ? 'linear-gradient(90deg, #f59e0b, #ef4444)'
-                : 'linear-gradient(90deg, #10b981, #f59e0b)',
+              background:
+                maritalFraction > 0.5
+                  ? 'linear-gradient(90deg, #f59e0b, #ef4444)'
+                  : 'linear-gradient(90deg, #10b981, #f59e0b)',
             }}
           />
         </div>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Callout } from '../shared';
+import type { Member } from '../../../types/Member';
 
 interface DocItem {
   id: string;
@@ -11,26 +12,80 @@ interface DocItem {
 
 function buildChecklist(flags: { hasDRO: boolean; maritalStatus?: string }): DocItem[] {
   const docs: DocItem[] = [
-    { id: 'retirement-app', label: 'Signed Retirement Application', required: true, status: 'received' },
-    { id: 'id-verification', label: 'Government-Issued Photo ID', required: true, status: 'received' },
-    { id: 'birth-cert', label: 'Birth Certificate or Proof of Age', required: true, status: 'pending' },
-    { id: 'employment-ver', label: 'Employment Verification Letter', required: true, status: 'received' },
+    {
+      id: 'retirement-app',
+      label: 'Signed Retirement Application',
+      required: true,
+      status: 'received',
+    },
+    {
+      id: 'id-verification',
+      label: 'Government-Issued Photo ID',
+      required: true,
+      status: 'received',
+    },
+    {
+      id: 'birth-cert',
+      label: 'Birth Certificate or Proof of Age',
+      required: true,
+      status: 'pending',
+    },
+    {
+      id: 'employment-ver',
+      label: 'Employment Verification Letter',
+      required: true,
+      status: 'received',
+    },
     { id: 'salary-cert', label: 'Final Salary Certification', required: true, status: 'received' },
-    { id: 'direct-deposit', label: 'Direct Deposit Authorization', required: false, status: 'pending' },
-    { id: 'tax-withholding', label: 'Federal/State Tax Withholding (W-4P)', required: true, status: 'pending' },
+    {
+      id: 'direct-deposit',
+      label: 'Direct Deposit Authorization',
+      required: false,
+      status: 'pending',
+    },
+    {
+      id: 'tax-withholding',
+      label: 'Federal/State Tax Withholding (W-4P)',
+      required: true,
+      status: 'pending',
+    },
   ];
 
   if (flags.maritalStatus === 'M') {
     docs.push(
-      { id: 'marriage-cert', label: 'Marriage Certificate', required: true, status: 'received', conditional: true },
-      { id: 'spouse-consent', label: 'Spousal Consent Form', required: true, status: 'pending', conditional: true }
+      {
+        id: 'marriage-cert',
+        label: 'Marriage Certificate',
+        required: true,
+        status: 'received',
+        conditional: true,
+      },
+      {
+        id: 'spouse-consent',
+        label: 'Spousal Consent Form',
+        required: true,
+        status: 'pending',
+        conditional: true,
+      },
     );
   }
 
   if (flags.hasDRO) {
     docs.push(
-      { id: 'dro-order', label: 'Certified DRO Court Order', required: true, status: 'received', conditional: true },
-      { id: 'dro-qdro', label: 'QDRO Approval Letter', required: true, status: 'pending', conditional: true }
+      {
+        id: 'dro-order',
+        label: 'Certified DRO Court Order',
+        required: true,
+        status: 'received',
+        conditional: true,
+      },
+      {
+        id: 'dro-qdro',
+        label: 'QDRO Approval Letter',
+        required: true,
+        status: 'pending',
+        conditional: true,
+      },
     );
   }
 
@@ -46,7 +101,7 @@ const STATUS_STYLES = {
 export default function IntakeStage({
   flags,
 }: {
-  member?: any;
+  member?: Member;
   flags: { hasDRO: boolean; maritalStatus?: string };
 }) {
   const [docs, setDocs] = useState<DocItem[]>(() => buildChecklist(flags));
@@ -55,9 +110,10 @@ export default function IntakeStage({
     setDocs((prev) =>
       prev.map((d) => {
         if (d.id !== id) return d;
-        const next = d.status === 'received' ? 'pending' : d.status === 'pending' ? 'missing' : 'received';
+        const next =
+          d.status === 'received' ? 'pending' : d.status === 'pending' ? 'missing' : 'received';
         return { ...d, status: next };
-      })
+      }),
     );
   };
 
@@ -69,9 +125,7 @@ export default function IntakeStage({
     <div>
       {/* Progress summary */}
       <div className="flex items-center justify-between mb-4">
-        <div className="text-sm text-gray-700 font-medium">
-          Document Checklist
-        </div>
+        <div className="text-sm text-gray-700 font-medium">Document Checklist</div>
         <div className="flex items-center gap-2">
           <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
             <div
@@ -95,8 +149,8 @@ export default function IntakeStage({
               doc.status === 'received'
                 ? 'border-emerald-100 bg-emerald-50/30'
                 : doc.status === 'missing'
-                ? 'border-red-100 bg-red-50/30'
-                : 'border-gray-200 bg-white hover:bg-gray-50'
+                  ? 'border-red-100 bg-red-50/30'
+                  : 'border-gray-200 bg-white hover:bg-gray-50'
             }`}
           >
             <div className="flex items-center gap-3">
