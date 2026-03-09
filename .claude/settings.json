@@ -71,7 +71,7 @@
           },
           {
             "type": "command",
-            "command": "bash -c 'FILE=\"$CLAUDE_FILE_PATH\"; if [[ \"$FILE\" == *.go ]]; then DIR=$(dirname \"$FILE\"); while [[ ! -f \"$DIR/go.mod\" ]] && [[ \"$DIR\" != \"/\" ]]; do DIR=$(dirname \"$DIR\"); done; if [[ -f \"$DIR/go.mod\" ]]; then cd \"$DIR\" && go vet ./... 2>&1 | head -20; fi; elif [[ \"$FILE\" == *.ts || \"$FILE\" == *.tsx ]]; then cd \"$(git rev-parse --show-toplevel)/frontend\" && npx tsc --noEmit 2>&1 | tail -10; fi'"
+            "command": "bash -c 'FILE=\"$CLAUDE_FILE_PATH\"; if [[ \"$FILE\" == *.go ]]; then DIR=$(dirname \"$FILE\"); while [[ ! -f \"$DIR/go.mod\" ]] && [[ \"$DIR\" != \"/\" ]]; do DIR=$(dirname \"$DIR\"); done; if [[ -f \"$DIR/go.mod\" ]]; then cd \"$DIR\" && go vet ./... 2>&1 | head -20; fi; elif [[ \"$FILE\" == *.ts || \"$FILE\" == *.tsx ]]; then cd \"$(git rev-parse --show-toplevel)/frontend\" && npx tsc -p tsconfig.app.json --noEmit 2>&1 | tail -10; fi'"
           },
           {
             "type": "command",
