@@ -235,7 +235,7 @@ Connect the React frontend to all 6 Go backend services through Docker Compose, 
 | Phase | Status | Session Date | Notes |
 |-------|--------|-------------|-------|
 | Phase 0: Planning | **Complete** | 2026-03-08 | This document created |
-| Phase 1: Docker Smoke Test | Not started | — | — |
+| Phase 1: Docker Smoke Test | **Complete** | 2026-03-08 | All 6 services + PostgreSQL + nginx healthy. Only issue: port conflicts from stale containers (resolved). UTF-8 mojibake in intelligence tier_source (pre-existing, non-blocking). |
 | Phase 2: CRM Integration | Not started | — | — |
 | Phase 3: Correspondence Integration | Not started | — | — |
 | Phase 4: Data Quality Integration | Not started | — | — |

@@ -1,5 +1,28 @@
 # noui-platform — Build History
 
+## Phase 1 Complete: Docker Smoke Test (2026-03-08)
+
+**Goal:** Prove all 6 backend services + PostgreSQL + frontend can boot together via Docker Compose.
+
+**Results:**
+- All 7 Docker images built successfully (Go services cached, frontend rebuilt)
+- PostgreSQL 16: 35 tables created from 10 init scripts (5 schema + 5 seed)
+- All 6 services connected to PostgreSQL and listening on correct ports
+- Health checks: 6/6 services return 200 on `/healthz`
+- Data verification: `GET /api/v1/members/10001` → Robert Martinez (confirmed)
+- CRM verification: `GET /api/v1/crm/contacts-by-legacy/10001` → Robert Martinez contact with addresses
+- Intelligence verification: `POST /api/v1/eligibility/evaluate` → Rule of 75, vested, 28.75yr service credit
+- Nginx proxy: all 6 service paths route correctly through `localhost:3000/api/v1/*`
+
+**Issues found:**
+1. Port conflicts from stale `epic-knuth-*` containers (previous worktree). Resolved by stopping old containers.
+2. UTF-8 mojibake in intelligence `tier_source` field — `§` and `→` characters garbled. Pre-existing encoding issue, non-blocking.
+3. `docker-compose.yml` `version` attribute is obsolete — cosmetic warning, no impact.
+
+**Status:** Phase 1 complete. Ready for Phase 2 (CRM integration).
+
+---
+
 ## Planning: Full-Stack Integration (2026-03-08)
 
 **Decision:** Connect frontend to all 6 Go backend services via Docker Compose, replacing in-memory demo data with live PostgreSQL-backed API calls.
