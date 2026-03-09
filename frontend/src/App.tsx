@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { useMember, useEmployment, useServiceCredit } from '@/hooks/useMember';
 import { useBenefitCalculation, useScenario } from '@/hooks/useBenefitCalculation';
 import MemberBanner from '@/components/MemberBanner';
@@ -10,14 +10,25 @@ import DROImpactPanel from '@/components/DROImpactPanel';
 import IPRCalculator from '@/components/IPRCalculator';
 import DeathBenefitPanel from '@/components/DeathBenefitPanel';
 import EmploymentTimeline from '@/components/EmploymentTimeline';
-import MemberPortal from '@/components/portal/MemberPortal';
-import CRMWorkspace from '@/components/CRMWorkspace';
-import EmployerPortal from '@/components/portal/EmployerPortal';
-import StaffPortal from '@/components/StaffPortal';
-import RetirementApplication from '@/components/RetirementApplication';
-import MemberDashboard from '@/components/dashboard/MemberDashboard';
 import CommandPalette from '@/components/CommandPalette';
-import VendorPortal from '@/components/portal/VendorPortal';
+import ErrorBoundary from '@/components/ErrorBoundary';
+
+// Lazy-load portal entry points — each becomes a separate chunk
+const StaffPortal = lazy(() => import('@/components/StaffPortal'));
+const MemberPortal = lazy(() => import('@/components/portal/MemberPortal'));
+const MemberDashboard = lazy(() => import('@/components/dashboard/MemberDashboard'));
+const RetirementApplication = lazy(() => import('@/components/RetirementApplication'));
+const CRMWorkspace = lazy(() => import('@/components/CRMWorkspace'));
+const EmployerPortal = lazy(() => import('@/components/portal/EmployerPortal'));
+const VendorPortal = lazy(() => import('@/components/portal/VendorPortal'));
+
+function PortalLoading() {
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="text-gray-400 text-sm">Loading...</div>
+    </div>
+  );
+}
 
 type ViewMode =
   | 'staff'
@@ -255,11 +266,15 @@ export default function App() {
     return (
       <>
         {cmdPalette}
-        <StaffPortal
-          onOpenCase={handleOpenCase}
-          onViewMember={handleViewMember}
-          onChangeView={handleChangeView}
-        />
+        <ErrorBoundary portalName="Staff Portal">
+          <Suspense fallback={<PortalLoading />}>
+            <StaffPortal
+              onOpenCase={handleOpenCase}
+              onViewMember={handleViewMember}
+              onChangeView={handleChangeView}
+            />
+          </Suspense>
+        </ErrorBoundary>
       </>
     );
   }
@@ -270,12 +285,16 @@ export default function App() {
     return (
       <>
         {cmdPalette}
-        <MemberDashboard
-          memberId={dashboardMemberId}
-          onBack={() => setViewMode('staff')}
-          onOpenCase={handleOpenCase}
-          onChangeView={handleChangeView}
-        />
+        <ErrorBoundary portalName="Member Dashboard">
+          <Suspense fallback={<PortalLoading />}>
+            <MemberDashboard
+              memberId={dashboardMemberId}
+              onBack={() => setViewMode('staff')}
+              onOpenCase={handleOpenCase}
+              onChangeView={handleChangeView}
+            />
+          </Suspense>
+        </ErrorBoundary>
       </>
     );
   }
@@ -286,14 +305,18 @@ export default function App() {
     return (
       <>
         {cmdPalette}
-        <RetirementApplication
-          caseId={activeCaseId}
-          memberId={caseMemberId}
-          retirementDate={caseRetDate}
-          caseFlags={caseFlagsState}
-          onBack={() => setViewMode('staff')}
-          onChangeView={handleChangeView}
-        />
+        <ErrorBoundary portalName="Retirement Application">
+          <Suspense fallback={<PortalLoading />}>
+            <RetirementApplication
+              caseId={activeCaseId}
+              memberId={caseMemberId}
+              retirementDate={caseRetDate}
+              caseFlags={caseFlagsState}
+              onBack={() => setViewMode('staff')}
+              onChangeView={handleChangeView}
+            />
+          </Suspense>
+        </ErrorBoundary>
       </>
     );
   }
@@ -304,13 +327,17 @@ export default function App() {
     return (
       <>
         {cmdPalette}
-        <MemberPortal
-          memberID={memberID}
-          retirementDate={retirementDate}
-          onSwitchToWorkspace={() => setViewMode('workspace')}
-          onSwitchToCRM={() => setViewMode('crm')}
-          onChangeView={handleChangeView}
-        />
+        <ErrorBoundary portalName="Member Portal">
+          <Suspense fallback={<PortalLoading />}>
+            <MemberPortal
+              memberID={memberID}
+              retirementDate={retirementDate}
+              onSwitchToWorkspace={() => setViewMode('workspace')}
+              onSwitchToCRM={() => setViewMode('crm')}
+              onChangeView={handleChangeView}
+            />
+          </Suspense>
+        </ErrorBoundary>
       </>
     );
   }
@@ -322,7 +349,11 @@ export default function App() {
       <>
         {cmdPalette}
         <TopNav viewMode={viewMode} onChangeView={handleChangeView} />
-        <CRMWorkspace />
+        <ErrorBoundary portalName="CRM">
+          <Suspense fallback={<PortalLoading />}>
+            <CRMWorkspace />
+          </Suspense>
+        </ErrorBoundary>
       </>
     );
   }
@@ -333,7 +364,11 @@ export default function App() {
     return (
       <>
         {cmdPalette}
-        <EmployerPortal onChangeView={handleChangeView} />
+        <ErrorBoundary portalName="Employer Portal">
+          <Suspense fallback={<PortalLoading />}>
+            <EmployerPortal onChangeView={handleChangeView} />
+          </Suspense>
+        </ErrorBoundary>
       </>
     );
   }
@@ -344,7 +379,11 @@ export default function App() {
     return (
       <>
         {cmdPalette}
-        <VendorPortal onChangeView={handleChangeView} />
+        <ErrorBoundary portalName="Vendor Portal">
+          <Suspense fallback={<PortalLoading />}>
+            <VendorPortal onChangeView={handleChangeView} />
+          </Suspense>
+        </ErrorBoundary>
       </>
     );
   }
