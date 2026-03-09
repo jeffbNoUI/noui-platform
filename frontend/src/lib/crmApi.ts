@@ -1,3 +1,4 @@
+import { fetchAPI, postAPI, patchAPI, toQueryString } from './apiClient';
 import type {
   Contact,
   ContactTimeline,
@@ -26,63 +27,6 @@ import type {
 } from '@/types/CRM';
 
 const CRM_URL = import.meta.env.VITE_CRM_URL || '/api';
-
-// ─── HTTP helpers (mirrors api.ts conventions) ───────────────────────────────
-
-interface APIResponse<T> {
-  data: T;
-  meta: { request_id: string; timestamp: string };
-}
-
-async function fetchAPI<T>(url: string): Promise<T> {
-  const res = await fetch(url);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: { message: res.statusText } }));
-    throw new Error(err.error?.message || `API error: ${res.status}`);
-  }
-  const body: APIResponse<T> = await res.json();
-  return body.data;
-}
-
-async function postAPI<T>(url: string, payload: unknown): Promise<T> {
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: { message: res.statusText } }));
-    throw new Error(err.error?.message || `API error: ${res.status}`);
-  }
-  const body: APIResponse<T> = await res.json();
-  return body.data;
-}
-
-async function patchAPI<T>(url: string, payload: unknown): Promise<T> {
-  const res = await fetch(url, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: { message: res.statusText } }));
-    throw new Error(err.error?.message || `API error: ${res.status}`);
-  }
-  const body: APIResponse<T> = await res.json();
-  return body.data;
-}
-
-// ─── Query-string builder ────────────────────────────────────────────────────
-
-function toQueryString(params: object): string {
-  const parts: string[] = [];
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== null && value !== '') {
-      parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
-    }
-  }
-  return parts.length > 0 ? `?${parts.join('&')}` : '';
-}
 
 // ─── CRM API client ─────────────────────────────────────────────────────────
 

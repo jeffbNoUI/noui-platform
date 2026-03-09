@@ -1,0 +1,7 @@
+.git
+.env
+*_test.go
+**/*_test.go
+README.md
+CLAUDE.md
+.vscode

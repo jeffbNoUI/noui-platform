@@ -1,4 +1,4 @@
-# Multi-stage build for connector service
+# Multi-stage build for dataaccess service
 FROM golang:1.22-alpine AS builder
 
 WORKDIR /app
@@ -6,13 +6,13 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /connector .
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /dataaccess .
 
 # Distroless production image
 FROM gcr.io/distroless/static-debian12:nonroot
 
-COPY --from=builder /connector /connector
+COPY --from=builder /dataaccess /dataaccess
 
 EXPOSE 8081
 
-ENTRYPOINT ["/connector"]
+ENTRYPOINT ["/dataaccess"]

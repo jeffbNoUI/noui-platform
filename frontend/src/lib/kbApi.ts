@@ -1,51 +1,26 @@
+import { fetchAPI, toQueryString } from './apiClient';
 import type { KBArticle, KBRuleReference } from '@/types/KnowledgeBase';
 
 const KB_URL = import.meta.env.VITE_KB_URL || '/api';
-
-// ─── HTTP helpers (mirrors crmApi.ts conventions) ────────────────────────────
-
-interface APIResponse<T> {
-  data: T;
-  meta: { request_id: string; timestamp: string };
-}
-
-async function fetchAPI<T>(url: string): Promise<T> {
-  const res = await fetch(url);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: { message: res.statusText } }));
-    throw new Error(err.error?.message || `API error: ${res.status}`);
-  }
-  const body: APIResponse<T> = await res.json();
-  return body.data;
-}
-
-// ─── Query-string builder ────────────────────────────────────────────────────
-
-function toQueryString(params: object): string {
-  const parts: string[] = [];
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== null && value !== '') {
-      parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
-    }
-  }
-  return parts.length > 0 ? `?${parts.join('&')}` : '';
-}
 
 // ─── Knowledge Base API client ───────────────────────────────────────────────
 
 export const kbAPI = {
   // ── Articles ───────────────────────────────────────────────────────────────
 
-  listArticles: (params?: { stage_id?: string; topic?: string; q?: string; limit?: number; offset?: number }) =>
-    fetchAPI<KBArticle[]>(`${KB_URL}/v1/kb/articles${toQueryString(params || {})}`),
+  listArticles: (params?: {
+    stage_id?: string;
+    topic?: string;
+    q?: string;
+    limit?: number;
+    offset?: number;
+  }) => fetchAPI<KBArticle[]>(`${KB_URL}/v1/kb/articles${toQueryString(params || {})}`),
 
-  getArticle: (articleId: string) =>
-    fetchAPI<KBArticle>(`${KB_URL}/v1/kb/articles/${articleId}`),
+  getArticle: (articleId: string) => fetchAPI<KBArticle>(`${KB_URL}/v1/kb/articles/${articleId}`),
 
   // ── Stage Help (replaces getHelpForStage) ──────────────────────────────────
 
-  getStageHelp: (stageId: string) =>
-    fetchAPI<KBArticle>(`${KB_URL}/v1/kb/stages/${stageId}`),
+  getStageHelp: (stageId: string) => fetchAPI<KBArticle>(`${KB_URL}/v1/kb/stages/${stageId}`),
 
   // ── Search ─────────────────────────────────────────────────────────────────
 
