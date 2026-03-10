@@ -1,5 +1,34 @@
 # noui-platform — Build History
 
+## Phase 2: CRM Integration (2026-03-10)
+
+**Goal:** Switch Member Dashboard CRM data from in-memory demo to live PostgreSQL-backed CRM API.
+
+**What changed:**
+- `frontend/src/hooks/useCRM.ts` — 3 portal hooks now call live CRM API with demo fallback via `VITE_USE_DEMO_CRM` env toggle:
+  - `useContactByMemberId()` → `crmAPI.getContactByLegacyId()`
+  - `useFullTimeline()` → `crmAPI.getContactTimeline()`
+  - `useContactCommitments()` → `crmAPI.listCommitments()` with array/paginated response handling
+- `frontend/src/lib/crmApi.ts` — Fixed URL mismatch: `contacts/legacy/{id}` → `contacts-by-legacy/{id}` to match Go CRM router
+- `frontend/vite.config.ts` — Dynamic port (`process.env.PORT || '5173'`) to avoid conflict with Docker frontend on port 3000
+
+**Decision made:** Keep demo data as development fallback. Set `VITE_USE_DEMO_CRM=true` in `.env.local` to use demo data when Docker stack isn't running. Default behavior: live API.
+
+**Issues found and fixed:**
+- CRM API URL mismatch between `crmApi.ts` and Go router (`contacts/legacy` vs `contacts-by-legacy`)
+- Commitments API returns flat array after `fetchAPI` unwraps `{ data }` envelope, not paginated wrapper — added `Array.isArray` guard with fallback
+- Vite port 3000 conflicted with Docker nginx container
+
+**Verification:**
+- 43/43 frontend tests pass
+- Member Dashboard shows 3 live interactions from PostgreSQL (was 4 demo entries)
+- All 3 CRM API calls confirmed via performance resource entries
+- Zero console errors on clean session
+
+**Status:** Phase 2 complete. Ready for Phase 3 (Correspondence Integration).
+
+---
+
 ## Planning: Full-Stack Integration (2026-03-08)
 
 **Decision:** Connect frontend to all 6 Go backend services via Docker Compose, replacing in-memory demo data with live PostgreSQL-backed API calls.

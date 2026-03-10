@@ -10,7 +10,7 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3000,
+    port: parseInt(process.env.PORT || '5173'),
     proxy: {
       '/api/v1/members': {
         target: 'http://localhost:8081',

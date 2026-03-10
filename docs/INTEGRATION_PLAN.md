@@ -235,8 +235,8 @@ Connect the React frontend to all 6 Go backend services through Docker Compose, 
 | Phase | Status | Session Date | Notes |
 |-------|--------|-------------|-------|
 | Phase 0: Planning | **Complete** | 2026-03-08 | This document created |
-| Phase 1: Docker Smoke Test | Not started | — | — |
-| Phase 2: CRM Integration | Not started | — | — |
+| Phase 1: Docker Smoke Test | **Complete** | 2026-03-09 | All 6 services healthy, seed data verified |
+| Phase 2: CRM Integration | **Complete** | 2026-03-10 | 3 hooks switched to live API, demo fallback via env toggle |
 | Phase 3: Correspondence Integration | Not started | — | — |
 | Phase 4: Data Quality Integration | Not started | — | — |
 | Phase 5: Full Verification | Not started | — | — |

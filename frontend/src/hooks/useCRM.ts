@@ -26,7 +26,12 @@ import type {
   ConversationListParams,
   OrgListParams,
 } from '@/types/CRM';
-import type { CreatePortalMessageData, CreateConversationData, CreateStaffNoteData, CreateStructuredNoteData } from '@/lib/crmDemoData';
+import type {
+  CreatePortalMessageData,
+  CreateConversationData,
+  CreateStaffNoteData,
+  CreateStructuredNoteData,
+} from '@/lib/crmDemoData';
 
 // ─── Query hooks ─────────────────────────────────────────────────────────────
 
@@ -202,7 +207,11 @@ export function useCreateConversation() {
 
 export function useUpdateConversation() {
   const queryClient = useQueryClient();
-  return useMutation<Conversation, Error, { conversationId: string; req: UpdateConversationRequest }>({
+  return useMutation<
+    Conversation,
+    Error,
+    { conversationId: string; req: UpdateConversationRequest }
+  >({
     mutationFn: ({ conversationId, req }) => crmAPI.updateConversation(conversationId, req),
     onSuccess: (_data, { conversationId }) => {
       queryClient.invalidateQueries({ queryKey: ['crm', 'conversation', conversationId] });
@@ -232,16 +241,20 @@ export function useUpdateOutreach() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Portal-specific hooks — use in-memory demo data for cross-portal demos.
-// These hooks power the member message center, staff journal, and employer
-// communications views. They share the same mutable data store so mutations
-// in one portal are immediately visible in the others via query invalidation.
+// Portal-specific hooks — default to live CRM API, with demo data fallback.
+//
+// Set VITE_USE_DEMO_CRM=true in .env.local to use in-memory demo data
+// (useful for local dev without the Docker stack running).
+// When unset or false, hooks call the live CRM service.
 // ═══════════════════════════════════════════════════════════════════════════════
+
+const USE_LIVE_CRM = import.meta.env.VITE_USE_DEMO_CRM !== 'true';
 
 export function useContactByMemberId(memberId: string) {
   return useQuery<Contact | undefined>({
     queryKey: ['crm', 'portal', 'contact-by-member', memberId],
-    queryFn: () => demo.getContactByMemberId(memberId),
+    queryFn: () =>
+      USE_LIVE_CRM ? crmAPI.getContactByLegacyId(memberId) : demo.getContactByMemberId(memberId),
     enabled: memberId.length > 0,
   });
 }
@@ -266,7 +279,8 @@ export function usePublicTimeline(contactId: string) {
 export function useFullTimeline(contactId: string) {
   return useQuery<ContactTimeline>({
     queryKey: ['crm', 'portal', 'full-timeline', contactId],
-    queryFn: () => demo.getFullTimeline(contactId),
+    queryFn: () =>
+      USE_LIVE_CRM ? crmAPI.getContactTimeline(contactId) : demo.getFullTimeline(contactId),
     enabled: contactId.length > 0,
   });
 }
@@ -322,7 +336,16 @@ export function useDemoInteraction(interactionId: string) {
 export function useContactCommitments(contactId: string) {
   return useQuery<Commitment[]>({
     queryKey: ['crm', 'portal', 'commitments', contactId],
-    queryFn: () => demo.getContactCommitments(contactId),
+    queryFn: async () => {
+      if (!USE_LIVE_CRM) return demo.getContactCommitments(contactId);
+      const response = await crmAPI.listCommitments({ contactId });
+      // fetchAPI unwraps { data } envelope — result is Commitment[] (array) directly
+      if (Array.isArray(response)) return response;
+      if (response && typeof response === 'object' && 'items' in response) {
+        return (response as { items: Commitment[] }).items ?? [];
+      }
+      return [];
+    },
     enabled: contactId.length > 0,
   });
 }
