@@ -6,9 +6,9 @@ import { mockMember, mockServiceCredit } from './fixtures';
 
 describe('VerifyEmploymentStage', () => {
   const mockEmployment = [
-    { event_id: 1, event_type: 'HIRE', event_date: '1998-06-01' },
-    { event_id: 2, event_type: 'PROMOTION', event_date: '2005-03-15' },
-    { event_id: 3, event_type: 'PROMOTION', event_date: '2012-07-01' },
+    { event_id: 1, member_id: 10001, event_type: 'HIRE', event_date: '1998-06-01' },
+    { event_id: 2, member_id: 10001, event_type: 'PROMOTION', event_date: '2005-03-15' },
+    { event_id: 3, member_id: 10001, event_type: 'PROMOTION', event_date: '2012-07-01' },
   ];
 
   it('renders without crashing with valid props', () => {
@@ -117,7 +117,7 @@ describe('VerifyEmploymentStage', () => {
 
   it('handles null member gracefully', () => {
     renderWithProviders(
-      <VerifyEmploymentStage member={null} employment={null} serviceCredit={null} />,
+      <VerifyEmploymentStage member={undefined} employment={undefined} serviceCredit={undefined} />,
     );
     // Hire date shows dash
     const hireDateValue = screen.getByText('Hire Date').closest('div')?.parentElement;
