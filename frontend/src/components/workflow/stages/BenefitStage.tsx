@@ -1,13 +1,15 @@
 import { Field, Callout, fmt } from '../shared';
+import type { Member, ServiceCreditResponse } from '../../../types/Member';
+import type { BenefitCalcResult } from '../../../types/BenefitCalculation';
 
 export default function BenefitStage({
   member,
   calculation,
   serviceCredit,
 }: {
-  member: any;
-  calculation: any;
-  serviceCredit: any;
+  member?: Member;
+  calculation?: BenefitCalcResult;
+  serviceCredit?: ServiceCreditResponse;
   retirementDate?: string;
 }) {
   const calc = calculation?.formula;
@@ -16,7 +18,13 @@ export default function BenefitStage({
   const svc = serviceCredit?.summary;
   const tier = member?.tier_code || member?.tier || 1;
 
-  const multiplierPct = calc ? (calc.multiplier * 100).toFixed(1) : tier === 1 ? '2.0' : tier === 2 ? '1.5' : '1.0';
+  const multiplierPct = calc
+    ? (calc.multiplier * 100).toFixed(1)
+    : tier === 1
+      ? '2.0'
+      : tier === 2
+        ? '1.5'
+        : '1.0';
   const monthlyBenefit = calc?.gross_benefit || calculation?.maximum_benefit;
   const reducedBenefit = reduction?.reduced_benefit;
 
@@ -46,10 +54,17 @@ export default function BenefitStage({
       <div className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-2 mt-4">
         Average Monthly Salary
       </div>
-      <Field label="AMS Window" value={`${ams?.window_months || (tier === 3 ? 60 : 36)} consecutive months`} />
+      <Field
+        label="AMS Window"
+        value={`${ams?.window_months || (tier === 3 ? 60 : 36)} consecutive months`}
+      />
       <Field
         label="Window Period"
-        value={ams ? `${new Date(ams.window_start).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} — ${new Date(ams.window_end).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}` : '—'}
+        value={
+          ams
+            ? `${new Date(ams.window_start).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} — ${new Date(ams.window_end).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`
+            : '—'
+        }
         highlight
       />
       <Field label="Average Monthly Salary" value={fmt(ams?.amount || calc?.ams)} highlight />
@@ -71,12 +86,19 @@ export default function BenefitStage({
       </div>
       <Field label="Multiplier" value={`${multiplierPct}% (Tier ${tier})`} />
       <Field label="AMS" value={fmt(calc?.ams || ams?.amount)} />
-      <Field label="Service Credit" value={`${(calc?.service_years || svc?.benefit_years || svc?.earned_years || 0).toFixed(2)} years`} />
+      <Field
+        label="Service Credit"
+        value={`${(calc?.service_years || svc?.benefit_years || svc?.earned_years || 0).toFixed(2)} years`}
+      />
       <Field label="Gross Monthly Benefit" value={fmt(monthlyBenefit)} />
 
       {reduction?.applies && (
         <>
-          <Field label="Reduction Factor" value={`${(reduction.reduction_factor * 100).toFixed(1)}%`} highlight />
+          <Field
+            label="Reduction Factor"
+            value={`${(reduction.reduction_factor * 100).toFixed(1)}%`}
+            highlight
+          />
           <Field label="Reduced Monthly Benefit" value={fmt(reducedBenefit)} highlight />
           <Callout
             type="warning"
