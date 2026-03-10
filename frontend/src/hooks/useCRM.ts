@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { crmAPI } from '@/lib/crmApi';
+import type { PaginatedResult } from '@/lib/apiClient';
 import * as demo from '@/lib/crmDemoData';
 import type {
   Contact,
@@ -10,7 +11,6 @@ import type {
   Commitment,
   Outreach,
   Organization,
-  PaginatedResponse,
   CreateInteractionRequest,
   CreateNoteRequest,
   CreateCommitmentRequest,
@@ -36,7 +36,7 @@ import type {
 // ─── Query hooks ─────────────────────────────────────────────────────────────
 
 export function useContactSearch(query: string, enabled = true) {
-  return useQuery<PaginatedResponse<Contact>>({
+  return useQuery<PaginatedResult<Contact>>({
     queryKey: ['crm', 'contacts', 'search', query],
     queryFn: () => crmAPI.searchContacts({ query }),
     enabled: enabled && query.length > 0,
@@ -76,7 +76,7 @@ export function useInteraction(interactionId: string) {
 }
 
 export function useConversations(params: ConversationListParams) {
-  return useQuery<PaginatedResponse<Conversation>>({
+  return useQuery<PaginatedResult<Conversation>>({
     queryKey: ['crm', 'conversations', params],
     queryFn: () => crmAPI.listConversations(params),
     enabled: !!(params.contactId || params.assignedAgent || params.assignedTeam || params.status),
@@ -92,7 +92,7 @@ export function useConversation(conversationId: string) {
 }
 
 export function useCommitments(params: CommitmentListParams) {
-  return useQuery<PaginatedResponse<Commitment>>({
+  return useQuery<PaginatedResult<Commitment>>({
     queryKey: ['crm', 'commitments', params],
     queryFn: () => crmAPI.listCommitments(params),
     enabled: !!(params.contactId || params.conversationId || params.ownerAgent || params.status),
@@ -100,7 +100,7 @@ export function useCommitments(params: CommitmentListParams) {
 }
 
 export function useOutreach(params: OutreachListParams) {
-  return useQuery<PaginatedResponse<Outreach>>({
+  return useQuery<PaginatedResult<Outreach>>({
     queryKey: ['crm', 'outreach', params],
     queryFn: () => crmAPI.listOutreach(params),
     enabled: !!(params.contactId || params.assignedAgent || params.assignedTeam || params.status),
@@ -108,7 +108,7 @@ export function useOutreach(params: OutreachListParams) {
 }
 
 export function useOrganizations(params: OrgListParams) {
-  return useQuery<PaginatedResponse<Organization>>({
+  return useQuery<PaginatedResult<Organization>>({
     queryKey: ['crm', 'organizations', params],
     queryFn: () => crmAPI.listOrganizations(params),
   });

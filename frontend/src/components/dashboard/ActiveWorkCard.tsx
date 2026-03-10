@@ -1,9 +1,10 @@
-import type { WorkQueueItem } from '@/lib/demoData';
+import type { RetirementCase } from '@/types/Case';
 import type { Commitment } from '@/types/CRM';
-import { STAGES } from '@/lib/demoData';
+
+const STAGE_COUNT = 7; // 7 workflow stages
 
 interface ActiveWorkCardProps {
-  activeCases: WorkQueueItem[];
+  activeCases: RetirementCase[];
   commitments: Commitment[];
   onOpenCase: (caseId: string, memberId: number, retDate: string, flags?: string[]) => void;
 }
@@ -90,7 +91,7 @@ export default function ActiveWorkCard({
                   </div>
                   {/* Stage progress */}
                   <div className="flex gap-0.5 mt-1.5">
-                    {STAGES.map((_, idx) => (
+                    {Array.from({ length: STAGE_COUNT }, (_, idx) => (
                       <div
                         key={idx}
                         className={`h-1 flex-1 rounded-full ${

@@ -42,6 +42,14 @@ export default defineConfig({
         target: 'http://localhost:8084',
         changeOrigin: true,
       },
+      '/api/v1/cases': {
+        target: 'http://localhost:8088',
+        changeOrigin: true,
+      },
+      '/api/v1/stages': {
+        target: 'http://localhost:8088',
+        changeOrigin: true,
+      },
       '/api/v1/kb': {
         target: 'http://localhost:8087',
         changeOrigin: true,

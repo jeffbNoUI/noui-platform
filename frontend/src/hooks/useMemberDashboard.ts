@@ -3,7 +3,7 @@ import { useMember, useEmployment, useServiceCredit, useBeneficiaries } from '@/
 import { useContactByMemberId, useFullTimeline, useContactCommitments } from '@/hooks/useCRM';
 import { useCorrespondenceHistory } from '@/hooks/useCorrespondence';
 import { useDQScore, useMemberDQIssues } from '@/hooks/useDataQuality';
-import { WORK_QUEUE } from '@/lib/demoData';
+import { useMemberCases } from '@/hooks/useCaseManagement';
 import { generateMemberSummary, type ActiveCaseItem } from '@/lib/memberSummary';
 
 /**
@@ -27,8 +27,9 @@ export function useMemberDashboard(memberId: number) {
   const timeline = useFullTimeline(contactId);
   const commitments = useContactCommitments(contactId);
 
-  // ─── Work queue (demo data) ───────────────────────────────────────────────
-  const activeCases = useMemo(() => WORK_QUEUE.filter((w) => w.memberId === memberId), [memberId]);
+  // ─── Work queue (case management service) ────────────────────────────────
+  const casesQuery = useMemberCases(memberId);
+  const activeCases = casesQuery.data ?? [];
 
   const activeCaseItems: ActiveCaseItem[] = useMemo(
     () =>
@@ -117,6 +118,7 @@ export function useMemberDashboard(memberId: number) {
       employment.isLoading ||
       serviceCredit.isLoading ||
       contact.isLoading ||
+      casesQuery.isLoading ||
       correspondenceQuery.isLoading ||
       dqScore.isLoading ||
       memberDQIssues.isLoading,

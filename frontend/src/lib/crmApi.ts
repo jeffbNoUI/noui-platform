@@ -1,4 +1,4 @@
-import { fetchAPI, postAPI, patchAPI, toQueryString } from './apiClient';
+import { fetchAPI, fetchPaginatedAPI, postAPI, patchAPI, toQueryString } from './apiClient';
 import type {
   Contact,
   ContactTimeline,
@@ -23,7 +23,6 @@ import type {
   UpdateOutreachRequest,
   Organization,
   OrgListParams,
-  PaginatedResponse,
 } from '@/types/CRM';
 
 const CRM_URL = import.meta.env.VITE_CRM_URL || '/api';
@@ -34,7 +33,7 @@ export const crmAPI = {
   // ── Contacts ─────────────────────────────────────────────────────────────
 
   searchContacts: (params: ContactSearchParams) =>
-    fetchAPI<PaginatedResponse<Contact>>(`${CRM_URL}/v1/crm/contacts${toQueryString(params)}`),
+    fetchPaginatedAPI<Contact>(`${CRM_URL}/v1/crm/contacts${toQueryString(params)}`),
 
   getContact: (contactId: string) => fetchAPI<Contact>(`${CRM_URL}/v1/crm/contacts/${contactId}`),
 
@@ -66,7 +65,7 @@ export const crmAPI = {
     limit?: number;
     offset?: number;
   }) =>
-    fetchAPI<PaginatedResponse<Interaction>>(
+    fetchPaginatedAPI<Interaction>(
       `${CRM_URL}/v1/crm/interactions${toQueryString({
         conversation_id: params.conversationId,
         contact_id: params.contactId,
@@ -79,9 +78,7 @@ export const crmAPI = {
   // ── Conversations ────────────────────────────────────────────────────────
 
   listConversations: (params: ConversationListParams) =>
-    fetchAPI<PaginatedResponse<Conversation>>(
-      `${CRM_URL}/v1/crm/conversations${toQueryString(params)}`,
-    ),
+    fetchPaginatedAPI<Conversation>(`${CRM_URL}/v1/crm/conversations${toQueryString(params)}`),
 
   listConversationsByAnchor: (
     anchorType: string,
@@ -89,7 +86,7 @@ export const crmAPI = {
     status?: string,
     limit?: number,
   ) =>
-    fetchAPI<PaginatedResponse<Conversation>>(
+    fetchPaginatedAPI<Conversation>(
       `${CRM_URL}/v1/crm/conversations${toQueryString({
         anchor_type: anchorType,
         anchor_id: anchorId,
@@ -114,9 +111,7 @@ export const crmAPI = {
   // ── Commitments ──────────────────────────────────────────────────────────
 
   listCommitments: (params: CommitmentListParams) =>
-    fetchAPI<PaginatedResponse<Commitment>>(
-      `${CRM_URL}/v1/crm/commitments${toQueryString(params)}`,
-    ),
+    fetchPaginatedAPI<Commitment>(`${CRM_URL}/v1/crm/commitments${toQueryString(params)}`),
 
   createCommitment: (req: CreateCommitmentRequest) =>
     postAPI<Commitment>(`${CRM_URL}/v1/crm/commitments`, req),
@@ -127,7 +122,7 @@ export const crmAPI = {
   // ── Outreach ─────────────────────────────────────────────────────────────
 
   listOutreach: (params: OutreachListParams) =>
-    fetchAPI<PaginatedResponse<Outreach>>(`${CRM_URL}/v1/crm/outreach${toQueryString(params)}`),
+    fetchPaginatedAPI<Outreach>(`${CRM_URL}/v1/crm/outreach${toQueryString(params)}`),
 
   createOutreach: (req: CreateOutreachRequest) =>
     postAPI<Outreach>(`${CRM_URL}/v1/crm/outreach`, req),
@@ -138,9 +133,7 @@ export const crmAPI = {
   // ── Organizations ────────────────────────────────────────────────────────
 
   listOrganizations: (params: OrgListParams) =>
-    fetchAPI<PaginatedResponse<Organization>>(
-      `${CRM_URL}/v1/crm/organizations${toQueryString(params)}`,
-    ),
+    fetchPaginatedAPI<Organization>(`${CRM_URL}/v1/crm/organizations${toQueryString(params)}`),
 
   getOrganization: (orgId: string) =>
     fetchAPI<Organization>(`${CRM_URL}/v1/crm/organizations/${orgId}`),

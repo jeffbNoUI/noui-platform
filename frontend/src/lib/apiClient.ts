@@ -35,7 +35,9 @@ async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
+// rawRequest performs the HTTP request with retry logic and returns the full parsed JSON body.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function rawRequest(url: string, init: RequestInit = {}): Promise<any> {
   const requestId = generateRequestId();
   const headers = new Headers(init.headers);
   headers.set('X-Request-ID', requestId);
@@ -75,8 +77,7 @@ async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
         throw apiError;
       }
 
-      const body: APIResponse<T> = await res.json();
-      return body.data;
+      return await res.json();
     } catch (err) {
       // Network errors (offline, DNS failure, etc.) — retry
       if (err instanceof TypeError && attempt < MAX_RETRIES) {
@@ -98,10 +99,32 @@ async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
   throw lastError ?? new Error(`Request failed after ${MAX_RETRIES + 1} attempts`);
 }
 
+// request unwraps body.data — used for non-paginated endpoints.
+async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
+  const body = await rawRequest(url, init);
+  return (body as APIResponse<T>).data;
+}
+
 // ─── Public helpers ─────────────────────────────────────────────────────────
 
 export function fetchAPI<T>(url: string): Promise<T> {
   return request<T>(url);
+}
+
+// fetchPaginatedAPI preserves both data and pagination from the response.
+// Go services return { data: T[], pagination: {...}, meta: {...} }.
+// fetchAPI only returns data — this variant also returns pagination.
+export interface PaginatedResult<T> {
+  items: T[];
+  pagination: { total: number; limit: number; offset: number; hasMore: boolean };
+}
+
+export async function fetchPaginatedAPI<T>(url: string): Promise<PaginatedResult<T>> {
+  const body = await rawRequest(url);
+  return {
+    items: body.data ?? [],
+    pagination: body.pagination ?? { total: 0, limit: 25, offset: 0, hasMore: false },
+  };
 }
 
 export function postAPI<T>(url: string, payload: unknown): Promise<T> {
