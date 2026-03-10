@@ -1,24 +1,12 @@
-# noui-platform — Delivery Guide
+# NoUI Platform — Delivery Guide
 
-How to use Claude and Claude Code to design, build, test, and maintain this product.
+## How This Project Gets Built
 
----
+This project uses AI-assisted development where Claude Code writes all implementation code. The human (Jeff) serves as Technical Director: defining what to build, reviewing output, verifying correctness, and making architectural decisions. Claude Code handles implementation, testing, and mechanical tasks.
 
-## Table of Contents
+This is not "vibe coding." It's infrastructure-driven development where declarative constraints (CLAUDE.md, hooks, test fixtures, type contracts) make correct output the default.
 
-1. [How Claude Code Works With This Repo](#1-how-claude-code-works-with-this-repo)
-2. [Starting a Session](#2-starting-a-session)
-3. [The Delivery Workflow](#3-the-delivery-workflow)
-4. [Designing Features](#4-designing-features)
-5. [Building Code](#5-building-code)
-6. [Testing](#6-testing)
-7. [Committing and Pushing](#7-committing-and-pushing)
-8. [Code Review](#8-code-review)
-9. [Maintaining the Codebase](#9-maintaining-the-codebase)
-10. [What NOT to Do](#10-what-not-to-do)
-11. [What TO Do](#11-what-to-do)
-12. [Troubleshooting Common Problems](#12-troubleshooting-common-problems)
-13. [File Reference](#13-file-reference)
+## The Core Loop
 
 ---
 
@@ -140,88 +128,129 @@ Claude Code sessions have a finite context window. When it fills up, you lose ea
 Every feature follows this sequence. Skipping steps is how bugs, regressions, and architectural drift happen.
 
 ```
-┌─────────┐     ┌─────────┐     ┌─────────┐     ┌─────────┐     ┌─────────┐
-│ DESIGN  │ ──▶ │  BUILD  │ ──▶ │  TEST   │ ──▶ │ REVIEW  │ ──▶ │  SHIP   │
-│         │     │         │     │         │     │         │     │         │
-│ Plan    │     │ Code    │     │ Verify  │     │ Check   │     │ Commit  │
-│ first   │     │ in the  │     │ it      │     │ quality │     │ push    │
-│         │     │ right   │     │ works   │     │         │     │ CI      │
-│         │     │ layer   │     │         │     │         │     │         │
-└─────────┘     └─────────┘     └─────────┘     └─────────┘     └─────────┘
+Plan → Implement → Verify → Commit
 ```
 
-**Never skip DESIGN for anything that touches more than one file.** This is the single most important rule. When you skip design, Claude writes code in the wrong place, breaks layer boundaries, or builds the wrong thing.
+**Plan:** Understand the task. If it touches more than 2 files, write a plan. If it's a complex feature, use the interview-then-implement pattern (`/feature-dev`). Get approval before proceeding.
 
----
+**Implement:** Write the code. For calculations, write the test first. For UI, implement and then verify visually. One-shot from a good plan whenever possible.
 
-## 4. Designing Features
+**Verify:** Run the verification loop. This is the single most important step. Tests, typechecks, builds, layer boundary checks. A verification loop 2-3x the quality of the final output.
 
-### When to Use Plan Mode
+**Commit:** Small, descriptive commits. `[layer/component] Brief description`. Update BUILD_HISTORY.md for significant changes.
 
-Tell Claude to plan before coding for anything non-trivial:
+## Session Management
 
-> "Plan this before writing any code."
+### Starting a Session
 
-Or Claude may enter plan mode itself for complex tasks. Either way, you should see a plan before code starts flowing.
+Run `/session-start`. This reads BUILD_HISTORY.md, checks builds, and reports the current state. Never write code before understanding where we left off.
 
-### What a Good Plan Looks Like
+### During a Session
 
-A plan should answer:
-1. **Which layer(s)** does this touch? (connector, platform, domains, frontend)
-2. **Which files** will be created or modified?
-3. **What's the API contract** between components?
-4. **What are the test cases?**
-5. **Does this violate any layer boundary rules?**
+Use `/check-quality` periodically to verify nothing is broken. Use `/grill` after completing a feature to catch issues before they compound.
 
-### Layer Boundary Decisions
+### Ending a Session
 
-This is where most architectural mistakes happen. The rules:
+Run `/session-end`. This runs tests, shows changes, updates BUILD_HISTORY.md, and commits. The repo must be in a clean state: all tests passing, no uncommitted changes, BUILD_HISTORY.md current.
 
-| If the code... | It belongs in... |
-|----------------|-----------------|
-| Discovers schemas from an unknown database | `connector/` |
-| Tags tables with business concepts using signals | `connector/` |
-| Detects data anomalies against statistical baselines | `connector/` |
-| Queries the known DERP PostgreSQL schema | `platform/dataaccess/` |
-| Calculates benefits, eligibility, DRO | `platform/intelligence/` |
-| Manages contacts, interactions, notes | `platform/crm/` |
-| Renders letter templates | `platform/correspondence/` |
-| Checks data quality rules | `platform/dataquality/` |
-| Serves knowledge articles | `platform/knowledgebase/` |
-| Defines SQL schemas for pension data | `domains/pension/schema/` |
-| Defines business rules in YAML | `domains/pension/rules/` |
-| Provides test fixtures | `domains/pension/demo-cases/` |
-| Renders UI components | `frontend/` |
+### Multiple Parallel Sessions
 
-**If you're unsure, ask Claude:** "Which layer should this go in?" and it will reference these rules.
+When running multiple Claude Code sessions:
+- Each session should work on a different layer or component
+- Never have two sessions modifying the same file
+- Use separate git branches if sessions might conflict
+- Merge frequently to avoid drift
 
-### How to Ask Claude to Design
+## Effective Prompting Patterns
 
-**Good approach — constraint-based:**
-> "Design an endpoint that returns data quality trends over the last 30 days. It should fit the existing dataquality service API pattern. Show me the plan before coding."
+### Be specific about scope
+❌ "Fix the retirement calculation"
+✅ "In platform/intelligence, the early retirement reduction for Tier 3 should use 6% per year under 65 but it's using 3%. Fix the reduction calculation in the eligibility evaluator. Case 3 (David Washington) should be the test — his reduction should be 12%."
 
-**Bad approach — solution-first:**
-> "Add a function called GetTrends to the dataquality handler."
+### Reference files and fixtures
+❌ "Make it match the expected output"
+✅ "The expected output is in domains/pension/demo-cases/case2-jennifer-kim-test-fixture.json. The unreduced benefit should be $2,332.96 and the reduced benefit should be $1,633.07."
 
-The first approach lets Claude figure out the right implementation. The second micromanages and often leads to the wrong pattern.
+### Give verification criteria
+❌ "Write tests for the DRO calculation"
+✅ "Write tests for the DRO calculation using Case 4 (Robert Martinez). The marital fraction should be 18.25/28.75 = 63.48%. The DRO awards 40% of the marital share. Run the tests and show me results."
 
----
+### Constrain the blast radius
+❌ "Refactor the data access layer"
+✅ "In platform/dataaccess, extract the AMS calculation query into its own function. Don't change any API contracts or response shapes. Existing tests should still pass without modification."
 
-## 5. Building Code
+## Anti-Patterns — Things That Waste Sessions
 
-### Go Services (connector/ and platform/)
+### The Rabbit Hole
+Claude goes deep on a tangent without checking in. Prevent with: clear scope in the initial prompt, ask Claude to stop and check after each major step.
 
-Each Go service is an independent module with its own `go.mod`. They don't share code at the Go import level.
+### The Silent Assumption
+Claude assumes something about a business rule instead of checking the governing documents. Prevent with: always reference the specific rule or fixture. If Claude says "I'll assume..." — that's a red flag.
 
-**Build one service:**
-```bash
-cd platform/dataaccess && go build ./...
+### The Test Fixture Edit
+Claude modifies test fixtures to match broken code instead of fixing the code. This is the most dangerous anti-pattern because it silently destroys the oracle. The settings.json hook warns on fixture edits, but review git diffs carefully.
+
+### The Big Bang Commit
+An entire feature implemented in one massive commit with no intermediate verification. Prevent with: commit after each logical unit, run tests at each step.
+
+### The Incomplete Session
+Session ends with uncommitted work, failing tests, or an un-updated BUILD_HISTORY.md. The next session starts confused. Prevent with: always run `/session-end`.
+
+### The Layer Violation
+Code placed in the wrong layer (business logic in frontend, connector importing platform types). The PostToolUse hook catches import violations, but logical violations (putting calculation logic in a component) require human review.
+
+## Decision Framework
+
+When Claude encounters ambiguity, it should follow this hierarchy:
+
+1. **Check CLAUDE.md** — Does it address this directly?
+2. **Check test fixtures** — Do the expected values imply a specific behavior?
+3. **Check governing documents** — What does the RMC say? What do the business rules YAML files specify?
+4. **Check BUILD_HISTORY.md** — Was a relevant decision already made?
+5. **Ask the user** — If none of the above resolves it, ask. Don't guess.
+
+## The Mistake-to-Rule Pipeline
+
+Every mistake Claude makes should become impossible to repeat:
+
+1. **Document it** in BUILD_HISTORY.md (what went wrong, why, how it was fixed)
+2. **Add a test** that would have caught it
+3. **Add a rule** to CLAUDE.md if it's a pattern (e.g., "never use float64 for money")
+4. **Add a hook** to settings.json if it's automatable (e.g., layer boundary checking)
+
+This creates a continuously improving system. Over time, the configuration gets smarter and the same class of mistakes stops happening.
+
+## Pension Domain Constraints
+
+These constraints apply specifically to work in `platform/intelligence/` and `domains/pension/`:
+
+### Monetary precision
+- All money in Go: `big.Rat` or scaled integers. Never `float64`.
+- All money in JSON: strings with 2 decimal places. `"10639.45"` not `10639.45`.
+- Round only the final monthly benefit. Carry full precision through all intermediate steps.
+
+### Service credit types
+- **Earned** (employment, military, leave): Counts for benefit AND eligibility
+- **Purchased**: Counts for benefit ONLY. Excluded from Rule of 75/85 and IPR.
+- Every function that uses service credit must declare which type.
+
+### Statutory tables over formulas
+Use lookup tables from the RMC, not formulas that happen to produce the same values. If the legislature changes one age's percentage, a table stays correct. A formula breaks silently.
+
+### Assumption marking
+Every code location implementing an assumed rule must include:
+```go
+// ASSUMPTION: [Q-CALC-XX] Description. See domains/pension/rules/...
 ```
+This makes all assumptions `grep`-able across the codebase.
 
-**Test one service:**
-```bash
-cd platform/dataaccess && go test ./... -v -count=1
-```
+## Build-for-Tomorrow Principle
+
+Design for the model six months from now, not today. This means:
+- Make constraints declarative (YAML rules, type contracts) not procedural
+- Prefer configuration over code where possible
+- Build verification loops that any future model can use
+- Keep the human-review gates even when the AI seems perfect
 
 **Lint one service:**
 ```bash

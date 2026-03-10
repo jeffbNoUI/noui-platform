@@ -1,5 +1,37 @@
 # noui-platform — Build History
 
+## PR #19: Case Management + CRM Polish + Dashboard Tests — MERGED (2026-03-10)
+
+**Result:** Three workstreams delivered in a single PR. All 9 CI checks green. Docker Compose verified with 10 services + PostgreSQL.
+
+**Workstream A — CRM Polish:**
+- Wired Member Portal messaging to live CRM API (replaced demo hooks)
+- Added `conversationId` filter support to backend `ListInteractions` handler
+
+**Workstream B — Case Management Service:**
+- New Go service `platform/casemanagement/` (port 8088) — 8 API endpoints, 7-stage workflow
+- Schema: `case_stage_definition`, `retirement_case`, `case_flag`, `case_stage_history`
+- 3-table JOIN queries enrich cases with member name, tier, department
+- Frontend: React Query hooks, new types, nginx proxy routes
+- `fetchPaginatedAPI` bugfix in `apiClient.ts` (was losing pagination metadata)
+- Deleted `demoData.ts` (fully replaced by live APIs)
+
+**Workstream C — Dashboard Testing:**
+- 71 new component tests across 5 dashboard cards + 7 workflow stages
+- Shared test fixtures for consistent test data
+
+**Test results:** 197/197 frontend tests pass, all Go services build and vet clean, 9/9 CI checks pass.
+
+**Docker verification (2026-03-10):**
+- All 12 PostgreSQL init scripts ran in order (001-012)
+- All 10 containers started healthy (postgres, 7 Go services, connector, frontend)
+- `GET /api/v1/cases` returns 4 seeded cases with correct member JOINs
+- Staff Portal work queue renders all 4 cases at http://localhost:3000
+
+**Status:** PR merged to main. Full-stack integration complete.
+
+---
+
 ## Phase 5: Full Stack Verification & Cleanup — DONE (2026-03-08)
 
 **Result:** Full-stack integration verified end-to-end. All 8 Member Dashboard cards render live data from PostgreSQL-backed Go services (except work queue, which has no backend).
