@@ -1,5 +1,102 @@
 # noui-platform — Build History
 
+## Phase 5: Full Stack Verification & Cleanup — DONE (2026-03-08)
+
+**Result:** Full-stack integration verified end-to-end. All 8 Member Dashboard cards render live data from PostgreSQL-backed Go services (except work queue, which has no backend).
+
+**Verification results:**
+- 43/43 frontend tests pass
+- All 6 Go service test suites pass (dataaccess, intelligence, crm, correspondence, dataquality, knowledgebase)
+- UI walkthrough: members 10001 (Robert Martinez), 10002 (Jennifer Kim), 10003 (David Washington) — all dashboard cards display correct live data
+- Zero console errors across all navigation
+
+**Cleanup:**
+- Removed dead demo exports: `DEMO_CORRESPONDENCE`, `DEMO_DQ_ISSUES`, `DemoCorrespondence`, `DemoDataQualityIssue` from `demoData.ts`
+- Added clarifying comments to `crmDemoData.ts` (portal messaging still uses demo data)
+- Updated `INTEGRATION_PLAN.md` progress table — all 5 phases marked complete
+
+**What still uses demo data:**
+- `WORK_QUEUE` + `STAGES` in `demoData.ts` — no backend service exists for case management
+- `crmDemoData.ts` — cross-portal messaging (conversations, staff notes, member messages)
+
+**Status:** Integration complete. All phases done.
+
+---
+
+## Phase 4: Data Quality Integration — DONE (2026-03-08)
+
+**Result:** Member Dashboard DQ card now shows live data from the Data Quality Go service (port 8086).
+
+**Changes made:**
+- `frontend/src/hooks/useDataQuality.ts` — New React Query hooks (`useDQScore`, `useMemberDQIssues`)
+- `frontend/src/hooks/useMemberDashboard.ts` — Wire real DQ hooks, remove `DEMO_DQ_ISSUES`
+- `frontend/src/components/dashboard/DataQualityCard.tsx` — Hybrid layout: org-wide score + per-member issues
+- `frontend/src/components/dashboard/MemberDashboard.tsx` — Pass new props to card
+- `domains/pension/seed/005_dataquality_seed.sql` — Added 4 member-specific DQ issues
+
+**Design decision:** Hybrid approach — org-wide quality score at top, per-member issues filtered by matching `recordId` to `memberId`.
+
+**Status:** Phase 4 complete. 43 frontend tests pass.
+
+---
+
+## Phase 3: Correspondence Integration — DONE (2026-03-08)
+
+**Result:** Member Dashboard correspondence card now shows live data from the Correspondence Go service (port 8085).
+
+**Changes made:**
+- `frontend/src/hooks/useCorrespondence.ts` — New `useCorrespondenceHistory()` hook using React Query + `correspondenceAPI.listHistory()`
+- `frontend/src/hooks/useMemberDashboard.ts` — Wire real hook, remove `DEMO_CORRESPONDENCE`
+- `frontend/src/components/dashboard/CorrespondenceHistoryCard.tsx` — Adapted to real `Correspondence` type
+- `domains/pension/seed/006_correspondence_seed.sql` — Added 4 correspondence history records for demo members
+
+**Design decision:** Hard-switch to API only (no demo fallback), consistent with Phase 2.
+
+**Status:** Phase 3 complete. 43 frontend tests pass.
+
+---
+
+## Phase 2: CRM Integration — DONE (2026-03-08)
+
+**Result:** Member Dashboard CRM data now flows from PostgreSQL via CRM Go service instead of in-memory demo data.
+
+**Changes made:**
+- `frontend/src/lib/crmApi.ts` — Fixed URL: `contacts/legacy/` → `contacts-by-legacy/` (matched Go route)
+- `frontend/src/hooks/useCRM.ts` — Switched 3 portal hooks from `demo.*` to `crmAPI.*`
+- `frontend/src/components/dashboard/InteractionHistoryCard.tsx` — `.toLowerCase()` for enum lookups (Go=UPPERCASE)
+- `frontend/src/hooks/useMemberDashboard.ts` — Updated comment
+
+**Design decision:** Hard-switch to API only (no demo fallback).
+
+**Issues found & fixed:** URL mismatch, case mismatch (Go UPPERCASE vs JS lowercase), type mismatch on commitments response.
+
+**Status:** Phase 2 complete. 43 frontend tests pass. Ready for Phase 3.
+
+---
+
+## Phase 1: Docker Smoke Test — PASSED (2026-03-08)
+
+**Result:** All 6 backend services + PostgreSQL + nginx frontend boot and respond correctly via Docker Compose.
+
+**What happened:**
+- All 7 Docker images built successfully (6 Go services + nginx frontend)
+- PostgreSQL initialized all 10 init scripts (5 schema + 5 seed) without errors
+- All 6 health endpoints returned `{"status":"ok"}`:
+  - dataaccess `:8081`, intelligence `:8082`, crm `:8084`, correspondence `:8085`, dataquality `:8086`, knowledgebase `:8087`
+- Real data verified: `GET /api/v1/members/10001` → Robert Martinez (Senior Engineer, Public Works)
+- Nginx proxy verified: `GET localhost:3000/api/v1/members/10001` → same response proxied through nginx
+
+**Issues found:**
+1. **Port conflict** — Previous worktree (`gallant-varahamihira`) had a Docker stack running on the same ports (5432, 3000, 8081, 8084-8087). Resolved by stopping the old stack with `docker compose -p gallant-varahamihira down -v`.
+2. **`version` attribute warning** — `docker-compose.yml` uses deprecated `version: '3.8'` attribute. Non-blocking, cosmetic only.
+3. **Frontend npm install required** — `tsc` not found on host without `npm install` first. Not an issue in Docker (uses `npm ci`).
+
+**No code changes required.** The entire stack worked on first boot after clearing port conflicts.
+
+**Status:** Phase 1 complete. Ready for Phase 2 (CRM Integration).
+
+---
+
 ## Planning: Full-Stack Integration (2026-03-08)
 
 **Decision:** Connect frontend to all 6 Go backend services via Docker Compose, replacing in-memory demo data with live PostgreSQL-backed API calls.

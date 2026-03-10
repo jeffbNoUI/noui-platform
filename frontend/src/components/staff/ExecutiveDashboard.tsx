@@ -6,7 +6,12 @@ const STATIC_KPIS = [
   { label: 'Cases This Month', value: '127', color: 'text-iw-navy', sub: '+12% vs last month' },
   { label: 'On-Time Rate', value: '96.8%', color: 'text-emerald-600', sub: 'Target: 95%' },
   { label: 'Avg Processing', value: '3.2d', color: 'text-blue-600', sub: 'Best: 2.1d (Lisa P.)' },
-  { label: 'Accuracy Rate', value: '99.97%', color: 'text-emerald-600', sub: '1 variance in 312 calcs' },
+  {
+    label: 'Accuracy Rate',
+    value: '99.97%',
+    color: 'text-emerald-600',
+    sub: '1 variance in 312 calcs',
+  },
 ];
 
 const VOLUME_DATA = [
@@ -33,9 +38,12 @@ export default function ExecutiveDashboard() {
   const [dqScore, setDqScore] = useState<DQScore | null>(null);
 
   useEffect(() => {
-    dqAPI.getScore().then(setDqScore).catch(() => {
-      // Fallback: leave dqScore null, dashboard shows hardcoded defaults
-    });
+    dqAPI
+      .getScore()
+      .then(setDqScore)
+      .catch((err) => {
+        console.warn('[ExecutiveDashboard] DQ score unavailable, using defaults', err);
+      });
   }, []);
 
   const dqKpi = dqScore
@@ -45,7 +53,12 @@ export default function ExecutiveDashboard() {
         color: dqScore.criticalIssues > 0 ? 'text-amber-600' : 'text-emerald-600',
         sub: `${dqScore.criticalIssues} critical · ${dqScore.overallScore.toFixed(1)}% score`,
       }
-    : { label: 'Data Quality', value: '4 open', color: 'text-amber-600', sub: '2 critical this month' };
+    : {
+        label: 'Data Quality',
+        value: '4 open',
+        color: 'text-amber-600',
+        sub: '2 critical this month',
+      };
 
   const KPIS = [...STATIC_KPIS, dqKpi];
 

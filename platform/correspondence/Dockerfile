@@ -1,18 +1,18 @@
+# Multi-stage build for correspondence service
 FROM golang:1.22-alpine AS builder
 
 WORKDIR /app
-
 COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /correspondence .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o /corr-service .
+# Distroless production image
+FROM gcr.io/distroless/static-debian12:nonroot
 
-FROM gcr.io/distroless/static-debian12
-
-COPY --from=builder /corr-service /corr-service
+COPY --from=builder /correspondence /correspondence
 
 EXPOSE 8085
 
-ENTRYPOINT ["/corr-service"]
+ENTRYPOINT ["/correspondence"]

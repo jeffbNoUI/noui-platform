@@ -124,12 +124,26 @@ When you need guidance beyond this file, read these:
 - `BUILD_HISTORY.md` — What's been built, current state (read at session start)
 - `docs/architecture/ARCHITECTURE_REFERENCE.md` — Detailed architecture decisions
 
-## Workflow Skills
+## Commands
 
-Three slash commands enforce the delivery workflow:
-- `/session-start` — Run at the beginning of every session (reads context, checks builds, establishes goal)
-- `/check-quality` — Run mid-session to verify nothing is broken (builds, tests, lint, layer boundaries)
-- `/session-end` — Run at the end of every session (tests, docs update, commit, push, CI verification)
+Slash commands in `.claude/commands/` enforce the delivery workflow:
+
+**Session lifecycle:**
+- `/session-start` — Read context, check builds, establish the session goal
+- `/session-end` — Run tests, update docs, commit, push, verify CI
+- `/check-quality` — Mid-session quality gate: builds, tests, lint, layer boundaries
+
+**Development workflow:**
+- `/plan` — Create a structured implementation plan before coding
+- `/feature-dev` — Interview-then-implement pattern for non-trivial features
+- `/test-and-fix` — Run tests and iteratively fix failures
+- `/verify` — Use preview tools to visually verify features in the browser
+- `/quick-commit` — Stage, commit with proper format, and push
+
+**Maintenance:**
+- `/grill` — Adversarial code review: correctness, boundaries, monetary handling
+- `/techdebt` — Scan for TODOs, unused code, and structural issues
+- `/docker-check` — Verify all Docker services are running and healthy
 
 ## Session Discipline (Mandatory)
 
