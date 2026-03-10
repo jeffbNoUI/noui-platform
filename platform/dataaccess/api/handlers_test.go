@@ -32,8 +32,8 @@ func TestHealthCheck(t *testing.T) {
 	if body["status"] != "ok" {
 		t.Errorf("HealthCheck status = %q, want %q", body["status"], "ok")
 	}
-	if body["service"] != "connector" {
-		t.Errorf("HealthCheck service = %q, want %q", body["service"], "connector")
+	if body["service"] != "dataaccess" {
+		t.Errorf("HealthCheck service = %q, want %q", body["service"], "dataaccess")
 	}
 	if body["version"] != "0.1.0" {
 		t.Errorf("HealthCheck version = %q, want %q", body["version"], "0.1.0")
