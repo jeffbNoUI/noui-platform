@@ -19,7 +19,10 @@ const statusConfig: Record<ConversationStatus, { label: string; color: string }>
 
 // ── Status transitions ──────────────────────────────────────────────────────
 
-const statusTransitions: Record<ConversationStatus, { target: ConversationStatus; label: string; color: string }[]> = {
+const statusTransitions: Record<
+  ConversationStatus,
+  { target: ConversationStatus; label: string; color: string }[]
+> = {
   open: [
     { target: 'resolved', label: 'Resolve', color: 'bg-green-600 hover:bg-green-700 text-white' },
     { target: 'closed', label: 'Close', color: 'bg-gray-600 hover:bg-gray-700 text-white' },
@@ -189,7 +192,10 @@ export default function ConversationPanel({
 
   if (!conversation) return null;
 
-  const sc = statusConfig[conversation.status];
+  const sc = statusConfig[conversation.status] ?? {
+    label: conversation.status,
+    color: 'bg-gray-100 text-gray-600',
+  };
   const transitions = statusTransitions[conversation.status] ?? [];
   const interactions: Interaction[] = conversation.interactions ?? [];
 
@@ -210,20 +216,27 @@ export default function ConversationPanel({
                 </span>
               )}
               <span>&middot;</span>
-              <span>{conversation.interactionCount} interaction{conversation.interactionCount !== 1 ? 's' : ''}</span>
+              <span>
+                {conversation.interactionCount} interaction
+                {conversation.interactionCount !== 1 ? 's' : ''}
+              </span>
               <span>&middot;</span>
               <span>Created {formatTimestamp(conversation.createdAt)}</span>
             </div>
           </div>
 
-          <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${sc.color}`}>
+          <span
+            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${sc.color}`}
+          >
             {sc.label}
           </span>
         </div>
 
         {/* SLA indicator */}
         {slaState && (
-          <div className={`mt-3 flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${slaState.color}`}>
+          <div
+            className={`mt-3 flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${slaState.color}`}
+          >
             {slaState.warningLevel === 'breached' || slaState.warningLevel === 'danger' ? (
               <svg className="h-4 w-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                 <path
@@ -233,8 +246,18 @@ export default function ConversationPanel({
                 />
               </svg>
             ) : (
-              <svg className="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg
+                className="h-4 w-4 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
             )}
             <span className="font-medium">{slaState.label}:</span>
@@ -278,7 +301,9 @@ export default function ConversationPanel({
       {/* Interaction list */}
       <div className="px-6 py-4">
         {interactions.length === 0 ? (
-          <p className="text-center text-sm text-gray-500 py-4">No interactions in this conversation.</p>
+          <p className="text-center text-sm text-gray-500 py-4">
+            No interactions in this conversation.
+          </p>
         ) : (
           <ul className="space-y-3">
             {interactions.map((ix) => (
@@ -290,7 +315,11 @@ export default function ConversationPanel({
                   <div className="flex items-center gap-2 text-sm">
                     <span className="font-medium text-gray-700">{channelLabel(ix.channel)}</span>
                     <span className="text-xs text-gray-400">
-                      {ix.direction === 'inbound' ? '\u2192' : ix.direction === 'outbound' ? '\u2190' : '\u2194'}
+                      {ix.direction === 'inbound'
+                        ? '\u2192'
+                        : ix.direction === 'outbound'
+                          ? '\u2190'
+                          : '\u2194'}
                     </span>
                     {ix.outcome && (
                       <span className="rounded bg-white px-1.5 py-0.5 text-xs text-gray-600">
