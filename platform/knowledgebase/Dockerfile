@@ -1,18 +1,18 @@
+# Multi-stage build for knowledgebase service
 FROM golang:1.22-alpine AS builder
 
 WORKDIR /app
-
 COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /knowledgebase .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o /kb-service .
+# Distroless production image
+FROM gcr.io/distroless/static-debian12:nonroot
 
-FROM gcr.io/distroless/static-debian12
-
-COPY --from=builder /kb-service /kb-service
+COPY --from=builder /knowledgebase /knowledgebase
 
 EXPOSE 8087
 
-ENTRYPOINT ["/kb-service"]
+ENTRYPOINT ["/knowledgebase"]

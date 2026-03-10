@@ -9,8 +9,18 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-query': ['@tanstack/react-query'],
+        },
+      },
+    },
+  },
   server: {
-    port: parseInt(process.env.PORT || '5173'),
+    port: parseInt(process.env.PORT || '3000'),
     proxy: {
       '/api/v1/members': {
         target: 'http://localhost:8081',

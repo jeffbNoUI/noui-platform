@@ -40,32 +40,61 @@ The repo has automated quality checks that run without you doing anything:
 
 | Hook | Trigger | What It Does |
 |------|---------|--------------|
-| PostToolUse (Write/Edit) | After Claude edits a `.go` file | Runs `go vet` and shows errors immediately |
-| PostToolUse (Write/Edit) | After Claude edits a `.ts/.tsx` file | Runs ESLint and shows warnings immediately |
+| PostToolUse (Write/Edit) | After Claude edits a `.go` file | Runs `gofmt -w` (format) then `go vet` (check) |
+| PostToolUse (Write/Edit) | After Claude edits a `.ts/.tsx/.js/.css/.json` file | Runs `prettier --write` (format) then `tsc --noEmit` (typecheck, .ts/.tsx only) |
+| PostToolUse (Write/Edit) | After Claude edits any file | Checks layer boundary rules (connector must not import platform and vice versa) |
+| PostToolUse (Write/Edit) | After Claude edits a test fixture file | Warns that fixtures are hand-calculated oracles and must not be modified to match code |
 | PreToolUse (git push) | Before Claude pushes to GitHub | Verifies the frontend builds successfully |
-| Pre-commit (husky) | Every `git commit` | Runs ESLint + Prettier + gofmt on staged files |
+| Pre-commit (husky) | Every `git commit` | Runs ESLint + Prettier + gofmt on staged files, then tests |
 
-You don't need to ask Claude to lint or vet — it happens automatically.
+You don't need to ask Claude to format, lint, or vet — it happens automatically.
 
 ### What the Permissions Do
 
 `.claude/settings.json` controls what Claude can run without asking:
 
 **Allowed automatically:**
-- `go build`, `go test`, `go run`, `go vet`
-- `npm run`, `npm install`, `npm test`, `npm ci`, `npx`
-- `docker compose` (up, down, build, etc.)
-- `git status`, `git diff`, `git log`, `git branch`, `git add`, `git commit`, `git stash`, `git tag`, `git push`
-- `golangci-lint`
+- Go: `go build`, `go test`, `go run`, `go vet`, `go mod`
+- Go lint: `golangci-lint`
+- Node: `npm run`, `npm install`, `npm test`, `npm ci`
+- Node tools: `npx` (including `npx tsc`, `npx eslint`, `npx vitest`)
+- Docker: `docker compose`, `docker ps`, `docker logs`, `docker exec`
+- Git: `git status`, `git diff`, `git log`, `git branch`, `git add`, `git commit`, `git stash`, `git tag`, `git push`, `git checkout`, `git switch`, `git merge`, `git rebase`, `git rev-parse`
+- Shell: `grep`, `find`, `wc`, `head`, `tail`, `cat`, `ls`, `echo`, `sort`
+- Network: `curl`, `jq`
+- Database: `pg_isready`, `psql`
 
 **Blocked (will refuse):**
-- `rm -rf /` — prevents catastrophic deletion
-- `git push --force` — prevents rewriting shared history
+- `rm -rf /` or `rm -rf ./` — prevents catastrophic deletion
+- `git push --force` / `git push -f` — prevents rewriting shared history
 - `git reset --hard` — prevents losing uncommitted work
 - `git push origin --delete main` — prevents deleting the main branch
+- `git clean -fdx` — prevents removing untracked files
+- `docker system prune` — prevents removing Docker resources
+- `drop database` / `DROP DATABASE` — prevents database deletion
 
 **Requires confirmation:**
-- Any command not in the allow list (e.g., `curl`, installing new tools, running scripts)
+- Any command not in the allow list
+
+### Available Commands
+
+The repo includes slash commands in `.claude/commands/` that automate common workflows:
+
+| Command | Purpose |
+|---------|---------|
+| `/session-start` | Read context, check builds, establish session goal |
+| `/session-end` | Run tests, update docs, commit, push, verify CI |
+| `/check-quality` | Mid-session quality gate |
+| `/plan` | Create an implementation plan before coding |
+| `/feature-dev` | Interview-then-implement for non-trivial features |
+| `/test-and-fix` | Run tests and iteratively fix failures |
+| `/verify` | Visually verify features using preview tools |
+| `/quick-commit` | Stage, commit with proper format, and push |
+| `/grill` | Adversarial code review |
+| `/techdebt` | Scan for tech debt and quick-win cleanup |
+| `/docker-check` | Verify Docker services are healthy |
+
+Type `/` in Claude Code to see available commands in autocomplete.
 
 ---
 
@@ -243,11 +272,13 @@ npm test -- --run  # Vitest (single run, CI-style)
 ### What Claude Should Do After Writing Code
 
 After Claude writes or modifies code, the hooks will automatically:
-- Run `go vet` on modified `.go` files
-- Run `eslint` on modified `.ts/.tsx` files
+- Run `gofmt -w` to format, then `go vet` to check modified `.go` files
+- Run `prettier --write` to format, then `tsc --noEmit` to typecheck modified `.ts/.tsx` files
+- Check layer boundary rules on any modified file
+- Warn if test fixture files are modified
 
 If the hook reports errors, Claude should fix them before moving on. If it doesn't, tell it:
-> "Fix the vet/lint errors before continuing."
+> "Fix the errors before continuing."
 
 ---
 
@@ -398,8 +429,8 @@ If a session reveals something that future sessions should know (new conventions
 
 > "Add a note to platform/CLAUDE.md about the new API versioning convention we established."
 
-Or use the skill:
-> "/revise-claude-md"
+Or ask Claude directly:
+> "Update CLAUDE.md with what we learned this session."
 
 ### Dependency Updates
 
@@ -567,6 +598,8 @@ git revert <commit-hash>         # Creates a new commit that undoes it (safe)
 | `platform/CLAUDE.md` | Platform service rules | When adding services or changing API conventions |
 | `domains/pension/CLAUDE.md` | Pension domain rules | When adding demo cases or changing domain rules |
 | `.claude/settings.json` | Permissions and hooks | When adding new allowed commands or hooks |
+| `.claude/commands/` | Slash commands for session lifecycle, development, and maintenance | When adding new workflow automation |
+| `.claude/prompts/` | Phase-specific integration guides and feature prompts | When starting a new integration phase |
 | `.claude/launch.json` | Dev server configs | When adding new preview targets |
 | `.github/workflows/ci.yml` | CI pipeline | When adding services or changing test commands |
 | `.golangci.yml` | Go lint rules | When adjusting lint strictness |

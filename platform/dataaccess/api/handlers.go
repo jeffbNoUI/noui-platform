@@ -42,7 +42,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 	resp := models.HealthResponse{
 		Status:  "ok",
-		Service: "connector",
+		Service: "dataaccess",
 		Version: "0.1.0",
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -572,8 +572,8 @@ func (h *Handler) GetServiceCredit(w http.ResponseWriter, r *http.Request) {
 	summary.BenefitYears = summary.EarnedYears + summary.PurchasedYears
 
 	result := struct {
-		Credits []models.ServiceCredit       `json:"credits"`
-		Summary models.ServiceCreditSummary  `json:"summary"`
+		Credits []models.ServiceCredit      `json:"credits"`
+		Summary models.ServiceCreditSummary `json:"summary"`
 	}{
 		Credits: credits,
 		Summary: summary,

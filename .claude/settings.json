@@ -5,13 +5,20 @@
       "Bash(go test:*)",
       "Bash(go run:*)",
       "Bash(go vet:*)",
+      "Bash(go mod:*)",
       "Bash(golangci-lint:*)",
       "Bash(npm run:*)",
       "Bash(npm install:*)",
       "Bash(npm test:*)",
       "Bash(npm ci:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npx vitest:*)",
       "Bash(npx:*)",
       "Bash(docker compose:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker logs:*)",
+      "Bash(docker exec:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
@@ -20,13 +27,37 @@
       "Bash(git commit:*)",
       "Bash(git stash:*)",
       "Bash(git tag:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git checkout:*)",
+      "Bash(git switch:*)",
+      "Bash(git merge:*)",
+      "Bash(git rebase:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(wc:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(cat:*)",
+      "Bash(ls:*)",
+      "Bash(echo:*)",
+      "Bash(curl:*)",
+      "Bash(jq:*)",
+      "Bash(sort:*)",
+      "Bash(pg_isready:*)",
+      "Bash(psql:*)"
     ],
     "deny": [
       "Bash(rm -rf /*)",
+      "Bash(rm -rf ./*)",
       "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
       "Bash(git reset --hard:*)",
-      "Bash(git push origin --delete main:*)"
+      "Bash(git push origin --delete main:*)",
+      "Bash(git clean -fdx:*)",
+      "Bash(docker system prune:*)",
+      "Bash(drop database:*)",
+      "Bash(DROP DATABASE:*)"
     ]
   },
   "hooks": {
@@ -36,11 +67,19 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'FILE=\"$CLAUDE_FILE_PATH\"; if [[ \"$FILE\" == *.go ]]; then cd \"$(dirname \"$FILE\")\" && go vet ./... 2>&1 | head -20; elif [[ \"$FILE\" == *.ts || \"$FILE\" == *.tsx ]]; then cd \"$(git rev-parse --show-toplevel)/frontend\" && npx eslint --no-error-on-unmatched-pattern \"$FILE\" 2>&1 | head -20; fi'"
+            "command": "bash -c 'FILE=\"$CLAUDE_FILE_PATH\"; if [[ \"$FILE\" == *.go ]]; then gofmt -w \"$FILE\" || true; elif [[ \"$FILE\" == *.ts || \"$FILE\" == *.tsx || \"$FILE\" == *.js || \"$FILE\" == *.jsx || \"$FILE\" == *.css || \"$FILE\" == *.json ]]; then cd \"$(git rev-parse --show-toplevel)/frontend\" && npx prettier --write \"$FILE\" 2>/dev/null || true; fi'"
           },
           {
             "type": "command",
-            "command": "bash -c 'FILE=\"$CLAUDE_FILE_PATH\"; if [[ \"$FILE\" == *.go ]]; then ROOT=$(git rev-parse --show-toplevel); REL=${FILE#$ROOT/}; if [[ \"$REL\" == connector/* ]] && grep -qE \"github.com/noui/platform/(dataaccess|intelligence|crm|correspondence|dataquality|knowledgebase)\" \"$FILE\" 2>/dev/null; then echo \"LAYER VIOLATION: connector/ must not import from platform/ services\"; exit 1; elif [[ \"$REL\" == platform/* ]] && grep -q \"github.com/noui/platform/connector\" \"$FILE\" 2>/dev/null; then echo \"LAYER VIOLATION: platform/ must not import from connector/\"; exit 1; fi; fi'"
+            "command": "bash -c 'FILE=\"$CLAUDE_FILE_PATH\"; if [[ \"$FILE\" == *.go ]]; then DIR=$(dirname \"$FILE\"); while [[ ! -f \"$DIR/go.mod\" ]] && [[ \"$DIR\" != \"/\" ]]; do DIR=$(dirname \"$DIR\"); done; if [[ -f \"$DIR/go.mod\" ]]; then cd \"$DIR\" && go vet ./... 2>&1 | head -20; fi; elif [[ \"$FILE\" == *.ts || \"$FILE\" == *.tsx ]]; then cd \"$(git rev-parse --show-toplevel)/frontend\" && npx tsc -p tsconfig.app.json --noEmit 2>&1 | tail -10; fi'"
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'FILE=\"$CLAUDE_FILE_PATH\"; ROOT=$(git rev-parse --show-toplevel 2>/dev/null); if [[ -z \"$ROOT\" ]]; then exit 0; fi; REL=${FILE#$ROOT/}; if [[ \"$REL\" == connector/* ]] && grep -qE \"github.com/noui/platform/(dataaccess|intelligence|crm|correspondence|dataquality|knowledgebase)\" \"$FILE\" 2>/dev/null; then echo \"❌ LAYER VIOLATION: connector/ must not import from platform/ services\"; exit 1; elif [[ \"$REL\" == platform/* ]] && grep -q \"github.com/noui/platform/connector\" \"$FILE\" 2>/dev/null; then echo \"❌ LAYER VIOLATION: platform/ must not import from connector/\"; exit 1; fi'"
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'FILE=\"$CLAUDE_FILE_PATH\"; if [[ \"$FILE\" == *test-fixture* ]] || [[ \"$FILE\" == *test_fixture* ]] || [[ \"$FILE\" == *demo-cases*fixture* ]]; then echo \"⚠️  TEST FIXTURE MODIFIED — Fixture files contain hand-calculated expected values.\"; echo \"These are the oracle. If code disagrees with the fixture, the code is wrong.\"; echo \"If you believe the fixture has an error, STOP and flag for human review.\"; fi'"
           }
         ]
       }
@@ -51,7 +90,16 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'cd \"$(git rev-parse --show-toplevel)\" && echo \"Pre-push: verifying frontend build...\" && cd frontend && npm run build 2>&1 | tail -5'"
+            "command": "bash -c 'cd \"$(git rev-parse --show-toplevel)\" && echo \"Pre-push: verifying frontend build...\" && cd frontend && npm run build 2>&1 | tail -5 && echo \"✅ Frontend build OK\" || echo \"❌ Frontend build FAILED — fix before pushing\"'"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash(git commit:*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'cd \"$(git rev-parse --show-toplevel)\" && CHANGED=$(git diff --cached --name-only); if echo \"$CHANGED\" | grep -q \"^connector/\"; then cd connector && go test ./... -short -count=1 2>&1 | tail -3; cd ..; fi; if echo \"$CHANGED\" | grep -q \"^platform/\"; then for svc in dataaccess intelligence crm correspondence dataquality knowledgebase; do if echo \"$CHANGED\" | grep -q \"^platform/$svc/\"; then cd platform/$svc && go test ./... -count=1 2>&1 | tail -3; cd ../..; fi; done; fi; if echo \"$CHANGED\" | grep -q \"^frontend/\"; then cd frontend && npm test -- --run 2>&1 | tail -5; fi'"
           }
         ]
       }

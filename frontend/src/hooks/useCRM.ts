@@ -241,20 +241,16 @@ export function useUpdateOutreach() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Portal-specific hooks — default to live CRM API, with demo data fallback.
-//
-// Set VITE_USE_DEMO_CRM=true in .env.local to use in-memory demo data
-// (useful for local dev without the Docker stack running).
-// When unset or false, hooks call the live CRM service.
+// Portal-specific hooks — use in-memory demo data for cross-portal demos.
+// These hooks power the member message center, staff journal, and employer
+// communications views. They share the same mutable data store so mutations
+// in one portal are immediately visible in the others via query invalidation.
 // ═══════════════════════════════════════════════════════════════════════════════
-
-const USE_LIVE_CRM = import.meta.env.VITE_USE_DEMO_CRM !== 'true';
 
 export function useContactByMemberId(memberId: string) {
   return useQuery<Contact | undefined>({
     queryKey: ['crm', 'portal', 'contact-by-member', memberId],
-    queryFn: () =>
-      USE_LIVE_CRM ? crmAPI.getContactByLegacyId(memberId) : demo.getContactByMemberId(memberId),
+    queryFn: () => crmAPI.getContactByLegacyId(memberId),
     enabled: memberId.length > 0,
   });
 }
@@ -279,8 +275,7 @@ export function usePublicTimeline(contactId: string) {
 export function useFullTimeline(contactId: string) {
   return useQuery<ContactTimeline>({
     queryKey: ['crm', 'portal', 'full-timeline', contactId],
-    queryFn: () =>
-      USE_LIVE_CRM ? crmAPI.getContactTimeline(contactId) : demo.getFullTimeline(contactId),
+    queryFn: () => crmAPI.getContactTimeline(contactId),
     enabled: contactId.length > 0,
   });
 }
@@ -336,16 +331,7 @@ export function useDemoInteraction(interactionId: string) {
 export function useContactCommitments(contactId: string) {
   return useQuery<Commitment[]>({
     queryKey: ['crm', 'portal', 'commitments', contactId],
-    queryFn: async () => {
-      if (!USE_LIVE_CRM) return demo.getContactCommitments(contactId);
-      const response = await crmAPI.listCommitments({ contactId });
-      // fetchAPI unwraps { data } envelope — result is Commitment[] (array) directly
-      if (Array.isArray(response)) return response;
-      if (response && typeof response === 'object' && 'items' in response) {
-        return (response as { items: Commitment[] }).items ?? [];
-      }
-      return [];
-    },
+    queryFn: () => crmAPI.listCommitments({ contactId }) as unknown as Promise<Commitment[]>,
     enabled: contactId.length > 0,
   });
 }
