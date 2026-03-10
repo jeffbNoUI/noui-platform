@@ -4,8 +4,9 @@
     {
       "name": "frontend",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["node_modules/vite/bin/vite.js", "--port", "3000"],
+      "runtimeArgs": ["node_modules/vite/bin/vite.js"],
       "port": 3000,
+      "autoPort": true,
       "cwd": "frontend"
     },
     {

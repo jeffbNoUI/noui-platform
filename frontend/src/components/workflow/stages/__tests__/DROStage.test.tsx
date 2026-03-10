@@ -11,7 +11,7 @@ describe('DROStage', () => {
   });
 
   it('shows empty state when calculation is null', () => {
-    renderWithProviders(<DROStage calculation={null} />);
+    renderWithProviders(<DROStage calculation={undefined} />);
     expect(screen.getByText('No DRO data available for this case.')).toBeInTheDocument();
   });
 
