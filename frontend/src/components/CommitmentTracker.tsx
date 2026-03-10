@@ -79,7 +79,13 @@ export default function CommitmentTracker({ contactId, conversationId }: Commitm
   const commitments = data?.items ?? [];
 
   // Sort: overdue first, then pending, in_progress, fulfilled, cancelled
-  const statusOrder: Record<string, number> = { overdue: 0, pending: 1, in_progress: 2, fulfilled: 3, cancelled: 4 };
+  const statusOrder: Record<string, number> = {
+    overdue: 0,
+    pending: 1,
+    in_progress: 2,
+    fulfilled: 3,
+    cancelled: 4,
+  };
   const sorted = [...commitments].sort((a, b) => {
     const orderA = statusOrder[a.status] ?? 5;
     const orderB = statusOrder[b.status] ?? 5;
@@ -143,7 +149,8 @@ export default function CommitmentTracker({ contactId, conversationId }: Commitm
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Commitments</h2>
             <p className="text-sm text-gray-500">
-              {activeCount} active{overdueCount > 0 && (
+              {activeCount} active
+              {overdueCount > 0 && (
                 <span className="text-red-600 font-medium"> ({overdueCount} overdue)</span>
               )}
             </p>
@@ -208,19 +215,28 @@ function CommitmentRow({
   onCancel: () => void;
   isMutating: boolean;
 }) {
-  const badge = statusBadge[commitment.status];
+  const badge = statusBadge[commitment.status] ?? {
+    label: commitment.status,
+    color: 'bg-gray-100 text-gray-600',
+  };
   const indicator = getDateIndicator(commitment.targetDate, commitment.status);
   const isTerminal = commitment.status === 'fulfilled' || commitment.status === 'cancelled';
 
   return (
-    <li className={`rounded-md border p-3 ${isTerminal ? 'border-gray-100 bg-gray-50' : 'border-gray-200'}`}>
+    <li
+      className={`rounded-md border p-3 ${isTerminal ? 'border-gray-100 bg-gray-50' : 'border-gray-200'}`}
+    >
       <div className="flex items-start justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${badge.color}`}>
+            <span
+              className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${badge.color}`}
+            >
               {badge.label}
             </span>
-            <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${dateIndicatorClasses[indicator]}`}>
+            <span
+              className={`rounded px-1.5 py-0.5 text-xs font-medium ${dateIndicatorClasses[indicator]}`}
+            >
               {relativeDateLabel(commitment.targetDate)}
             </span>
           </div>
@@ -245,11 +261,7 @@ function CommitmentRow({
             <div className="mt-2 rounded bg-green-50 px-2 py-1 text-xs text-green-700">
               Fulfilled {new Date(commitment.fulfilledAt).toLocaleDateString()}
               {commitment.fulfilledBy && ` by ${commitment.fulfilledBy}`}
-              {commitment.fulfillmentNote && (
-                <>
-                  {' '}&mdash; {commitment.fulfillmentNote}
-                </>
-              )}
+              {commitment.fulfillmentNote && <> &mdash; {commitment.fulfillmentNote}</>}
             </div>
           )}
         </div>
