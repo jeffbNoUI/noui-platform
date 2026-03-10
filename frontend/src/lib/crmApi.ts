@@ -59,11 +59,43 @@ export const crmAPI = {
   getInteraction: (interactionId: string) =>
     fetchAPI<Interaction>(`${CRM_URL}/v1/crm/interactions/${interactionId}`),
 
+  listInteractions: (params: {
+    conversationId?: string;
+    contactId?: string;
+    channel?: string;
+    limit?: number;
+    offset?: number;
+  }) =>
+    fetchAPI<PaginatedResponse<Interaction>>(
+      `${CRM_URL}/v1/crm/interactions${toQueryString({
+        conversation_id: params.conversationId,
+        contact_id: params.contactId,
+        channel: params.channel,
+        limit: params.limit,
+        offset: params.offset,
+      })}`,
+    ),
+
   // ── Conversations ────────────────────────────────────────────────────────
 
   listConversations: (params: ConversationListParams) =>
     fetchAPI<PaginatedResponse<Conversation>>(
       `${CRM_URL}/v1/crm/conversations${toQueryString(params)}`,
+    ),
+
+  listConversationsByAnchor: (
+    anchorType: string,
+    anchorId: string,
+    status?: string,
+    limit?: number,
+  ) =>
+    fetchAPI<PaginatedResponse<Conversation>>(
+      `${CRM_URL}/v1/crm/conversations${toQueryString({
+        anchor_type: anchorType,
+        anchor_id: anchorId,
+        status,
+        limit,
+      })}`,
     ),
 
   getConversation: (conversationId: string) =>

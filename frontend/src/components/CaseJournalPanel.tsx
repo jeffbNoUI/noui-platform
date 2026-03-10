@@ -37,7 +37,10 @@ interface CaseJournalPanelProps {
 
 type JournalTab = 'timeline' | 'conversations' | 'commitments';
 
-export default function CaseJournalPanel({ contactId: propContactId, memberId }: CaseJournalPanelProps) {
+export default function CaseJournalPanel({
+  contactId: propContactId,
+  memberId,
+}: CaseJournalPanelProps) {
   const [activeTab, setActiveTab] = useState<JournalTab>('timeline');
   const [selectedConvId, setSelectedConvId] = useState('');
   const [summaryOpen, setSummaryOpen] = useState(true);
@@ -50,9 +53,10 @@ export default function CaseJournalPanel({ contactId: propContactId, memberId }:
   const resolvedContact = resolvedByMember || resolvedByProp;
   const effectiveContactId = resolvedContact?.contactId || propContactId || '';
 
-  // Data hooks
+  // Data hooks — useMemberConversations takes a member ID (the backend anchor)
+  const effectiveMemberId = resolvedContact?.legacyMemberId ?? memberId ?? '';
   const { data: timeline } = useFullTimeline(effectiveContactId);
-  const { data: conversations } = useMemberConversations(effectiveContactId);
+  const { data: conversations } = useMemberConversations(effectiveMemberId);
   const { data: convInteractions } = useAllConversationInteractions(selectedConvId);
   const { data: commitments } = useContactCommitments(effectiveContactId);
 
@@ -75,7 +79,12 @@ export default function CaseJournalPanel({ contactId: propContactId, memberId }:
   const tabs: { key: JournalTab; label: string; count?: number }[] = [
     { key: 'timeline', label: 'Timeline', count: timeline?.totalEntries },
     { key: 'conversations', label: 'Conversations', count: convList.length },
-    { key: 'commitments', label: 'Commitments', count: commitmentList.filter((c) => c.status !== 'fulfilled' && c.status !== 'cancelled').length },
+    {
+      key: 'commitments',
+      label: 'Commitments',
+      count: commitmentList.filter((c) => c.status !== 'fulfilled' && c.status !== 'cancelled')
+        .length,
+    },
   ];
 
   if (!effectiveContactId) {
@@ -97,9 +106,16 @@ export default function CaseJournalPanel({ contactId: propContactId, memberId }:
             <p className="text-xs text-gray-500">{contactName}</p>
           </div>
           <div className="flex items-center gap-2">
-            {convList.filter((c) => c.status === 'open' || c.status === 'pending' || c.status === 'reopened').length > 0 && (
+            {convList.filter(
+              (c) => c.status === 'open' || c.status === 'pending' || c.status === 'reopened',
+            ).length > 0 && (
               <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
-                {convList.filter((c) => c.status === 'open' || c.status === 'pending' || c.status === 'reopened').length} open
+                {
+                  convList.filter(
+                    (c) => c.status === 'open' || c.status === 'pending' || c.status === 'reopened',
+                  ).length
+                }{' '}
+                open
               </span>
             )}
             {overdueCommitments.length > 0 && (
@@ -131,7 +147,10 @@ export default function CaseJournalPanel({ contactId: propContactId, memberId }:
           {tabs.map((tab) => (
             <button
               key={tab.key}
-              onClick={() => { setActiveTab(tab.key); if (tab.key !== 'conversations') setSelectedConvId(''); }}
+              onClick={() => {
+                setActiveTab(tab.key);
+                if (tab.key !== 'conversations') setSelectedConvId('');
+              }}
               className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                 activeTab === tab.key
                   ? 'bg-blue-100 text-blue-800'
@@ -233,7 +252,9 @@ function AiSummaryContent({ summary }: { summary: CrmSummary }) {
       {/* Digest + sentiment */}
       <div className="flex items-start justify-between gap-2">
         <p className="text-gray-700">{summary.interactionDigest}</p>
-        <span className={`inline-flex flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${sent.color}`}>
+        <span
+          className={`inline-flex flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${sent.color}`}
+        >
           {sent.label}
         </span>
       </div>
@@ -297,7 +318,13 @@ function AiSummaryContent({ summary }: { summary: CrmSummary }) {
   );
 }
 
-function ConversationRow({ conversation, onClick }: { conversation: Conversation; onClick: () => void }) {
+function ConversationRow({
+  conversation,
+  onClick,
+}: {
+  conversation: Conversation;
+  onClick: () => void;
+}) {
   const statusColors: Record<string, string> = {
     open: 'bg-blue-100 text-blue-800',
     pending: 'bg-yellow-100 text-yellow-800',
@@ -315,24 +342,30 @@ function ConversationRow({ conversation, onClick }: { conversation: Conversation
         <span className="text-sm font-medium text-gray-800 truncate">
           {conversation.subject || 'Untitled'}
         </span>
-        <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium flex-shrink-0 ${statusColors[conversation.status] || statusColors.closed}`}>
+        <span
+          className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium flex-shrink-0 ${statusColors[conversation.status] || statusColors.closed}`}
+        >
           {conversation.status}
         </span>
       </div>
       <div className="mt-0.5 flex items-center gap-2 text-xs text-gray-500">
-        <span>{conversation.interactionCount} interaction{conversation.interactionCount !== 1 ? 's' : ''}</span>
+        <span>
+          {conversation.interactionCount} interaction
+          {conversation.interactionCount !== 1 ? 's' : ''}
+        </span>
         <span>&middot;</span>
         <span>{formatDate(conversation.updatedAt)}</span>
-        {conversation.slaBreached && (
-          <span className="font-medium text-red-600">SLA Breached</span>
-        )}
+        {conversation.slaBreached && <span className="font-medium text-red-600">SLA Breached</span>}
       </div>
     </button>
   );
 }
 
 function CommitmentRow({ commitment }: { commitment: Commitment }) {
-  const overdue = commitment.status !== 'fulfilled' && commitment.status !== 'cancelled' && isOverdue(commitment.targetDate);
+  const overdue =
+    commitment.status !== 'fulfilled' &&
+    commitment.status !== 'cancelled' &&
+    isOverdue(commitment.targetDate);
 
   const statusColors: Record<string, string> = {
     pending: 'bg-yellow-100 text-yellow-800',
@@ -348,7 +381,9 @@ function CommitmentRow({ commitment }: { commitment: Commitment }) {
     <div className="px-4 py-3">
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm text-gray-800">{commitment.description}</p>
-        <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium flex-shrink-0 ${statusColors[effectiveStatus] || statusColors.pending}`}>
+        <span
+          className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium flex-shrink-0 ${statusColors[effectiveStatus] || statusColors.pending}`}
+        >
           {effectiveStatus}
         </span>
       </div>
