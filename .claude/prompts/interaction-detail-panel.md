@@ -1,39 +1,56 @@
-# Interaction Detail Panel Build
+# Next Session Starter
 
-## Goal
+## Current State (as of 2026-03-10)
 
-Enhance the Member Dashboard's interaction history so users can **click any interaction row** and have a **detail panel visually spawn from that row** — animating outward from the clicked element's position to become the focal point of the screen. The panel shows the full interaction record: complete notes, agent, duration, commitments, and linked correspondence. Clicking outside or pressing Escape dismisses it with a reverse animation back to the source row.
+**Option A complete (branch `claude/happy-villani`).** `tsc --noEmit` now reports 0 errors (was 105). All 197 frontend tests pass. Ready to merge or continue.
 
-## Plan File
+**What was done in this session:**
+- Installed missing `@testing-library/dom` peer dependency (fixed 23 TS2305 import errors)
+- Added `/// <reference types="vitest/globals" />` to `vite-env.d.ts` (fixed 1 TS2304 `vi` not found error)
+- Completed `mockCalculation.eligibility` in shared fixtures with 7 missing required fields + `payment_options.disclaimer` (fixed ~70 TS2322 errors)
+- Added explicit type annotations (`BenefitCalcResult`, `Member`) to fixture declarations
+- Changed `null` → `undefined` in 5 test files where props accept `T | undefined` (12 errors)
+- Added `member_id` to `EmploymentEvent` mocks, fixed `IntakeStage` and `ElectionStage` test data (3 errors)
+- Updated `.claude/launch.json` with `autoPort: true` for worktree port conflicts
 
-Read the approved implementation plan at `.claude/plans/shiny-inventing-allen.md` before writing any code. It contains the animation strategy (pure CSS + `getBoundingClientRect()`, no new dependencies), component structure, state flow, file list, and step-by-step implementation sequence.
+**Verification:**
+- `npx tsc --noEmit` → 0 errors
+- `npm test -- --run` → 197/197 pass
+- `npm run build` → clean
+- Pre-commit hooks (lint + prettier + tests) all passed
 
-## Key Files
+## What's Built on Main (unchanged from prior session)
 
-| File | Role |
-|------|------|
-| `frontend/src/components/dashboard/InteractionHistoryCard.tsx` | **Modify** — add click handler per row, capture `getBoundingClientRect()` |
-| `frontend/src/components/dashboard/MemberDashboard.tsx` | **Modify** — own `selectedInteraction` state, render detail panel overlay |
-| `frontend/src/hooks/useCRM.ts` | **Reference** — `useDemoInteraction()` hook fetches full `Interaction` object |
-| `frontend/src/types/CRM.ts` | **Reference** — `Interaction` (line 196), `Note` (line 239), `Commitment` (line 259) types |
-| `frontend/src/components/CommandPalette.tsx` | **Reference** — overlay/modal pattern (`fixed inset-0 z-50`, backdrop, Escape key) |
-| `frontend/src/components/workflow/DeckView.tsx` | **Reference** — transform-based animation pattern (`transition-all duration-500`) |
+- 10-service Docker Compose stack: 7 Go services + PostgreSQL + connector + nginx frontend
+- All 12 PostgreSQL init scripts, all APIs live, zero demo data remaining
+- Staff Portal work queue + Member Dashboard with 8 cards — all PostgreSQL-backed
 
-## Files to Create
+## What to Work On Next
 
-1. `frontend/src/lib/channelMeta.ts` — extract shared `CHANNEL_ICONS`, `CHANNEL_LABELS`, `OUTCOME_STYLES` maps
-2. `frontend/src/hooks/useSpawnAnimation.ts` — reusable animation hook (4-phase state machine, transform computation)
-3. `frontend/src/components/dashboard/InteractionDetailPanel.tsx` — detail panel overlay with full interaction content
+Choose from the remaining options (B through E):
 
-## Implementation Order
+### Option B: End-to-End Workflow Testing
+Click through cases in the browser: open a case from the work queue, advance stages, verify the full 7-stage workflow from Application Intake to Certification. Requires Docker stack running (`docker compose up --build`). Tests the case management API's `POST /api/v1/cases/{id}/advance` endpoint and stage transition audit trail.
 
-1. Extract channel metadata to shared module
-2. Create `useSpawnAnimation` hook
-3. Create `InteractionDetailPanel` component
-4. Wire up InteractionHistoryCard (click handler + callback)
-5. Wire up MemberDashboard (state + panel rendering)
-6. Tests
+### Option C: Case Management Go Tests
+The `platform/casemanagement/` service has zero test coverage (`[no test files]` for all packages). Adding handler tests and data access tests would match the pattern in `platform/crm/api/handlers_test.go` and `platform/dataaccess/api/handlers_test.go`.
 
-## Instructions
+### Option D: Member Portal CRM Messaging
+`crmDemoData.ts` still provides cross-portal messaging data (conversations, staff notes, member messages). Wire the Member Portal conversation view to the real CRM API so members see their actual interaction history.
 
-Run `/session-start` first, then read the plan file and begin implementation following the sequence above.
+### Option E: User's Choice
+The platform is at a stable milestone. Good time for new features, polish, or hardening.
+
+## Build Verification
+
+Run these to confirm the codebase is green before starting work:
+```bash
+# Frontend (tsc is now a reliable gate!)
+cd frontend && npx tsc --noEmit && npm test -- --run
+
+# Go services (each independent module)
+cd platform/dataaccess && go build ./... && go test ./...
+cd platform/intelligence && go build ./... && go test ./...
+cd platform/crm && go build ./... && go test ./...
+cd platform/casemanagement && go build ./...
+```
