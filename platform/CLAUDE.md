@@ -14,6 +14,7 @@ Shared platform services that power the NoUI workspace. Each service is an indep
 | correspondence | `github.com/noui/platform/correspondence` | 8085 | PostgreSQL | Template rendering, merge fields, letter history |
 | dataquality | `github.com/noui/platform/dataquality` | 8086 | PostgreSQL | Data quality checks, scoring, issues, trend analysis |
 | knowledgebase | `github.com/noui/platform/knowledgebase` | 8087 | PostgreSQL | Articles, stage help, rule references, search |
+| casemanagement | `github.com/noui/platform/casemanagement` | 8088 | PostgreSQL | Retirement case tracking, stage workflow, work queue |
 
 ## Common Patterns
 
