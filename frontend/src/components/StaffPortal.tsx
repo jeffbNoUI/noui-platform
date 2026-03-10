@@ -6,7 +6,7 @@ import CSRContextHub from '@/components/staff/CSRContextHub';
 import ServiceMap from '@/components/admin/ServiceMap';
 import DataQualityPanel from '@/components/admin/DataQualityPanel';
 import CorrespondencePanel from '@/components/workflow/CorrespondencePanel';
-import { WORK_QUEUE, STAGES } from '@/lib/demoData';
+import { useCases, useStages } from '@/hooks/useCaseManagement';
 
 interface StaffPortalProps {
   onOpenCase: (caseId: string, memberId: number, retDate: string, flags?: string[]) => void;
@@ -23,8 +23,6 @@ type StaffTab =
   | 'service-map'
   | 'dq'
   | 'correspondence';
-
-// WORK_QUEUE and STAGES imported from '@/lib/demoData'
 
 const PRIORITY_STYLES = {
   urgent: 'bg-red-50 text-red-700 border-red-200',
@@ -70,18 +68,27 @@ export default function StaffPortal({ onOpenCase, onViewMember, onChangeView }: 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<StaffTab>('queue');
 
-  const filteredQueue = WORK_QUEUE.filter(
+  const { data: cases = [] } = useCases({ status: 'active' });
+  const { data: stages = [] } = useStages();
+  const stageCount = stages.length || 7;
+
+  // For DRO cases, append "(DRO)" to the name for display
+  const displayName = (c: { name: string; caseType: string }) =>
+    c.caseType === 'DRO' ? `${c.name} (DRO)` : c.name;
+
+  const filteredQueue = cases.filter(
     (item) =>
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      displayName(item).toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.caseId.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.dept.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const stats = {
-    total: WORK_QUEUE.length,
-    urgent: WORK_QUEUE.filter((w) => w.priority === 'urgent').length,
-    atRisk: WORK_QUEUE.filter((w) => w.sla === 'at-risk' || w.sla === 'urgent').length,
-    avgDays: Math.round(WORK_QUEUE.reduce((a, w) => a + w.daysOpen, 0) / WORK_QUEUE.length),
+    total: cases.length,
+    urgent: cases.filter((w) => w.priority === 'urgent').length,
+    atRisk: cases.filter((w) => w.sla === 'at-risk' || w.sla === 'urgent').length,
+    avgDays:
+      cases.length > 0 ? Math.round(cases.reduce((a, w) => a + w.daysOpen, 0) / cases.length) : 0,
   };
 
   const handleMemberSelect = (memberId: number) => {
@@ -262,7 +269,9 @@ export default function StaffPortal({ onOpenCase, onViewMember, onChangeView }: 
                           T{item.tier}
                         </span>
                         <div>
-                          <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {displayName(item)}
+                          </div>
                           <div className="text-xs text-gray-500">{item.dept}</div>
                         </div>
                       </div>
@@ -270,7 +279,7 @@ export default function StaffPortal({ onOpenCase, onViewMember, onChangeView }: 
                     <div className="col-span-2">
                       <div className="text-sm text-gray-700">{item.stage}</div>
                       <div className="flex gap-0.5 mt-1">
-                        {STAGES.slice(0, 7).map((_, idx) => (
+                        {Array.from({ length: stageCount }, (_, idx) => (
                           <div
                             key={idx}
                             className={`h-1 flex-1 rounded-full ${

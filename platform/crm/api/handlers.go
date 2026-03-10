@@ -325,10 +325,11 @@ func (h *Handler) ListInteractions(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantFromHeader(r)
 
 	filter := crmdb.InteractionFilter{
-		ContactID: r.URL.Query().Get("contact_id"),
-		Channel:   r.URL.Query().Get("channel"),
-		Limit:     intParam(r, "limit", 25),
-		Offset:    intParam(r, "offset", 0),
+		ContactID:      r.URL.Query().Get("contact_id"),
+		ConversationID: r.URL.Query().Get("conversation_id"),
+		Channel:        r.URL.Query().Get("channel"),
+		Limit:          intParam(r, "limit", 25),
+		Offset:         intParam(r, "offset", 0),
 	}
 
 	interactions, total, err := h.store.ListInteractions(tenantID, filter)
@@ -365,12 +366,12 @@ func (h *Handler) CreateInteraction(w http.ResponseWriter, r *http.Request) {
 		Category:        req.Category,
 		Subcategory:     req.Subcategory,
 		Outcome:         req.Outcome,
-		Direction:      models.Direction(req.Direction),
-		StartedAt:      startedAt,
-		Summary:        req.Summary,
-		Visibility:     models.Visibility(ptrOrDefault(req.Visibility, "INTERNAL")),
-		CreatedAt:      now,
-		CreatedBy:      "system",
+		Direction:       models.Direction(req.Direction),
+		StartedAt:       startedAt,
+		Summary:         req.Summary,
+		Visibility:      models.Visibility(ptrOrDefault(req.Visibility, "INTERNAL")),
+		CreatedAt:       now,
+		CreatedBy:       "system",
 	}
 
 	if err := h.store.CreateInteraction(&interaction); err != nil {
@@ -417,8 +418,8 @@ func (h *Handler) CreateNote(w http.ResponseWriter, r *http.Request) {
 		NextStep:      req.NextStep,
 		Narrative:     req.Narrative,
 		Sentiment:     req.Sentiment,
-		UrgentFlag:   req.UrgentFlag,
-		AISuggested:  req.AISuggested,
+		UrgentFlag:    req.UrgentFlag,
+		AISuggested:   req.AISuggested,
 		CreatedAt:     now,
 		CreatedBy:     "system",
 		UpdatedAt:     now,

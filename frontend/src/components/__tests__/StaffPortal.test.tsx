@@ -3,6 +3,46 @@ import { screen, fireEvent } from '@testing-library/react';
 import { renderWithProviders } from '@/test/helpers';
 import StaffPortal from '@/components/StaffPortal';
 
+// Mock case management hooks
+vi.mock('@/hooks/useCaseManagement', () => ({
+  useCases: () => ({
+    data: [
+      {
+        caseId: 'RET-2026-0147',
+        memberId: 10001,
+        name: 'Robert Martinez',
+        caseType: 'RET',
+        tier: 1,
+        dept: 'Public Works',
+        retDate: '2026-04-01',
+        stage: 'Benefit Calculation',
+        stageIdx: 4,
+        priority: 'standard' as const,
+        sla: 'on-track' as const,
+        daysOpen: 5,
+        flags: ['leave-payout'],
+        assignedTo: 'Sarah Chen',
+        status: 'active',
+      },
+    ],
+    isLoading: false,
+    error: null,
+  }),
+  useStages: () => ({
+    data: [
+      { stageIdx: 0, stageName: 'Application Intake', sortOrder: 0 },
+      { stageIdx: 1, stageName: 'Document Verification', sortOrder: 1 },
+      { stageIdx: 2, stageName: 'Eligibility Review', sortOrder: 2 },
+      { stageIdx: 3, stageName: 'Marital Share Calculation', sortOrder: 3 },
+      { stageIdx: 4, stageName: 'Benefit Calculation', sortOrder: 4 },
+      { stageIdx: 5, stageName: 'Election Recording', sortOrder: 5 },
+      { stageIdx: 6, stageName: 'Certification', sortOrder: 6 },
+    ],
+    isLoading: false,
+    error: null,
+  }),
+}));
+
 const noop = vi.fn();
 
 describe('StaffPortal', () => {

@@ -62,6 +62,7 @@ These rules are **non-negotiable** and prevent the tangling that caused the prev
 | `platform/correspondence/` | Template rendering, merge fields, letter history | 8085 |
 | `platform/dataquality/` | Data quality checks, scoring, issues, trends | 8086 |
 | `platform/knowledgebase/` | Articles, stage help, rule references, search | 8087 |
+| `platform/casemanagement/` | Retirement case tracking, stage workflow, work queue | 8088 |
 | `frontend/` | React UI (StaffPortal, MemberPortal, RetirementApplication) | 3000 |
 
 **`connector/` and `platform/dataaccess/` are completely different things.** The connector discovers unknown schemas. The dataaccess service queries a known PostgreSQL schema for member data.

@@ -934,7 +934,7 @@ export function createPortalMessage(data: CreatePortalMessageData): Interaction 
 }
 
 export interface CreateConversationData {
-  anchorType: 'contact' | 'organization';
+  anchorType: 'contact' | 'organization' | 'MEMBER';
   anchorId: string;
   subject: string;
   initialMessage: string;

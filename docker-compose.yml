@@ -21,6 +21,8 @@ services:
       - ./domains/pension/seed/004_knowledgebase_seed.sql:/docker-entrypoint-initdb.d/008_knowledgebase_seed.sql
       - ./domains/pension/seed/005_dataquality_seed.sql:/docker-entrypoint-initdb.d/009_dataquality_seed.sql
       - ./domains/pension/seed/006_correspondence_seed.sql:/docker-entrypoint-initdb.d/010_correspondence_seed.sql
+      - ./domains/pension/schema/006_casemanagement_schema.sql:/docker-entrypoint-initdb.d/011_casemanagement_schema.sql
+      - ./domains/pension/seed/007_casemanagement_seed.sql:/docker-entrypoint-initdb.d/012_casemanagement_seed.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U derp"]
       interval: 5s
@@ -135,6 +137,25 @@ services:
       postgres:
         condition: service_healthy
 
+  casemanagement:
+    build:
+      context: ./platform/casemanagement
+      dockerfile: Dockerfile
+    ports:
+      - "8088:8088"
+    environment:
+      PORT: "8088"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: derp
+      DB_PASSWORD: derp
+      DB_NAME: derp
+      DB_SSLMODE: disable
+      CORS_ORIGIN: "http://localhost:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   connector:
     build:
       context: ./connector
@@ -155,6 +176,7 @@ services:
       - dataaccess
       - intelligence
       - crm
+      - casemanagement
       - knowledgebase
       - dataquality
       - correspondence

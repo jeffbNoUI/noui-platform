@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { crmAPI } from '@/lib/crmApi';
+import type { PaginatedResult } from '@/lib/apiClient';
 import * as demo from '@/lib/crmDemoData';
 import type {
   Contact,
@@ -10,7 +11,6 @@ import type {
   Commitment,
   Outreach,
   Organization,
-  PaginatedResponse,
   CreateInteractionRequest,
   CreateNoteRequest,
   CreateCommitmentRequest,
@@ -36,7 +36,7 @@ import type {
 // ─── Query hooks ─────────────────────────────────────────────────────────────
 
 export function useContactSearch(query: string, enabled = true) {
-  return useQuery<PaginatedResponse<Contact>>({
+  return useQuery<PaginatedResult<Contact>>({
     queryKey: ['crm', 'contacts', 'search', query],
     queryFn: () => crmAPI.searchContacts({ query }),
     enabled: enabled && query.length > 0,
@@ -76,7 +76,7 @@ export function useInteraction(interactionId: string) {
 }
 
 export function useConversations(params: ConversationListParams) {
-  return useQuery<PaginatedResponse<Conversation>>({
+  return useQuery<PaginatedResult<Conversation>>({
     queryKey: ['crm', 'conversations', params],
     queryFn: () => crmAPI.listConversations(params),
     enabled: !!(params.contactId || params.assignedAgent || params.assignedTeam || params.status),
@@ -92,7 +92,7 @@ export function useConversation(conversationId: string) {
 }
 
 export function useCommitments(params: CommitmentListParams) {
-  return useQuery<PaginatedResponse<Commitment>>({
+  return useQuery<PaginatedResult<Commitment>>({
     queryKey: ['crm', 'commitments', params],
     queryFn: () => crmAPI.listCommitments(params),
     enabled: !!(params.contactId || params.conversationId || params.ownerAgent || params.status),
@@ -100,7 +100,7 @@ export function useCommitments(params: CommitmentListParams) {
 }
 
 export function useOutreach(params: OutreachListParams) {
-  return useQuery<PaginatedResponse<Outreach>>({
+  return useQuery<PaginatedResult<Outreach>>({
     queryKey: ['crm', 'outreach', params],
     queryFn: () => crmAPI.listOutreach(params),
     enabled: !!(params.contactId || params.assignedAgent || params.assignedTeam || params.status),
@@ -108,7 +108,7 @@ export function useOutreach(params: OutreachListParams) {
 }
 
 export function useOrganizations(params: OrgListParams) {
-  return useQuery<PaginatedResponse<Organization>>({
+  return useQuery<PaginatedResult<Organization>>({
     queryKey: ['crm', 'organizations', params],
     queryFn: () => crmAPI.listOrganizations(params),
   });
@@ -280,11 +280,14 @@ export function useFullTimeline(contactId: string) {
   });
 }
 
-export function useMemberConversations(contactId: string) {
+export function useMemberConversations(memberId: string) {
   return useQuery<Conversation[]>({
-    queryKey: ['crm', 'portal', 'member-conversations', contactId],
-    queryFn: () => demo.getMemberConversations(contactId),
-    enabled: contactId.length > 0,
+    queryKey: ['crm', 'portal', 'member-conversations', memberId],
+    queryFn: async () => {
+      const res = await crmAPI.listConversationsByAnchor('MEMBER', memberId);
+      return res.items;
+    },
+    enabled: memberId.length > 0,
   });
 }
 
@@ -299,7 +302,10 @@ export function usePublicConversationInteractions(conversationId: string) {
 export function useAllConversationInteractions(conversationId: string) {
   return useQuery<Interaction[]>({
     queryKey: ['crm', 'portal', 'all-interactions', conversationId],
-    queryFn: () => demo.getAllConversationInteractions(conversationId),
+    queryFn: async () => {
+      const res = await crmAPI.listInteractions({ conversationId });
+      return res.items;
+    },
     enabled: conversationId.length > 0,
   });
 }
@@ -315,7 +321,7 @@ export function useEmployerConversations(orgId: string) {
 export function useDemoConversation(conversationId: string) {
   return useQuery<Conversation | undefined>({
     queryKey: ['crm', 'portal', 'conversation', conversationId],
-    queryFn: () => demo.getConversation(conversationId),
+    queryFn: () => crmAPI.getConversation(conversationId),
     enabled: conversationId.length > 0,
   });
 }
@@ -323,7 +329,7 @@ export function useDemoConversation(conversationId: string) {
 export function useDemoInteraction(interactionId: string) {
   return useQuery<Interaction | undefined>({
     queryKey: ['crm', 'portal', 'interaction', interactionId],
-    queryFn: () => demo.getDemoInteraction(interactionId),
+    queryFn: () => crmAPI.getInteraction(interactionId),
     enabled: interactionId.length > 0,
   });
 }
@@ -378,7 +384,17 @@ export function useCreateNewConversation() {
 export function useCreateStaffNote() {
   const queryClient = useQueryClient();
   return useMutation<Interaction, Error, CreateStaffNoteData>({
-    mutationFn: (data) => Promise.resolve(demo.createStaffNote(data)),
+    mutationFn: (data) =>
+      crmAPI.createInteraction({
+        contactId: data.contactId,
+        conversationId: data.conversationId,
+        agentId: data.agentId,
+        channel: 'internal_handoff',
+        interactionType: 'follow_up',
+        direction: 'internal',
+        summary: data.content,
+        visibility: 'internal',
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['crm', 'portal'] });
     },
@@ -388,7 +404,100 @@ export function useCreateStaffNote() {
 export function useCreateStructuredNote() {
   const queryClient = useQueryClient();
   return useMutation<Interaction, Error, CreateStructuredNoteData>({
-    mutationFn: (data) => Promise.resolve(demo.createStructuredStaffNote(data)),
+    mutationFn: async (data) => {
+      const interaction = await crmAPI.createInteraction({
+        contactId: data.contactId,
+        conversationId: data.conversationId,
+        agentId: data.agentId,
+        channel: 'internal_handoff',
+        interactionType: 'follow_up',
+        direction: 'internal',
+        summary: data.summary,
+        visibility: 'internal',
+      });
+      await crmAPI.createNote({
+        interactionId: interaction.interactionId,
+        category: data.category,
+        summary: data.summary,
+        outcome: data.outcome,
+        nextStep: data.nextStep,
+        narrative: data.narrative,
+        sentiment: data.sentiment,
+        urgentFlag: data.urgentFlag,
+        aiSuggested: false,
+      });
+      return interaction;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crm', 'portal'] });
+    },
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Member-specific hooks — hit the real CRM API (PostgreSQL).
+// These replace the shared demo hooks for MemberPortal only.
+// EmployerPortal continues using the demo-based hooks above.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export function useMemberPublicInteractions(conversationId: string) {
+  return useQuery<Interaction[]>({
+    queryKey: ['crm', 'portal', 'member-public-interactions', conversationId],
+    queryFn: async () => {
+      const res = await crmAPI.listInteractions({ conversationId });
+      return res.items.filter((i) => i.visibility === 'public');
+    },
+    enabled: conversationId.length > 0,
+  });
+}
+
+export function useCreateMemberMessage() {
+  const queryClient = useQueryClient();
+  return useMutation<Interaction, Error, CreatePortalMessageData>({
+    mutationFn: (data) =>
+      crmAPI.createInteraction({
+        conversationId: data.conversationId,
+        contactId: data.contactId,
+        orgId: data.orgId,
+        agentId: data.agentId,
+        channel: 'secure_message',
+        interactionType: 'request',
+        direction: data.direction,
+        summary: data.content,
+        visibility: 'public',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crm', 'portal'] });
+    },
+  });
+}
+
+export function useCreateMemberConversation() {
+  const queryClient = useQueryClient();
+  return useMutation<
+    { conversation: Conversation; interaction: Interaction },
+    Error,
+    CreateConversationData
+  >({
+    mutationFn: async (data) => {
+      const conversation = await crmAPI.createConversation({
+        anchorType: data.anchorType,
+        anchorId: data.anchorId,
+        subject: data.subject,
+      });
+      const interaction = await crmAPI.createInteraction({
+        conversationId: conversation.conversationId,
+        contactId: data.contactId,
+        orgId: data.orgId,
+        agentId: data.agentId,
+        channel: 'secure_message',
+        interactionType: 'request',
+        direction: data.direction,
+        summary: data.initialMessage,
+        visibility: 'public',
+      });
+      return { conversation, interaction };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['crm', 'portal'] });
     },
