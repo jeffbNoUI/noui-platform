@@ -444,6 +444,10 @@ function AgentWorkspace({
   ];
   const { data: scenario } = useScenario(memberID, scenarioDates);
 
+  const [workspaceTab, setWorkspaceTab] = useState<'summary' | 'detail' | 'options' | 'history'>(
+    'summary',
+  );
+
   const isEarlyRetirement = calculation?.eligibility.best_eligible_type === 'EARLY';
   const svcSummary = svcCreditData?.summary;
 
@@ -527,8 +531,6 @@ function AgentWorkspace({
           <>
             <MemberBanner member={member} />
 
-            {svcSummary && <ServiceCreditSummary summary={svcSummary} />}
-
             {calcLoading && (
               <div className="rounded-lg bg-white p-8 text-center text-gray-500">
                 Calculating benefit...
@@ -537,30 +539,137 @@ function AgentWorkspace({
 
             {calculation && (
               <>
-                <BenefitCalculationPanel calculation={calculation} />
+                {/* Section tabs */}
+                <div className="flex gap-1 border-b border-gray-200 bg-white rounded-t-lg px-2 pt-2">
+                  {(
+                    [
+                      { key: 'summary', label: 'Summary' },
+                      { key: 'detail', label: 'Calculation Detail' },
+                      { key: 'options', label: 'Payment Options' },
+                      { key: 'history', label: 'History & Other' },
+                    ] as const
+                  ).map((tab) => (
+                    <button
+                      key={tab.key}
+                      onClick={() => setWorkspaceTab(tab.key)}
+                      className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+                        workspaceTab === tab.key
+                          ? 'bg-iw-sageLight text-iw-sage border-b-2 border-iw-sage'
+                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
 
-                <PaymentOptionsComparison
-                  options={calculation.payment_options}
-                  maritalStatus={member.marital_status}
-                />
+                {/* Summary tab */}
+                {workspaceTab === 'summary' && (
+                  <div className="space-y-6">
+                    {svcSummary && <ServiceCreditSummary summary={svcSummary} />}
 
-                {calculation.dro && <DROImpactPanel dro={calculation.dro} />}
+                    <div className="rounded-lg border border-gray-200 bg-white shadow-sm p-6">
+                      <div className="text-center">
+                        <p className="text-sm text-gray-500 mb-1">Maximum Monthly Benefit</p>
+                        <p className="text-4xl font-bold text-iw-navy tabular-nums">
+                          $
+                          {calculation.maximum_benefit.toLocaleString('en-US', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-2">
+                          {calculation.eligibility.best_eligible_type === 'EARLY'
+                            ? 'Early retirement — reduction applied'
+                            : 'Normal retirement — no reduction'}
+                          {calculation.dro ? ' — DRO in effect' : ''}
+                        </p>
+                      </div>
 
-                {isEarlyRetirement && scenario && (
-                  <ScenarioModeler
-                    scenarios={scenario.scenarios}
-                    currentRetirementDate={retirementDate}
-                  />
+                      <div className="mt-6 grid grid-cols-3 gap-4 border-t border-gray-100 pt-4 text-center">
+                        <div>
+                          <p className="text-xs text-gray-500">AMS</p>
+                          <p className="text-lg font-semibold text-gray-900">
+                            $
+                            {calculation.ams.amount.toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">100% J&S</p>
+                          <p className="text-lg font-semibold text-gray-900">
+                            $
+                            {(
+                              calculation.payment_options.js_100?.member_amount ?? 0
+                            ).toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">75% J&S</p>
+                          <p className="text-lg font-semibold text-gray-900">
+                            $
+                            {(calculation.payment_options.js_75?.member_amount ?? 0).toLocaleString(
+                              'en-US',
+                              { minimumFractionDigits: 2, maximumFractionDigits: 2 },
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-6">
-                  <DeathBenefitPanel deathBenefit={calculation.death_benefit} />
-                  <IPRCalculator ipr={calculation.ipr} medicareFlag={member.medicare_flag} />
-                </div>
+                {/* Calculation Detail tab */}
+                {workspaceTab === 'detail' && (
+                  <div className="space-y-6">
+                    {svcSummary && <ServiceCreditSummary summary={svcSummary} />}
+                    <BenefitCalculationPanel calculation={calculation} />
+                  </div>
+                )}
+
+                {/* Payment Options tab */}
+                {workspaceTab === 'options' && (
+                  <div className="space-y-6">
+                    <PaymentOptionsComparison
+                      options={calculation.payment_options}
+                      maritalStatus={member.marital_status}
+                    />
+                    {calculation.dro && <DROImpactPanel dro={calculation.dro} />}
+                  </div>
+                )}
+
+                {/* History & Other tab */}
+                {workspaceTab === 'history' && (
+                  <div className="space-y-6">
+                    {isEarlyRetirement && scenario && (
+                      <ScenarioModeler
+                        scenarios={scenario.scenarios}
+                        currentRetirementDate={retirementDate}
+                      />
+                    )}
+
+                    <div className="grid grid-cols-2 gap-6">
+                      <DeathBenefitPanel deathBenefit={calculation.death_benefit} />
+                      <IPRCalculator ipr={calculation.ipr} medicareFlag={member.medicare_flag} />
+                    </div>
+
+                    {employment && employment.length > 0 && (
+                      <EmploymentTimeline events={employment} />
+                    )}
+                  </div>
+                )}
               </>
             )}
 
-            {employment && employment.length > 0 && <EmploymentTimeline events={employment} />}
+            {/* Show employment timeline in summary if no calculation yet */}
+            {!calculation && !calcLoading && employment && employment.length > 0 && (
+              <EmploymentTimeline events={employment} />
+            )}
           </>
         )}
 
