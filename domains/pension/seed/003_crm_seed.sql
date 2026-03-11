@@ -541,6 +541,31 @@ INSERT INTO crm_conversation (
     '2026-03-10 17:00:00-07', FALSE,
     'legal_compliance', 'jsmith',
     '2026-01-10 14:30:00-07', '2026-02-05 10:30:00-07', 'jsmith', 'jsmith'
+),
+-- Conv 5: CCD contribution reporting question (Employer Portal)
+(
+    '00000000-0000-0000-6000-000000000005',
+    '00000000-0000-0000-0000-000000000001',
+    'EMPLOYER', '00000000-0000-0000-3000-000000000001',
+    'Contributions', 'Reporting',
+    'February 2026 contribution file — format change question',
+    'OPEN', NULL, NULL, NULL,
+    NULL, NULL, FALSE,
+    'employer_services', 'jsmith',
+    '2026-02-10 11:00:00-07', '2026-02-12 09:30:00-07', 'hr@ccd', 'jsmith'
+),
+-- Conv 6: CCD new hire enrollment inquiry (Employer Portal)
+(
+    '00000000-0000-0000-6000-000000000006',
+    '00000000-0000-0000-0000-000000000001',
+    'EMPLOYER', '00000000-0000-0000-3000-000000000001',
+    'Enrollment', 'New Hire',
+    'New hire batch — 3 employees starting March 2026',
+    'RESOLVED', '2026-02-20 16:00:00-07', 'jsmith',
+    'Enrollment forms received and processed for all 3 new hires. Benefits effective April 1, 2026.',
+    NULL, NULL, FALSE,
+    'employer_services', 'jsmith',
+    '2026-02-05 14:00:00-07', '2026-02-20 16:00:00-07', 'hr@ccd', 'jsmith'
 );
 
 
@@ -694,6 +719,66 @@ INSERT INTO crm_interaction (
     'Alternate payee Patricia Martinez called to inquire about status of DRO DR-2010-30214. Informed that order is under legal review, estimated 4-6 weeks for determination. Verified identity and mailing address on file.',
     'DRO-2026-0001', 'DRO_UNDER_REVIEW', 45, 'INTERNAL',
     '2026-02-05 10:25:00-07', 'jsmith'
+),
+-- 10. CCD employer: contribution file format question (Conv 5, employer portal)
+(
+    '00000000-0000-0000-7000-000000000010',
+    '00000000-0000-0000-0000-000000000001',
+    '00000000-0000-0000-6000-000000000005',
+    NULL, '00000000-0000-0000-3000-000000000001', NULL,
+    'SECURE_MESSAGE', 'INQUIRY', 'Contributions', 'Reporting',
+    NULL, 'INBOUND',
+    '2026-02-10 11:00:00-07', '2026-02-10 11:00:00-07', NULL,
+    NULL, NULL, NULL,
+    NULL, NULL,
+    'We noticed the contribution file template was updated for 2026. Can you confirm whether the new column for employee tier classification is required or optional? We want to make sure our February submission is accepted.',
+    NULL, NULL, NULL, 'PUBLIC',
+    '2026-02-10 11:00:00-07', 'hr@ccd'
+),
+-- 11. DERP staff reply to CCD contribution question (Conv 5)
+(
+    '00000000-0000-0000-7000-000000000011',
+    '00000000-0000-0000-0000-000000000001',
+    '00000000-0000-0000-6000-000000000005',
+    NULL, '00000000-0000-0000-3000-000000000001', 'jsmith',
+    'SECURE_MESSAGE', 'FOLLOW_UP', 'Contributions', 'Reporting',
+    'INFO_PROVIDED', 'OUTBOUND',
+    '2026-02-12 09:30:00-07', '2026-02-12 09:30:00-07', NULL,
+    NULL, NULL, NULL,
+    NULL, NULL,
+    'The tier classification column is optional for the February 2026 submission. It will become required starting with the April 2026 reporting period. We will send updated documentation next week.',
+    NULL, NULL, NULL, 'PUBLIC',
+    '2026-02-12 09:30:00-07', 'jsmith'
+),
+-- 12. CCD employer: new hire enrollment request (Conv 6, employer portal)
+(
+    '00000000-0000-0000-7000-000000000012',
+    '00000000-0000-0000-0000-000000000001',
+    '00000000-0000-0000-6000-000000000006',
+    NULL, '00000000-0000-0000-3000-000000000001', NULL,
+    'SECURE_MESSAGE', 'REQUEST', 'Enrollment', 'New Hire',
+    NULL, 'INBOUND',
+    '2026-02-05 14:00:00-07', '2026-02-05 14:00:00-07', NULL,
+    NULL, NULL, NULL,
+    NULL, NULL,
+    'We have 3 new employees starting March 3, 2026 in the Parks & Recreation department. Enrollment forms are attached. Please confirm receipt and expected benefits effective date.',
+    NULL, NULL, NULL, 'PUBLIC',
+    '2026-02-05 14:00:00-07', 'hr@ccd'
+),
+-- 13. DERP staff reply confirming enrollment processing (Conv 6)
+(
+    '00000000-0000-0000-7000-000000000013',
+    '00000000-0000-0000-0000-000000000001',
+    '00000000-0000-0000-6000-000000000006',
+    NULL, '00000000-0000-0000-3000-000000000001', 'jsmith',
+    'SECURE_MESSAGE', 'FOLLOW_UP', 'Enrollment', 'New Hire',
+    'RESOLVED', 'OUTBOUND',
+    '2026-02-20 16:00:00-07', '2026-02-20 16:00:00-07', NULL,
+    NULL, NULL, NULL,
+    NULL, NULL,
+    'All 3 enrollment forms have been processed. Benefits will be effective April 1, 2026, per the standard first-of-month-following-30-days rule. Welcome packets will be mailed to the employees directly.',
+    NULL, NULL, NULL, 'PUBLIC',
+    '2026-02-20 16:00:00-07', 'jsmith'
 );
 
 
