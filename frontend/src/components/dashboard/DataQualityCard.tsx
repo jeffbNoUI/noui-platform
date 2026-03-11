@@ -1,4 +1,5 @@
 import type { DQScore, DQIssue } from '@/types/DataQuality';
+import CollapsibleSection from '@/components/ui/CollapsibleSection';
 
 interface DataQualityCardProps {
   score?: DQScore;
@@ -24,40 +25,37 @@ export default function DataQualityCard({ score, memberIssues, isLoading }: Data
 
   if (isLoading && !score) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-white shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-2">Data Quality</h3>
+      <CollapsibleSection title="Data Quality">
         <p className="text-xs text-gray-400">Loading...</p>
-      </div>
+      </CollapsibleSection>
     );
   }
 
   if (!score && openIssues.length === 0) return null;
 
-  const cardBorder = hasOpenMemberIssues
-    ? 'border-amber-200 bg-amber-50/50'
-    : 'border-gray-200 bg-white';
+  const badgeText = hasOpenMemberIssues
+    ? `${openIssues.length} issue${openIssues.length > 1 ? 's' : ''}`
+    : score
+      ? `${score.overallScore.toFixed(0)}%`
+      : undefined;
 
   return (
-    <div className={`rounded-lg border shadow-sm ${cardBorder}`}>
-      {/* ── Header ───────────────────────────────────────────────────── */}
-      <div
-        className={`border-b px-5 py-3 flex items-center justify-between ${hasOpenMemberIssues ? 'border-amber-200' : 'border-gray-200'}`}
-      >
-        <h3
-          className={`text-sm font-semibold ${hasOpenMemberIssues ? 'text-amber-800' : 'text-gray-700'}`}
-        >
-          Data Quality
-        </h3>
-        {hasOpenMemberIssues && (
-          <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">
-            {openIssues.length} issue{openIssues.length > 1 ? 's' : ''}
-          </span>
-        )}
-      </div>
-
-      {/* ── Score summary ────────────────────────────────────────────── */}
+    <CollapsibleSection
+      title="Data Quality"
+      badge={badgeText}
+      className={`rounded-lg border shadow-sm overflow-hidden ${
+        hasOpenMemberIssues ? 'border-amber-200 bg-amber-50/50' : 'border-gray-200 bg-white'
+      }`}
+      titleClassName={`text-sm font-semibold ${hasOpenMemberIssues ? 'text-amber-800' : 'text-gray-700'}`}
+      badgeClassName={
+        hasOpenMemberIssues
+          ? 'text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full'
+          : 'rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600'
+      }
+    >
+      {/* Score summary */}
       {score && (
-        <div className="px-5 py-3 border-b border-gray-100">
+        <div className="mb-3 pb-3 border-b border-gray-100">
           <div className="flex items-baseline gap-2 mb-1">
             <span className={`text-2xl font-bold tabular-nums ${scoreColor(score.overallScore)}`}>
               {score.overallScore.toFixed(1)}%
@@ -76,16 +74,14 @@ export default function DataQualityCard({ score, memberIssues, isLoading }: Data
         </div>
       )}
 
-      {/* ── Member issues ────────────────────────────────────────────── */}
+      {/* Member issues */}
       {openIssues.length > 0 && (
         <div>
-          <div className="px-5 pt-2 pb-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
-              Issues for this member
-            </span>
-          </div>
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+            Issues for this member
+          </span>
           <div
-            className={`divide-y ${hasOpenMemberIssues ? 'divide-amber-100' : 'divide-gray-100'}`}
+            className={`mt-2 -mx-5 divide-y ${hasOpenMemberIssues ? 'divide-amber-100' : 'divide-gray-100'}`}
           >
             {openIssues.map((issue) => (
               <div key={issue.issueId} className="px-5 py-3">
@@ -105,6 +101,6 @@ export default function DataQualityCard({ score, memberIssues, isLoading }: Data
           </div>
         </div>
       )}
-    </div>
+    </CollapsibleSection>
   );
 }

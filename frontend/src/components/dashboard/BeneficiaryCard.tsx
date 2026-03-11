@@ -1,4 +1,5 @@
 import type { Beneficiary } from '@/types/Member';
+import CollapsibleSection from '@/components/ui/CollapsibleSection';
 
 interface BeneficiaryCardProps {
   beneficiaries?: Beneficiary[];
@@ -12,25 +13,23 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 export default function BeneficiaryCard({ beneficiaries, isLoading }: BeneficiaryCardProps) {
-  // Only show active beneficiaries (no end_date)
   const active = beneficiaries?.filter((b) => !b.end_date) ?? [];
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
-      <div className="border-b border-gray-200 px-5 py-3">
-        <h3 className="text-sm font-semibold text-gray-900">Beneficiaries</h3>
-      </div>
-
-      {isLoading && <div className="px-5 py-6 text-center text-sm text-gray-400">Loading...</div>}
+    <CollapsibleSection
+      title="Beneficiaries"
+      badge={isLoading ? undefined : active.length || undefined}
+    >
+      {isLoading && <div className="text-center text-sm text-gray-400">Loading...</div>}
 
       {!isLoading && active.length === 0 && (
-        <div className="px-5 py-6 text-center text-sm text-amber-600">
+        <div className="text-center text-sm text-amber-600">
           No beneficiary designations on file
         </div>
       )}
 
       {active.length > 0 && (
-        <div className="divide-y divide-gray-100">
+        <div className="-mx-5 -my-4 divide-y divide-gray-100">
           {active.map((b) => (
             <div key={b.bene_id} className="px-5 py-3 flex items-center justify-between">
               <div>
@@ -47,6 +46,6 @@ export default function BeneficiaryCard({ beneficiaries, isLoading }: Beneficiar
           ))}
         </div>
       )}
-    </div>
+    </CollapsibleSection>
   );
 }
