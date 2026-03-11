@@ -37,7 +37,7 @@ function assessConfidence(
     calculation?: any;
     employment?: any;
     serviceCredit?: any;
-  }
+  },
 ): ConfidenceSignal {
   const { calculation, employment } = data;
 
@@ -48,8 +48,7 @@ function assessConfidence(
 
     case 'eligibility':
       if (!calculation?.eligibility) return 'pending';
-      if (calculation.eligibility.best_eligible_type === 'EARLY')
-        return 'needs-review';
+      if (calculation.eligibility.best_eligible_type === 'EARLY') return 'needs-review';
       return 'pre-verified';
 
     case 'dro':
@@ -90,7 +89,7 @@ export function composeStages(
     calculation?: any;
     employment?: any;
     serviceCredit?: any;
-  }
+  },
 ): StageDescriptor[] {
   const d = data || {};
   const stages: StageDescriptor[] = [];
@@ -199,10 +198,17 @@ export function deriveCaseFlags(
   member?: any,
   calculation?: any,
   serviceCredit?: any,
-  caseFlags?: string[]
+  caseFlags?: string[],
 ): CaseFlags {
+  // When caseFlags are provided (case context), they are authoritative for
+  // conditional stages like DRO. A member may have DRO records but the current
+  // case may not be a DRO case (e.g., standard retirement for a member who also
+  // has a separate DRO case). Only fall back to calculation data when no case
+  // flags are available (e.g., ad-hoc benefit preview outside a case).
+  const hasCaseContext = !!caseFlags;
+
   return {
-    hasDRO: !!calculation?.dro?.has_dro || (caseFlags || []).includes('dro'),
+    hasDRO: hasCaseContext ? caseFlags!.includes('dro') : !!calculation?.dro?.has_dro,
     hasPurchasedService:
       (serviceCredit?.summary?.purchased_years || 0) > 0 ||
       (caseFlags || []).includes('purchased-service'),
