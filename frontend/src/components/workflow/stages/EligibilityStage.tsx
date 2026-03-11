@@ -16,7 +16,7 @@ export default function EligibilityStage({
   const tier = member?.tier_code || member?.tier || 1;
   const ruleThreshold = tier === 3 ? 85 : 75;
   const ruleLabel = tier === 3 ? 'Rule of 85' : 'Rule of 75';
-  const ruleSum = elig?.rule_of_75_sum || elig?.rule_of_85_sum || 0;
+  const ruleSum = elig?.rule_of_n_sum ?? elig?.rule_of_75_sum ?? elig?.rule_of_85_sum ?? 0;
   const met = elig?.best_eligible_type !== 'EARLY';
 
   return (

@@ -38,8 +38,9 @@ export const intelligenceAPI = {
       member_id: memberID,
       retirement_dates: retirementDates,
     }),
-  calculateDRO: (memberID: number) =>
+  calculateDRO: (memberID: number, retirementDate: string) =>
     postAPI(`${INTELLIGENCE_URL}/v1/dro/calculate`, {
       member_id: memberID,
+      retirement_date: retirementDate,
     }),
 };

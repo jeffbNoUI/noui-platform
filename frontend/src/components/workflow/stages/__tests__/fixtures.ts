@@ -47,6 +47,7 @@ export const mockCalculation: BenefitCalcResult = {
     vested: true,
     best_eligible_type: 'RULE_OF_75',
     eligible_normal: false,
+    rule_of_n_sum: 91.75,
     rule_of_75_sum: 91.75,
     age_at_retirement: { completed_years: 64, years: 64, months: 11, decimal: 64.92 },
     reduction_pct: 0,
