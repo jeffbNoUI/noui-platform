@@ -1,19 +1,72 @@
 # Next Session Starter
 
-## Current State (as of 2026-03-10)
+## Current State (as of 2026-03-11)
 
-**PR #19 merged. Full-stack integration is COMPLETE.** All demo data has been replaced with live PostgreSQL-backed APIs. Do NOT re-assess or re-plan integration phases.
+**Branch `claude/competent-banzai` has 4 bug-fix commits ready for PR.** These fix 3 bugs found during E2E workflow testing of the 4 seeded retirement cases, plus 1 additional bug discovered during live verification.
 
-**What's built and running on main:**
+### Commits on this branch (oldest → newest):
+
+1. **`4f28494`** — `[platform/intelligence] Fix Rule of N sum missing from eligibility response`
+   - Added `RuleOfNSum` field to Go `EligibilityResult` struct + set it in `EvaluateEligibility()`
+   - Added `rule_of_n_sum` to frontend `EligibilityResult` type
+   - Updated `EligibilityStage.tsx` to read new field with backward-compatible fallback
+   - Added RuleOfNSum assertions to Go eligibility tests + frontend test fixtures
+
+2. **`93d1ff4`** — `[frontend] Fix DRO stage appearing on non-DRO cases in deriveCaseFlags`
+   - Root cause: `deriveCaseFlags()` OR'd case flags with member-level DRO data
+   - Fix: Case flags are authoritative when present; member data is fallback only
+   - Created `workflowComposition.test.ts` with 7 regression tests
+
+3. **`54c6326`** — `[platform/intelligence + frontend] Fix DRO payment calculation using wrong retirement date`
+   - Added `retirement_date` to `DROCalcRequest` struct (required field)
+   - Handler now validates and parses date instead of using `time.Now()`
+   - Frontend `calculateDRO` API updated to pass retirement date
+
+4. **`ecd1a93`** — `[platform/intelligence] Fix DRO date parsing — dataaccess returns RFC3339, not bare dates`
+   - Root cause: `fetchDRO()` parsed dates with `"2006-01-02"` but dataaccess returns `"1999-08-15T00:00:00Z"`
+   - Silent parse failure left zero-value dates → negative marital fractions → $85K inflated payments
+   - Added `parseFlexDate()` helper that tries bare date then RFC3339
+
+### Verified results:
+- Martinez eligibility: `rule_of_n_sum = 91.75` (was 0.00)
+- Martinez standard case: 7 stages, no DRO (was showing DRO stage incorrectly)
+- Martinez DRO case: 8 stages, DRO Division included correctly
+- Martinez DRO benefit: `member_benefit_after_dro = $2,213.35` (was $85,238.94)
+- 18/18 Go intelligence tests pass
+- 204/204 frontend tests pass (including 7 new workflowComposition tests)
+
+## First Action: Create PR
+
+These 4 commits are tested, verified, and ready. Create a PR against `main`:
+
+```bash
+git push -u origin claude/competent-banzai
+gh pr create --title "Fix 3 E2E bugs: Rule of N sum, DRO stage visibility, DRO date parsing" --body "..."
+```
+
+## What's built and running on main:
+
 - 10-service Docker Compose stack: 7 Go services + PostgreSQL + connector + nginx frontend
 - All 12 PostgreSQL init scripts (schema + seed) run on first boot
-- Staff Portal work queue showing 4 live retirement cases from `platform/casemanagement/` (port 8088)
-- Member Dashboard with 8 cards — all showing live data (no demo fallback anywhere)
-- CRM, Correspondence, Data Quality, Case Management all wired to real APIs
-- `demoData.ts` deleted — all frontend data comes from Go services
-- 197/197 frontend tests passing, all Go services build clean, 9/9 CI checks green
+- Staff Portal work queue showing 4 live retirement cases
+- Member Dashboard with 8 cards — all showing live data
+- 197/197 frontend tests on main (204/204 on this branch with new tests)
 
-**Services:**
+## What to Work On After PR Merge
+
+### Option A: Interaction Detail Panel
+An approved plan exists at `.claude/plans/shiny-inventing-allen.md` and prompt at `.claude/prompts/interaction-detail-panel.md`. This adds a click-to-expand detail panel to the interaction history card with spawn-from-row animation. 3 new files, 2 modified files.
+
+### Option B: Case Management Go Tests
+`platform/casemanagement/` has zero test coverage. Adding handler tests would match patterns in `platform/crm/api/handlers_test.go`.
+
+### Option C: E2E Workflow Stage Advancement
+Click through the full 7/8-stage workflow in the browser: advance stages via `POST /api/v1/cases/{id}/advance`, verify stage transitions, audit trail, and that eligibility/benefit data renders correctly at each stage.
+
+### Option D: User's Choice
+The platform is at a stable milestone with all critical calculation bugs fixed.
+
+## Services Reference
 
 | Service | Port | Status |
 |---------|------|--------|
@@ -26,38 +79,14 @@
 | `platform/casemanagement` | 8088 | Live — case workflow, 7 stages, work queue |
 | `connector` | 8090 | Live — schema introspection |
 
-**Known issue:** `npx tsc --noEmit` reports type errors in test fixture files (`BenefitStage.test.tsx`, `ElectionStage.test.tsx`, etc.) where mock `eligibility` objects are intentionally incomplete. Tests pass at runtime — this is a test data typing issue, not a bug.
-
 ## Build Verification
 
-Run these to confirm the codebase is green before starting work:
-
 ```bash
-# Frontend (tests are the reliable gate — tsc has known test fixture type warnings)
-cd frontend && npm test -- --run
+# Frontend
+cd frontend && npx tsc --noEmit && npm test -- --run
 
-# Go services (each independent module)
-cd platform/dataaccess && go build ./... && go test ./...
+# Go services
 cd platform/intelligence && go build ./... && go test ./...
-cd platform/crm && go build ./... && go test ./...
+cd platform/dataaccess && go build ./... && go test ./...
 cd platform/casemanagement && go build ./...
 ```
-
-## What to Work On Next
-
-Choose one of these based on what the user wants:
-
-### Option A: Fix Test Fixture Types
-The `tsc --noEmit` warnings in test files are low-hanging fruit. The mock `eligibility` objects in `BenefitStage.test.tsx` and similar files are missing fields from `EligibilityResult`. Fix by either using `Partial<EligibilityResult>` with type assertions or creating test factory functions. Small, clean task.
-
-### Option B: End-to-End Workflow Testing
-Click through cases in the browser: open a case from the work queue, advance stages, verify the full 7-stage workflow from Application Intake to Certification. This would exercise the case management API's `POST /api/v1/cases/{id}/advance` endpoint and verify the stage transition audit trail.
-
-### Option C: Case Management Polish
-The casemanagement service has no Go tests yet (`[no test files]` for all packages). Adding handler tests and data access tests would match the pattern established in `platform/crm/api/handlers_test.go` and `platform/dataaccess/api/handlers_test.go`.
-
-### Option D: Member Portal CRM Messaging
-`crmDemoData.ts` still provides cross-portal messaging data (conversations, staff notes, member messages). Wire the Member Portal conversation view to the real CRM API so members see their actual interaction history.
-
-### Option E: User's Choice
-The platform is at a stable milestone — all services running, all integrations live, full Docker stack verified. Good time for new features, polish, or hardening.

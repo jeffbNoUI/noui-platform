@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useDemoInteraction } from '@/hooks/useCRM';
+import { usePortalInteraction } from '@/hooks/useCRM';
 import { useSpawnAnimation } from '@/hooks/useSpawnAnimation';
 import { CHANNEL_ICONS, CHANNEL_LABELS, OUTCOME_STYLES, OUTCOME_LABELS } from '@/lib/channelMeta';
 import type { TimelineEntry, Note, Commitment } from '@/types/CRM';
@@ -17,7 +17,7 @@ export default function InteractionDetailPanel({
   sourceRect,
   onClose,
 }: InteractionDetailPanelProps) {
-  const { data: interaction, isLoading } = useDemoInteraction(interactionId);
+  const { data: interaction, isLoading } = usePortalInteraction(interactionId);
   const { panelRef, isVisible, style, open, close } = useSpawnAnimation();
 
   const handleClose = () => {

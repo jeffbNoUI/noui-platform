@@ -22,10 +22,10 @@ vi.mock('@/hooks/useSpawnAnimation', () => ({
   }),
 }));
 
-// Mock useDemoInteraction
-const mockUseDemoInteraction = vi.fn();
+// Mock usePortalInteraction
+const mockUsePortalInteraction = vi.fn();
 vi.mock('@/hooks/useCRM', () => ({
-  useDemoInteraction: (...args: unknown[]) => mockUseDemoInteraction(...args),
+  usePortalInteraction: (...args: unknown[]) => mockUsePortalInteraction(...args),
 }));
 
 const defaultProps = {
@@ -38,7 +38,7 @@ const defaultProps = {
 describe('InteractionDetailPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseDemoInteraction.mockReturnValue({
+    mockUsePortalInteraction.mockReturnValue({
       data: mockInteraction,
       isLoading: false,
     });
@@ -62,7 +62,7 @@ describe('InteractionDetailPanel', () => {
   });
 
   it('shows loading state', () => {
-    mockUseDemoInteraction.mockReturnValue({ data: undefined, isLoading: true });
+    mockUsePortalInteraction.mockReturnValue({ data: undefined, isLoading: true });
     renderWithProviders(<InteractionDetailPanel {...defaultProps} />);
     expect(screen.getByText('Loading details...')).toBeInTheDocument();
   });
@@ -151,7 +151,7 @@ describe('InteractionDetailPanel', () => {
   });
 
   it('shows empty state when no details exist', () => {
-    mockUseDemoInteraction.mockReturnValue({
+    mockUsePortalInteraction.mockReturnValue({
       data: mockInteractionMinimal,
       isLoading: false,
     });
@@ -192,7 +192,7 @@ describe('InteractionDetailPanel', () => {
   });
 
   it('shows dash for duration when not provided', () => {
-    mockUseDemoInteraction.mockReturnValue({
+    mockUsePortalInteraction.mockReturnValue({
       data: mockInteractionMinimal,
       isLoading: false,
     });

@@ -1,5 +1,115 @@
 # noui-platform — Build History
 
+## Case Management Go Tests — 52/52 Pass (2026-03-11)
+
+**Result:** Added db-level Store tests and handler edge case tests for the case management service. Total test count: 52 (32 handler + 20 db-level).
+
+**New test files:**
+
+| File | Tests | Coverage |
+|------|-------|----------|
+| `db/cases_test.go` | 17 | ListCases (5 filter combos), GetCase (null member, not found), AdvanceStage (final stage, success, not found), GetStageHistory (DESC ordering), GetCaseFlags (empty, multiple), CreateCase (with/without flags), UpdateCase (no-op, multi-field) |
+| `db/stages_test.go` | 3 | ListStages (all 7 stages), GetStage (valid, not found) |
+
+**New handler edge cases (in `api/handlers_test.go`):**
+
+| Test | What It Validates |
+|------|-------------------|
+| TestListCases_FilterCombination | HTTP with combined status + priority query params |
+| TestAdvanceStage_FinalStage_HTTP | HTTP 400 with ADVANCE_ERROR when case at final stage |
+| TestGetCase_NullMemberJoin | HTTP 200 with COALESCE defaults for missing member data |
+| TestListCases_WithAssignedToFilter | assigned_to query parameter flows through to Store |
+
+**Other changes:**
+- Promoted `go-sqlmock` from indirect to direct dependency in `go.mod`
+- Ran `go mod tidy`
+
+**Verification:** `go test ./... -v -count=1` → 52/52 pass (api: 32, db: 20)
+
+---
+
+## E2E Workflow Testing — All 4 Cases Completed (2026-03-11)
+
+**Result:** Full end-to-end browser testing of the 7-stage retirement workflow. All 4 seeded cases advanced to Final Certification via live Docker stack. 14 audit trail entries verified.
+
+**Cases tested:**
+| Case | Member | Path | Key Validation |
+|------|--------|------|----------------|
+| RET-2026-0159 | David Washington (T3) | Stage 1→6, full path | Auto-skip Marital Share (2 POSTs in 17ms) |
+| RET-2026-0152 | Jennifer Kim (T2) | Stage 2→6 | Auto-skip + purchased service in calc (21.17y vs 18.17y earned) |
+| DRO-2026-0031 | Robert Martinez DRO (T1) | Stage 3→6 | DRO Division NOT skipped (single POST, no auto-skip) |
+| RET-2026-0147 | Robert Martinez (T1) | Stage 4→6, short path | 2 advances to Certification |
+
+**Stage advancement verified:**
+- Single-step advances work correctly
+- Auto-skip fires sequential POSTs (~16ms apart) with "Stage not applicable for this case" audit note
+- DRO flag correctly prevents auto-skip of Marital Share stage
+- Frontend-only stages (Salary & AMS, Scenario Comparison) advance UI without backend calls
+- Certify & Submit button wired and working (8/8 confirmed for all cases)
+- Audit trail: 14 transitions total, all with correct from/to stages, timestamps, transitionedBy
+
+**Bugs found:**
+1. **Rule sum display = 0.00** (intelligence API) — Rule of 75/85 displays "0.00" instead of actual age+service sum. Determination (Met/Not Met) and reduction calculations are correct — display-only bug.
+2. **DRO stage on non-DRO case** (frontend) — RET-2026-0147 (flags: leave-payout only) shows DRO Division as completed stage. `computeInitialState()` likely includes DRO when backend stageIdx > 3 regardless of flags.
+3. **Payment amounts inflated** (intelligence API) — Standard Robert Martinez case shows DRO-adjusted amounts ($85K+ vs expected $2,962). Intelligence service returns DRO data per-member not per-case.
+4. **DRO seed data placeholder** — Marriage dates "12/31/1", negative marital fractions. Expected — DRO engine not implemented.
+5. **KB 404 for scenario stage** — `/api/v1/kb/stages/scenario` returns 404. Expected — no KB article for frontend-only stage.
+
+**Data accuracy verified:**
+- Jennifer Kim: 27% early retirement reduction correct (T2: 3%/yr × 9yr under 65)
+- Jennifer Kim: Purchased service (3y) in benefit calc, excluded from IPR ✓
+- David Washington: T3 60-month AMS window, 1.5% multiplier ✓
+- Robert Martinez: T1 36-month AMS window, 2.0% multiplier ✓
+
+---
+
+## Housekeeping Sprint (2026-03-11)
+
+**Result:** Cleaned up accumulated debt from rapid feature development.
+
+**Changes:**
+- Deleted orphaned `MemberDetailsCard.tsx` (zero imports since PR #25 progressive disclosure refactor)
+- Closed stale PR #2 (`claude/upbeat-hellman` — "Add interaction detail panel with spawn animation") — superseded by existing InteractionDetailPanel in main
+- Deleted remote branch `origin/claude/upbeat-hellman`
+
+**Previously reported issues now resolved:**
+- useMemberDashboard commitments crash — fixed in PR #21 (commit c35f7f0)
+- React act() warnings — no act() calls exist; tests use renderWithProviders pattern
+
+**Verification:** 222/222 frontend tests pass, TypeScript clean.
+
+---
+
+## Option F: Wire useAdvanceStage — Backend-Connected Stage Workflow (2026-03-11)
+
+**Result:** Frontend RetirementApplication stage navigation now persists to the backend case management API. Three bugs fixed, stage mapping translation layer created.
+
+**Bug Fixes:**
+- **Bug #2 (SubmitStage.tsx):** "Certify & Submit" button had no `onClick` handler — added `onSubmit` prop wired to `advance()`
+- **Bug #3 (handlers.go):** Advance endpoint accepted empty `transitionedBy`, creating blank audit entries — added server-side validation
+
+**Stage Mapping Translation Layer (`stageMapping.ts`):**
+- Maps between 7-9 dynamic frontend stages and 7 fixed backend stages
+- Auto-skip logic: non-DRO cases auto-advance through Marital Share (backend stage 3) with audit note
+- Frontend-only stages (`salary-ams`, `scenario`) advance UI position without backend calls
+- 5 exported functions: `getBackendStageIdx`, `isAutoSkipStage`, `computeAdvanceSequence`, `frontendIdxFromBackendIdx`, `computeInitialState`
+- 25 unit tests covering all mapping functions and edge cases
+
+**RetirementApplication.tsx Wiring:**
+- Initializes stage position from backend `caseData.stageIdx` on load
+- Re-syncs when stage count changes (handles DRO flag resolving late from calculation API)
+- `advance()` is now async — computes advance sequence, fires sequential `POST /advance` calls
+- "Saving..." indicator shown during backend mutations
+
+**Verification:**
+- Browser: Robert Martinez (Stage 8/8 Final Certification) — correct for backend stage 6
+- Browser: Jennifer Kim — clicked Confirm & Continue at Eligibility, auto-skip fired 2 POST /advance calls (2→3, 3→4), backend history shows "Stage not applicable for this case"
+- 222/222 frontend tests pass, Go build+vet clean, zero console errors
+
+**Files changed:** 5 modified, 2 new (`stageMapping.ts`, `stageMapping.test.ts`)
+
+---
+
 ## PR #19: Case Management + CRM Polish + Dashboard Tests — MERGED (2026-03-10)
 
 **Result:** Three workstreams delivered in a single PR. All 9 CI checks green. Docker Compose verified with 10 services + PostgreSQL.

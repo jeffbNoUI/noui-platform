@@ -13,6 +13,7 @@ import NoteEditor from '@/components/NoteEditor';
 import MemberBanner from '@/components/MemberBanner';
 import BenefitCalculationPanel from '@/components/BenefitCalculationPanel';
 import CaseJournalPanel from '@/components/CaseJournalPanel';
+import CollapsibleSection from '@/components/ui/CollapsibleSection';
 
 // ── Contact type badge config ───────────────────────────────────────────────
 
@@ -25,10 +26,16 @@ const contactTypeBadge: Record<string, { label: string; color: string }> = {
 
 const securityFlagConfig: Record<string, { label: string; color: string }> = {
   fraud_alert: { label: 'Fraud Alert', color: 'bg-red-100 border-red-300 text-red-800' },
-  pending_divorce: { label: 'Pending Divorce', color: 'bg-orange-100 border-orange-300 text-orange-800' },
+  pending_divorce: {
+    label: 'Pending Divorce',
+    color: 'bg-orange-100 border-orange-300 text-orange-800',
+  },
   suspected_death: { label: 'Suspected Death', color: 'bg-red-100 border-red-300 text-red-800' },
   legal_hold: { label: 'Legal Hold', color: 'bg-red-100 border-red-300 text-red-800' },
-  restricted_access: { label: 'Restricted Access', color: 'bg-red-100 border-red-300 text-red-800' },
+  restricted_access: {
+    label: 'Restricted Access',
+    color: 'bg-red-100 border-red-300 text-red-800',
+  },
 };
 
 export default function CRMWorkspace() {
@@ -129,115 +136,119 @@ export default function CRMWorkspace() {
         {/* Contact loaded */}
         {contact && (
           <div className={showJournal ? 'grid grid-cols-[1fr_380px] gap-6' : ''}>
-          <div className="space-y-6">
-            {/* Contact banner */}
-            <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-100 text-lg font-bold text-brand-700">
-                    {contact.firstName[0]}{contact.lastName[0]}
+            <div className="space-y-6">
+              {/* Contact banner */}
+              <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-100 text-lg font-bold text-brand-700">
+                      {contact.firstName[0]}
+                      {contact.lastName[0]}
+                    </div>
+                    <div>
+                      <h1 className="text-xl font-semibold text-gray-900">
+                        {contact.firstName}
+                        {contact.middleName ? ` ${contact.middleName}` : ''} {contact.lastName}
+                        {contact.suffix ? ` ${contact.suffix}` : ''}
+                      </h1>
+                      <p className="text-sm text-gray-500">
+                        Contact ID: {contact.contactId}
+                        {contact.legacyMemberId && (
+                          <> &middot; Legacy ID: {contact.legacyMemberId}</>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    {badge && (
+                      <span
+                        className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${badge.color}`}
+                      >
+                        {badge.label}
+                      </span>
+                    )}
+                    {contact.identityVerified && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800">
+                        <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path
+                            fillRule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        Verified
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Security flag warning */}
+                {secFlag && (
+                  <div
+                    className={`mt-3 flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium ${secFlag.color}`}
+                  >
+                    <svg className="h-4 w-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path
+                        fillRule="evenodd"
+                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    {secFlag.label}
+                    {contact.securityFlagNote && (
+                      <span className="font-normal"> &mdash; {contact.securityFlagNote}</span>
+                    )}
+                  </div>
+                )}
+
+                {/* Contact details */}
+                <div className="mt-3 grid grid-cols-4 gap-4 border-t border-gray-100 pt-3 text-sm">
+                  <div>
+                    <span className="text-gray-500">Phone</span>
+                    <p className="font-medium">{contact.primaryPhone || 'Not on file'}</p>
                   </div>
                   <div>
-                    <h1 className="text-xl font-semibold text-gray-900">
-                      {contact.firstName}
-                      {contact.middleName ? ` ${contact.middleName}` : ''}{' '}
-                      {contact.lastName}
-                      {contact.suffix ? ` ${contact.suffix}` : ''}
-                    </h1>
-                    <p className="text-sm text-gray-500">
-                      Contact ID: {contact.contactId}
-                      {contact.legacyMemberId && (
-                        <> &middot; Legacy ID: {contact.legacyMemberId}</>
-                      )}
+                    <span className="text-gray-500">Email</span>
+                    <p className="font-medium truncate">{contact.primaryEmail || 'Not on file'}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Preferred Channel</span>
+                    <p className="font-medium capitalize">
+                      {contact.preferredChannel.replace(/_/g, ' ')}
                     </p>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  {badge && (
-                    <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${badge.color}`}>
-                      {badge.label}
-                    </span>
-                  )}
-                  {contact.identityVerified && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800">
-                      <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                        <path
-                          fillRule="evenodd"
-                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      Verified
-                    </span>
-                  )}
+                  <div>
+                    <span className="text-gray-500">Language</span>
+                    <p className="font-medium">{contact.preferredLanguage}</p>
+                  </div>
                 </div>
               </div>
 
-              {/* Security flag warning */}
-              {secFlag && (
-                <div className={`mt-3 flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium ${secFlag.color}`}>
-                  <svg className="h-4 w-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path
-                      fillRule="evenodd"
-                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  {secFlag.label}
-                  {contact.securityFlagNote && (
-                    <span className="font-normal"> &mdash; {contact.securityFlagNote}</span>
-                  )}
-                </div>
+              {/* Member pension integration (shown only for member contacts) */}
+              {contact.contactType === 'member' && member && (
+                <CollapsibleSection title="Pension Data" badge={`Member ${member.member_id}`}>
+                  <div className="space-y-4 -mx-5 -my-4 px-5 py-4">
+                    <MemberBanner member={member} />
+                    {calculation && <BenefitCalculationPanel calculation={calculation} />}
+                  </div>
+                </CollapsibleSection>
               )}
 
-              {/* Contact details */}
-              <div className="mt-3 grid grid-cols-4 gap-4 border-t border-gray-100 pt-3 text-sm">
-                <div>
-                  <span className="text-gray-500">Phone</span>
-                  <p className="font-medium">{contact.primaryPhone || 'Not on file'}</p>
-                </div>
-                <div>
-                  <span className="text-gray-500">Email</span>
-                  <p className="font-medium truncate">{contact.primaryEmail || 'Not on file'}</p>
-                </div>
-                <div>
-                  <span className="text-gray-500">Preferred Channel</span>
-                  <p className="font-medium capitalize">{contact.preferredChannel.replace(/_/g, ' ')}</p>
-                </div>
-                <div>
-                  <span className="text-gray-500">Language</span>
-                  <p className="font-medium">{contact.preferredLanguage}</p>
-                </div>
-              </div>
-            </div>
+              {/* Two-column layout */}
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                {/* Left column: Timeline + Conversations */}
+                <div className="space-y-6">
+                  <InteractionTimeline
+                    contactId={selectedContactId}
+                    onSelectInteraction={handleSelectInteraction}
+                  />
 
-            {/* Member pension integration (shown only for member contacts) */}
-            {contact.contactType === 'member' && member && (
-              <div className="space-y-6">
-                <MemberBanner member={member} />
-                {calculation && <BenefitCalculationPanel calculation={calculation} />}
-              </div>
-            )}
-
-            {/* Two-column layout */}
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              {/* Left column: Timeline + Conversations */}
-              <div className="space-y-6">
-                <InteractionTimeline
-                  contactId={selectedContactId}
-                  onSelectInteraction={handleSelectInteraction}
-                />
-
-                {/* Conversation list */}
-                <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
-                  <div className="border-b border-gray-200 px-6 py-4">
-                    <h2 className="text-lg font-semibold text-gray-900">Conversations</h2>
-                    <p className="text-sm text-gray-500">
-                      {conversationList.length} conversation{conversationList.length !== 1 ? 's' : ''}
-                    </p>
-                  </div>
-                  <div className="px-6 py-4">
+                  {/* Conversation list */}
+                  <CollapsibleSection
+                    title="Conversations"
+                    badge={conversationList.length || undefined}
+                  >
                     {conversationList.length === 0 ? (
                       <p className="text-center text-sm text-gray-500 py-4">No conversations.</p>
                     ) : (
@@ -266,12 +277,17 @@ export default function CRMWorkspace() {
                                   <span className="text-sm font-medium text-gray-800 truncate">
                                     {conv.subject || 'Untitled'}
                                   </span>
-                                  <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[conv.status] || 'bg-gray-100 text-gray-600'}`}>
+                                  <span
+                                    className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[conv.status] || 'bg-gray-100 text-gray-600'}`}
+                                  >
                                     {conv.status}
                                   </span>
                                 </div>
                                 <div className="mt-0.5 flex items-center gap-2 text-xs text-gray-500">
-                                  <span>{conv.interactionCount} interaction{conv.interactionCount !== 1 ? 's' : ''}</span>
+                                  <span>
+                                    {conv.interactionCount} interaction
+                                    {conv.interactionCount !== 1 ? 's' : ''}
+                                  </span>
                                   {conv.slaBreached && (
                                     <span className="font-medium text-red-600">SLA Breached</span>
                                   )}
@@ -282,66 +298,65 @@ export default function CRMWorkspace() {
                         })}
                       </ul>
                     )}
-                  </div>
+                  </CollapsibleSection>
+
+                  {/* Selected conversation detail */}
+                  {selectedConversationId && (
+                    <ConversationPanel
+                      conversationId={selectedConversationId}
+                      onSelectInteraction={handleSelectInteraction}
+                    />
+                  )}
                 </div>
 
-                {/* Selected conversation detail */}
-                {selectedConversationId && (
-                  <ConversationPanel
-                    conversationId={selectedConversationId}
-                    onSelectInteraction={handleSelectInteraction}
-                  />
-                )}
-              </div>
+                {/* Right column: Commitments + Outreach + Note Editor */}
+                <div className="space-y-6">
+                  <CommitmentTracker contactId={selectedContactId} />
 
-              {/* Right column: Commitments + Outreach + Note Editor */}
-              <div className="space-y-6">
-                <CommitmentTracker contactId={selectedContactId} />
+                  <OutreachQueue contactId={selectedContactId} />
 
-                <OutreachQueue contactId={selectedContactId} />
-
-                {/* Note editor (shown when an interaction is selected) */}
-                {selectedInteractionId && (
-                  <>
-                    {!showNoteEditor ? (
-                      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-gray-700">
-                              Interaction selected: <span className="font-mono text-xs text-gray-500">{selectedInteractionId}</span>
-                            </p>
+                  {/* Note editor (shown when an interaction is selected) */}
+                  {selectedInteractionId && (
+                    <>
+                      {!showNoteEditor ? (
+                        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-gray-700">
+                                Interaction selected:{' '}
+                                <span className="font-mono text-xs text-gray-500">
+                                  {selectedInteractionId}
+                                </span>
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setShowNoteEditor(true)}
+                              className="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 transition-colors"
+                            >
+                              Add Note
+                            </button>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => setShowNoteEditor(true)}
-                            className="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 transition-colors"
-                          >
-                            Add Note
-                          </button>
                         </div>
-                      </div>
-                    ) : (
-                      <NoteEditor
-                        interactionId={selectedInteractionId}
-                        onSaved={() => setShowNoteEditor(false)}
-                        onCancel={() => setShowNoteEditor(false)}
-                      />
-                    )}
-                  </>
-                )}
+                      ) : (
+                        <NoteEditor
+                          interactionId={selectedInteractionId}
+                          onSaved={() => setShowNoteEditor(false)}
+                          onCancel={() => setShowNoteEditor(false)}
+                        />
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Case Journal (right sidebar when toggled) */}
-          {showJournal && (
-            <div className="sticky top-4 self-start">
-              <CaseJournalPanel
-                contactId={selectedContactId}
-                memberId={contact.legacyMemberId}
-              />
-            </div>
-          )}
+            {/* Case Journal (right sidebar when toggled) */}
+            {showJournal && (
+              <div className="sticky top-4 self-start">
+                <CaseJournalPanel contactId={selectedContactId} memberId={contact.legacyMemberId} />
+              </div>
+            )}
           </div>
         )}
       </main>

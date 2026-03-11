@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import {
   useContactByMemberId,
-  useResolveDemoContact,
+  useContact,
   useFullTimeline,
   useMemberConversations,
   useAllConversationInteractions,
@@ -45,11 +45,10 @@ export default function CaseJournalPanel({
   const [selectedConvId, setSelectedConvId] = useState('');
   const [summaryOpen, setSummaryOpen] = useState(true);
 
-  // Resolve to a demo contact. Try memberId first, then fall back to the
-  // propContactId (which may be an API-generated ID, a demo ID, or a name).
-  // All data hooks read from the in-memory demo store keyed by demo contact IDs.
+  // Resolve contact via API. Try memberId first (legacy lookup), then fall
+  // back to propContactId (direct UUID lookup).
   const { data: resolvedByMember } = useContactByMemberId(memberId ?? '');
-  const { data: resolvedByProp } = useResolveDemoContact(propContactId ?? '');
+  const { data: resolvedByProp } = useContact(propContactId ?? '');
   const resolvedContact = resolvedByMember || resolvedByProp;
   const effectiveContactId = resolvedContact?.contactId || propContactId || '';
 

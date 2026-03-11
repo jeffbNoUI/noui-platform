@@ -71,10 +71,10 @@ func TestCalculateAge(t *testing.T) {
 
 func TestCalculateEarnedService(t *testing.T) {
 	tests := []struct {
-		name     string
-		hire     string
-		end      string
-		expected float64
+		name      string
+		hire      string
+		end       string
+		expected  float64
 		tolerance float64
 	}{
 		// Case 1: Robert Martinez Jun 15, 1997 to Apr 1, 2026 = 28yr 9mo
@@ -131,6 +131,10 @@ func TestEvaluateEligibility_Case1_Martinez(t *testing.T) {
 	if result.ReductionFactor != 1.0 {
 		t.Errorf("Martinez reduction factor = %.4f, want 1.0000", result.ReductionFactor)
 	}
+	// RuleOfNSum must be populated (age 63.07 + service 28.75 ≈ 91.82)
+	if result.RuleOfNSum < 90.0 || result.RuleOfNSum > 93.0 {
+		t.Errorf("Martinez RuleOfNSum = %.2f, want ~91.8", result.RuleOfNSum)
+	}
 }
 
 func TestEvaluateEligibility_Case2_Kim(t *testing.T) {
@@ -166,6 +170,10 @@ func TestEvaluateEligibility_Case2_Kim(t *testing.T) {
 	}
 	if result.ReductionFactor != 0.70 {
 		t.Errorf("Kim reduction factor = %.4f, want 0.7000", result.ReductionFactor)
+	}
+	// RuleOfNSum must be populated (age 55.86 + service 18.17 ≈ 74.03)
+	if result.RuleOfNSum < 73.0 || result.RuleOfNSum > 75.0 {
+		t.Errorf("Kim RuleOfNSum = %.2f, want ~74.0", result.RuleOfNSum)
 	}
 }
 
@@ -263,8 +271,8 @@ func TestPurchasedServiceExcludedFromRuleOf75(t *testing.T) {
 	svcCredit := models.ServiceCreditData{
 		EarnedYears:      17.0,
 		PurchasedYears:   4.0,
-		EligibilityYears: 17.0,  // Earned only
-		BenefitYears:     21.0,  // Earned + purchased
+		EligibilityYears: 17.0, // Earned only
+		BenefitYears:     21.0, // Earned + purchased
 		TotalYears:       21.0,
 	}
 	retDate := parseDate("2026-01-01")

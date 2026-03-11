@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { crmAPI } from '@/lib/crmApi';
 import type { PaginatedResult } from '@/lib/apiClient';
-import * as demo from '@/lib/crmDemoData';
 import type {
   Contact,
   ContactTimeline,
@@ -25,13 +24,11 @@ import type {
   OutreachListParams,
   ConversationListParams,
   OrgListParams,
-} from '@/types/CRM';
-import type {
   CreatePortalMessageData,
   CreateConversationData,
   CreateStaffNoteData,
   CreateStructuredNoteData,
-} from '@/lib/crmDemoData';
+} from '@/types/CRM';
 
 // ─── Query hooks ─────────────────────────────────────────────────────────────
 
@@ -241,10 +238,10 @@ export function useUpdateOutreach() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Portal-specific hooks — use in-memory demo data for cross-portal demos.
+// Portal-specific hooks — hit the real CRM API (PostgreSQL).
 // These hooks power the member message center, staff journal, and employer
-// communications views. They share the same mutable data store so mutations
-// in one portal are immediately visible in the others via query invalidation.
+// communications views. Mutations in one portal are visible in the others
+// via React Query cache invalidation on the ['crm', 'portal'] prefix.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export function useContactByMemberId(memberId: string) {
@@ -252,23 +249,6 @@ export function useContactByMemberId(memberId: string) {
     queryKey: ['crm', 'portal', 'contact-by-member', memberId],
     queryFn: () => crmAPI.getContactByLegacyId(memberId),
     enabled: memberId.length > 0,
-  });
-}
-
-/** Resolve any identifier (contactId, legacyMemberId, name) to a demo contact. */
-export function useResolveDemoContact(identifier: string) {
-  return useQuery<Contact | undefined>({
-    queryKey: ['crm', 'portal', 'resolve-contact', identifier],
-    queryFn: () => demo.resolveDemoContact(identifier),
-    enabled: identifier.length > 0,
-  });
-}
-
-export function usePublicTimeline(contactId: string) {
-  return useQuery<ContactTimeline>({
-    queryKey: ['crm', 'portal', 'public-timeline', contactId],
-    queryFn: () => demo.getPublicTimeline(contactId),
-    enabled: contactId.length > 0,
   });
 }
 
@@ -291,13 +271,31 @@ export function useMemberConversations(memberId: string) {
   });
 }
 
+export function useEmployerConversations(orgId: string) {
+  return useQuery<Conversation[]>({
+    queryKey: ['crm', 'portal', 'employer-conversations', orgId],
+    queryFn: async () => {
+      const res = await crmAPI.listConversationsByAnchor('EMPLOYER', orgId);
+      return res.items;
+    },
+    enabled: orgId.length > 0,
+  });
+}
+
+/** Fetch interactions for a conversation, filtered to public visibility only. */
 export function usePublicConversationInteractions(conversationId: string) {
   return useQuery<Interaction[]>({
     queryKey: ['crm', 'portal', 'public-interactions', conversationId],
-    queryFn: () => demo.getPublicConversationInteractions(conversationId),
+    queryFn: async () => {
+      const res = await crmAPI.listInteractions({ conversationId });
+      return res.items.filter((i) => i.visibility === 'public');
+    },
     enabled: conversationId.length > 0,
   });
 }
+
+/** Alias for public interactions — used by MemberPortal. */
+export const useMemberPublicInteractions = usePublicConversationInteractions;
 
 export function useAllConversationInteractions(conversationId: string) {
   return useQuery<Interaction[]>({
@@ -310,15 +308,7 @@ export function useAllConversationInteractions(conversationId: string) {
   });
 }
 
-export function useEmployerConversations(orgId: string) {
-  return useQuery<Conversation[]>({
-    queryKey: ['crm', 'portal', 'employer-conversations', orgId],
-    queryFn: () => demo.getEmployerConversations(orgId),
-    enabled: orgId.length > 0,
-  });
-}
-
-export function useDemoConversation(conversationId: string) {
+export function usePortalConversation(conversationId: string) {
   return useQuery<Conversation | undefined>({
     queryKey: ['crm', 'portal', 'conversation', conversationId],
     queryFn: () => crmAPI.getConversation(conversationId),
@@ -326,7 +316,7 @@ export function useDemoConversation(conversationId: string) {
   });
 }
 
-export function useDemoInteraction(interactionId: string) {
+export function usePortalInteraction(interactionId: string) {
   return useQuery<Interaction | undefined>({
     queryKey: ['crm', 'portal', 'interaction', interactionId],
     queryFn: () => crmAPI.getInteraction(interactionId),
@@ -337,35 +327,57 @@ export function useDemoInteraction(interactionId: string) {
 export function useContactCommitments(contactId: string) {
   return useQuery<Commitment[]>({
     queryKey: ['crm', 'portal', 'commitments', contactId],
-    queryFn: () => crmAPI.listCommitments({ contactId }) as unknown as Promise<Commitment[]>,
+    queryFn: async () => {
+      const res = await crmAPI.listCommitments({ contactId });
+      return res.items;
+    },
     enabled: contactId.length > 0,
   });
 }
 
-export function useDemoOrganization(orgId: string) {
+export function usePortalOrganization(orgId: string) {
   return useQuery<Organization | undefined>({
     queryKey: ['crm', 'portal', 'organization', orgId],
-    queryFn: () => demo.getOrganization(orgId),
+    queryFn: () => crmAPI.getOrganization(orgId),
     enabled: orgId.length > 0,
   });
 }
 
-export function useDemoOrganizations() {
+export function usePortalOrganizations() {
   return useQuery<Organization[]>({
     queryKey: ['crm', 'portal', 'organizations'],
-    queryFn: () => demo.getAllOrganizations(),
+    queryFn: async () => {
+      const res = await crmAPI.listOrganizations({});
+      return res.items;
+    },
   });
 }
+
+// ─── Portal mutations ────────────────────────────────────────────────────────
 
 export function useCreatePortalMessage() {
   const queryClient = useQueryClient();
   return useMutation<Interaction, Error, CreatePortalMessageData>({
-    mutationFn: (data) => Promise.resolve(demo.createPortalMessage(data)),
+    mutationFn: (data) =>
+      crmAPI.createInteraction({
+        conversationId: data.conversationId,
+        contactId: data.contactId,
+        orgId: data.orgId,
+        agentId: data.agentId,
+        channel: 'secure_message',
+        interactionType: 'request',
+        direction: data.direction,
+        summary: data.content,
+        visibility: 'public',
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['crm', 'portal'] });
     },
   });
 }
+
+/** Alias for portal message — used by MemberPortal. */
+export const useCreateMemberMessage = useCreatePortalMessage;
 
 export function useCreateNewConversation() {
   const queryClient = useQueryClient();
@@ -374,12 +386,33 @@ export function useCreateNewConversation() {
     Error,
     CreateConversationData
   >({
-    mutationFn: (data) => Promise.resolve(demo.createNewConversation(data)),
+    mutationFn: async (data) => {
+      const conversation = await crmAPI.createConversation({
+        anchorType: data.anchorType,
+        anchorId: data.anchorId,
+        subject: data.subject,
+      });
+      const interaction = await crmAPI.createInteraction({
+        conversationId: conversation.conversationId,
+        contactId: data.contactId,
+        orgId: data.orgId,
+        agentId: data.agentId,
+        channel: 'secure_message',
+        interactionType: 'request',
+        direction: data.direction,
+        summary: data.initialMessage,
+        visibility: 'public',
+      });
+      return { conversation, interaction };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['crm', 'portal'] });
     },
   });
 }
+
+/** Alias for new conversation — used by MemberPortal. */
+export const useCreateMemberConversation = useCreateNewConversation;
 
 export function useCreateStaffNote() {
   const queryClient = useQueryClient();
@@ -427,76 +460,6 @@ export function useCreateStructuredNote() {
         aiSuggested: false,
       });
       return interaction;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['crm', 'portal'] });
-    },
-  });
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Member-specific hooks — hit the real CRM API (PostgreSQL).
-// These replace the shared demo hooks for MemberPortal only.
-// EmployerPortal continues using the demo-based hooks above.
-// ═══════════════════════════════════════════════════════════════════════════════
-
-export function useMemberPublicInteractions(conversationId: string) {
-  return useQuery<Interaction[]>({
-    queryKey: ['crm', 'portal', 'member-public-interactions', conversationId],
-    queryFn: async () => {
-      const res = await crmAPI.listInteractions({ conversationId });
-      return res.items.filter((i) => i.visibility === 'public');
-    },
-    enabled: conversationId.length > 0,
-  });
-}
-
-export function useCreateMemberMessage() {
-  const queryClient = useQueryClient();
-  return useMutation<Interaction, Error, CreatePortalMessageData>({
-    mutationFn: (data) =>
-      crmAPI.createInteraction({
-        conversationId: data.conversationId,
-        contactId: data.contactId,
-        orgId: data.orgId,
-        agentId: data.agentId,
-        channel: 'secure_message',
-        interactionType: 'request',
-        direction: data.direction,
-        summary: data.content,
-        visibility: 'public',
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['crm', 'portal'] });
-    },
-  });
-}
-
-export function useCreateMemberConversation() {
-  const queryClient = useQueryClient();
-  return useMutation<
-    { conversation: Conversation; interaction: Interaction },
-    Error,
-    CreateConversationData
-  >({
-    mutationFn: async (data) => {
-      const conversation = await crmAPI.createConversation({
-        anchorType: data.anchorType,
-        anchorId: data.anchorId,
-        subject: data.subject,
-      });
-      const interaction = await crmAPI.createInteraction({
-        conversationId: conversation.conversationId,
-        contactId: data.contactId,
-        orgId: data.orgId,
-        agentId: data.agentId,
-        channel: 'secure_message',
-        interactionType: 'request',
-        direction: data.direction,
-        summary: data.initialMessage,
-        visibility: 'public',
-      });
-      return { conversation, interaction };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['crm', 'portal'] });

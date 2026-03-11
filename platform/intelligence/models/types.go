@@ -8,16 +8,16 @@ import "time"
 // MemberData represents the member information needed for calculations.
 // Fetched from the connector service, not directly from the database.
 type MemberData struct {
-	MemberID     int       `json:"member_id"`
-	FirstName    string    `json:"first_name"`
-	LastName     string    `json:"last_name"`
-	DOB          time.Time `json:"dob"`
-	HireDate     time.Time `json:"hire_date"`
+	MemberID     int        `json:"member_id"`
+	FirstName    string     `json:"first_name"`
+	LastName     string     `json:"last_name"`
+	DOB          time.Time  `json:"dob"`
+	HireDate     time.Time  `json:"hire_date"`
 	TermDate     *time.Time `json:"term_date,omitempty"`
-	StatusCode   string    `json:"status_code"`
-	TierCode     int       `json:"tier_code"`
-	MaritalStat  string    `json:"marital_status"`
-	MedicareFlag string    `json:"medicare_flag"`
+	StatusCode   string     `json:"status_code"`
+	TierCode     int        `json:"tier_code"`
+	MaritalStat  string     `json:"marital_status"`
+	MedicareFlag string     `json:"medicare_flag"`
 }
 
 // ServiceCreditData contains service credit summary from connector.
@@ -42,13 +42,13 @@ type AMSData struct {
 
 // DROData contains DRO information from connector.
 type DROData struct {
-	HasDRO         bool      `json:"has_dro"`
-	MarriageDate   time.Time `json:"marriage_date"`
-	DivorceDate    time.Time `json:"divorce_date"`
-	DivisionMethod string    `json:"division_method"`
-	DivisionValue  float64   `json:"division_value"`
-	AltPayeeFirst  string    `json:"alt_payee_first"`
-	AltPayeeLast   string    `json:"alt_payee_last"`
+	HasDRO         bool       `json:"has_dro"`
+	MarriageDate   time.Time  `json:"marriage_date"`
+	DivorceDate    time.Time  `json:"divorce_date"`
+	DivisionMethod string     `json:"division_method"`
+	DivisionValue  float64    `json:"division_value"`
+	AltPayeeFirst  string     `json:"alt_payee_first"`
+	AltPayeeLast   string     `json:"alt_payee_last"`
 	AltPayeeDOB    *time.Time `json:"alt_payee_dob,omitempty"`
 }
 
@@ -56,7 +56,7 @@ type DROData struct {
 
 // EligibilityRequest is the input for eligibility evaluation.
 type EligibilityRequest struct {
-	MemberID      int    `json:"member_id"`
+	MemberID       int    `json:"member_id"`
 	RetirementDate string `json:"retirement_date,omitempty"` // YYYY-MM-DD
 }
 
@@ -81,32 +81,34 @@ type ScenarioRequest struct {
 
 // DROCalcRequest is the input for DRO calculation.
 type DROCalcRequest struct {
-	MemberID int `json:"member_id"`
+	MemberID       int    `json:"member_id"`
+	RetirementDate string `json:"retirement_date"` // YYYY-MM-DD
 }
 
 // --- Response Types ---
 
 // EligibilityResult contains the full eligibility evaluation.
 type EligibilityResult struct {
-	MemberID       int                `json:"member_id"`
-	RetirementDate string             `json:"retirement_date"`
-	Age            AgeAtRetirement    `json:"age_at_retirement"`
-	Tier           int                `json:"tier"`
-	TierSource     string             `json:"tier_source"`
-	Vested         bool               `json:"vested"`
-	ServiceCredit  ServiceCreditData  `json:"service_credit"`
-	Evaluations    []RuleEvaluation   `json:"evaluations"`
-	BestEligible   string             `json:"best_eligible_type"` // NORMAL, RULE_OF_75, RULE_OF_85, EARLY, DEFERRED, NONE
-	ReductionPct   float64            `json:"reduction_pct"`
+	MemberID        int               `json:"member_id"`
+	RetirementDate  string            `json:"retirement_date"`
+	Age             AgeAtRetirement   `json:"age_at_retirement"`
+	Tier            int               `json:"tier"`
+	TierSource      string            `json:"tier_source"`
+	Vested          bool              `json:"vested"`
+	ServiceCredit   ServiceCreditData `json:"service_credit"`
+	Evaluations     []RuleEvaluation  `json:"evaluations"`
+	BestEligible    string            `json:"best_eligible_type"` // NORMAL, RULE_OF_75, RULE_OF_85, EARLY, DEFERRED, NONE
+	RuleOfNSum      float64           `json:"rule_of_n_sum"`
+	ReductionPct    float64           `json:"reduction_pct"`
 	ReductionFactor float64           `json:"reduction_factor"`
 }
 
 // AgeAtRetirement breaks down the member's age at retirement.
 type AgeAtRetirement struct {
-	Years         int     `json:"years"`
-	Months        int     `json:"months"`
-	CompletedYears int    `json:"completed_years"`
-	Decimal       float64 `json:"decimal"`
+	Years          int     `json:"years"`
+	Months         int     `json:"months"`
+	CompletedYears int     `json:"completed_years"`
+	Decimal        float64 `json:"decimal"`
 }
 
 // RuleEvaluation records the result of evaluating a single rule.
@@ -120,18 +122,18 @@ type RuleEvaluation struct {
 
 // BenefitCalcResult contains the complete benefit calculation worksheet.
 type BenefitCalcResult struct {
-	MemberID        int               `json:"member_id"`
-	RetirementDate  string            `json:"retirement_date"`
-	Tier            int               `json:"tier"`
-	Eligibility     EligibilityResult `json:"eligibility"`
-	AMS             AMSCalcDetail     `json:"ams"`
-	Formula         FormulaDetail     `json:"formula"`
-	Reduction       ReductionDetail   `json:"reduction"`
-	MaximumBenefit  float64           `json:"maximum_benefit"`
-	PaymentOptions  PaymentOptions    `json:"payment_options"`
-	DRO             *DROCalcResult    `json:"dro,omitempty"`
-	DeathBenefit    DeathBenefitDetail `json:"death_benefit"`
-	IPR             IPRDetail         `json:"ipr"`
+	MemberID       int                `json:"member_id"`
+	RetirementDate string             `json:"retirement_date"`
+	Tier           int                `json:"tier"`
+	Eligibility    EligibilityResult  `json:"eligibility"`
+	AMS            AMSCalcDetail      `json:"ams"`
+	Formula        FormulaDetail      `json:"formula"`
+	Reduction      ReductionDetail    `json:"reduction"`
+	MaximumBenefit float64            `json:"maximum_benefit"`
+	PaymentOptions PaymentOptions     `json:"payment_options"`
+	DRO            *DROCalcResult     `json:"dro,omitempty"`
+	DeathBenefit   DeathBenefitDetail `json:"death_benefit"`
+	IPR            IPRDetail          `json:"ipr"`
 }
 
 // AMSCalcDetail provides full AMS calculation transparency.
@@ -147,13 +149,13 @@ type AMSCalcDetail struct {
 
 // FormulaDetail shows the benefit formula applied.
 type FormulaDetail struct {
-	AMS             float64 `json:"ams"`
-	Multiplier      float64 `json:"multiplier"`
-	MultiplierPct   string  `json:"multiplier_pct"`
-	ServiceYears    float64 `json:"service_years"`
-	ServiceType     string  `json:"service_type"`
-	GrossBenefit    float64 `json:"gross_benefit"`
-	FormulaDisplay  string  `json:"formula_display"`
+	AMS            float64 `json:"ams"`
+	Multiplier     float64 `json:"multiplier"`
+	MultiplierPct  string  `json:"multiplier_pct"`
+	ServiceYears   float64 `json:"service_years"`
+	ServiceType    string  `json:"service_type"`
+	GrossBenefit   float64 `json:"gross_benefit"`
+	FormulaDisplay string  `json:"formula_display"`
 }
 
 // ReductionDetail shows early retirement reduction calculation.
@@ -171,12 +173,12 @@ type ReductionDetail struct {
 
 // PaymentOptions contains all four payment option amounts.
 type PaymentOptions struct {
-	BaseAmount float64       `json:"base_amount"`
-	Maximum    float64       `json:"maximum"`
-	JS100      JSOption      `json:"js_100"`
-	JS75       JSOption      `json:"js_75"`
-	JS50       JSOption      `json:"js_50"`
-	Disclaimer string        `json:"disclaimer"`
+	BaseAmount float64  `json:"base_amount"`
+	Maximum    float64  `json:"maximum"`
+	JS100      JSOption `json:"js_100"`
+	JS75       JSOption `json:"js_75"`
+	JS50       JSOption `json:"js_50"`
+	Disclaimer string   `json:"disclaimer"`
 }
 
 // JSOption represents a Joint & Survivor payment option.
@@ -205,11 +207,11 @@ type DROCalcResult struct {
 
 // DeathBenefitDetail shows lump-sum death benefit calculation.
 type DeathBenefitDetail struct {
-	Amount        float64 `json:"amount"`
-	Installment50 float64 `json:"installment_50"`
+	Amount         float64 `json:"amount"`
+	Installment50  float64 `json:"installment_50"`
 	Installment100 float64 `json:"installment_100"`
-	RetirementType string `json:"retirement_type"`
-	SourceRef      string `json:"source_reference"`
+	RetirementType string  `json:"retirement_type"`
+	SourceRef      string  `json:"source_reference"`
 }
 
 // IPRDetail shows Insurance Premium Reimbursement calculation.
@@ -222,8 +224,8 @@ type IPRDetail struct {
 
 // ScenarioResult contains comparison across multiple retirement dates.
 type ScenarioResult struct {
-	MemberID  int              `json:"member_id"`
-	Scenarios []ScenarioEntry  `json:"scenarios"`
+	MemberID  int             `json:"member_id"`
+	Scenarios []ScenarioEntry `json:"scenarios"`
 }
 
 // ScenarioEntry is one retirement date scenario.
