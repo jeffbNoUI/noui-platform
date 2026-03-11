@@ -222,6 +222,17 @@ func (h *Handler) CalculateDRO(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.RetirementDate == "" {
+		writeError(w, http.StatusBadRequest, "MISSING_DATE", "retirement_date is required")
+		return
+	}
+
+	retDate, err := time.Parse("2006-01-02", req.RetirementDate)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_DATE", "retirement_date must be YYYY-MM-DD")
+		return
+	}
+
 	droData, err := h.fetchDRO(req.MemberID)
 	if err != nil || droData == nil || !droData.HasDRO {
 		writeError(w, http.StatusNotFound, "NO_DRO", "No DRO records found for this member")
@@ -246,8 +257,7 @@ func (h *Handler) CalculateDRO(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Calculate gross benefit first
-	retDate := time.Now()
+	// Calculate gross benefit using the case's actual retirement date
 	eligibility := rules.EvaluateEligibility(*member, *svcCredit, retDate)
 	multiplier := rules.TierMultiplier[eligibility.Tier]
 	grossBenefit := ams.Amount * multiplier * svcCredit.BenefitYears
