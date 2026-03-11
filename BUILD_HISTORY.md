@@ -1,5 +1,33 @@
 # noui-platform — Build History
 
+## Case Management Go Tests — 52/52 Pass (2026-03-11)
+
+**Result:** Added db-level Store tests and handler edge case tests for the case management service. Total test count: 52 (32 handler + 20 db-level).
+
+**New test files:**
+
+| File | Tests | Coverage |
+|------|-------|----------|
+| `db/cases_test.go` | 17 | ListCases (5 filter combos), GetCase (null member, not found), AdvanceStage (final stage, success, not found), GetStageHistory (DESC ordering), GetCaseFlags (empty, multiple), CreateCase (with/without flags), UpdateCase (no-op, multi-field) |
+| `db/stages_test.go` | 3 | ListStages (all 7 stages), GetStage (valid, not found) |
+
+**New handler edge cases (in `api/handlers_test.go`):**
+
+| Test | What It Validates |
+|------|-------------------|
+| TestListCases_FilterCombination | HTTP with combined status + priority query params |
+| TestAdvanceStage_FinalStage_HTTP | HTTP 400 with ADVANCE_ERROR when case at final stage |
+| TestGetCase_NullMemberJoin | HTTP 200 with COALESCE defaults for missing member data |
+| TestListCases_WithAssignedToFilter | assigned_to query parameter flows through to Store |
+
+**Other changes:**
+- Promoted `go-sqlmock` from indirect to direct dependency in `go.mod`
+- Ran `go mod tidy`
+
+**Verification:** `go test ./... -v -count=1` → 52/52 pass (api: 32, db: 20)
+
+---
+
 ## E2E Workflow Testing — All 4 Cases Completed (2026-03-11)
 
 **Result:** Full end-to-end browser testing of the 7-stage retirement workflow. All 4 seeded cases advanced to Final Certification via live Docker stack. 14 audit trail entries verified.
