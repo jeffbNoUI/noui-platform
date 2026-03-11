@@ -1,56 +1,28 @@
 # Next Session Starter
 
-## Current State (as of 2026-03-11)
+## Current State (as of 2026-03-10)
 
-**The multi-session plan (`jiggly-spinning-barto.md`) is COMPLETE.** All 3 sessions across 4 workstreams finished — partly by this worktree (Session 1 via PR #28) and partly by parallel sessions.
+**PR #19 merged. Full-stack integration is COMPLETE.** All demo data has been replaced with live PostgreSQL-backed APIs.
 
-### Multi-session plan — Final Status:
+**Option A (Fix Test Fixture Types) is DONE** on branch `claude/happy-villani` — ready to merge. `tsc --noEmit` now reports 0 errors (was 105). All 197 frontend tests pass.
 
-| Session | Workstreams | Status |
-|---------|-------------|--------|
-| **Session 1** | A (type fixes) + C (Go tests) | **DONE** — PR #28 merged |
-| **Session 2** | D (CRM demo → live API) | **DONE** — commit `d1df754` (parallel session) |
-| **Session 3** | B (E2E workflow testing) + cleanup | **DONE** — commits `08dc4e0`, `716e3e1`, `6bc859d` (parallel sessions) |
+**What was fixed in Option A:**
+- Installed missing `@testing-library/dom` peer dependency (23 import errors)
+- Added `/// <reference types="vitest/globals" />` to `vite-env.d.ts` (1 error)
+- Completed `mockCalculation.eligibility` in shared fixtures with 7 missing required fields (70+ errors)
+- Changed `null` → `undefined` in 5 test files, fixed minor mock data issues (12 errors)
+- Added explicit type annotations (`BenefitCalcResult`, `Member`) to fixture declarations
 
-### Additional work completed by parallel sessions:
-- **PR #27** — DRO bug fixes: date parsing, payment calculation, stage appearing on non-DRO cases, Rule of N sum
-- **PR #25** — Progressive disclosure across all pages
-- **PR #24** — Stage wiring: `useAdvanceStage` + `stageMapping.ts` translation layer (25 unit tests)
-
-### Session 2 DoD — ALL MET:
-- [x] Zero imports from `crmDemoData.ts` in the codebase
-- [x] `crmDemoData.ts` deleted
-- [x] All portal messaging reads from PostgreSQL via CRM Go service
-- [x] `tsc --noEmit` → 0 errors
-- [x] 229/229 frontend tests pass
-- [x] Docker-verified: both portals functional (E2E testing confirmed)
-
-### Session 3 DoD — ALL MET:
-- [x] All 4 cases advanced through remaining stages via API (14 audit trail entries)
-- [x] Error cases confirmed (boundary, 404, 400)
-- [x] Browser walkthrough: all portals functional
-- [x] BUILD_HISTORY.md updated
-
-### Known bugs from E2E testing (logged in BUILD_HISTORY.md):
-1. **Rule sum display = 0.00** — intelligence API returns 0 for Rule of 75/85 sum (determination correct, display-only)
-2. **Payment amounts inflated** — intelligence service returns DRO data per-member not per-case
-3. **DRO seed data placeholder** — marriage dates "12/31/1", negative marital fractions (DRO engine not implemented)
-4. **KB 404 for scenario stage** — no KB article for frontend-only stage
-
-## What's built and running on main:
-
+**What's built and running on main:**
 - 10-service Docker Compose stack: 7 Go services + PostgreSQL + connector + nginx frontend
 - All 12 PostgreSQL init scripts (schema + seed) run on first boot
-- Staff Portal work queue showing 4 live retirement cases
-- Member Dashboard with 8 cards — all showing live data
-- Interaction Detail Panel with spawn-from-row animation
-- Retirement Application: 7-stage workflow with backend-connected stage advancement
-- All CRM portals (Member, Employer, Staff) wired to live PostgreSQL-backed API
-- Case management Go tests: handler tests + sqlmock DB tests + db layer tests (52 total)
-- Stage mapping translation layer: auto-skip, DRO flag handling (25 unit tests)
-- 229/229 frontend tests passing, `tsc --noEmit` clean, all Go services build and test clean
+- Staff Portal work queue showing 4 live retirement cases from `platform/casemanagement/` (port 8088)
+- Member Dashboard with 8 cards — all showing live data (no demo fallback anywhere)
+- CRM, Correspondence, Data Quality, Case Management all wired to real APIs
+- `demoData.ts` deleted — all frontend data comes from Go services
+- 197/197 frontend tests passing, all Go services build clean, 9/9 CI checks green
 
-## Services Reference
+**Services:**
 
 | Service | Port | Status |
 |---------|------|--------|
@@ -65,20 +37,31 @@
 
 ## Build Verification
 
+Run these to confirm the codebase is green before starting work:
+
 ```bash
-# Frontend
+# Frontend (tsc is now a reliable gate after Option A!)
 cd frontend && npx tsc --noEmit && npm test -- --run
 
-# Go services
+# Go services (each independent module)
+cd platform/dataaccess && go build ./... && go test ./...
 cd platform/intelligence && go build ./... && go test ./...
-cd platform/casemanagement && go build ./... && go test ./...
 cd platform/crm && go build ./... && go test ./...
+cd platform/casemanagement && go build ./...
 ```
 
-## What's Next
+## What to Work On Next
 
-The 4-workstream plan is complete. Potential next workstreams:
-- Fix the 4 known bugs from E2E testing (especially #1 Rule sum display and #2 payment amounts)
-- Add CRM Go test coverage (currently only handler tests, no db-level like casemanagement has)
-- Employer Portal visual polish / UX improvements
-- Additional seed data for more diverse test scenarios
+Choose from Options B through E:
+
+### Option B: End-to-End Workflow Testing
+Click through cases in the browser: open a case from the work queue, advance stages, verify the full 7-stage workflow from Application Intake to Certification. Requires Docker stack running (`docker compose up --build`). Tests the case management API's `POST /api/v1/cases/{id}/advance` endpoint and stage transition audit trail.
+
+### Option C: Case Management Go Tests
+The `platform/casemanagement/` service has zero test coverage (`[no test files]` for all packages). Adding handler tests and data access tests would match the pattern in `platform/crm/api/handlers_test.go` and `platform/dataaccess/api/handlers_test.go`.
+
+### Option D: Member Portal CRM Messaging
+`crmDemoData.ts` still provides cross-portal messaging data (conversations, staff notes, member messages). Wire the Member Portal conversation view to the real CRM API so members see their actual interaction history.
+
+### Option E: User's Choice
+The platform is at a stable milestone. Good time for new features, polish, or hardening.

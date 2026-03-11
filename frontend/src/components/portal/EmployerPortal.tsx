@@ -10,6 +10,13 @@ import {
 import { ConversationThread, MessageComposer, EMPLOYER_THEME } from '@/components/crm';
 import { DISPLAY, BODY } from '@/lib/designSystem';
 
+// ── Date formatter ──────────────────────────────────────────────────────────
+
+function fmtDate(iso: string): string {
+  const d = new Date(iso.includes('T') ? iso : iso + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 // ── Employer slate color palette ────────────────────────────────────────────
 
 const EC = {
@@ -366,7 +373,10 @@ export default function EmployerPortal({ onChangeView }: EmployerPortalProps) {
               >
                 <span>ID: {org.legacyEmployerId}</span>
                 <span>{org.memberCount} members</span>
-                <span>Last contribution: {org.lastContributionDate}</span>
+                <span>
+                  Last contribution:{' '}
+                  {org.lastContributionDate ? fmtDate(org.lastContributionDate) : '\u2014'}
+                </span>
                 <span>{org.reportingFrequency} reporting</span>
               </div>
             </div>
@@ -408,7 +418,7 @@ export default function EmployerPortal({ onChangeView }: EmployerPortalProps) {
                   sub: 'Eligible for contributions',
                 },
                 { label: 'YTD Employee', value: '$96,120.50', sub: '2 periods reported' },
-                { label: 'YTD Employer', value: '$144,180.75', sub: '2 periods reported' },
+                { label: 'YTD Employer', value: '$144,181', sub: '2 periods reported' },
               ].map((s) => (
                 <div
                   key={s.label}
@@ -432,11 +442,14 @@ export default function EmployerPortal({ onChangeView }: EmployerPortalProps) {
                   </div>
                   <div
                     style={{
-                      fontSize: 24,
+                      fontSize: 22,
                       fontWeight: 700,
                       color: EC.navy,
                       fontFamily: DISPLAY,
                       marginTop: 4,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
                     }}
                   >
                     {s.value}
@@ -551,7 +564,7 @@ export default function EmployerPortal({ onChangeView }: EmployerPortalProps) {
                     }}
                   >
                     <div style={{ fontWeight: 600 }}>{r.period}</div>
-                    <div style={{ color: EC.textSecondary }}>{r.dueDate}</div>
+                    <div style={{ color: EC.textSecondary }}>{fmtDate(r.dueDate)}</div>
                     <div>{r.members}</div>
                     <div style={{ textAlign: 'right', fontFamily: 'monospace' }}>
                       ${r.eeTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
@@ -559,7 +572,7 @@ export default function EmployerPortal({ onChangeView }: EmployerPortalProps) {
                     <div style={{ textAlign: 'right', fontFamily: 'monospace' }}>
                       ${r.erTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </div>
-                    <div style={{ color: EC.textSecondary }}>{r.submittedDate}</div>
+                    <div style={{ color: EC.textSecondary }}>{fmtDate(r.submittedDate)}</div>
                     <div>
                       <span
                         style={{
@@ -583,20 +596,172 @@ export default function EmployerPortal({ onChangeView }: EmployerPortalProps) {
 
         {/* ── ENROLLMENT TAB ── */}
         {activeTab === 'enrollment' && (
-          <div
-            style={{
-              background: EC.cardBg,
-              border: `1px solid ${EC.border}`,
-              borderRadius: 12,
-              padding: 48,
-              textAlign: 'center',
-            }}
-          >
-            <div style={{ fontSize: 14, color: EC.textTertiary, marginBottom: 8 }}>
-              Member enrollment management coming soon.
+          <div>
+            {/* Stats row */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: 16,
+                marginBottom: 24,
+              }}
+            >
+              {[
+                {
+                  label: 'Active Members',
+                  value: String(org?.memberCount ?? 142),
+                  sub: 'Currently enrolled',
+                },
+                { label: 'Pending Actions', value: '0', sub: 'No pending enrollments' },
+                {
+                  label: 'Last Update',
+                  value: org?.lastContributionDate ? fmtDate(org.lastContributionDate) : '\u2014',
+                  sub: 'Most recent roster change',
+                },
+              ].map((s) => (
+                <div
+                  key={s.label}
+                  style={{
+                    background: EC.cardBg,
+                    border: `1px solid ${EC.border}`,
+                    borderRadius: 12,
+                    padding: 20,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: EC.textTertiary,
+                      textTransform: 'uppercase' as const,
+                      letterSpacing: '0.5px',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {s.label}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 22,
+                      fontWeight: 700,
+                      color: EC.navy,
+                      fontFamily: DISPLAY,
+                      marginTop: 4,
+                    }}
+                  >
+                    {s.value}
+                  </div>
+                  <div style={{ fontSize: 12, color: EC.textSecondary, marginTop: 2 }}>{s.sub}</div>
+                </div>
+              ))}
             </div>
-            <div style={{ fontSize: 12, color: EC.textTertiary }}>
-              Submit new hires, terminations, and status changes from this tab.
+
+            {/* Actions */}
+            <div
+              style={{
+                background: EC.cardBg,
+                border: `1px solid ${EC.border}`,
+                borderRadius: 12,
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  padding: '16px 20px',
+                  borderBottom: `1px solid ${EC.border}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <h2 style={{ fontFamily: DISPLAY, fontSize: 18, fontWeight: 600, color: EC.navy }}>
+                  Enrollment Actions
+                </h2>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0 }}>
+                {[
+                  {
+                    label: 'New Hire Enrollment',
+                    desc: 'Enroll a newly hired employee into the retirement plan',
+                    icon: '+',
+                  },
+                  {
+                    label: 'Termination / Separation',
+                    desc: 'Report an employee separation or retirement',
+                    icon: '\u2212',
+                  },
+                  {
+                    label: 'Status Change',
+                    desc: 'Update employment status, hours, or department',
+                    icon: '\u21c4',
+                  },
+                ].map((action, idx) => (
+                  <button
+                    key={action.label}
+                    style={{
+                      padding: '24px 20px',
+                      textAlign: 'left' as const,
+                      border: 'none',
+                      borderRight: idx < 2 ? `1px solid ${EC.borderLight}` : 'none',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      fontFamily: BODY,
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.background = EC.accentLight;
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 10,
+                        background: EC.accentLight,
+                        border: `1px solid ${EC.border}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 18,
+                        color: EC.accent,
+                        fontWeight: 700,
+                        marginBottom: 12,
+                      }}
+                    >
+                      {action.icon}
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: EC.navy }}>
+                      {action.label}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: EC.textSecondary,
+                        marginTop: 4,
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      {action.desc}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div
+              style={{
+                marginTop: 16,
+                padding: '12px 16px',
+                borderRadius: 8,
+                background: EC.accentLight,
+                border: `1px solid ${EC.border}`,
+                fontSize: 12,
+                color: EC.textSecondary,
+                textAlign: 'center',
+              }}
+            >
+              Enrollment submissions are reviewed by DERP staff within 2 business days.
             </div>
           </div>
         )}

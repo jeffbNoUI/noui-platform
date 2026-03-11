@@ -138,16 +138,18 @@ export default function App() {
   const [caseMemberId, setCaseMemberId] = useState(10001);
   const [caseRetDate, setCaseRetDate] = useState('2026-04-01');
   const [caseFlagsState, setCaseFlagsState] = useState<string[]>([]);
+  const [caseDroId, setCaseDroId] = useState<number | undefined>(undefined);
 
   // Member dashboard state
   const [dashboardMemberId, setDashboardMemberId] = useState(0);
 
   const handleOpenCase = useCallback(
-    (caseId: string, memberId: number, retDate: string, flags?: string[]) => {
+    (caseId: string, memberId: number, retDate: string, flags?: string[], droId?: number) => {
       setActiveCaseId(caseId);
       setCaseMemberId(memberId);
       setCaseRetDate(retDate);
       setCaseFlagsState(flags || []);
+      setCaseDroId(droId);
       setViewMode('retirement-app');
     },
     [],
@@ -312,6 +314,7 @@ export default function App() {
               memberId={caseMemberId}
               retirementDate={caseRetDate}
               caseFlags={caseFlagsState}
+              droId={caseDroId}
               onBack={() => setViewMode('staff')}
               onChangeView={handleChangeView}
             />

@@ -9,7 +9,13 @@ import CorrespondencePanel from '@/components/workflow/CorrespondencePanel';
 import { useCases, useStages } from '@/hooks/useCaseManagement';
 
 interface StaffPortalProps {
-  onOpenCase: (caseId: string, memberId: number, retDate: string, flags?: string[]) => void;
+  onOpenCase: (
+    caseId: string,
+    memberId: number,
+    retDate: string,
+    flags?: string[],
+    droId?: number,
+  ) => void;
   onViewMember: (memberId: number) => void;
   onChangeView: (mode: string) => void;
 }
@@ -246,7 +252,9 @@ export default function StaffPortal({ onOpenCase, onViewMember, onChangeView }: 
                 {filteredQueue.map((item) => (
                   <div
                     key={item.caseId}
-                    onClick={() => onOpenCase(item.caseId, item.memberId, item.retDate, item.flags)}
+                    onClick={() =>
+                      onOpenCase(item.caseId, item.memberId, item.retDate, item.flags, item.droId)
+                    }
                     className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-gray-100 hover:bg-iw-sageLight/30 cursor-pointer transition-colors items-center"
                   >
                     <div className="col-span-1">

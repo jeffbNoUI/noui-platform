@@ -14,7 +14,13 @@ import DataQualityCard from '@/components/dashboard/DataQualityCard';
 interface MemberDashboardProps {
   memberId: number;
   onBack: () => void;
-  onOpenCase: (caseId: string, memberId: number, retDate: string, flags?: string[]) => void;
+  onOpenCase: (
+    caseId: string,
+    memberId: number,
+    retDate: string,
+    flags?: string[],
+    droId?: number,
+  ) => void;
   onChangeView: (mode: string) => void;
 }
 
@@ -66,7 +72,7 @@ export default function MemberDashboard({
               <button
                 onClick={() => {
                   const first = activeCases[0];
-                  onOpenCase(first.caseId, first.memberId, first.retDate, first.flags);
+                  onOpenCase(first.caseId, first.memberId, first.retDate, first.flags, first.droId);
                 }}
                 className="rounded-lg bg-iw-sage px-3 py-1.5 text-xs font-medium text-white hover:bg-iw-sageDark transition-colors"
               >
