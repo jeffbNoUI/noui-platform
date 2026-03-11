@@ -6,7 +6,13 @@ const STAGE_COUNT = 7; // 7 workflow stages
 interface ActiveWorkCardProps {
   activeCases: RetirementCase[];
   commitments: Commitment[];
-  onOpenCase: (caseId: string, memberId: number, retDate: string, flags?: string[]) => void;
+  onOpenCase: (
+    caseId: string,
+    memberId: number,
+    retDate: string,
+    flags?: string[],
+    droId?: number,
+  ) => void;
 }
 
 const PRIORITY_STYLES: Record<string, string> = {
@@ -65,7 +71,9 @@ export default function ActiveWorkCard({
               {activeCases.map((item) => (
                 <div
                   key={item.caseId}
-                  onClick={() => onOpenCase(item.caseId, item.memberId, item.retDate, item.flags)}
+                  onClick={() =>
+                    onOpenCase(item.caseId, item.memberId, item.retDate, item.flags, item.droId)
+                  }
                   className="px-5 py-3 border-b border-gray-100 hover:bg-iw-sageLight/30 cursor-pointer transition-colors"
                 >
                   <div className="flex items-center justify-between mb-1.5">

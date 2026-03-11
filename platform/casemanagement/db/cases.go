@@ -16,7 +16,7 @@ const caseColumns = `
 	rc.case_id, rc.tenant_id, rc.member_id, rc.case_type,
 	rc.retirement_date, rc.priority, rc.sla_status,
 	rc.current_stage, rc.current_stage_idx, rc.assigned_to,
-	rc.days_open, rc.status, rc.created_at, rc.updated_at,
+	rc.days_open, rc.status, rc.dro_id, rc.created_at, rc.updated_at,
 	COALESCE(m.first_name || ' ' || m.last_name, '') AS name,
 	COALESCE(m.tier_cd, 0) AS tier,
 	COALESCE(d.dept_name, '') AS dept
@@ -33,12 +33,13 @@ func scanCase(scanner interface{ Scan(dest ...any) error }) (*models.RetirementC
 	var c models.RetirementCase
 	var retDate time.Time
 	var assignedTo sql.NullString
+	var droID sql.NullInt64
 
 	err := scanner.Scan(
 		&c.CaseID, &c.TenantID, &c.MemberID, &c.CaseType,
 		&retDate, &c.Priority, &c.SLAStatus,
 		&c.CurrentStage, &c.CurrentStageIdx, &assignedTo,
-		&c.DaysOpen, &c.Status, &c.CreatedAt, &c.UpdatedAt,
+		&c.DaysOpen, &c.Status, &droID, &c.CreatedAt, &c.UpdatedAt,
 		&c.Name, &c.Tier, &c.Dept,
 	)
 	if err != nil {
@@ -48,6 +49,10 @@ func scanCase(scanner interface{ Scan(dest ...any) error }) (*models.RetirementC
 	c.RetirementDate = retDate.Format("2006-01-02")
 	if assignedTo.Valid {
 		c.AssignedTo = assignedTo.String
+	}
+	if droID.Valid {
+		id := int(droID.Int64)
+		c.DROID = &id
 	}
 
 	return &c, nil
@@ -161,12 +166,12 @@ func (s *Store) CreateCase(c *models.RetirementCase, flags []string) error {
 		INSERT INTO retirement_case (
 			case_id, tenant_id, member_id, case_type, retirement_date,
 			priority, sla_status, current_stage, current_stage_idx,
-			assigned_to, days_open, status, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+			assigned_to, days_open, status, dro_id, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 	`,
 		c.CaseID, c.TenantID, c.MemberID, c.CaseType, c.RetirementDate,
 		c.Priority, c.SLAStatus, c.CurrentStage, c.CurrentStageIdx,
-		c.AssignedTo, c.DaysOpen, c.Status, c.CreatedAt, c.UpdatedAt,
+		c.AssignedTo, c.DaysOpen, c.Status, c.DROID, c.CreatedAt, c.UpdatedAt,
 	)
 	if err != nil {
 		return err

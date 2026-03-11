@@ -25,6 +25,7 @@ export interface RetirementCase {
   assignedTo: string;
   daysOpen: number;
   status: string;
+  droId?: number;
   flags: string[];
   createdAt: string;
   updatedAt: string;
@@ -54,6 +55,7 @@ export interface CreateCaseRequest {
   retirementDate: string;
   priority?: string;
   assignedTo?: string;
+  droId?: number;
   flags?: string[];
 }
 

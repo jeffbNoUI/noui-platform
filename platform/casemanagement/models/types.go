@@ -24,6 +24,7 @@ type RetirementCase struct {
 	AssignedTo      string    `json:"assignedTo"`
 	DaysOpen        int       `json:"daysOpen"`
 	Status          string    `json:"status"`
+	DROID           *int      `json:"droId,omitempty"`
 	Flags           []string  `json:"flags"`
 	CreatedAt       time.Time `json:"createdAt"`
 	UpdatedAt       time.Time `json:"updatedAt"`
@@ -72,6 +73,7 @@ type CreateCaseRequest struct {
 	RetirementDate string   `json:"retirementDate"`
 	Priority       string   `json:"priority"`
 	AssignedTo     string   `json:"assignedTo"`
+	DROID          *int     `json:"droId,omitempty"`
 	Flags          []string `json:"flags"`
 }
 

@@ -63,7 +63,8 @@ type EligibilityRequest struct {
 // BenefitCalcRequest is the input for benefit calculation.
 type BenefitCalcRequest struct {
 	MemberID       int    `json:"member_id"`
-	RetirementDate string `json:"retirement_date"` // YYYY-MM-DD
+	RetirementDate string `json:"retirement_date"`  // YYYY-MM-DD
+	DROID          *int   `json:"dro_id,omitempty"` // Links to specific DRO; nil = no DRO for this case
 }
 
 // PaymentOptionsRequest is the input for payment options calculation.

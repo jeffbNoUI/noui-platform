@@ -22,10 +22,11 @@ export const intelligenceAPI = {
       member_id: memberID,
       retirement_date: retirementDate,
     }),
-  calculateBenefit: (memberID: number, retirementDate: string) =>
+  calculateBenefit: (memberID: number, retirementDate: string, droId?: number) =>
     postAPI(`${INTELLIGENCE_URL}/v1/benefit/calculate`, {
       member_id: memberID,
       retirement_date: retirementDate,
+      ...(droId != null && { dro_id: droId }),
     }),
   calculateOptions: (memberID: number, retirementDate: string, beneficiaryDOB?: string) =>
     postAPI(`${INTELLIGENCE_URL}/v1/benefit/options`, {

@@ -32,6 +32,7 @@ interface RetirementApplicationProps {
   memberId: number;
   retirementDate: string;
   caseFlags?: string[];
+  droId?: number;
   onBack: () => void;
   onChangeView: (mode: string) => void;
 }
@@ -41,6 +42,7 @@ export default function RetirementApplication({
   memberId,
   retirementDate,
   caseFlags,
+  droId,
   onBack,
 }: RetirementApplicationProps) {
   const [activeIdx, setActiveIdx] = useState(0);
@@ -55,7 +57,7 @@ export default function RetirementApplication({
   const { data: member } = useMember(memberId);
   const { data: employment } = useEmployment(memberId);
   const { data: svcCreditData } = useServiceCredit(memberId);
-  const { data: calculation } = useBenefitCalculation(memberId, retirementDate);
+  const { data: calculation } = useBenefitCalculation(memberId, retirementDate, droId);
   const { data: caseData } = useCase(caseId);
   const advanceStageMutation = useAdvanceStage();
 
