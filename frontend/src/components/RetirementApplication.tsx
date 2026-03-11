@@ -1,13 +1,17 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useMember, useEmployment, useServiceCredit } from '@/hooks/useMember';
 import { useBenefitCalculation } from '@/hooks/useBenefitCalculation';
+import { useCase, useAdvanceStage } from '@/hooks/useCaseManagement';
 import { composeStages, deriveCaseFlags } from '@/lib/workflowComposition';
+import { computeAdvanceSequence, computeInitialState } from '@/lib/stageMapping';
 import GuidedView from '@/components/workflow/GuidedView';
 import ExpertView from '@/components/workflow/ExpertView';
 import DeckView from '@/components/workflow/DeckView';
 import OrbitView from '@/components/workflow/OrbitView';
 import LiveSummary from '@/components/workflow/LiveSummary';
-import NavigationModelPicker, { type NavigationModel } from '@/components/workflow/NavigationModelPicker';
+import NavigationModelPicker, {
+  type NavigationModel,
+} from '@/components/workflow/NavigationModelPicker';
 import { calcAge } from '@/components/workflow/shared';
 import ProficiencySelector from '@/components/workflow/ProficiencySelector';
 import ContextualHelp from '@/components/workflow/ContextualHelp';
@@ -44,17 +48,21 @@ export default function RetirementApplication({
   const [navModel, setNavModel] = useState<NavigationModel>('guided');
   const { level: proficiency, setLevel: setProficiency } = useProficiency();
   const [helpOpen, setHelpOpen] = useState(true);
+  const [isAdvancing, setIsAdvancing] = useState(false);
+  const syncedWith = useRef<{ caseId: string; stageCount: number } | null>(null);
 
   // Data hooks
   const { data: member } = useMember(memberId);
   const { data: employment } = useEmployment(memberId);
   const { data: svcCreditData } = useServiceCredit(memberId);
   const { data: calculation } = useBenefitCalculation(memberId, retirementDate);
+  const { data: caseData } = useCase(caseId);
+  const advanceStageMutation = useAdvanceStage();
 
   // Derive case flags and compose stages
   const flags = useMemo(
     () => deriveCaseFlags(member, calculation, svcCreditData, caseFlags),
-    [member, calculation, svcCreditData, caseFlags]
+    [member, calculation, svcCreditData, caseFlags],
   );
 
   const stages = useMemo(
@@ -65,8 +73,21 @@ export default function RetirementApplication({
         employment,
         serviceCredit: svcCreditData,
       }),
-    [flags, member, calculation, employment, svcCreditData]
+    [flags, member, calculation, employment, svcCreditData],
   );
+
+  // Initialize from backend case state on first load.
+  // Re-syncs when stage count changes (e.g., DRO flag resolves after calculation loads).
+  useEffect(() => {
+    if (!caseData || stages.length === 0) return;
+    const prev = syncedWith.current;
+    if (!prev || prev.caseId !== caseId || prev.stageCount !== stages.length) {
+      const initial = computeInitialState(caseData.stageIdx, stages, flags.hasDRO);
+      setActiveIdx(initial.activeIdx);
+      setCompleted(initial.completed);
+      syncedWith.current = { caseId, stageCount: stages.length };
+    }
+  }, [caseData, stages, flags.hasDRO, caseId]);
 
   // Reset position when stages change significantly
   useEffect(() => {
@@ -75,10 +96,40 @@ export default function RetirementApplication({
     }
   }, [stages.length, activeIdx]);
 
-  const advance = useCallback(() => {
+  const advance = useCallback(async () => {
+    if (isAdvancing) return;
+
+    const currentStage = stages[activeIdx];
+    if (!currentStage) return;
+
+    const currentBackendIdx = caseData?.stageIdx ?? 0;
+    const transitionedBy = caseData?.assignedTo || 'Sarah Chen';
+
+    const sequence = computeAdvanceSequence(currentStage.id, currentBackendIdx, flags);
+
+    if (sequence.length > 0) {
+      setIsAdvancing(true);
+      try {
+        for (const step of sequence) {
+          await advanceStageMutation.mutateAsync({
+            caseId,
+            req: {
+              transitionedBy,
+              ...(step.note ? { note: step.note } : {}),
+            },
+          });
+        }
+      } catch (err) {
+        console.error('[RetirementApplication] Stage advance failed:', err);
+        setIsAdvancing(false);
+        return;
+      }
+      setIsAdvancing(false);
+    }
+
     setCompleted((prev) => new Set([...prev, activeIdx]));
     if (activeIdx < stages.length - 1) setActiveIdx(activeIdx + 1);
-  }, [activeIdx, stages.length]);
+  }, [activeIdx, stages, isAdvancing, caseData, flags, caseId, advanceStageMutation]);
 
   const goBack = useCallback(() => {
     if (activeIdx > 0) setActiveIdx(activeIdx - 1);
@@ -88,7 +139,7 @@ export default function RetirementApplication({
     (idx: number) => {
       if (completed.has(idx) || idx <= activeIdx) setActiveIdx(idx);
     },
-    [completed, activeIdx]
+    [completed, activeIdx],
   );
 
   // Keyboard navigation
@@ -199,13 +250,25 @@ export default function RetirementApplication({
               retirementDate={retirementDate}
               completedStages={completed.size}
               totalStages={stages.length}
+              onSubmit={advance}
             />
           );
         default:
           return <div className="text-gray-400 text-sm">Stage content not yet implemented.</div>;
       }
     },
-    [member, employment, svcCreditData, calculation, retirementDate, flags, completed.size, stages.length, benefitData]
+    [
+      member,
+      employment,
+      svcCreditData,
+      calculation,
+      retirementDate,
+      flags,
+      completed.size,
+      stages.length,
+      benefitData,
+      advance,
+    ],
   );
 
   // Shared view props
@@ -297,8 +360,8 @@ export default function RetirementApplication({
                   member.tier_code === 1
                     ? 'bg-blue-50 border-blue-400 text-blue-700'
                     : member.tier_code === 2
-                    ? 'bg-amber-50 border-amber-400 text-amber-700'
-                    : 'bg-emerald-50 border-emerald-400 text-emerald-700'
+                      ? 'bg-amber-50 border-amber-400 text-amber-700'
+                      : 'bg-emerald-50 border-emerald-400 text-emerald-700'
                 }`}
               >
                 T{member.tier_code}
@@ -323,17 +386,28 @@ export default function RetirementApplication({
                 </span>
               ))}
               {[
-                { label: 'Status', value: member.status_code || 'Active', color: 'text-emerald-600' },
+                {
+                  label: 'Status',
+                  value: member.status_code || 'Active',
+                  color: 'text-emerald-600',
+                },
                 { label: 'Dept', value: member.dept_name || '\u2014' },
                 {
                   label: 'Retiring',
                   value: new Date(
-                    retirementDate.includes('T') ? retirementDate : retirementDate + 'T00:00:00'
-                  ).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+                    retirementDate.includes('T') ? retirementDate : retirementDate + 'T00:00:00',
+                  ).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  }),
                   color: 'text-iw-sage',
                 },
               ].map((t) => (
-                <div key={t.label} className="px-2.5 py-1 rounded-md bg-gray-50 border border-gray-200 text-xs">
+                <div
+                  key={t.label}
+                  className="px-2.5 py-1 rounded-md bg-gray-50 border border-gray-200 text-xs"
+                >
                   <span className="text-gray-400">{t.label} </span>
                   <span className={`font-semibold ${t.color || 'text-gray-700'}`}>{t.value}</span>
                 </div>
@@ -354,8 +428,8 @@ export default function RetirementApplication({
                   completed.has(i)
                     ? 'bg-iw-sage'
                     : i === activeIdx
-                    ? 'bg-iw-sage animate-pulse'
-                    : 'bg-gray-200'
+                      ? 'bg-iw-sage animate-pulse'
+                      : 'bg-gray-200'
                 }`}
                 onClick={() => navigate(i)}
               >
@@ -401,9 +475,14 @@ export default function RetirementApplication({
             <span>{stages[activeIdx]?.label}</span>
           </div>
           <div className="flex items-center gap-4">
-            <span>Assigned: Sarah Chen</span>
+            {isAdvancing && (
+              <span className="text-iw-sage animate-pulse font-medium">Saving...</span>
+            )}
+            <span>Assigned: {caseData?.assignedTo || 'Sarah Chen'}</span>
             <span>\u00b7</span>
-            <span className="font-mono">{completed.size}/{stages.length} confirmed</span>
+            <span className="font-mono">
+              {completed.size}/{stages.length} confirmed
+            </span>
             <span>\u00b7</span>
             <span className="text-[10px] text-gray-300">
               \u2190\u2192 navigate \u00b7 1-{stages.length} jump \u00b7 Esc back

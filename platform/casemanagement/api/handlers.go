@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -197,6 +198,11 @@ func (h *Handler) AdvanceStage(w http.ResponseWriter, r *http.Request) {
 	var req models.AdvanceStageRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+
+	if strings.TrimSpace(req.TransitionedBy) == "" {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "transitionedBy is required")
 		return
 	}
 

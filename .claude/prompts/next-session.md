@@ -1,19 +1,17 @@
 # Next Session Starter
 
-## Current State (as of 2026-03-10)
+## Current State (as of 2026-03-11)
 
 **Option A complete (merged in PR #20).** `tsc --noEmit` now reports 0 errors (was 105). All 197 frontend tests pass.
 
-**What was done in Option A:**
-- Installed missing `@testing-library/dom` peer dependency (fixed 23 TS2305 import errors)
-- Added `/// <reference types="vitest/globals" />` to `vite-env.d.ts` (fixed 1 TS2304 `vi` not found error)
-- Completed `mockCalculation.eligibility` in shared fixtures with 7 missing required fields + `payment_options.disclaimer` (fixed ~70 TS2322 errors)
-- Added explicit type annotations (`BenefitCalcResult`, `Member`) to fixture declarations
-- Changed `null` → `undefined` in 5 test files where props accept `T | undefined` (12 errors)
-- Added `member_id` to `EmploymentEvent` mocks, fixed `IntakeStage` and `ElectionStage` test data (3 errors)
-- Updated `.claude/launch.json` with `autoPort: true` for worktree port conflicts
-
 **Option B (E2E Workflow Testing) done in PR #21.** Fixed `useContactCommitments` crash. Documented bugs #2 and #3.
+
+**Option F (Wire useAdvanceStage) done in PR #22.** Three bugs fixed, stage mapping translation layer created:
+- Bug #2: SubmitStage "Certify & Submit" button now has onClick handler
+- Bug #3: Advance endpoint validates transitionedBy (rejects empty strings)
+- Architecture gap: useAdvanceStage hook is now called — stage progress persists to backend
+- New stageMapping.ts bridges 7 fixed backend stages ↔ 7-9 dynamic frontend stages with auto-skip logic
+- 25 new unit tests, 222/222 total frontend tests pass
 
 ## What's Built on Main
 
@@ -23,7 +21,7 @@
 
 ## What to Work On Next
 
-Choose from the remaining options (C through E):
+Choose from the remaining options:
 
 ### Option C: Case Management Go Tests
 The `platform/casemanagement/` service has zero test coverage (`[no test files]` for all packages). Adding handler tests and data access tests would match the pattern in `platform/crm/api/handlers_test.go` and `platform/dataaccess/api/handlers_test.go`.
