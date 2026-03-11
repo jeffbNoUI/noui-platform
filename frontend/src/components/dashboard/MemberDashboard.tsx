@@ -7,7 +7,6 @@ import InteractionHistoryCard from '@/components/dashboard/InteractionHistoryCar
 import type { InteractionRowClickData } from '@/components/dashboard/InteractionHistoryCard';
 import InteractionDetailPanel from '@/components/dashboard/InteractionDetailPanel';
 import CorrespondenceHistoryCard from '@/components/dashboard/CorrespondenceHistoryCard';
-import MemberDetailsCard from '@/components/dashboard/MemberDetailsCard';
 import ServiceCreditCard from '@/components/dashboard/ServiceCreditCard';
 import BeneficiaryCard from '@/components/dashboard/BeneficiaryCard';
 import DataQualityCard from '@/components/dashboard/DataQualityCard';
@@ -129,8 +128,6 @@ export default function MemberDashboard({
 
               {/* Right column (1/3) */}
               <div className="space-y-6">
-                <MemberDetailsCard member={member} />
-
                 <ServiceCreditCard summary={serviceCredit} isLoading={isLoadingSecondary} />
 
                 <BeneficiaryCard beneficiaries={beneficiaries} isLoading={isLoadingSecondary} />

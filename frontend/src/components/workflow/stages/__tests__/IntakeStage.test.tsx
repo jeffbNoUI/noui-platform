@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { screen, fireEvent } from '@testing-library/react';
 import { renderWithProviders } from '@/test/helpers';
 import IntakeStage from '../IntakeStage';
+import { mockMember } from './fixtures';
 
 describe('IntakeStage', () => {
   const baseFlags = { hasDRO: false, maritalStatus: 'S' };
@@ -70,7 +71,7 @@ describe('IntakeStage', () => {
   });
 
   it('renders with member prop (optional, unused by component)', () => {
-    renderWithProviders(<IntakeStage member={{ name: 'test' }} flags={baseFlags} />);
+    renderWithProviders(<IntakeStage member={mockMember} flags={baseFlags} />);
     expect(screen.getByText('Document Checklist')).toBeInTheDocument();
   });
 });

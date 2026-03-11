@@ -45,7 +45,13 @@ export type ConversationStatus = 'open' | 'pending' | 'resolved' | 'closed' | 'r
 
 export type CommitmentStatus = 'pending' | 'in_progress' | 'fulfilled' | 'overdue' | 'cancelled';
 
-export type OutreachStatus = 'pending' | 'assigned' | 'attempted' | 'completed' | 'cancelled' | 'deferred';
+export type OutreachStatus =
+  | 'pending'
+  | 'assigned'
+  | 'attempted'
+  | 'completed'
+  | 'cancelled'
+  | 'deferred';
 
 export type Direction = 'inbound' | 'outbound' | 'internal';
 
@@ -556,4 +562,46 @@ export interface OrgListParams {
   query?: string;
   limit?: number;
   offset?: number;
+}
+
+// ─── Portal mutation payloads ────────────────────────────────────────────────
+
+export interface CreatePortalMessageData {
+  conversationId: string;
+  contactId?: string;
+  orgId?: string;
+  content: string;
+  direction: Direction;
+  agentId?: string;
+}
+
+export interface CreateConversationData {
+  anchorType: 'contact' | 'organization' | 'MEMBER' | 'EMPLOYER';
+  anchorId: string;
+  subject: string;
+  initialMessage: string;
+  contactId?: string;
+  orgId?: string;
+  direction: Direction;
+  agentId?: string;
+}
+
+export interface CreateStaffNoteData {
+  contactId: string;
+  content: string;
+  agentId: string;
+  conversationId?: string;
+}
+
+export interface CreateStructuredNoteData {
+  contactId: string;
+  agentId: string;
+  category: string;
+  summary: string;
+  outcome: string;
+  nextStep?: string;
+  narrative?: string;
+  sentiment?: string;
+  urgentFlag: boolean;
+  conversationId?: string;
 }
