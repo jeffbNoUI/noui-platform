@@ -117,6 +117,7 @@ func EvaluateEligibility(member models.MemberData, svcCredit models.ServiceCredi
 	// RULE-RULE-OF-75 / RULE-RULE-OF-85
 	// CRITICAL: Use earned service ONLY — purchased service excluded
 	ruleOfNSum := age.Decimal + svcCredit.EligibilityYears
+	result.RuleOfNSum = ruleOfNSum
 	threshold := RuleOfNThreshold[tier]
 	minAge := RuleOfNMinAge[tier]
 	ruleOfNMet := ruleOfNSum >= threshold && age.CompletedYears >= minAge
@@ -129,9 +130,9 @@ func EvaluateEligibility(member models.MemberData, svcCredit models.ServiceCredi
 	}
 
 	result.Evaluations = append(result.Evaluations, models.RuleEvaluation{
-		RuleID:  ruleID,
+		RuleID:   ruleID,
 		RuleName: ruleName,
-		Met:     ruleOfNMet,
+		Met:      ruleOfNMet,
 		Details: fmt.Sprintf("Age %.2f + earned service %.2f = %.2f (need %.0f, min age %d, actual age %d). Purchased service (%.2f yr) EXCLUDED per RMC §18-409(a)",
 			age.Decimal, svcCredit.EligibilityYears, ruleOfNSum, threshold, minAge, age.CompletedYears, svcCredit.PurchasedYears),
 		SourceReference: "RMC §18-409(a)(2)",
@@ -183,9 +184,9 @@ func EvaluateEligibility(member models.MemberData, svcCredit models.ServiceCredi
 		}
 
 		result.Evaluations = append(result.Evaluations, models.RuleEvaluation{
-			RuleID:  reduceRuleID,
+			RuleID:   reduceRuleID,
 			RuleName: "Early Retirement Reduction",
-			Met:     true,
+			Met:      true,
 			Details: fmt.Sprintf("Age %d, %.0f%% per year under 65 = %.0f%% reduction (factor %.4f). Statutory table lookup, not formula.",
 				age.CompletedYears, ratePerYear, result.ReductionPct, factor),
 			SourceReference: "RMC §18-409(b)",
