@@ -8,12 +8,14 @@ export default function SubmitStage({
   retirementDate,
   completedStages,
   totalStages,
+  onSubmit,
 }: {
   member?: Member;
   calculation?: BenefitCalcResult;
   retirementDate: string;
   completedStages: number;
   totalStages: number;
+  onSubmit?: () => void;
 }) {
   const calc = calculation?.formula;
   const reduction = calculation?.reduction;
@@ -75,6 +77,7 @@ export default function SubmitStage({
         </div>
         <button
           disabled={!allComplete}
+          onClick={onSubmit}
           className={`px-8 py-2.5 rounded-lg font-semibold text-sm transition-colors shadow-sm ${
             allComplete
               ? 'bg-iw-sage text-white hover:bg-iw-sageDark cursor-pointer'

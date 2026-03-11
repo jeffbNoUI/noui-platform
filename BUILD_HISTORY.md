@@ -1,5 +1,35 @@
 # noui-platform — Build History
 
+## Option F: Wire useAdvanceStage — Backend-Connected Stage Workflow (2026-03-11)
+
+**Result:** Frontend RetirementApplication stage navigation now persists to the backend case management API. Three bugs fixed, stage mapping translation layer created.
+
+**Bug Fixes:**
+- **Bug #2 (SubmitStage.tsx):** "Certify & Submit" button had no `onClick` handler — added `onSubmit` prop wired to `advance()`
+- **Bug #3 (handlers.go):** Advance endpoint accepted empty `transitionedBy`, creating blank audit entries — added server-side validation
+
+**Stage Mapping Translation Layer (`stageMapping.ts`):**
+- Maps between 7-9 dynamic frontend stages and 7 fixed backend stages
+- Auto-skip logic: non-DRO cases auto-advance through Marital Share (backend stage 3) with audit note
+- Frontend-only stages (`salary-ams`, `scenario`) advance UI position without backend calls
+- 5 exported functions: `getBackendStageIdx`, `isAutoSkipStage`, `computeAdvanceSequence`, `frontendIdxFromBackendIdx`, `computeInitialState`
+- 25 unit tests covering all mapping functions and edge cases
+
+**RetirementApplication.tsx Wiring:**
+- Initializes stage position from backend `caseData.stageIdx` on load
+- Re-syncs when stage count changes (handles DRO flag resolving late from calculation API)
+- `advance()` is now async — computes advance sequence, fires sequential `POST /advance` calls
+- "Saving..." indicator shown during backend mutations
+
+**Verification:**
+- Browser: Robert Martinez (Stage 8/8 Final Certification) — correct for backend stage 6
+- Browser: Jennifer Kim — clicked Confirm & Continue at Eligibility, auto-skip fired 2 POST /advance calls (2→3, 3→4), backend history shows "Stage not applicable for this case"
+- 222/222 frontend tests pass, Go build+vet clean, zero console errors
+
+**Files changed:** 5 modified, 2 new (`stageMapping.ts`, `stageMapping.test.ts`)
+
+---
+
 ## PR #19: Case Management + CRM Polish + Dashboard Tests — MERGED (2026-03-10)
 
 **Result:** Three workstreams delivered in a single PR. All 9 CI checks green. Docker Compose verified with 10 services + PostgreSQL.

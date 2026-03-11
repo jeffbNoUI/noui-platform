@@ -2,7 +2,16 @@
 
 ## Current State (as of 2026-03-10)
 
-**PR #19 merged. Full-stack integration is COMPLETE.** All demo data has been replaced with live PostgreSQL-backed APIs. Do NOT re-assess or re-plan integration phases.
+**PR #19 merged. Full-stack integration is COMPLETE.** All demo data has been replaced with live PostgreSQL-backed APIs.
+
+**Option A (Fix Test Fixture Types) is DONE** on branch `claude/happy-villani` — ready to merge. `tsc --noEmit` now reports 0 errors (was 105). All 197 frontend tests pass.
+
+**What was fixed in Option A:**
+- Installed missing `@testing-library/dom` peer dependency (23 import errors)
+- Added `/// <reference types="vitest/globals" />` to `vite-env.d.ts` (1 error)
+- Completed `mockCalculation.eligibility` in shared fixtures with 7 missing required fields (70+ errors)
+- Changed `null` → `undefined` in 5 test files, fixed minor mock data issues (12 errors)
+- Added explicit type annotations (`BenefitCalcResult`, `Member`) to fixture declarations
 
 **What's built and running on main:**
 - 10-service Docker Compose stack: 7 Go services + PostgreSQL + connector + nginx frontend
@@ -26,15 +35,13 @@
 | `platform/casemanagement` | 8088 | Live — case workflow, 7 stages, work queue |
 | `connector` | 8090 | Live — schema introspection |
 
-**Known issue:** `npx tsc --noEmit` reports type errors in test fixture files (`BenefitStage.test.tsx`, `ElectionStage.test.tsx`, etc.) where mock `eligibility` objects are intentionally incomplete. Tests pass at runtime — this is a test data typing issue, not a bug.
-
 ## Build Verification
 
 Run these to confirm the codebase is green before starting work:
 
 ```bash
-# Frontend (tests are the reliable gate — tsc has known test fixture type warnings)
-cd frontend && npm test -- --run
+# Frontend (tsc is now a reliable gate after Option A!)
+cd frontend && npx tsc --noEmit && npm test -- --run
 
 # Go services (each independent module)
 cd platform/dataaccess && go build ./... && go test ./...
@@ -45,19 +52,16 @@ cd platform/casemanagement && go build ./...
 
 ## What to Work On Next
 
-Choose one of these based on what the user wants:
-
-### Option A: Fix Test Fixture Types
-The `tsc --noEmit` warnings in test files are low-hanging fruit. The mock `eligibility` objects in `BenefitStage.test.tsx` and similar files are missing fields from `EligibilityResult`. Fix by either using `Partial<EligibilityResult>` with type assertions or creating test factory functions. Small, clean task.
+Choose from Options B through E:
 
 ### Option B: End-to-End Workflow Testing
-Click through cases in the browser: open a case from the work queue, advance stages, verify the full 7-stage workflow from Application Intake to Certification. This would exercise the case management API's `POST /api/v1/cases/{id}/advance` endpoint and verify the stage transition audit trail.
+Click through cases in the browser: open a case from the work queue, advance stages, verify the full 7-stage workflow from Application Intake to Certification. Requires Docker stack running (`docker compose up --build`). Tests the case management API's `POST /api/v1/cases/{id}/advance` endpoint and stage transition audit trail.
 
-### Option C: Case Management Polish
-The casemanagement service has no Go tests yet (`[no test files]` for all packages). Adding handler tests and data access tests would match the pattern established in `platform/crm/api/handlers_test.go` and `platform/dataaccess/api/handlers_test.go`.
+### Option C: Case Management Go Tests
+The `platform/casemanagement/` service has zero test coverage (`[no test files]` for all packages). Adding handler tests and data access tests would match the pattern in `platform/crm/api/handlers_test.go` and `platform/dataaccess/api/handlers_test.go`.
 
 ### Option D: Member Portal CRM Messaging
 `crmDemoData.ts` still provides cross-portal messaging data (conversations, staff notes, member messages). Wire the Member Portal conversation view to the real CRM API so members see their actual interaction history.
 
 ### Option E: User's Choice
-The platform is at a stable milestone — all services running, all integrations live, full Docker stack verified. Good time for new features, polish, or hardening.
+The platform is at a stable milestone. Good time for new features, polish, or hardening.
