@@ -5,7 +5,10 @@
  * with realistic calculation data for testing display logic.
  */
 
-export const mockMember = {
+import type { BenefitCalcResult } from '@/types/BenefitCalculation';
+import type { Member } from '@/types/Member';
+
+export const mockMember: Member = {
   member_id: 10001,
   first_name: 'Robert',
   last_name: 'Martinez',
@@ -31,11 +34,15 @@ export const mockServiceCredit = {
   },
 };
 
-export const mockCalculation = {
+export const mockCalculation: BenefitCalcResult = {
   member_id: 10001,
   retirement_date: '2026-04-01',
   tier: 1,
   eligibility: {
+    member_id: 10001,
+    retirement_date: '2026-04-01',
+    tier: 1,
+    tier_source: 'hire_date',
     is_vested: true,
     vested: true,
     best_eligible_type: 'RULE_OF_75',
@@ -44,6 +51,16 @@ export const mockCalculation = {
     age_at_retirement: { completed_years: 64, years: 64, months: 11, decimal: 64.92 },
     reduction_pct: 0,
     reduction_percentage: 0,
+    reduction_factor: 1.0,
+    service_credit: {
+      earned_years: 27.75,
+      purchased_years: 2.0,
+      military_years: 0,
+      total_years: 29.75,
+      eligibility_years: 27.75,
+      benefit_years: 29.75,
+    },
+    evaluations: [],
   },
   ams: {
     window_months: 36,
@@ -81,6 +98,7 @@ export const mockCalculation = {
     js_100: { member_amount: 4607.8, survivor_amount: 4607.8, survivor_pct: 100, factor: 0.885 },
     js_75: { member_amount: 4764.5, survivor_amount: 3573.37, survivor_pct: 75, factor: 0.915 },
     js_50: { member_amount: 4920.19, survivor_amount: 2460.1, survivor_pct: 50, factor: 0.945 },
+    disclaimer: 'Estimates are illustrative only and subject to final verification.',
   },
   dro: {
     has_dro: true,

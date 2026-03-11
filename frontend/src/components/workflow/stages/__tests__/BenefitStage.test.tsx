@@ -129,7 +129,9 @@ describe('BenefitStage', () => {
   });
 
   it('handles null/undefined props gracefully', () => {
-    renderWithProviders(<BenefitStage member={null} calculation={null} serviceCredit={null} />);
+    renderWithProviders(
+      <BenefitStage member={undefined} calculation={undefined} serviceCredit={undefined} />,
+    );
     // Should render without crashing
     expect(screen.getByText(/Formula:/)).toBeInTheDocument();
     expect(screen.getByText('—/mo')).toBeInTheDocument();

@@ -337,7 +337,10 @@ export function useDemoInteraction(interactionId: string) {
 export function useContactCommitments(contactId: string) {
   return useQuery<Commitment[]>({
     queryKey: ['crm', 'portal', 'commitments', contactId],
-    queryFn: () => crmAPI.listCommitments({ contactId }) as unknown as Promise<Commitment[]>,
+    queryFn: async () => {
+      const res = await crmAPI.listCommitments({ contactId });
+      return res.items;
+    },
     enabled: contactId.length > 0,
   });
 }

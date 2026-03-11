@@ -102,7 +102,7 @@ describe('ElectionStage', () => {
   });
 
   it('renders fallback options when calculation has no payment_options', () => {
-    renderWithProviders(<ElectionStage member={mockMember} calculation={{}} />);
+    renderWithProviders(<ElectionStage member={mockMember} calculation={undefined} />);
     // Should still show all 4 options with zero amounts
     expect(screen.getByText('Maximum (Single Life)')).toBeInTheDocument();
     expect(screen.getByText('100% Joint & Survivor')).toBeInTheDocument();

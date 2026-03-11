@@ -96,12 +96,12 @@ describe('SubmitStage', () => {
   });
 
   it('handles null member gracefully', () => {
-    renderWithProviders(<SubmitStage {...baseProps} member={null} />);
+    renderWithProviders(<SubmitStage {...baseProps} member={undefined} />);
     expect(screen.getByText('Certification Summary')).toBeInTheDocument();
   });
 
   it('handles null calculation gracefully', () => {
-    renderWithProviders(<SubmitStage {...baseProps} calculation={null} />);
+    renderWithProviders(<SubmitStage {...baseProps} calculation={undefined} />);
     expect(screen.getByText('Certification Summary')).toBeInTheDocument();
   });
 });

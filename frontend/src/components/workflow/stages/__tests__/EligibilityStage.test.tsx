@@ -156,7 +156,9 @@ describe('EligibilityStage', () => {
   });
 
   it('handles null/undefined props gracefully', () => {
-    renderWithProviders(<EligibilityStage member={null} calculation={null} serviceCredit={null} />);
+    renderWithProviders(
+      <EligibilityStage member={undefined} calculation={undefined} serviceCredit={undefined} />,
+    );
     // Should render without crashing, showing defaults
     expect(screen.getByText('Tier 1')).toBeInTheDocument();
     expect(screen.getByText('0.0%')).toBeInTheDocument();
