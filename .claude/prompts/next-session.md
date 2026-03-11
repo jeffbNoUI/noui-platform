@@ -2,47 +2,40 @@
 
 ## Current State (as of 2026-03-11)
 
-**Branch `claude/competent-banzai` has 4 bug-fix commits ready for PR.** These fix 3 bugs found during E2E workflow testing of the 4 seeded retirement cases, plus 1 additional bug discovered during live verification.
+**The multi-session plan (`jiggly-spinning-barto.md`) is COMPLETE.** All 3 sessions across 4 workstreams finished — partly by this worktree (Session 1 via PR #28) and partly by parallel sessions.
 
-### Commits on this branch (oldest → newest):
+### Multi-session plan — Final Status:
 
-1. **`4f28494`** — `[platform/intelligence] Fix Rule of N sum missing from eligibility response`
-   - Added `RuleOfNSum` field to Go `EligibilityResult` struct + set it in `EvaluateEligibility()`
-   - Added `rule_of_n_sum` to frontend `EligibilityResult` type
-   - Updated `EligibilityStage.tsx` to read new field with backward-compatible fallback
-   - Added RuleOfNSum assertions to Go eligibility tests + frontend test fixtures
+| Session | Workstreams | Status |
+|---------|-------------|--------|
+| **Session 1** | A (type fixes) + C (Go tests) | **DONE** — PR #28 merged |
+| **Session 2** | D (CRM demo → live API) | **DONE** — commit `d1df754` (parallel session) |
+| **Session 3** | B (E2E workflow testing) + cleanup | **DONE** — commits `08dc4e0`, `716e3e1`, `6bc859d` (parallel sessions) |
 
-2. **`93d1ff4`** — `[frontend] Fix DRO stage appearing on non-DRO cases in deriveCaseFlags`
-   - Root cause: `deriveCaseFlags()` OR'd case flags with member-level DRO data
-   - Fix: Case flags are authoritative when present; member data is fallback only
-   - Created `workflowComposition.test.ts` with 7 regression tests
+### Additional work completed by parallel sessions:
+- **PR #27** — DRO bug fixes: date parsing, payment calculation, stage appearing on non-DRO cases, Rule of N sum
+- **PR #25** — Progressive disclosure across all pages
+- **PR #24** — Stage wiring: `useAdvanceStage` + `stageMapping.ts` translation layer (25 unit tests)
 
-3. **`54c6326`** — `[platform/intelligence + frontend] Fix DRO payment calculation using wrong retirement date`
-   - Added `retirement_date` to `DROCalcRequest` struct (required field)
-   - Handler now validates and parses date instead of using `time.Now()`
-   - Frontend `calculateDRO` API updated to pass retirement date
+### Session 2 DoD — ALL MET:
+- [x] Zero imports from `crmDemoData.ts` in the codebase
+- [x] `crmDemoData.ts` deleted
+- [x] All portal messaging reads from PostgreSQL via CRM Go service
+- [x] `tsc --noEmit` → 0 errors
+- [x] 229/229 frontend tests pass
+- [x] Docker-verified: both portals functional (E2E testing confirmed)
 
-4. **`ecd1a93`** — `[platform/intelligence] Fix DRO date parsing — dataaccess returns RFC3339, not bare dates`
-   - Root cause: `fetchDRO()` parsed dates with `"2006-01-02"` but dataaccess returns `"1999-08-15T00:00:00Z"`
-   - Silent parse failure left zero-value dates → negative marital fractions → $85K inflated payments
-   - Added `parseFlexDate()` helper that tries bare date then RFC3339
+### Session 3 DoD — ALL MET:
+- [x] All 4 cases advanced through remaining stages via API (14 audit trail entries)
+- [x] Error cases confirmed (boundary, 404, 400)
+- [x] Browser walkthrough: all portals functional
+- [x] BUILD_HISTORY.md updated
 
-### Verified results:
-- Martinez eligibility: `rule_of_n_sum = 91.75` (was 0.00)
-- Martinez standard case: 7 stages, no DRO (was showing DRO stage incorrectly)
-- Martinez DRO case: 8 stages, DRO Division included correctly
-- Martinez DRO benefit: `member_benefit_after_dro = $2,213.35` (was $85,238.94)
-- 18/18 Go intelligence tests pass
-- 204/204 frontend tests pass (including 7 new workflowComposition tests)
-
-## First Action: Create PR
-
-These 4 commits are tested, verified, and ready. Create a PR against `main`:
-
-```bash
-git push -u origin claude/competent-banzai
-gh pr create --title "Fix 3 E2E bugs: Rule of N sum, DRO stage visibility, DRO date parsing" --body "..."
-```
+### Known bugs from E2E testing (logged in BUILD_HISTORY.md):
+1. **Rule sum display = 0.00** — intelligence API returns 0 for Rule of 75/85 sum (determination correct, display-only)
+2. **Payment amounts inflated** — intelligence service returns DRO data per-member not per-case
+3. **DRO seed data placeholder** — marriage dates "12/31/1", negative marital fractions (DRO engine not implemented)
+4. **KB 404 for scenario stage** — no KB article for frontend-only stage
 
 ## What's built and running on main:
 
@@ -50,21 +43,12 @@ gh pr create --title "Fix 3 E2E bugs: Rule of N sum, DRO stage visibility, DRO d
 - All 12 PostgreSQL init scripts (schema + seed) run on first boot
 - Staff Portal work queue showing 4 live retirement cases
 - Member Dashboard with 8 cards — all showing live data
-- 197/197 frontend tests on main (204/204 on this branch with new tests)
-
-## What to Work On After PR Merge
-
-### Option A: Interaction Detail Panel
-An approved plan exists at `.claude/plans/shiny-inventing-allen.md` and prompt at `.claude/prompts/interaction-detail-panel.md`. This adds a click-to-expand detail panel to the interaction history card with spawn-from-row animation. 3 new files, 2 modified files.
-
-### Option B: Case Management Go Tests
-`platform/casemanagement/` has zero test coverage. Adding handler tests would match patterns in `platform/crm/api/handlers_test.go`.
-
-### Option C: E2E Workflow Stage Advancement
-Click through the full 7/8-stage workflow in the browser: advance stages via `POST /api/v1/cases/{id}/advance`, verify stage transitions, audit trail, and that eligibility/benefit data renders correctly at each stage.
-
-### Option D: User's Choice
-The platform is at a stable milestone with all critical calculation bugs fixed.
+- Interaction Detail Panel with spawn-from-row animation
+- Retirement Application: 7-stage workflow with backend-connected stage advancement
+- All CRM portals (Member, Employer, Staff) wired to live PostgreSQL-backed API
+- Case management Go tests: handler tests + sqlmock DB tests + db layer tests (52 total)
+- Stage mapping translation layer: auto-skip, DRO flag handling (25 unit tests)
+- 229/229 frontend tests passing, `tsc --noEmit` clean, all Go services build and test clean
 
 ## Services Reference
 
@@ -87,6 +71,14 @@ cd frontend && npx tsc --noEmit && npm test -- --run
 
 # Go services
 cd platform/intelligence && go build ./... && go test ./...
-cd platform/dataaccess && go build ./... && go test ./...
-cd platform/casemanagement && go build ./...
+cd platform/casemanagement && go build ./... && go test ./...
+cd platform/crm && go build ./... && go test ./...
 ```
+
+## What's Next
+
+The 4-workstream plan is complete. Potential next workstreams:
+- Fix the 4 known bugs from E2E testing (especially #1 Rule sum display and #2 payment amounts)
+- Add CRM Go test coverage (currently only handler tests, no db-level like casemanagement has)
+- Employer Portal visual polish / UX improvements
+- Additional seed data for more diverse test scenarios
