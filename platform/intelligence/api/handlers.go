@@ -345,19 +345,29 @@ func (h *Handler) fetchDRO(memberID int) (*models.DROData, error) {
 			AltPayeeFirst:  d.AltPayeeFirst,
 			AltPayeeLast:   d.AltPayeeLast,
 		}
-		if t, err := time.Parse("2006-01-02", d.MarriageDate); err == nil {
+		if t, err := parseFlexDate(d.MarriageDate); err == nil {
 			result.MarriageDate = t
 		}
-		if t, err := time.Parse("2006-01-02", d.DivorceDate); err == nil {
+		if t, err := parseFlexDate(d.DivorceDate); err == nil {
 			result.DivorceDate = t
 		}
-		if t, err := time.Parse("2006-01-02", d.AltPayeeDOB); err == nil {
+		if t, err := parseFlexDate(d.AltPayeeDOB); err == nil {
 			result.AltPayeeDOB = &t
 		}
 		return result, nil
 	}
 
 	return nil, nil
+}
+
+// parseFlexDate parses a date string in either "2006-01-02" or RFC3339 format.
+// The dataaccess service returns RFC3339 timestamps (e.g. "1999-08-15T00:00:00Z")
+// while some inputs use bare dates ("1999-08-15").
+func parseFlexDate(s string) (time.Time, error) {
+	if t, err := time.Parse("2006-01-02", s); err == nil {
+		return t, nil
+	}
+	return time.Parse(time.RFC3339, s)
 }
 
 func fetchFromConnector[T any](url string) (*T, error) {
