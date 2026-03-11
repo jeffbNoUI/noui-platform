@@ -826,3 +826,167 @@ func TestGetStageHistory_WithRecords(t *testing.T) {
 		t.Errorf("history[1].FromStage = %v, want nil (initial transition)", body.Data[1].FromStage)
 	}
 }
+
+// --- Edge Case Tests (Session 3) ---
+
+func TestListCases_FilterCombination(t *testing.T) {
+	h, mock := newTestHandler(t)
+
+	// status=active + priority=high → 2 filter args + tenant = 3 WHERE args
+	mock.ExpectQuery("SELECT COUNT").
+		WithArgs(defaultTenantID, "active", "high").
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+
+	dataRows := sqlmock.NewRows(caseCols)
+	addCaseRow(dataRows, "case-filtered", 10001, 1, "Verify Employment")
+	mock.ExpectQuery("SELECT").
+		WithArgs(defaultTenantID, "active", "high", 25, 0).
+		WillReturnRows(dataRows)
+
+	mock.ExpectQuery("SELECT flag_code FROM case_flag").
+		WithArgs("case-filtered").
+		WillReturnRows(sqlmock.NewRows([]string{"flag_code"}))
+
+	w := serve(h, "GET", "/api/v1/cases?status=active&priority=high", nil)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("ListCases(status+priority) status = %d, want %d\nbody: %s",
+			w.Code, http.StatusOK, w.Body.String())
+	}
+
+	var body struct {
+		Data       []models.RetirementCase `json:"data"`
+		Pagination map[string]interface{}  `json:"pagination"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	if len(body.Data) != 1 {
+		t.Errorf("expected 1 case, got %d", len(body.Data))
+	}
+	if body.Data[0].CaseID != "case-filtered" {
+		t.Errorf("CaseID = %q, want case-filtered", body.Data[0].CaseID)
+	}
+}
+
+func TestAdvanceStage_FinalStage_HTTP(t *testing.T) {
+	h, mock := newTestHandler(t)
+
+	// Case is at stage 6 (final). AdvanceStage will try nextIdx=7, get ErrNoRows,
+	// and return "case is already at the final stage" error.
+	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT current_stage_idx").
+		WithArgs("case-final").
+		WillReturnRows(sqlmock.NewRows([]string{"current_stage_idx"}).AddRow(6))
+
+	mock.ExpectQuery("SELECT stage_name FROM case_stage_definition").
+		WithArgs(7).
+		WillReturnError(sql.ErrNoRows)
+	mock.ExpectRollback()
+
+	reqBody, _ := json.Marshal(models.AdvanceStageRequest{
+		TransitionedBy: "jsmith",
+		Note:           "try to advance past final",
+	})
+
+	w := serve(h, "POST", "/api/v1/cases/case-final/advance", reqBody)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("AdvanceStage(final) status = %d, want %d\nbody: %s",
+			w.Code, http.StatusBadRequest, w.Body.String())
+	}
+
+	var body map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &body)
+	errObj := body["error"].(map[string]interface{})
+	if errObj["code"] != "ADVANCE_ERROR" {
+		t.Errorf("error.code = %q, want ADVANCE_ERROR", errObj["code"])
+	}
+}
+
+func TestGetCase_NullMemberJoin(t *testing.T) {
+	h, mock := newTestHandler(t)
+
+	// Member doesn't exist in member_master → COALESCE returns defaults
+	now := time.Now().UTC()
+	rows := sqlmock.NewRows(caseCols).AddRow(
+		"case-orphan", defaultTenantID, 99999, "service",
+		time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC),
+		"standard", "on-track",
+		"Application Intake", 0, sql.NullString{Valid: false},
+		5, "active", now, now,
+		"", 0, "", // COALESCE defaults
+	)
+	mock.ExpectQuery("SELECT").
+		WithArgs("case-orphan").
+		WillReturnRows(rows)
+
+	mock.ExpectQuery("SELECT flag_code FROM case_flag").
+		WithArgs("case-orphan").
+		WillReturnRows(sqlmock.NewRows([]string{"flag_code"}))
+
+	w := serve(h, "GET", "/api/v1/cases/case-orphan", nil)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GetCase(orphan) status = %d, want %d\nbody: %s",
+			w.Code, http.StatusOK, w.Body.String())
+	}
+
+	var body struct {
+		Data models.RetirementCase `json:"data"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	if body.Data.Name != "" {
+		t.Errorf("Name = %q, want empty (COALESCE default)", body.Data.Name)
+	}
+	if body.Data.Tier != 0 {
+		t.Errorf("Tier = %d, want 0 (COALESCE default)", body.Data.Tier)
+	}
+	if body.Data.AssignedTo != "" {
+		t.Errorf("AssignedTo = %q, want empty (NULL)", body.Data.AssignedTo)
+	}
+}
+
+func TestListCases_WithAssignedToFilter(t *testing.T) {
+	h, mock := newTestHandler(t)
+
+	// assigned_to=jsmith filter
+	mock.ExpectQuery("SELECT COUNT").
+		WithArgs(defaultTenantID, "jsmith").
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+
+	dataRows := sqlmock.NewRows(caseCols)
+	addCaseRow(dataRows, "case-assigned", 10002, 3, "Marital Share Calculation")
+	mock.ExpectQuery("SELECT").
+		WithArgs(defaultTenantID, "jsmith", 25, 0).
+		WillReturnRows(dataRows)
+
+	mock.ExpectQuery("SELECT flag_code FROM case_flag").
+		WithArgs("case-assigned").
+		WillReturnRows(sqlmock.NewRows([]string{"flag_code"}).AddRow("dro"))
+
+	w := serve(h, "GET", "/api/v1/cases?assigned_to=jsmith", nil)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("ListCases(assigned_to) status = %d, want %d\nbody: %s",
+			w.Code, http.StatusOK, w.Body.String())
+	}
+
+	var body struct {
+		Data []models.RetirementCase `json:"data"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	if len(body.Data) != 1 {
+		t.Errorf("expected 1 case, got %d", len(body.Data))
+	}
+	if body.Data[0].CaseID != "case-assigned" {
+		t.Errorf("CaseID = %q, want case-assigned", body.Data[0].CaseID)
+	}
+	if len(body.Data[0].Flags) != 1 || body.Data[0].Flags[0] != "dro" {
+		t.Errorf("Flags = %v, want [dro]", body.Data[0].Flags)
+	}
+}
