@@ -1,5 +1,22 @@
 # noui-platform — Build History
 
+## Housekeeping Sprint (2026-03-11)
+
+**Result:** Cleaned up accumulated debt from rapid feature development.
+
+**Changes:**
+- Deleted orphaned `MemberDetailsCard.tsx` (zero imports since PR #25 progressive disclosure refactor)
+- Closed stale PR #2 (`claude/upbeat-hellman` — "Add interaction detail panel with spawn animation") — superseded by existing InteractionDetailPanel in main
+- Deleted remote branch `origin/claude/upbeat-hellman`
+
+**Previously reported issues now resolved:**
+- useMemberDashboard commitments crash — fixed in PR #21 (commit c35f7f0)
+- React act() warnings — no act() calls exist; tests use renderWithProviders pattern
+
+**Verification:** 222/222 frontend tests pass, TypeScript clean.
+
+---
+
 ## Option F: Wire useAdvanceStage — Backend-Connected Stage Workflow (2026-03-11)
 
 **Result:** Frontend RetirementApplication stage navigation now persists to the backend case management API. Three bugs fixed, stage mapping translation layer created.
