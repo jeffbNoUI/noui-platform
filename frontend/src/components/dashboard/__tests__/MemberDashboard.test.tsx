@@ -101,9 +101,13 @@ describe('MemberDashboard', () => {
   it('opens first active case when Open Active Case is clicked', () => {
     renderWithProviders(<MemberDashboard {...defaultProps} />);
     fireEvent.click(screen.getByText('Open Active Case'));
-    expect(defaultProps.onOpenCase).toHaveBeenCalledWith('RET-2026-0147', 10001, '2026-04-01', [
-      'leave-payout',
-    ]);
+    expect(defaultProps.onOpenCase).toHaveBeenCalledWith(
+      'RET-2026-0147',
+      10001,
+      '2026-04-01',
+      ['leave-payout'],
+      undefined,
+    );
   });
 
   it('hides Open Active Case button when no cases', () => {

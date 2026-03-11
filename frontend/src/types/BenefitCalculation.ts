@@ -7,7 +7,7 @@ export interface EligibilityResult {
   vested: boolean;
   is_vested?: boolean;
   eligible_normal?: boolean;
-  rule_of_n_sum?: number;
+  rule_of_n_sum: number;
   rule_of_75_sum?: number;
   rule_of_85_sum?: number;
   service_credit: ServiceCreditData;

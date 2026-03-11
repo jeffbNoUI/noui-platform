@@ -69,7 +69,7 @@ describe('DROStage', () => {
 
   it('shows DRO award percentage', () => {
     renderWithProviders(<DROStage calculation={mockCalculation} />);
-    // alt_payee_pct = 0.5 → 50%
+    // alt_payee_pct = 50 (API returns percentage, not decimal)
     expect(screen.getByText('50% of marital share')).toBeInTheDocument();
   });
 });

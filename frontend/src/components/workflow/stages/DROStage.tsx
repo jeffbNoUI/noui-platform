@@ -71,7 +71,7 @@ export default function DROStage({ calculation }: { calculation?: BenefitCalcRes
         <Field label="Division Method" value={dro.division_method || 'Shared Interest'} />
         <Field
           label="DRO Award"
-          value={`${((dro.alt_payee_pct || dro.division_value || 0) * 100).toFixed(0)}% of marital share`}
+          value={`${(dro.alt_payee_pct || dro.division_value || 0).toFixed(0)}% of marital share`}
         />
         <Field label="Alt Payee Monthly" value={fmt(dro.alt_payee_amount)} highlight />
         <Field label="Member After DRO" value={fmt(dro.member_benefit_after_dro)} highlight />

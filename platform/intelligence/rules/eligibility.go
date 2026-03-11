@@ -90,6 +90,9 @@ func EvaluateEligibility(member models.MemberData, svcCredit models.ServiceCredi
 		SourceReference: "RMC §18-403",
 	})
 
+	// Rule of N sum: age + earned service (always computed for display)
+	result.RuleOfNSum = age.Decimal + svcCredit.EligibilityYears
+
 	if !vested {
 		result.BestEligible = "NONE"
 		result.ReductionPct = 0
