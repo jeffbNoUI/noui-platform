@@ -90,7 +90,9 @@ wait_for_services() {
     local ep="${endpoints[$i]}"
     local attempts=0
     while [ $attempts -lt 30 ]; do
-      if curl -sf "${BASE_URL}${ep}" -H "X-Tenant-ID: ${TENANT_ID}" > /dev/null 2>&1; then
+      local hc
+      hc=$(curl -s -o /dev/null -w "%{http_code}" "${BASE_URL}${ep}" -H "X-Tenant-ID: ${TENANT_ID}" 2>/dev/null || echo "000")
+      if [ "$hc" = "200" ]; then
         echo -e "  ${GREEN}✓${NC} ${svc} is ready"
         break
       fi
@@ -103,6 +105,18 @@ wait_for_services() {
     fi
   done
   echo ""
+}
+
+# Extract HTTP code and body from curl response (body\nHTTP_CODE format)
+extract_http() {
+  local response="$1"
+  HTTP_CODE=$(echo "$response" | tail -1)
+  BODY=$(echo "$response" | sed '$d')
+  # If response was empty, default to 000
+  if [ -z "$HTTP_CODE" ] || ! [[ "$HTTP_CODE" =~ ^[0-9]+$ ]]; then
+    HTTP_CODE="000"
+    BODY=""
+  fi
 }
 
 # ─── Parse flags ──────────────────────────────────────────────────────────────
@@ -121,9 +135,9 @@ echo ""
 
 log_header "Test 1: Schema Verification"
 
-RESPONSE=$(curl -sf -w "\n%{http_code}" \
+RESPONSE=$(curl -s -w "\n%{http_code}" \
   "${BASE_URL}/api/v1/correspondence/templates?stage_category=intake&limit=10" \
-  -H "X-Tenant-ID: ${TENANT_ID}" 2>/dev/null || echo -e "\n000")
+  -H "X-Tenant-ID: ${TENANT_ID}" 2>/dev/null) || true
 
 HTTP_CODE=$(echo "$RESPONSE" | tail -1)
 BODY=$(echo "$RESPONSE" | sed '$d')
@@ -145,7 +159,6 @@ GENERATE_PAYLOAD=$(cat <<'ENDJSON'
 {
   "templateId": "c0000000-0000-0000-0000-000000000006",
   "memberId": 10001,
-  "caseId": "RET-2026-0147",
   "mergeData": {
     "member_name": "Robert Martinez",
     "application_date": "2026-03-05",
@@ -155,11 +168,11 @@ GENERATE_PAYLOAD=$(cat <<'ENDJSON'
 ENDJSON
 )
 
-RESPONSE=$(curl -sf -w "\n%{http_code}" \
+RESPONSE=$(curl -s -w "\n%{http_code}" \
   -X POST "${BASE_URL}/api/v1/correspondence/generate" \
   -H "Content-Type: application/json" \
   -H "X-Tenant-ID: ${TENANT_ID}" \
-  -d "$GENERATE_PAYLOAD" 2>/dev/null || echo -e "\n000")
+  -d "$GENERATE_PAYLOAD" 2>/dev/null) || true
 
 HTTP_CODE=$(echo "$RESPONSE" | tail -1)
 BODY=$(echo "$RESPONSE" | sed '$d')
@@ -167,18 +180,18 @@ BODY=$(echo "$RESPONSE" | sed '$d')
 assert_status "POST generate (INTAKE_ACK)" "201" "$HTTP_CODE"
 
 # Extract the rendered body and check merge field substitution
-RENDERED=$(echo "$BODY" | jq -r '.data.bodyRendered // empty')
+RENDERED=$(echo "$BODY" | jq -r '.data.bodyRendered // empty' 2>/dev/null || echo "")
 assert_contains "Rendered body has member name" "$RENDERED" "Robert Martinez"
 assert_contains "Rendered body has case number" "$RENDERED" "RET-2026-0147"
 
 # Save correspondence ID for later tests
-CORR_ID=$(echo "$BODY" | jq -r '.data.correspondenceId // empty')
+CORR_ID=$(echo "$BODY" | jq -r '.data.correspondenceId // empty' 2>/dev/null || echo "")
 echo -e "  ${YELLOW}→ Generated correspondence ID: ${CORR_ID}${NC}"
 
 # Verify it appears in history
-RESPONSE=$(curl -sf -w "\n%{http_code}" \
+RESPONSE=$(curl -s -w "\n%{http_code}" \
   "${BASE_URL}/api/v1/correspondence/history?member_id=10001&limit=10" \
-  -H "X-Tenant-ID: ${TENANT_ID}" 2>/dev/null || echo -e "\n000")
+  -H "X-Tenant-ID: ${TENANT_ID}" 2>/dev/null) || true
 
 HTTP_CODE=$(echo "$RESPONSE" | tail -1)
 BODY=$(echo "$RESPONSE" | sed '$d')
@@ -197,19 +210,19 @@ log_header "Test 3: Correspondence → CRM Bridge"
 CRM_PAYLOAD=$(cat <<ENDJSON
 {
   "contactId": "00000000-0000-0000-1000-000000000001",
-  "channel": "CORRESPONDENCE",
-  "interactionType": "LETTER_SENT",
+  "channel": "MAIL_OUTBOUND",
+  "interactionType": "NOTIFICATION",
   "direction": "OUTBOUND",
   "summary": "Sent INTAKE_ACK letter for case RET-2026-0147 (correspondence: ${CORR_ID})"
 }
 ENDJSON
 )
 
-RESPONSE=$(curl -sf -w "\n%{http_code}" \
+RESPONSE=$(curl -s -w "\n%{http_code}" \
   -X POST "${BASE_URL}/api/v1/crm/interactions" \
   -H "Content-Type: application/json" \
   -H "X-Tenant-ID: ${TENANT_ID}" \
-  -d "$CRM_PAYLOAD" 2>/dev/null || echo -e "\n000")
+  -d "$CRM_PAYLOAD" 2>/dev/null) || true
 
 HTTP_CODE=$(echo "$RESPONSE" | tail -1)
 BODY=$(echo "$RESPONSE" | sed '$d')
@@ -217,13 +230,13 @@ BODY=$(echo "$RESPONSE" | sed '$d')
 assert_status "POST CRM interaction (CORRESPONDENCE)" "201" "$HTTP_CODE"
 
 # Extract interaction ID
-INTERACTION_ID=$(echo "$BODY" | jq -r '.data.interactionId // empty')
+INTERACTION_ID=$(echo "$BODY" | jq -r '.data.interactionId // empty' 2>/dev/null || echo "")
 echo -e "  ${YELLOW}→ CRM interaction ID: ${INTERACTION_ID}${NC}"
 
 # Verify the interaction appears in CRM query by contact
-RESPONSE=$(curl -sf -w "\n%{http_code}" \
+RESPONSE=$(curl -s -w "\n%{http_code}" \
   "${BASE_URL}/api/v1/crm/interactions?contact_id=00000000-0000-0000-1000-000000000001&limit=20" \
-  -H "X-Tenant-ID: ${TENANT_ID}" 2>/dev/null || echo -e "\n000")
+  -H "X-Tenant-ID: ${TENANT_ID}" 2>/dev/null) || true
 
 HTTP_CODE=$(echo "$RESPONSE" | tail -1)
 BODY=$(echo "$RESPONSE" | sed '$d')
@@ -231,8 +244,8 @@ BODY=$(echo "$RESPONSE" | sed '$d')
 assert_status "GET CRM interactions for Robert Martinez" "200" "$HTTP_CODE"
 
 # Find our specific interaction by channel
-HAS_CORR=$(echo "$BODY" | jq '[.data[] | select(.channel == "CORRESPONDENCE")] | length')
-assert_json_gte "CORRESPONDENCE interactions exist" "{\"count\": $HAS_CORR}" ".count" "1"
+HAS_CORR=$(echo "$BODY" | jq '[.data[] | select(.channel == "MAIL_OUTBOUND" and .interactionType == "NOTIFICATION")] | length' 2>/dev/null || echo "0")
+assert_json_gte "MAIL_OUTBOUND/NOTIFICATION interactions exist" "{\"count\": $HAS_CORR}" ".count" "1"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TEST 4: Stage-Filtered Template Queries
@@ -244,9 +257,9 @@ log_header "Test 4: Stage-Filtered Template Queries"
 STAGES=("intake" "verify-employment" "eligibility" "election" "submit" "dro")
 
 for stage in "${STAGES[@]}"; do
-  RESPONSE=$(curl -sf -w "\n%{http_code}" \
+  RESPONSE=$(curl -s -w "\n%{http_code}" \
     "${BASE_URL}/api/v1/correspondence/templates?stage_category=${stage}&limit=5" \
-    -H "X-Tenant-ID: ${TENANT_ID}" 2>/dev/null || echo -e "\n000")
+    -H "X-Tenant-ID: ${TENANT_ID}" 2>/dev/null) || true
 
   HTTP_CODE=$(echo "$RESPONSE" | tail -1)
   BODY=$(echo "$RESPONSE" | sed '$d')
@@ -269,9 +282,9 @@ for stage in "${STAGES[@]}"; do
 done
 
 # Verify unfiltered query includes NULL stage templates (MISSING_DOC has no stage)
-RESPONSE=$(curl -sf -w "\n%{http_code}" \
+RESPONSE=$(curl -s -w "\n%{http_code}" \
   "${BASE_URL}/api/v1/correspondence/templates?limit=50" \
-  -H "X-Tenant-ID: ${TENANT_ID}" 2>/dev/null || echo -e "\n000")
+  -H "X-Tenant-ID: ${TENANT_ID}" 2>/dev/null) || true
 
 HTTP_CODE=$(echo "$RESPONSE" | tail -1)
 BODY=$(echo "$RESPONSE" | sed '$d')
