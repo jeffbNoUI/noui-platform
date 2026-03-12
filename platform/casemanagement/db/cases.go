@@ -137,8 +137,25 @@ func (s *Store) ListCases(tenantID string, f models.CaseFilter) ([]models.Retire
 	return cases, total, rows.Err()
 }
 
-// GetCase returns a single case by ID, enriched with member data and flags.
-func (s *Store) GetCase(caseID string) (*models.RetirementCase, error) {
+// GetCase returns a single case by ID, scoped to the given tenant.
+func (s *Store) GetCase(tenantID, caseID string) (*models.RetirementCase, error) {
+	query := fmt.Sprintf("SELECT %s %s WHERE rc.case_id = $1 AND rc.tenant_id = $2", caseColumns, caseFrom)
+	c, err := scanCase(s.DB.QueryRow(query, caseID, tenantID))
+	if err != nil {
+		return nil, err
+	}
+
+	flags, err := s.GetCaseFlags(caseID)
+	if err != nil {
+		return nil, err
+	}
+	c.Flags = flags
+
+	return c, nil
+}
+
+// GetCaseByID returns a case without tenant scoping (internal use only, e.g. after CreateCase).
+func (s *Store) GetCaseByID(caseID string) (*models.RetirementCase, error) {
 	query := fmt.Sprintf("SELECT %s %s WHERE rc.case_id = $1", caseColumns, caseFrom)
 	c, err := scanCase(s.DB.QueryRow(query, caseID))
 	if err != nil {
@@ -199,8 +216,8 @@ func (s *Store) CreateCase(c *models.RetirementCase, flags []string) error {
 	return tx.Commit()
 }
 
-// UpdateCase updates mutable fields on an existing case.
-func (s *Store) UpdateCase(caseID string, req models.UpdateCaseRequest) error {
+// UpdateCase updates mutable fields on an existing case, scoped to tenant.
+func (s *Store) UpdateCase(tenantID, caseID string, req models.UpdateCaseRequest) error {
 	sets := []string{"updated_at = NOW()"}
 	args := []any{}
 	idx := 1
@@ -231,28 +248,28 @@ func (s *Store) UpdateCase(caseID string, req models.UpdateCaseRequest) error {
 	}
 
 	query := fmt.Sprintf(
-		"UPDATE retirement_case SET %s WHERE case_id = $%d",
-		strings.Join(sets, ", "), idx,
+		"UPDATE retirement_case SET %s WHERE case_id = $%d AND tenant_id = $%d",
+		strings.Join(sets, ", "), idx, idx+1,
 	)
-	args = append(args, caseID)
+	args = append(args, caseID, tenantID)
 
 	_, err := s.DB.Exec(query, args...)
 	return err
 }
 
-// AdvanceStage moves a case to the next stage and records the transition.
-func (s *Store) AdvanceStage(caseID string, transitionedBy, note string) (*models.RetirementCase, error) {
+// AdvanceStage moves a case to the next stage and records the transition, scoped to tenant.
+func (s *Store) AdvanceStage(tenantID, caseID string, transitionedBy, note string) (*models.RetirementCase, error) {
 	tx, err := s.DB.Begin()
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
 
-	// Get current stage
+	// Get current stage (tenant-scoped lock)
 	var currentIdx int
 	err = tx.QueryRow(
-		`SELECT current_stage_idx FROM retirement_case WHERE case_id = $1 FOR UPDATE`,
-		caseID,
+		`SELECT current_stage_idx FROM retirement_case WHERE case_id = $1 AND tenant_id = $2 FOR UPDATE`,
+		caseID, tenantID,
 	).Scan(&currentIdx)
 	if err != nil {
 		return nil, err
@@ -304,7 +321,7 @@ func (s *Store) AdvanceStage(caseID string, transitionedBy, note string) (*model
 	}
 
 	// Return refreshed case
-	return s.GetCase(caseID)
+	return s.GetCase(tenantID, caseID)
 }
 
 // GetCaseFlags returns flag codes for a case.
@@ -329,15 +346,16 @@ func (s *Store) GetCaseFlags(caseID string) ([]string, error) {
 	return flags, rows.Err()
 }
 
-// GetStageHistory returns the transition history for a case.
-func (s *Store) GetStageHistory(caseID string) ([]models.StageTransition, error) {
+// GetStageHistory returns the transition history for a case, scoped to tenant.
+func (s *Store) GetStageHistory(tenantID, caseID string) ([]models.StageTransition, error) {
 	rows, err := s.DB.Query(`
-		SELECT id, case_id, from_stage_idx, to_stage_idx, from_stage, to_stage,
-			   COALESCE(transitioned_by, ''), COALESCE(note, ''), transitioned_at
-		FROM case_stage_history
-		WHERE case_id = $1
-		ORDER BY transitioned_at DESC
-	`, caseID)
+		SELECT csh.id, csh.case_id, csh.from_stage_idx, csh.to_stage_idx, csh.from_stage, csh.to_stage,
+			   COALESCE(csh.transitioned_by, ''), COALESCE(csh.note, ''), csh.transitioned_at
+		FROM case_stage_history csh
+		WHERE csh.case_id = $1
+		  AND EXISTS (SELECT 1 FROM retirement_case rc WHERE rc.case_id = $1 AND rc.tenant_id = $2)
+		ORDER BY csh.transitioned_at DESC
+	`, caseID, tenantID)
 	if err != nil {
 		return nil, err
 	}

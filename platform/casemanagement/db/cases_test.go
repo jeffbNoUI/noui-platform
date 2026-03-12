@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"testing"
 	"time"
 
@@ -202,6 +203,27 @@ func TestListCases_WithAssignedToFilter(t *testing.T) {
 	}
 }
 
+func TestListCases_NegativeLimit(t *testing.T) {
+	s, mock := newStore(t)
+
+	mock.ExpectQuery("SELECT COUNT").
+		WithArgs("tenant-1").
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
+
+	// Negative limit → code defaults to 25
+	mock.ExpectQuery("SELECT").
+		WithArgs("tenant-1", 25, 0).
+		WillReturnRows(sqlmock.NewRows(caseCols))
+
+	_, total, err := s.ListCases("tenant-1", models.CaseFilter{Limit: -5})
+	if err != nil {
+		t.Fatalf("ListCases(negative limit) error: %v", err)
+	}
+	if total != 0 {
+		t.Errorf("total = %d, want 0", total)
+	}
+}
+
 // --- GetCase ---
 
 func TestGetCase_NullMemberData(t *testing.T) {
@@ -218,14 +240,14 @@ func TestGetCase_NullMemberData(t *testing.T) {
 		"", 0, "", // COALESCE defaults for missing member data
 	)
 	mock.ExpectQuery("SELECT").
-		WithArgs("case-orphan").
+		WithArgs("case-orphan", "tenant-1").
 		WillReturnRows(rows)
 
 	mock.ExpectQuery("SELECT flag_code FROM case_flag").
 		WithArgs("case-orphan").
 		WillReturnRows(sqlmock.NewRows([]string{"flag_code"}))
 
-	c, err := s.GetCase("case-orphan")
+	c, err := s.GetCase("tenant-1", "case-orphan")
 	if err != nil {
 		t.Fatalf("GetCase error: %v", err)
 	}
@@ -247,12 +269,26 @@ func TestGetCase_NotFound(t *testing.T) {
 	s, mock := newStore(t)
 
 	mock.ExpectQuery("SELECT").
-		WithArgs("nonexistent").
+		WithArgs("nonexistent", "tenant-1").
 		WillReturnError(sql.ErrNoRows)
 
-	_, err := s.GetCase("nonexistent")
+	_, err := s.GetCase("tenant-1", "nonexistent")
 	if err != sql.ErrNoRows {
 		t.Errorf("GetCase(nonexistent) error = %v, want sql.ErrNoRows", err)
+	}
+}
+
+func TestGetCase_WrongTenant(t *testing.T) {
+	s, mock := newStore(t)
+
+	// Case exists under tenant-1 but queried under tenant-2 → no rows
+	mock.ExpectQuery("SELECT").
+		WithArgs("case-001", "tenant-2").
+		WillReturnError(sql.ErrNoRows)
+
+	_, err := s.GetCase("tenant-2", "case-001")
+	if err != sql.ErrNoRows {
+		t.Errorf("GetCase(wrong tenant) error = %v, want sql.ErrNoRows", err)
 	}
 }
 
@@ -263,7 +299,7 @@ func TestAdvanceStage_FinalStage(t *testing.T) {
 
 	mock.ExpectBegin()
 	mock.ExpectQuery("SELECT current_stage_idx").
-		WithArgs("case-final").
+		WithArgs("case-final", "tenant-1").
 		WillReturnRows(sqlmock.NewRows([]string{"current_stage_idx"}).AddRow(6))
 
 	// Next stage (idx=7) doesn't exist → sql.ErrNoRows
@@ -272,7 +308,7 @@ func TestAdvanceStage_FinalStage(t *testing.T) {
 		WillReturnError(sql.ErrNoRows)
 	mock.ExpectRollback()
 
-	_, err := s.AdvanceStage("case-final", "jsmith", "try advancing past final")
+	_, err := s.AdvanceStage("tenant-1", "case-final", "jsmith", "try advancing past final")
 	if err == nil {
 		t.Fatal("AdvanceStage at final stage should return error")
 	}
@@ -287,7 +323,7 @@ func TestAdvanceStage_Success(t *testing.T) {
 	// Full transaction: BEGIN → get current idx → lookup next → lookup current → UPDATE → INSERT history → COMMIT
 	mock.ExpectBegin()
 	mock.ExpectQuery("SELECT current_stage_idx").
-		WithArgs("case-001").
+		WithArgs("case-001", "tenant-1").
 		WillReturnRows(sqlmock.NewRows([]string{"current_stage_idx"}).AddRow(1))
 
 	mock.ExpectQuery("SELECT stage_name FROM case_stage_definition").
@@ -306,16 +342,16 @@ func TestAdvanceStage_Success(t *testing.T) {
 
 	mock.ExpectCommit()
 
-	// GetCase re-fetch after commit
+	// GetCase re-fetch after commit (tenant-scoped)
 	mock.ExpectQuery("SELECT").
-		WithArgs("case-001").
+		WithArgs("case-001", "tenant-1").
 		WillReturnRows(addCaseRow(sqlmock.NewRows(caseCols), "case-001", 10001, 2, "Eligibility Verification"))
 
 	mock.ExpectQuery("SELECT flag_code FROM case_flag").
 		WithArgs("case-001").
 		WillReturnRows(sqlmock.NewRows([]string{"flag_code"}))
 
-	c, err := s.AdvanceStage("case-001", "jsmith", "Verified employment records")
+	c, err := s.AdvanceStage("tenant-1", "case-001", "jsmith", "Verified employment records")
 	if err != nil {
 		t.Fatalf("AdvanceStage error: %v", err)
 	}
@@ -332,13 +368,43 @@ func TestAdvanceStage_CaseNotFound(t *testing.T) {
 
 	mock.ExpectBegin()
 	mock.ExpectQuery("SELECT current_stage_idx").
-		WithArgs("nonexistent").
+		WithArgs("nonexistent", "tenant-1").
 		WillReturnError(sql.ErrNoRows)
 	mock.ExpectRollback()
 
-	_, err := s.AdvanceStage("nonexistent", "jsmith", "")
+	_, err := s.AdvanceStage("tenant-1", "nonexistent", "jsmith", "")
 	if err != sql.ErrNoRows {
 		t.Errorf("AdvanceStage(nonexistent) error = %v, want sql.ErrNoRows", err)
+	}
+}
+
+func TestAdvanceStage_HistoryInsertFails(t *testing.T) {
+	s, mock := newStore(t)
+
+	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT current_stage_idx").
+		WithArgs("case-001", "tenant-1").
+		WillReturnRows(sqlmock.NewRows([]string{"current_stage_idx"}).AddRow(0))
+
+	mock.ExpectQuery("SELECT stage_name FROM case_stage_definition").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"stage_name"}).AddRow("Document Verification"))
+
+	mock.ExpectQuery("SELECT stage_name FROM case_stage_definition").
+		WithArgs(0).
+		WillReturnRows(sqlmock.NewRows([]string{"stage_name"}).AddRow("Application Intake"))
+
+	mock.ExpectExec("UPDATE retirement_case").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	// History insert fails — triggers rollback
+	mock.ExpectExec("INSERT INTO case_stage_history").
+		WillReturnError(fmt.Errorf("constraint violation"))
+	mock.ExpectRollback()
+
+	_, err := s.AdvanceStage("tenant-1", "case-001", "jsmith", "test rollback")
+	if err == nil {
+		t.Fatal("AdvanceStage should fail when history insert fails")
 	}
 }
 
@@ -359,11 +425,11 @@ func TestGetStageHistory_Ordering(t *testing.T) {
 		AddRow(2, "case-001", &fromIdx, 1, &fromStage, "Verify Employment", "jsmith", "Reviewed docs", now).
 		AddRow(1, "case-001", nil, 0, nil, "Application Intake", "jsmith", "Case created", earlier)
 
-	mock.ExpectQuery("SELECT id, case_id").
-		WithArgs("case-001").
+	mock.ExpectQuery("SELECT").
+		WithArgs("case-001", "tenant-1").
 		WillReturnRows(rows)
 
-	history, err := s.GetStageHistory("case-001")
+	history, err := s.GetStageHistory("tenant-1", "case-001")
 	if err != nil {
 		t.Fatalf("GetStageHistory error: %v", err)
 	}
@@ -380,6 +446,25 @@ func TestGetStageHistory_Ordering(t *testing.T) {
 	// Initial transition has nil FromStage
 	if history[1].FromStage != nil {
 		t.Errorf("history[1].FromStage = %v, want nil (initial transition)", history[1].FromStage)
+	}
+}
+
+func TestGetStageHistory_Empty(t *testing.T) {
+	s, mock := newStore(t)
+
+	mock.ExpectQuery("SELECT").
+		WithArgs("case-new", "tenant-1").
+		WillReturnRows(sqlmock.NewRows([]string{
+			"id", "case_id", "from_stage_idx", "to_stage_idx",
+			"from_stage", "to_stage", "transitioned_by", "note", "transitioned_at",
+		}))
+
+	history, err := s.GetStageHistory("tenant-1", "case-new")
+	if err != nil {
+		t.Fatalf("GetStageHistory(empty) error: %v", err)
+	}
+	if history != nil {
+		t.Errorf("history = %v, want nil (no transitions)", history)
 	}
 }
 
@@ -507,7 +592,7 @@ func TestUpdateCase_NoChanges(t *testing.T) {
 	s, _ := newStore(t)
 
 	// All fields nil → UpdateCase returns nil immediately (no DB call)
-	err := s.UpdateCase("case-001", models.UpdateCaseRequest{})
+	err := s.UpdateCase("tenant-1", "case-001", models.UpdateCaseRequest{})
 	if err != nil {
 		t.Errorf("UpdateCase(no changes) error = %v, want nil", err)
 	}
@@ -521,7 +606,7 @@ func TestUpdateCase_MultipleFields(t *testing.T) {
 	mock.ExpectExec("UPDATE retirement_case SET").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err := s.UpdateCase("case-001", models.UpdateCaseRequest{
+	err := s.UpdateCase("tenant-1", "case-001", models.UpdateCaseRequest{
 		Priority: &prio,
 		Status:   &status,
 	})

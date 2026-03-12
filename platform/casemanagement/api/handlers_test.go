@@ -42,6 +42,23 @@ func serve(h *Handler, method, path string, body []byte) *httptest.ResponseRecor
 	return w
 }
 
+// serveWithTenant dispatches a request with a custom X-Tenant-ID header.
+func serveWithTenant(h *Handler, method, path, tenantID string, body []byte) *httptest.ResponseRecorder {
+	mux := http.NewServeMux()
+	h.RegisterRoutes(mux)
+	var req *http.Request
+	if body != nil {
+		req = httptest.NewRequest(method, path, bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+	} else {
+		req = httptest.NewRequest(method, path, nil)
+	}
+	req.Header.Set("X-Tenant-ID", tenantID)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	return w
+}
+
 // --- HealthCheck ---
 
 func TestHealthCheck(t *testing.T) {
@@ -357,7 +374,7 @@ func TestGetCase_NotFound(t *testing.T) {
 	h, mock := newTestHandler(t)
 
 	mock.ExpectQuery("SELECT").
-		WithArgs("nonexistent").
+		WithArgs("nonexistent", defaultTenantID).
 		WillReturnError(sql.ErrNoRows)
 
 	w := serve(h, "GET", "/api/v1/cases/nonexistent", nil)
@@ -378,7 +395,7 @@ func TestGetCase_Valid(t *testing.T) {
 	h, mock := newTestHandler(t)
 
 	mock.ExpectQuery("SELECT").
-		WithArgs("case-001").
+		WithArgs("case-001", defaultTenantID).
 		WillReturnRows(newCaseRows("case-001", 10001, 2, "Eligibility Verification"))
 
 	// GetCase also calls GetCaseFlags
@@ -614,7 +631,7 @@ func TestUpdateCase_NotFound(t *testing.T) {
 	h, mock := newTestHandler(t)
 
 	mock.ExpectQuery("SELECT").
-		WithArgs("nonexistent").
+		WithArgs("nonexistent", defaultTenantID).
 		WillReturnError(sql.ErrNoRows)
 
 	prio := "high"
@@ -630,21 +647,21 @@ func TestUpdateCase_NotFound(t *testing.T) {
 func TestUpdateCase_Valid(t *testing.T) {
 	h, mock := newTestHandler(t)
 
-	// First: verify case exists (GetCase)
+	// First: verify case exists (GetCase — now tenant-scoped)
 	mock.ExpectQuery("SELECT").
-		WithArgs("case-001").
+		WithArgs("case-001", defaultTenantID).
 		WillReturnRows(newCaseRows("case-001", 10001, 2, "Eligibility Verification"))
 	mock.ExpectQuery("SELECT flag_code FROM case_flag").
 		WithArgs("case-001").
 		WillReturnRows(sqlmock.NewRows([]string{"flag_code"}))
 
-	// Then: UpdateCase exec
+	// Then: UpdateCase exec (tenant-scoped)
 	mock.ExpectExec("UPDATE retirement_case SET").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	// Then: re-fetch via GetCase
+	// Then: re-fetch via GetCase (tenant-scoped)
 	mock.ExpectQuery("SELECT").
-		WithArgs("case-001").
+		WithArgs("case-001", defaultTenantID).
 		WillReturnRows(newCaseRows("case-001", 10001, 2, "Eligibility Verification"))
 	mock.ExpectQuery("SELECT flag_code FROM case_flag").
 		WithArgs("case-001").
@@ -707,7 +724,7 @@ func TestAdvanceStage_CaseNotFound(t *testing.T) {
 	// AdvanceStage starts a transaction, then queries current_stage_idx
 	mock.ExpectBegin()
 	mock.ExpectQuery("SELECT current_stage_idx").
-		WithArgs("nonexistent").
+		WithArgs("nonexistent", defaultTenantID).
 		WillReturnError(sql.ErrNoRows)
 	mock.ExpectRollback()
 
@@ -726,10 +743,10 @@ func TestAdvanceStage_CaseNotFound(t *testing.T) {
 func TestAdvanceStage_Valid(t *testing.T) {
 	h, mock := newTestHandler(t)
 
-	// Transaction: get current stage, look up next stage, look up current stage name, update, record history
+	// Transaction: get current stage (tenant-scoped), look up next stage, look up current stage name, update, record history
 	mock.ExpectBegin()
 	mock.ExpectQuery("SELECT current_stage_idx").
-		WithArgs("case-001").
+		WithArgs("case-001", defaultTenantID).
 		WillReturnRows(sqlmock.NewRows([]string{"current_stage_idx"}).AddRow(1))
 
 	// Look up next stage (idx=2)
@@ -752,9 +769,9 @@ func TestAdvanceStage_Valid(t *testing.T) {
 
 	mock.ExpectCommit()
 
-	// GetCase re-fetch after commit
+	// GetCase re-fetch after commit (tenant-scoped)
 	mock.ExpectQuery("SELECT").
-		WithArgs("case-001").
+		WithArgs("case-001", defaultTenantID).
 		WillReturnRows(newCaseRows("case-001", 10001, 2, "Eligibility Verification"))
 	mock.ExpectQuery("SELECT flag_code FROM case_flag").
 		WithArgs("case-001").
@@ -798,8 +815,8 @@ func TestGetStageHistory_WithRecords(t *testing.T) {
 		AddRow(2, "case-001", &fromIdx, 1, &fromStage, "Verify Employment", "jsmith", "Reviewed docs", now).
 		AddRow(1, "case-001", nil, 0, nil, "Application Intake", "jsmith", "Case created", now)
 
-	mock.ExpectQuery("SELECT id, case_id").
-		WithArgs("case-001").
+	mock.ExpectQuery("SELECT").
+		WithArgs("case-001", defaultTenantID).
 		WillReturnRows(rows)
 
 	w := serve(h, "GET", "/api/v1/cases/case-001/history", nil)
@@ -876,7 +893,7 @@ func TestAdvanceStage_FinalStage_HTTP(t *testing.T) {
 	// and return "case is already at the final stage" error.
 	mock.ExpectBegin()
 	mock.ExpectQuery("SELECT current_stage_idx").
-		WithArgs("case-final").
+		WithArgs("case-final", defaultTenantID).
 		WillReturnRows(sqlmock.NewRows([]string{"current_stage_idx"}).AddRow(6))
 
 	mock.ExpectQuery("SELECT stage_name FROM case_stage_definition").
@@ -918,7 +935,7 @@ func TestGetCase_NullMemberJoin(t *testing.T) {
 		"", 0, "", // COALESCE defaults
 	)
 	mock.ExpectQuery("SELECT").
-		WithArgs("case-orphan").
+		WithArgs("case-orphan", defaultTenantID).
 		WillReturnRows(rows)
 
 	mock.ExpectQuery("SELECT flag_code FROM case_flag").
@@ -988,5 +1005,118 @@ func TestListCases_WithAssignedToFilter(t *testing.T) {
 	}
 	if len(body.Data[0].Flags) != 1 || body.Data[0].Flags[0] != "dro" {
 		t.Errorf("Flags = %v, want [dro]", body.Data[0].Flags)
+	}
+}
+
+// --- Tenant Isolation + Edge Case Tests ---
+
+func TestCreateCase_MalformedJSON(t *testing.T) {
+	h, _ := newTestHandler(t)
+
+	w := serve(h, "POST", "/api/v1/cases", []byte(`{invalid json`))
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("CreateCase(malformed JSON) status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+
+	var body map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &body)
+	errObj := body["error"].(map[string]interface{})
+	if errObj["code"] != "INVALID_REQUEST" {
+		t.Errorf("error.code = %q, want INVALID_REQUEST", errObj["code"])
+	}
+}
+
+func TestGetCase_CrossTenant(t *testing.T) {
+	h, mock := newTestHandler(t)
+
+	// Case exists under defaultTenantID but request comes with "other-tenant"
+	// The tenant-scoped query returns ErrNoRows because tenant doesn't match
+	mock.ExpectQuery("SELECT").
+		WithArgs("case-001", "other-tenant").
+		WillReturnError(sql.ErrNoRows)
+
+	w := serveWithTenant(h, "GET", "/api/v1/cases/case-001", "other-tenant", nil)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("GetCase(cross-tenant) status = %d, want %d", w.Code, http.StatusNotFound)
+	}
+
+	var body map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &body)
+	errObj := body["error"].(map[string]interface{})
+	if errObj["code"] != "NOT_FOUND" {
+		t.Errorf("error.code = %q, want NOT_FOUND", errObj["code"])
+	}
+}
+
+func TestUpdateCase_EmptyBody(t *testing.T) {
+	h, mock := newTestHandler(t)
+
+	// Verify case exists (tenant-scoped)
+	mock.ExpectQuery("SELECT").
+		WithArgs("case-001", defaultTenantID).
+		WillReturnRows(newCaseRows("case-001", 10001, 2, "Eligibility Verification"))
+	mock.ExpectQuery("SELECT flag_code FROM case_flag").
+		WithArgs("case-001").
+		WillReturnRows(sqlmock.NewRows([]string{"flag_code"}))
+
+	// UpdateCase with no fields is a no-op (no UPDATE exec expected)
+
+	// Re-fetch (tenant-scoped)
+	mock.ExpectQuery("SELECT").
+		WithArgs("case-001", defaultTenantID).
+		WillReturnRows(newCaseRows("case-001", 10001, 2, "Eligibility Verification"))
+	mock.ExpectQuery("SELECT flag_code FROM case_flag").
+		WithArgs("case-001").
+		WillReturnRows(sqlmock.NewRows([]string{"flag_code"}))
+
+	reqBody, _ := json.Marshal(models.UpdateCaseRequest{})
+
+	w := serve(h, "PUT", "/api/v1/cases/case-001", reqBody)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("UpdateCase(empty body) status = %d, want %d\nbody: %s",
+			w.Code, http.StatusOK, w.Body.String())
+	}
+
+	var body struct {
+		Data models.RetirementCase `json:"data"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	if body.Data.CaseID != "case-001" {
+		t.Errorf("CaseID = %q, want case-001", body.Data.CaseID)
+	}
+}
+
+func TestGetStageHistory_Empty(t *testing.T) {
+	h, mock := newTestHandler(t)
+
+	// Case exists but has no stage history records
+	mock.ExpectQuery("SELECT").
+		WithArgs("case-no-history", defaultTenantID).
+		WillReturnRows(sqlmock.NewRows([]string{
+			"id", "case_id", "from_stage_idx", "to_stage_idx",
+			"from_stage", "to_stage", "transitioned_by", "note", "transitioned_at",
+		}))
+
+	w := serve(h, "GET", "/api/v1/cases/case-no-history/history", nil)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GetStageHistory(empty) status = %d, want %d\nbody: %s",
+			w.Code, http.StatusOK, w.Body.String())
+	}
+
+	var body struct {
+		Data []models.StageTransition `json:"data"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	// Verify empty history returns empty array (not null)
+	if body.Data == nil {
+		t.Error("GetStageHistory(empty) returned nil, want empty slice")
 	}
 }
