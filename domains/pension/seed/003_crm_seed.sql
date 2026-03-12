@@ -612,7 +612,7 @@ INSERT INTO crm_interaction (
     NULL, NULL, NULL,
     NULL, NULL,
     'Preliminary benefit estimate letter mailed to member. Includes Rule of 75 eligibility confirmation and estimated monthly benefit range.',
-    NULL, NULL, NULL, 'INTERNAL',
+    NULL, NULL, NULL, 'PUBLIC',
     '2026-02-18 10:00:00-07', 'jsmith'
 ),
 -- 3. Jennifer emailed about service purchase (2026-01-20)
@@ -627,7 +627,7 @@ INSERT INTO crm_interaction (
     NULL, NULL, NULL,
     'Service Credit Purchase — Prior Government Employment', 'THR-20260120-JK001',
     'Member emailed asking about purchasing 2 years of service credit from prior government employment with Jefferson County. Replied with eligibility requirements and cost estimate process.',
-    NULL, 'SVC_PURCH_INFO', NULL, 'INTERNAL',
+    NULL, 'SVC_PURCH_INFO', NULL, 'PUBLIC',
     '2026-01-20 10:45:00-07', 'agarcia'
 ),
 -- 4. Jennifer portal self-service estimate (2026-01-25)
@@ -642,7 +642,7 @@ INSERT INTO crm_interaction (
     NULL, NULL, NULL,
     NULL, NULL,
     'Member used self-service portal to generate a service credit purchase cost estimate for 2 years of prior Jefferson County service.',
-    NULL, NULL, NULL, 'INTERNAL',
+    NULL, NULL, NULL, 'PUBLIC',
     '2026-01-25 19:35:00-07', 'system'
 ),
 -- 5. Jennifer follow-up call (2026-02-01)
@@ -672,7 +672,7 @@ INSERT INTO crm_interaction (
     NULL, NULL, NULL,
     'Early Retirement — Reduction Factor Question', 'THR-20260220-DW001',
     'Member sent secure message asking about early retirement reduction under Tier 3. Replied with explanation of 6% annual reduction factor, Rule of 85 details, and comparison of early vs. deferred retirement.',
-    NULL, 'RET_EST_PROVIDED', NULL, 'INTERNAL',
+    NULL, 'RET_EST_PROVIDED', NULL, 'PUBLIC',
     '2026-02-20 09:15:00-07', 'mwilson'
 ),
 -- 7. David system event — retirement application started (2026-02-25)
@@ -687,7 +687,7 @@ INSERT INTO crm_interaction (
     NULL, NULL, NULL,
     NULL, NULL,
     'System event: Retirement application initiated via member portal. Application status set to PENDING. Awaiting beneficiary designation form and final salary verification.',
-    NULL, 'RET_APP_RECEIVED', NULL, 'INTERNAL',
+    NULL, 'RET_APP_RECEIVED', NULL, 'PUBLIC',
     '2026-02-25 11:00:00-07', 'system'
 ),
 -- 8. Robert DRO document received (2026-01-10)
