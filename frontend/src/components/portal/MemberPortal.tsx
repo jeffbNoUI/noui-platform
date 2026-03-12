@@ -1099,7 +1099,6 @@ function MemberMessageCenter({
   const { data: contact } = useContactByMemberId(String(memberID));
   const contactId = contact?.contactId ?? '';
   const { data: conversations } = useMemberConversations(String(memberID));
-  const { data: interactions } = useMemberPublicInteractions(selectedConvId);
   const sendMessage = useCreateMemberMessage();
   const createConv = useCreateMemberConversation();
 
@@ -1107,6 +1106,7 @@ function MemberMessageCenter({
 
   // Auto-select first conversation
   const effectiveConvId = selectedConvId || (convList.length > 0 ? convList[0].conversationId : '');
+  const { data: interactions } = useMemberPublicInteractions(effectiveConvId);
 
   const handleSend = (message: string) => {
     if (composing) {

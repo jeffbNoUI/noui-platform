@@ -1,6 +1,51 @@
 // Shared API client — single source for fetch helpers, retry, request tracing.
 // All per-service API modules (api.ts, crmApi.ts, etc.) delegate to this.
 
+// ─── Enum normalization ──────────────────────────────────────────────────────
+// Go services return PostgreSQL enum values in UPPERCASE (e.g. 'OPEN', 'PUBLIC').
+// TypeScript types use lowercase (e.g. 'open', 'public'). This transform bridges
+// the gap by lowercasing known enum fields in API responses.
+
+const ENUM_FIELDS = new Set([
+  'contactType',
+  'status',
+  'channel',
+  'interactionType',
+  'outcome',
+  'direction',
+  'visibility',
+  'preferredChannel',
+  'addressType',
+  'preferenceType',
+  'orgType',
+  'anchorType',
+  'employerStatus',
+  'securityFlag',
+  'priority',
+  'sentiment',
+  'linkType',
+  'primaryPhoneType',
+  'gender',
+  'slaStatus',
+]);
+
+function normalizeEnums(obj: unknown): unknown {
+  if (obj === null || obj === undefined) return obj;
+  if (Array.isArray(obj)) return obj.map(normalizeEnums);
+  if (typeof obj === 'object') {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+      if (ENUM_FIELDS.has(key) && typeof value === 'string') {
+        result[key] = value.toLowerCase();
+      } else {
+        result[key] = normalizeEnums(value);
+      }
+    }
+    return result;
+  }
+  return obj;
+}
+
 export interface APIResponse<T> {
   data: T;
   meta: { request_id: string; timestamp: string };
@@ -77,7 +122,7 @@ async function rawRequest(url: string, init: RequestInit = {}): Promise<any> {
         throw apiError;
       }
 
-      return await res.json();
+      return normalizeEnums(await res.json());
     } catch (err) {
       // Network errors (offline, DNS failure, etc.) — retry
       if (err instanceof TypeError && attempt < MAX_RETRIES) {
