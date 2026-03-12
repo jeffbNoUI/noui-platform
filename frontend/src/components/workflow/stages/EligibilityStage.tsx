@@ -16,8 +16,17 @@ export default function EligibilityStage({
   const tier = member?.tier_code || member?.tier || 1;
   const ruleThreshold = tier === 3 ? 85 : 75;
   const ruleLabel = tier === 3 ? 'Rule of 85' : 'Rule of 75';
-  const ruleSum = elig?.rule_of_n_sum ?? elig?.rule_of_75_sum ?? elig?.rule_of_85_sum ?? 0;
-  const met = elig?.best_eligible_type !== 'EARLY';
+  // Primary source: rule_of_n_sum from the API. Fallback: compute from age + eligibility service.
+  // The Go backend always populates rule_of_n_sum, but if it's 0 (e.g., partial response),
+  // recompute from the eligibility data to avoid displaying "0.00".
+  const apiSum = elig?.rule_of_n_sum ?? elig?.rule_of_75_sum ?? elig?.rule_of_85_sum ?? 0;
+  const computedSum =
+    (elig?.age_at_retirement?.decimal ?? 0) + (elig?.service_credit?.eligibility_years ?? 0);
+  const ruleSum = apiSum > 0 ? apiSum : computedSum;
+  const met =
+    elig?.best_eligible_type === 'NORMAL' ||
+    elig?.best_eligible_type === 'RULE_OF_75' ||
+    elig?.best_eligible_type === 'RULE_OF_85';
 
   return (
     <div>
