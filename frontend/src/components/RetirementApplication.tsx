@@ -16,6 +16,9 @@ import { calcAge } from '@/components/workflow/shared';
 import ProficiencySelector from '@/components/workflow/ProficiencySelector';
 import ContextualHelp from '@/components/workflow/ContextualHelp';
 import { useProficiency } from '@/hooks/useProficiency';
+import StageCorrespondencePrompt from '@/components/workflow/StageCorrespondencePrompt';
+import CorrespondencePanel from '@/components/workflow/CorrespondencePanel';
+import { getTemplateCategoryForStage } from '@/lib/stageCorrespondenceMapping';
 
 // Stage content components
 import IntakeStage from '@/components/workflow/stages/IntakeStage';
@@ -51,6 +54,12 @@ export default function RetirementApplication({
   const { level: proficiency, setLevel: setProficiency } = useProficiency();
   const [helpOpen, setHelpOpen] = useState(true);
   const [isAdvancing, setIsAdvancing] = useState(false);
+  const [correspondencePrompt, setCorrespondencePrompt] = useState<{
+    stageId: string;
+    stageName: string;
+    templateCategory: string;
+  } | null>(null);
+  const [showCorrespondencePanel, setShowCorrespondencePanel] = useState(false);
   const syncedWith = useRef<{ caseId: string; stageCount: number } | null>(null);
 
   // Data hooks
@@ -130,6 +139,18 @@ export default function RetirementApplication({
     }
 
     setCompleted((prev) => new Set([...prev, activeIdx]));
+
+    // Check if the completed stage has a correspondence template mapping
+    const completedStage = stages[activeIdx];
+    const templateCategory = getTemplateCategoryForStage(completedStage.id);
+    if (templateCategory) {
+      setCorrespondencePrompt({
+        stageId: completedStage.id,
+        stageName: completedStage.label,
+        templateCategory,
+      });
+    }
+
     if (activeIdx < stages.length - 1) setActiveIdx(activeIdx + 1);
   }, [activeIdx, stages, isAdvancing, caseData, flags, caseId, advanceStageMutation]);
 
@@ -446,6 +467,19 @@ export default function RetirementApplication({
         </div>
       </div>
 
+      {/* Correspondence prompt banner */}
+      {correspondencePrompt && (
+        <StageCorrespondencePrompt
+          stageName={correspondencePrompt.stageName}
+          templateCategory={correspondencePrompt.templateCategory}
+          onGenerate={() => {
+            setShowCorrespondencePanel(true);
+            setCorrespondencePrompt(null);
+          }}
+          onSkip={() => setCorrespondencePrompt(null)}
+        />
+      )}
+
       {/* Main content */}
       <main className="mx-auto max-w-7xl px-6 py-6">
         {showLiveSummary ? (
@@ -467,6 +501,34 @@ export default function RetirementApplication({
           renderView()
         )}
       </main>
+
+      {/* Correspondence panel sidebar */}
+      {showCorrespondencePanel && (
+        <div className="fixed inset-0 z-30 flex justify-end">
+          <div
+            className="flex-1 bg-black bg-opacity-20"
+            onClick={() => setShowCorrespondencePanel(false)}
+          />
+          <div className="w-[420px] bg-white border-l border-gray-200 shadow-xl overflow-y-auto">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+              <span className="text-sm font-semibold text-gray-800">Correspondence</span>
+              <button
+                onClick={() => setShowCorrespondencePanel(false)}
+                className="text-gray-400 hover:text-gray-600 text-sm"
+              >
+                Close
+              </button>
+            </div>
+            <div className="p-4">
+              <CorrespondencePanel
+                memberId={memberId}
+                caseId={caseId}
+                caseContext={{ member, calculation, caseData }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Status bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-20">

@@ -1,3 +1,10 @@
+/** Side-effect that fires when correspondence status changes to 'sent'. */
+export interface SendEffect {
+  type: 'advance_stage' | 'create_commitment';
+  description?: string;
+  targetDays?: number;
+}
+
 /** Correspondence template with merge field definitions. */
 export interface CorrespondenceTemplate {
   templateId: string;
@@ -6,6 +13,8 @@ export interface CorrespondenceTemplate {
   templateName: string;
   description?: string;
   category: string;
+  stageCategory?: string;
+  onSendEffects: SendEffect[];
   bodyTemplate: string;
   mergeFields: MergeField[];
   outputFormat: 'text' | 'html' | 'pdf';

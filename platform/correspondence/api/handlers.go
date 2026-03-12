@@ -56,11 +56,12 @@ func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListTemplates(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantFromHeader(r)
 	category := r.URL.Query().Get("category")
+	stageCategory := r.URL.Query().Get("stage_category")
 	activeOnly := r.URL.Query().Get("is_active") != "false"
 	limit := intParam(r, "limit", 25)
 	offset := intParam(r, "offset", 0)
 
-	templates, total, err := h.store.ListTemplates(tenantID, category, activeOnly, limit, offset)
+	templates, total, err := h.store.ListTemplates(tenantID, category, stageCategory, activeOnly, limit, offset)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return

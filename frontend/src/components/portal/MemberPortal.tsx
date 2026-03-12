@@ -15,6 +15,7 @@ import type { ProjectionDataPoint } from './BenefitProjectionChart';
 import ContributionBars from './ContributionBars';
 import type { ContributionDataPoint } from './ContributionBars';
 import AIChatPanel from './AIChatPanel';
+import MemberCorrespondenceTab from './MemberCorrespondenceTab';
 
 type ViewMode = 'portal' | 'workspace' | 'crm' | 'employer';
 
@@ -412,6 +413,7 @@ export default function MemberPortal({
     { key: 'projections', label: 'Projections' },
     { key: 'history', label: 'History' },
     { key: 'documents', label: 'Documents' },
+    { key: 'letters', label: 'Letters' },
   ];
 
   return (
@@ -746,6 +748,8 @@ export default function MemberPortal({
             memberID={memberID}
             onNavigateToDashboard={() => setActiveView('dashboard')}
           />
+        ) : activeView === 'letters' ? (
+          <MemberCorrespondenceTab memberId={memberID} />
         ) : (
           <div
             style={{

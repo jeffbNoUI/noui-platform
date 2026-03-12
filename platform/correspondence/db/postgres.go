@@ -96,7 +96,7 @@ func getEnv(key, fallback string) string {
 // ============================================================
 
 // ListTemplates returns templates filtered by optional parameters.
-func (s *Store) ListTemplates(tenantID, category string, activeOnly bool, limit, offset int) ([]models.Template, int, error) {
+func (s *Store) ListTemplates(tenantID, category, stageCategory string, activeOnly bool, limit, offset int) ([]models.Template, int, error) {
 	where := "WHERE t.tenant_id = $1 AND t.deleted_at IS NULL"
 	args := []interface{}{tenantID}
 	argIdx := 2
@@ -109,6 +109,11 @@ func (s *Store) ListTemplates(tenantID, category string, activeOnly bool, limit,
 		args = append(args, category)
 		argIdx++
 	}
+	if stageCategory != "" {
+		where += fmt.Sprintf(" AND t.stage_category = $%d", argIdx)
+		args = append(args, stageCategory)
+		argIdx++
+	}
 
 	var total int
 	if err := s.DB.QueryRow("SELECT COUNT(*) FROM correspondence_template t "+where, args...).Scan(&total); err != nil {
@@ -118,6 +123,7 @@ func (s *Store) ListTemplates(tenantID, category string, activeOnly bool, limit,
 	query := fmt.Sprintf(`
 		SELECT t.template_id, t.tenant_id, t.template_code, t.template_name, t.description,
 		       t.category, t.body_template, t.merge_fields, t.output_format,
+		       t.stage_category, t.on_send_effects,
 		       t.is_active, t.version, t.created_at, t.updated_at, t.created_by, t.updated_by
 		FROM correspondence_template t
 		%s
@@ -149,6 +155,7 @@ func (s *Store) GetTemplate(templateID string) (*models.Template, error) {
 	row := s.DB.QueryRow(`
 		SELECT template_id, tenant_id, template_code, template_name, description,
 		       category, body_template, merge_fields, output_format,
+		       stage_category, on_send_effects,
 		       is_active, version, created_at, updated_at, created_by, updated_by
 		FROM correspondence_template
 		WHERE template_id = $1 AND deleted_at IS NULL
@@ -159,6 +166,7 @@ func (s *Store) GetTemplate(templateID string) (*models.Template, error) {
 	if err := row.Scan(
 		&t.TemplateID, &t.TenantID, &t.TemplateCode, &t.TemplateName, &t.Description,
 		&t.Category, &t.BodyTemplate, &mergeFieldsJSON, &t.OutputFormat,
+		&t.StageCategory, &t.OnSendEffects,
 		&t.IsActive, &t.Version, &t.CreatedAt, &t.UpdatedAt, &t.CreatedBy, &t.UpdatedBy,
 	); err != nil {
 		return nil, err
@@ -176,6 +184,7 @@ func scanTemplate(rows *sql.Rows) (models.Template, error) {
 	if err := rows.Scan(
 		&t.TemplateID, &t.TenantID, &t.TemplateCode, &t.TemplateName, &t.Description,
 		&t.Category, &t.BodyTemplate, &mergeFieldsJSON, &t.OutputFormat,
+		&t.StageCategory, &t.OnSendEffects,
 		&t.IsActive, &t.Version, &t.CreatedAt, &t.UpdatedAt, &t.CreatedBy, &t.UpdatedBy,
 	); err != nil {
 		return t, fmt.Errorf("scan template: %w", err)
