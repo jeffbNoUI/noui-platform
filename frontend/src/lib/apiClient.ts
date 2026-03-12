@@ -102,7 +102,63 @@ async function rawRequest(url: string, init: RequestInit = {}): Promise<any> {
 // request unwraps body.data — used for non-paginated endpoints.
 async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
   const body = await rawRequest(url, init);
-  return (body as APIResponse<T>).data;
+  return lowercaseEnums((body as APIResponse<T>).data);
+}
+
+// ─── Enum normalization ─────────────────────────────────────────────────────
+// Go services store enums as UPPER_SNAKE_CASE in PostgreSQL.
+// TypeScript uses lowercase. These helpers bridge the gap on outgoing requests.
+
+const ENUM_FIELDS = new Set([
+  'channel',
+  'interactionType',
+  'direction',
+  'visibility',
+  'outcome',
+  'status',
+  'anchorType',
+  'category',
+  'subcategory',
+  'linkType',
+  'priority',
+]);
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function uppercaseEnums(obj: any): any {
+  if (obj === null || obj === undefined) return obj;
+  if (Array.isArray(obj)) return obj.map(uppercaseEnums);
+  if (typeof obj !== 'object') return obj;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const out: any = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (ENUM_FIELDS.has(key) && typeof value === 'string') {
+      out[key] = value.toUpperCase();
+    } else if (typeof value === 'object' && value !== null) {
+      out[key] = uppercaseEnums(value);
+    } else {
+      out[key] = value;
+    }
+  }
+  return out;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function lowercaseEnums(obj: any): any {
+  if (obj === null || obj === undefined) return obj;
+  if (Array.isArray(obj)) return obj.map(lowercaseEnums);
+  if (typeof obj !== 'object') return obj;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const out: any = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (ENUM_FIELDS.has(key) && typeof value === 'string') {
+      out[key] = value.toLowerCase();
+    } else if (typeof value === 'object' && value !== null) {
+      out[key] = lowercaseEnums(value);
+    } else {
+      out[key] = value;
+    }
+  }
+  return out;
 }
 
 // ─── Public helpers ─────────────────────────────────────────────────────────
@@ -122,21 +178,21 @@ export interface PaginatedResult<T> {
 export async function fetchPaginatedAPI<T>(url: string): Promise<PaginatedResult<T>> {
   const body = await rawRequest(url);
   return {
-    items: body.data ?? [],
+    items: lowercaseEnums(body.data ?? []),
     pagination: body.pagination ?? { total: 0, limit: 25, offset: 0, hasMore: false },
   };
 }
 
 export function postAPI<T>(url: string, payload: unknown): Promise<T> {
-  return request<T>(url, { method: 'POST', body: JSON.stringify(payload) });
+  return request<T>(url, { method: 'POST', body: JSON.stringify(uppercaseEnums(payload)) });
 }
 
 export function putAPI<T>(url: string, payload: unknown): Promise<T> {
-  return request<T>(url, { method: 'PUT', body: JSON.stringify(payload) });
+  return request<T>(url, { method: 'PUT', body: JSON.stringify(uppercaseEnums(payload)) });
 }
 
 export function patchAPI<T>(url: string, payload: unknown): Promise<T> {
-  return request<T>(url, { method: 'PATCH', body: JSON.stringify(payload) });
+  return request<T>(url, { method: 'PATCH', body: JSON.stringify(uppercaseEnums(payload)) });
 }
 
 export function toQueryString(params: object): string {

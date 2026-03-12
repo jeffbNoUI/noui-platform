@@ -1,5 +1,32 @@
 # noui-platform — Build History
 
+## Frontend Polish + Send-Message E2E (2026-03-12)
+
+**Result:** Fixed NaN SVG warnings in 2 chart components, implemented bidirectional enum normalization in API client, fixed conversation auto-select bug in portals, verified send-message E2E.
+
+**Fixes:**
+| Component | Bug | Fix |
+|-----------|-----|-----|
+| `BenefitProjectionChart.tsx` | `Math.max(...[0,0,0]) * 1.12 = 0` → NaN in SVG coords | Guard `max` to minimum 1; early return for `< 2` data points |
+| `ContributionBars.tsx` | `Math.max(...[0,0,0]) = 0` → NaN in rect height/y | Guard `max` to minimum 1 |
+| `apiClient.ts` | Go/PostgreSQL returns UPPERCASE enums, TS expects lowercase | Added `uppercaseEnums` (outgoing) + `lowercaseEnums` (incoming) |
+| `MemberPortal.tsx` | `useMemberPublicInteractions(selectedConvId)` called with empty string, not `effectiveConvId` | Moved hook call after `effectiveConvId` computation |
+| `EmployerPortal.tsx` | Same auto-select bug as MemberPortal | Same fix — use `effectiveConvId` |
+
+**New tests:** `frontend/src/components/portal/__tests__/`
+- `BenefitProjectionChart.test.tsx` — 3 tests (zero data, empty data, normal data)
+- `ContributionBars.test.tsx` — 3 tests (zero data, empty data, normal data)
+
+**E2E Verification (Docker + Vite dev server):**
+- POST `/api/v1/crm/interactions` → 201 Created (enum normalization works)
+- Message appears in Member Portal conversation thread immediately
+- Message appears in Staff Portal CRM interaction timeline with correct direction (Inbound) and channel (Message)
+- React Query cache invalidation triggers proper re-fetch after send
+
+**Verification:** 235/235 tests pass, 0 TS errors
+
+---
+
 ## Case Management Go Tests — 52/52 Pass (2026-03-11)
 
 **Result:** Added db-level Store tests and handler edge case tests for the case management service. Total test count: 52 (32 handler + 20 db-level).
