@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { renderWithProviders } from '@/test/helpers';
 import StaffPortal from '@/components/StaffPortal';
 
@@ -91,12 +91,13 @@ describe('StaffPortal', () => {
     expect(headers.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('renders Correspondence tab', () => {
+  it('renders Correspondence tab', async () => {
     renderWithProviders(<StaffPortal onOpenCase={noop} onViewMember={noop} onChangeView={noop} />);
     fireEvent.click(screen.getByText('Correspondence'));
-    // Tab header
-    const headers = screen.getAllByText('Correspondence');
-    expect(headers.length).toBeGreaterThanOrEqual(1);
+    await waitFor(() => {
+      const headers = screen.getAllByText('Correspondence');
+      expect(headers.length).toBeGreaterThanOrEqual(1);
+    });
   });
 
   it('shows all 8 sidebar nav items', () => {

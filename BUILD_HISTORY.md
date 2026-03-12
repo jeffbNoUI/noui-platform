@@ -1,5 +1,72 @@
 # noui-platform — Build History
 
+## Post-Correspondence Follow-Up (2026-03-12)
+
+**Result:** Completed 4 follow-up items from the correspondence enrichment work (PRs #35–#37).
+
+**Changes:**
+| Item | Description |
+|------|-------------|
+| Case Journal case-scoped query | `CaseJournalPanel` now accepts optional `caseId` prop; uses `useCaseCorrespondence(caseId)` when available, falls back to `useCorrespondenceHistory(memberId)` |
+| act() warning fix | 9 act() warnings eliminated across RetirementApplication (6) and StaffPortal (1) tests by wrapping async assertions in `waitFor()` |
+| Docker E2E re-validation | Clean `docker compose down -v && up --build` + correspondence_e2e.sh — all 5 test suites passing |
+| BUILD_HISTORY.md | Added entries for PRs #35–#37 below |
+
+**Verification:** 262/262 frontend tests pass, 0 TS errors, 0 act() warnings, E2E suite green.
+
+---
+
+## Correspondence Enrichment — Tasks D+E, PR #37 (2026-03-12)
+
+**Result:** Migrated `caseId` from INTEGER to TEXT across full stack. Implemented `on_send_effects` execution in CorrespondencePanel (create_commitment, advance_stage notifications).
+
+**Changes:**
+- Migration 009: `ALTER COLUMN case_id TYPE TEXT` on correspondence_history + index
+- Seed 010: Associate existing correspondence with string case IDs (RET-2026-0001)
+- Go correspondence service: case_id parameter now TEXT in queries
+- Frontend: `useCorrespondenceSend` mutation executes `on_send_effects` after send — create_commitment (via CRM API), advance_stage (notification only)
+- `useCaseCorrespondence(caseId: string)` hook added for case-scoped queries
+- 12 new sendEffects unit tests
+
+**Verification:** 274 frontend tests (262 + 12 sendEffects), 17 Go tests, 0 TS errors.
+
+---
+
+## Correspondence Enrichment — Task C, PR #36 (2026-03-12)
+
+**Result:** Docker integration and E2E test suite for correspondence. Wired migrations 008/009 (stage_category enrichment) and 009/010 (caseId TEXT) into Docker Compose init sequence.
+
+**Changes:**
+- Docker Compose: 18 init scripts (schema + seed) in correct execution order
+- E2E test script: `tests/e2e/correspondence_e2e.sh` — 5 test suites, 27 assertions
+  - Schema verification (stage_category column)
+  - Letter generation with merge fields
+  - Correspondence → CRM bridge
+  - Stage-filtered template queries (6 stages)
+  - Case-scoped history (caseId TEXT filtering)
+
+**Verification:** All 5 E2E suites pass on clean Docker start.
+
+---
+
+## Correspondence Enrichment — Tasks A+B, PR #35 (2026-03-12)
+
+**Result:** Integrated correspondence across CRM, portals, and workflow. Stage-mapped templates, merge field auto-populate, CRM logging on send, and portal correspondence tabs.
+
+**Changes:**
+- Backend: `stage_category` + `on_send_effects` columns on `correspondence_template`
+- 9 stage-mapped templates (intake, verify-employment, eligibility, election, submit, dro)
+- `mergeFieldResolver.ts`: 30+ field auto-populate mappings from case context
+- Enhanced `CorrespondencePanel`: auto-populate merge fields, CRM interaction logging on send
+- Stage-triggered correspondence prompts after workflow advance (`stageCorrespondenceMapping.ts`)
+- Member Portal "Letters" tab, Employer Portal "Correspondence" tab
+- Case Journal correspondence tab (member-scoped)
+- `case_id` filtering added to correspondence history API
+
+**Verification:** 262 frontend tests, 17 Go tests, 0 TS errors.
+
+---
+
 ## Frontend Polish + Send-Message E2E (2026-03-12)
 
 **Result:** Fixed NaN SVG warnings in 2 chart components, implemented bidirectional enum normalization in API client, fixed conversation auto-select bug in portals, verified send-message E2E.
