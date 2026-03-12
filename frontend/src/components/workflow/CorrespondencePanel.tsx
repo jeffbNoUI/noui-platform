@@ -48,6 +48,7 @@ export default function CorrespondencePanel({
           correspondenceAPI.listHistory({
             member_id: memberId,
             contact_id: contactId,
+            case_id: caseId || undefined,
           }),
         ]);
         setTemplates(tmplData || []);
@@ -106,6 +107,7 @@ export default function CorrespondencePanel({
       const result = await correspondenceAPI.generate({
         templateId: selectedTemplate.templateId,
         memberId,
+        caseId: caseId || undefined,
         contactId,
         mergeData,
       });
@@ -119,18 +121,33 @@ export default function CorrespondencePanel({
     }
   }
 
+  // Track executed side-effects for user feedback
+  const [executedEffects, setExecutedEffects] = useState<string[]>([]);
+
   async function handleSend() {
     if (!lastGeneratedId) return;
 
     setError(null);
     try {
-      await sendMutation.mutateAsync({
+      const result = await sendMutation.mutateAsync({
         correspondenceId: lastGeneratedId,
         sentVia,
         contactId: contactId || undefined,
         subject: selectedTemplate?.templateName,
         caseId: caseId || undefined,
+        onSendEffects: selectedTemplate?.onSendEffects,
       });
+
+      // Track which effects ran for user feedback
+      const effectLabels = result.executedEffects.map((e) =>
+        e.type === 'create_commitment'
+          ? 'Follow-up commitment created'
+          : e.type === 'advance_stage'
+            ? 'Stage advance suggested'
+            : e.type,
+      );
+      setExecutedEffects(effectLabels);
+
       setSendSuccess(true);
       setShowSendForm(false);
     } catch (err) {
@@ -315,8 +332,15 @@ export default function CorrespondencePanel({
 
           {/* Send success */}
           {sendSuccess && (
-            <div className="border border-green-200 rounded-lg p-3 bg-green-50 text-green-700 text-xs font-medium text-center">
-              Correspondence sent successfully
+            <div className="border border-green-200 rounded-lg p-3 bg-green-50 text-green-700 text-xs font-medium text-center space-y-1">
+              <div>Correspondence sent successfully</div>
+              {executedEffects.length > 0 && (
+                <div className="text-[10px] text-green-600">
+                  {executedEffects.map((label, i) => (
+                    <div key={i}>✓ {label}</div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

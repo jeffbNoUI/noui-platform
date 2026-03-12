@@ -27,6 +27,8 @@ services:
       - ./domains/pension/seed/008_additional_seed.sql:/docker-entrypoint-initdb.d/014_additional_seed.sql
       - ./domains/pension/schema/008_correspondence_enrich.sql:/docker-entrypoint-initdb.d/015_correspondence_enrich.sql
       - ./domains/pension/seed/009_correspondence_enrich_seed.sql:/docker-entrypoint-initdb.d/016_correspondence_enrich_seed.sql
+      - ./domains/pension/schema/009_correspondence_caseid_text.sql:/docker-entrypoint-initdb.d/017_correspondence_caseid_text.sql
+      - ./domains/pension/seed/010_correspondence_caseid_seed.sql:/docker-entrypoint-initdb.d/018_correspondence_caseid_seed.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U derp"]
       interval: 5s

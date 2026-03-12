@@ -163,7 +163,12 @@ func (h *Handler) ListHistory(w http.ResponseWriter, r *http.Request) {
 		contactID = &cid
 	}
 
-	history, total, err := h.store.ListHistory(tenantID, memberID, contactID, status, limit, offset)
+	var caseID *string
+	if caseid := r.URL.Query().Get("case_id"); caseid != "" {
+		caseID = &caseid
+	}
+
+	history, total, err := h.store.ListHistory(tenantID, memberID, contactID, caseID, status, limit, offset)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
