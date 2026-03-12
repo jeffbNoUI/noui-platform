@@ -87,7 +87,8 @@ func (h *Handler) ListCases(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetCase(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	c, err := h.store.GetCase(id)
+	tenantID := tenantFromHeader(r)
+	c, err := h.store.GetCase(tenantID, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			writeError(w, http.StatusNotFound, "NOT_FOUND", "Case not found")
@@ -147,8 +148,8 @@ func (h *Handler) CreateCase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Re-fetch with JOINed member data
-	full, err := h.store.GetCase(c.CaseID)
+	// Re-fetch with JOINed member data (unscoped — we just created it with the right tenant)
+	full, err := h.store.GetCaseByID(c.CaseID)
 	if err != nil {
 		// Case was created but re-fetch failed; return the bare case
 		writeSuccess(w, http.StatusCreated, c)
@@ -160,9 +161,10 @@ func (h *Handler) CreateCase(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UpdateCase(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
+	tenantID := tenantFromHeader(r)
 
-	// Verify case exists
-	_, err := h.store.GetCase(id)
+	// Verify case exists (tenant-scoped)
+	_, err := h.store.GetCase(tenantID, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			writeError(w, http.StatusNotFound, "NOT_FOUND", "Case not found")
@@ -178,12 +180,12 @@ func (h *Handler) UpdateCase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.store.UpdateCase(id, req); err != nil {
+	if err := h.store.UpdateCase(tenantID, id, req); err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
-	updated, err := h.store.GetCase(id)
+	updated, err := h.store.GetCase(tenantID, id)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
@@ -194,6 +196,7 @@ func (h *Handler) UpdateCase(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) AdvanceStage(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
+	tenantID := tenantFromHeader(r)
 
 	var req models.AdvanceStageRequest
 	if err := decodeJSON(r, &req); err != nil {
@@ -206,7 +209,7 @@ func (h *Handler) AdvanceStage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updated, err := h.store.AdvanceStage(id, req.TransitionedBy, req.Note)
+	updated, err := h.store.AdvanceStage(tenantID, id, req.TransitionedBy, req.Note)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			writeError(w, http.StatusNotFound, "NOT_FOUND", "Case not found")
@@ -221,11 +224,15 @@ func (h *Handler) AdvanceStage(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetStageHistory(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
+	tenantID := tenantFromHeader(r)
 
-	history, err := h.store.GetStageHistory(id)
+	history, err := h.store.GetStageHistory(tenantID, id)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
+	}
+	if history == nil {
+		history = []models.StageTransition{}
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{"data": history})

@@ -27,6 +27,8 @@ const ENUM_FIELDS = new Set([
   'primaryPhoneType',
   'gender',
   'slaStatus',
+  'category',
+  'subcategory',
 ]);
 
 function normalizeEnums(obj: unknown): unknown {
@@ -150,23 +152,8 @@ async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
   return lowercaseEnums((body as APIResponse<T>).data);
 }
 
-// ─── Enum normalization ─────────────────────────────────────────────────────
-// Go services store enums as UPPER_SNAKE_CASE in PostgreSQL.
-// TypeScript uses lowercase. These helpers bridge the gap on outgoing requests.
-
-const ENUM_FIELDS = new Set([
-  'channel',
-  'interactionType',
-  'direction',
-  'visibility',
-  'outcome',
-  'status',
-  'anchorType',
-  'category',
-  'subcategory',
-  'linkType',
-  'priority',
-]);
+// ─── Enum case helpers (outgoing requests) ──────────────────────────────────
+// Reuses the ENUM_FIELDS set declared at the top of this file.
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function uppercaseEnums(obj: any): any {
