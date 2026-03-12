@@ -113,9 +113,9 @@ export default function ActiveWorkCard({
                     ))}
                   </div>
                   {/* Flags */}
-                  {item.flags.length > 0 && (
+                  {(item.flags ?? []).length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1.5">
-                      {item.flags.map((flag) => (
+                      {(item.flags ?? []).map((flag) => (
                         <span
                           key={flag}
                           className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 border border-gray-200"

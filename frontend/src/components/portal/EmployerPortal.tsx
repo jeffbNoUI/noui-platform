@@ -125,12 +125,12 @@ export default function EmployerPortal({ onChangeView }: EmployerPortalProps) {
   const effectiveOrgId = selectedOrgId || (orgList.length > 0 ? orgList[0].orgId : '');
   const { data: org } = usePortalOrganization(effectiveOrgId);
   const { data: conversations } = useEmployerConversations(effectiveOrgId);
-  const { data: interactions } = usePublicConversationInteractions(selectedConvId);
   const sendMessage = useCreatePortalMessage();
   const createConv = useCreateNewConversation();
 
   const convList = conversations ?? [];
   const effectiveConvId = selectedConvId || (convList.length > 0 ? convList[0].conversationId : '');
+  const { data: interactions } = usePublicConversationInteractions(effectiveConvId);
 
   const handleSend = (message: string) => {
     if (composing) {

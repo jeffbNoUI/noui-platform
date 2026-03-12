@@ -22,8 +22,8 @@ services:
       - ./domains/pension/seed/005_dataquality_seed.sql:/docker-entrypoint-initdb.d/009_dataquality_seed.sql
       - ./domains/pension/seed/006_correspondence_seed.sql:/docker-entrypoint-initdb.d/010_correspondence_seed.sql
       - ./domains/pension/schema/006_casemanagement_schema.sql:/docker-entrypoint-initdb.d/011_casemanagement_schema.sql
-      - ./domains/pension/seed/007_casemanagement_seed.sql:/docker-entrypoint-initdb.d/012_casemanagement_seed.sql
-      - ./domains/pension/schema/007_add_dro_id_to_case.sql:/docker-entrypoint-initdb.d/013_add_dro_id_to_case.sql
+      - ./domains/pension/schema/007_add_dro_id_to_case.sql:/docker-entrypoint-initdb.d/012_add_dro_id_to_case.sql
+      - ./domains/pension/seed/007_casemanagement_seed.sql:/docker-entrypoint-initdb.d/013_casemanagement_seed.sql
       - ./domains/pension/seed/008_additional_seed.sql:/docker-entrypoint-initdb.d/014_additional_seed.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U derp"]

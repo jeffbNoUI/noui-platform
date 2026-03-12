@@ -1,26 +1,28 @@
 # Next Session Starter
 
-## Current State (as of 2026-03-10)
+## Current State (as of 2026-03-11)
 
-**PR #19 merged. Full-stack integration is COMPLETE.** All demo data has been replaced with live PostgreSQL-backed APIs.
+**PR #30 merged. Options B and C are DONE.**
 
-**Option A (Fix Test Fixture Types) is DONE** on branch `claude/happy-villani` — ready to merge. `tsc --noEmit` now reports 0 errors (was 105). All 197 frontend tests pass.
+**What was done this session:**
+- Fixed 3 TS errors (`rule_of_n_sum` missing in `memberSummary.test.ts` fixtures)
+- Fixed case management Go test column mismatch — `dro_id` added to sqlmock `caseCols` and `addCaseRow` in both `db/cases_test.go` and `api/handlers_test.go` (17 → 18 columns)
+- Fixed Docker init script ordering — `dro_id` migration now runs BEFORE casemanagement seed
+- Fixed null `flags` crash in `StaffPortal.tsx` and `ActiveWorkCard.tsx` (`item.flags` → `(item.flags ?? [])`)
+- End-to-end browser test: opened David Washington case (RET-2026-0159), advanced from Document Verification through Benefit Calculation (3 stage advances), verified audit trail via API (5 history records with timestamps)
 
-**What was fixed in Option A:**
-- Installed missing `@testing-library/dom` peer dependency (23 import errors)
-- Added `/// <reference types="vitest/globals" />` to `vite-env.d.ts` (1 error)
-- Completed `mockCalculation.eligibility` in shared fixtures with 7 missing required fields (70+ errors)
-- Changed `null` → `undefined` in 5 test files, fixed minor mock data issues (12 errors)
-- Added explicit type annotations (`BenefitCalcResult`, `Member`) to fixture declarations
+**Test results:**
+- 52 case management Go tests pass (api + db)
+- 229/229 frontend tests pass
+- tsc: 0 errors
+- Docker stack: all 10 containers healthy, 6 cases with correct data, zero console errors
 
-**What's built and running on main:**
+**What's built and running:**
 - 10-service Docker Compose stack: 7 Go services + PostgreSQL + connector + nginx frontend
-- All 12 PostgreSQL init scripts (schema + seed) run on first boot
-- Staff Portal work queue showing 4 live retirement cases from `platform/casemanagement/` (port 8088)
-- Member Dashboard with 8 cards — all showing live data (no demo fallback anywhere)
-- CRM, Correspondence, Data Quality, Case Management all wired to real APIs
-- `demoData.ts` deleted — all frontend data comes from Go services
-- 197/197 frontend tests passing, all Go services build clean, 9/9 CI checks green
+- All 14 PostgreSQL init scripts run in correct order
+- Staff Portal work queue showing 6 live retirement cases
+- Full 7-stage workflow functional: open case → advance stages → audit trail recorded
+- `crmDemoData.ts` deleted in PR #30 — CRM messaging may need wiring
 
 **Services:**
 
@@ -37,31 +39,23 @@
 
 ## Build Verification
 
-Run these to confirm the codebase is green before starting work:
-
 ```bash
-# Frontend (tsc is now a reliable gate after Option A!)
+# Frontend
 cd frontend && npx tsc --noEmit && npm test -- --run
 
-# Go services (each independent module)
+# Go services
+cd platform/casemanagement && go build ./... && go test ./...
+cd platform/crm && go build ./... && go test ./...
 cd platform/dataaccess && go build ./... && go test ./...
 cd platform/intelligence && go build ./... && go test ./...
-cd platform/crm && go build ./... && go test ./...
-cd platform/casemanagement && go build ./...
 ```
 
 ## What to Work On Next
 
-Choose from Options B through E:
-
-### Option B: End-to-End Workflow Testing
-Click through cases in the browser: open a case from the work queue, advance stages, verify the full 7-stage workflow from Application Intake to Certification. Requires Docker stack running (`docker compose up --build`). Tests the case management API's `POST /api/v1/cases/{id}/advance` endpoint and stage transition audit trail.
-
-### Option C: Case Management Go Tests
-The `platform/casemanagement/` service has zero test coverage (`[no test files]` for all packages). Adding handler tests and data access tests would match the pattern in `platform/crm/api/handlers_test.go` and `platform/dataaccess/api/handlers_test.go`.
-
 ### Option D: Member Portal CRM Messaging
-`crmDemoData.ts` still provides cross-portal messaging data (conversations, staff notes, member messages). Wire the Member Portal conversation view to the real CRM API so members see their actual interaction history.
+`crmDemoData.ts` was deleted in PR #30. The Member Portal conversation view needs to be wired to the real CRM API so members see their actual interaction history. Check if the component gracefully handles the missing data or if it's broken.
 
-### Option E: User's Choice
-The platform is at a stable milestone. Good time for new features, polish, or hardening.
+### Other Options
+- **Eligibility display audit**: During browser testing, Rule of 85 display showed "65.16 >= 85 — Met" for David Washington (age 51 + 13.58y = 64.58, not 65.16). May be using decimal age vs integer. Worth investigating.
+- **Stage history UI**: Stage history is available via API but has no UI panel. Could add a timeline to case detail view.
+- **Full workflow paths**: Advance other cases through all 7 stages to test DRO path, early retirement with reduction, etc.

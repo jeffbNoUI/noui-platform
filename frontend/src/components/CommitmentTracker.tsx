@@ -19,6 +19,12 @@ const statusBadge: Record<CommitmentStatus, { label: string; color: string }> = 
 
 // ── Date helpers ────────────────────────────────────────────────────────────
 
+/** Parse a date string that may be bare "2026-03-15" or a full timestamp "2026-03-15T00:00:00Z". */
+function safeParseDate(dateStr: string | null | undefined): Date {
+  if (!dateStr) return new Date(NaN);
+  return new Date(dateStr.includes('T') ? dateStr : dateStr + 'T00:00:00');
+}
+
 type DateIndicator = 'green' | 'yellow' | 'red';
 
 function getDateIndicator(targetDate: string, status: CommitmentStatus): DateIndicator {
@@ -26,9 +32,10 @@ function getDateIndicator(targetDate: string, status: CommitmentStatus): DateInd
 
   const now = new Date();
   now.setHours(0, 0, 0, 0);
-  const target = new Date(targetDate + 'T00:00:00');
+  const target = safeParseDate(targetDate);
   const diffDays = Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
+  if (isNaN(diffDays)) return 'yellow';
   if (diffDays < 0) return 'red';
   if (diffDays <= 3) return 'yellow';
   return 'green';
@@ -41,7 +48,9 @@ const dateIndicatorClasses: Record<DateIndicator, string> = {
 };
 
 function formatDate(dateStr: string): string {
-  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', {
+  const d = safeParseDate(dateStr);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -51,9 +60,10 @@ function formatDate(dateStr: string): string {
 function relativeDateLabel(targetDate: string): string {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
-  const target = new Date(targetDate + 'T00:00:00');
+  const target = safeParseDate(targetDate);
   const diffDays = Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
+  if (isNaN(diffDays)) return formatDate(targetDate);
   if (diffDays < -1) return `${Math.abs(diffDays)} days overdue`;
   if (diffDays === -1) return 'Yesterday (overdue)';
   if (diffDays === 0) return 'Due today';

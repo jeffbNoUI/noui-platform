@@ -1,7 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { dqAPI } from '@/lib/dqApi';
-import type { DQScore, DQIssue, DQScoreTrend } from '@/types/DataQuality';
+import type { DQScore, DQIssue, DQScoreTrend, DQCheckDefinition } from '@/types/DataQuality';
 
 // ─── Query hooks ──────────────────────────────────────────────────────────────
 
@@ -23,12 +23,39 @@ export function useDQScoreTrend(days = 30) {
   });
 }
 
+/** All check definitions with latest result. */
+export function useDQChecks() {
+  return useQuery<DQCheckDefinition[]>({
+    queryKey: ['dq', 'checks'],
+    queryFn: () => dqAPI.listChecks(),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 /** All issues matching optional filters. */
 export function useDQIssues(params?: { severity?: string; status?: string }) {
   return useQuery<DQIssue[]>({
     queryKey: ['dq', 'issues', params],
     queryFn: () => dqAPI.listIssues({ ...params, limit: 200 }),
     staleTime: 2 * 60 * 1000,
+  });
+}
+
+/** Update an issue's status (acknowledge, resolve, false_positive). */
+export function useUpdateDQIssue() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      issueId,
+      req,
+    }: {
+      issueId: string;
+      req: { status?: string; resolutionNote?: string };
+    }) => dqAPI.updateIssue(issueId, req),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['dq', 'issues'] });
+      qc.invalidateQueries({ queryKey: ['dq', 'score'] });
+    },
   });
 }
 
