@@ -11,12 +11,12 @@ import (
 
 // --- Test Helpers ---
 
-// caseCols matches the 17-column SELECT used by scanCase.
+// caseCols matches the 18-column SELECT used by scanCase.
 var caseCols = []string{
 	"case_id", "tenant_id", "member_id", "case_type",
 	"retirement_date", "priority", "sla_status",
 	"current_stage", "current_stage_idx", "assigned_to",
-	"days_open", "status", "created_at", "updated_at",
+	"days_open", "status", "dro_id", "created_at", "updated_at",
 	"name", "tier", "dept",
 }
 
@@ -28,7 +28,7 @@ func addCaseRow(rows *sqlmock.Rows, caseID string, memberID int, stageIdx int, s
 		time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC),
 		"standard", "on-track",
 		stage, stageIdx, sql.NullString{String: "jsmith", Valid: true},
-		15, "active", now, now,
+		15, "active", sql.NullInt64{Valid: false}, now, now,
 		"Robert Martinez", 1, "Public Works",
 	)
 }
@@ -214,7 +214,7 @@ func TestGetCase_NullMemberData(t *testing.T) {
 		time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC),
 		"standard", "on-track",
 		"Application Intake", 0, sql.NullString{Valid: false}, // no assigned_to
-		5, "active", now, now,
+		5, "active", sql.NullInt64{Valid: false}, now, now,
 		"", 0, "", // COALESCE defaults for missing member data
 	)
 	mock.ExpectQuery("SELECT").
