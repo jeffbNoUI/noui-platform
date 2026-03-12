@@ -19,7 +19,7 @@ export default function EligibilityStage({
   // Primary source: rule_of_n_sum from the API. Fallback: compute from age + eligibility service.
   // The Go backend always populates rule_of_n_sum, but if it's 0 (e.g., partial response),
   // recompute from the eligibility data to avoid displaying "0.00".
-  const apiSum = elig?.rule_of_n_sum ?? elig?.rule_of_75_sum ?? elig?.rule_of_85_sum ?? 0;
+  const apiSum = elig?.rule_of_n_sum ?? 0;
   const computedSum =
     (elig?.age_at_retirement?.decimal ?? 0) + (elig?.service_credit?.eligibility_years ?? 0);
   const ruleSum = apiSum > 0 ? apiSum : computedSum;
@@ -46,17 +46,17 @@ export default function EligibilityStage({
       <Field
         label="Vested"
         value={
-          elig?.is_vested || elig?.vested
+          elig?.vested
             ? `Yes — ${svc?.earned_years?.toFixed(2) || '—'} years`
             : 'No'
         }
         badge={
-          elig?.is_vested || elig?.vested
+          elig?.vested
             ? { text: 'Met', className: 'bg-emerald-50 text-emerald-700' }
             : { text: 'Not Met', className: 'bg-red-50 text-red-700' }
         }
       />
-      <Field label="Normal Retirement (65)" value={elig?.eligible_normal ? 'Yes' : 'Not yet'} />
+      <Field label="Normal Retirement (65)" value={elig?.best_eligible_type === 'NORMAL' ? 'Yes' : 'Not yet'} />
       <Field
         label={ruleLabel}
         value={elig ? `${ruleSum.toFixed(2)} ≥ ${ruleThreshold}` : `— ≥ ${ruleThreshold}`}
@@ -77,7 +77,7 @@ export default function EligibilityStage({
       />
       <Field
         label="Benefit Reduction"
-        value={`${(elig?.reduction_pct || elig?.reduction_percentage || 0).toFixed(1)}%`}
+        value={`${(elig?.reduction_pct || 0).toFixed(1)}%`}
         highlight
       />
       <Field
@@ -95,7 +95,7 @@ export default function EligibilityStage({
         <Callout
           type="warning"
           title="Early Retirement"
-          text={`${ruleLabel} threshold not met (${ruleSum.toFixed(2)} < ${ruleThreshold}). ${(elig.reduction_pct || elig.reduction_percentage || 0).toFixed(1)}% reduction applied.`}
+          text={`${ruleLabel} threshold not met (${ruleSum.toFixed(2)} < ${ruleThreshold}). ${(elig.reduction_pct || 0).toFixed(1)}% reduction applied.`}
         />
       )}
     </div>
