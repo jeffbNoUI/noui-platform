@@ -9,6 +9,7 @@ import {
 } from '@/hooks/useCRM';
 import { ConversationThread, MessageComposer, EMPLOYER_THEME } from '@/components/crm';
 import { DISPLAY, BODY } from '@/lib/designSystem';
+import EmployerCorrespondenceTab from './EmployerCorrespondenceTab';
 
 // ── Date formatter ──────────────────────────────────────────────────────────
 
@@ -45,7 +46,7 @@ interface EmployerPortalProps {
   onChangeView: (mode: ViewMode) => void;
 }
 
-type PortalTab = 'communications' | 'reporting' | 'enrollment';
+type PortalTab = 'communications' | 'reporting' | 'enrollment' | 'correspondence';
 
 // ── Demo contribution reporting data ────────────────────────────────────────
 const DEMO_REPORTING_PERIODS = [
@@ -253,6 +254,7 @@ export default function EmployerPortal({ onChangeView }: EmployerPortalProps) {
             <div style={{ display: 'flex', gap: 2 }}>
               {[
                 { key: 'communications' as PortalTab, label: 'Communications' },
+                { key: 'correspondence' as PortalTab, label: 'Correspondence' },
                 { key: 'reporting' as PortalTab, label: 'Reporting' },
                 { key: 'enrollment' as PortalTab, label: 'Enrollment' },
               ].map((tab) => (
@@ -765,6 +767,9 @@ export default function EmployerPortal({ onChangeView }: EmployerPortalProps) {
             </div>
           </div>
         )}
+
+        {/* ── CORRESPONDENCE TAB ── */}
+        {activeTab === 'correspondence' && <EmployerCorrespondenceTab contactId={effectiveOrgId} />}
 
         {/* ── COMMUNICATIONS TAB ── */}
         {activeTab === 'communications' && (

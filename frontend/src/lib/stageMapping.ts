@@ -146,6 +146,10 @@ export function computeInitialState(
 
   const completed = new Set<number>();
   for (let i = 0; i < activeIdx; i++) {
+    // Don't mark the DRO Division stage as completed for non-DRO cases.
+    // When stageIdx > 3 and the stages array includes DRO (e.g., from stale
+    // calculation data), the naive loop would incorrectly mark it completed.
+    if (!hasDRO && stages[i]?.id === 'dro') continue;
     completed.add(i);
   }
 

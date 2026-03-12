@@ -7,7 +7,10 @@
 //   - camelCase JSON tags throughout
 package models
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // ============================================================
 // CORE ENTITIES
@@ -15,27 +18,29 @@ import "time"
 
 // Template represents a correspondence template with merge fields.
 type Template struct {
-	TemplateID   string       `json:"templateId"`
-	TenantID     string       `json:"tenantId"`
-	TemplateCode string       `json:"templateCode"`
-	TemplateName string       `json:"templateName"`
-	Description  *string      `json:"description,omitempty"`
-	Category     string       `json:"category"`
-	BodyTemplate string       `json:"bodyTemplate"`
-	MergeFields  []MergeField `json:"mergeFields"`
-	OutputFormat string       `json:"outputFormat"`
-	IsActive     bool         `json:"isActive"`
-	Version      int          `json:"version"`
-	CreatedAt    time.Time    `json:"createdAt"`
-	UpdatedAt    time.Time    `json:"updatedAt"`
-	CreatedBy    string       `json:"createdBy"`
-	UpdatedBy    string       `json:"updatedBy"`
+	TemplateID    string          `json:"templateId"`
+	TenantID      string          `json:"tenantId"`
+	TemplateCode  string          `json:"templateCode"`
+	TemplateName  string          `json:"templateName"`
+	Description   *string         `json:"description,omitempty"`
+	Category      string          `json:"category"`
+	BodyTemplate  string          `json:"bodyTemplate"`
+	MergeFields   []MergeField    `json:"mergeFields"`
+	OutputFormat  string          `json:"outputFormat"`
+	StageCategory *string         `json:"stageCategory,omitempty"`
+	OnSendEffects json.RawMessage `json:"onSendEffects"`
+	IsActive      bool            `json:"isActive"`
+	Version       int             `json:"version"`
+	CreatedAt     time.Time       `json:"createdAt"`
+	UpdatedAt     time.Time       `json:"updatedAt"`
+	CreatedBy     string          `json:"createdBy"`
+	UpdatedBy     string          `json:"updatedBy"`
 }
 
 // MergeField defines a placeholder in a template body.
 type MergeField struct {
 	Name        string `json:"name"`
-	Type        string `json:"type"`        // string, date, currency, number
+	Type        string `json:"type"` // string, date, currency, number
 	Required    bool   `json:"required"`
 	Description string `json:"description"`
 }

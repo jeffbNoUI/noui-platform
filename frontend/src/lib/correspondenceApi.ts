@@ -12,7 +12,7 @@ const CORR_URL = import.meta.env.VITE_CORRESPONDENCE_URL || '/api';
 export const correspondenceAPI = {
   // ── Templates ──────────────────────────────────────────────────────────────
 
-  listTemplates: (params?: { category?: string; is_active?: string }) =>
+  listTemplates: (params?: { category?: string; stage_category?: string; is_active?: string }) =>
     fetchAPI<CorrespondenceTemplate[]>(
       `${CORR_URL}/v1/correspondence/templates${toQueryString(params || {})}`,
     ),

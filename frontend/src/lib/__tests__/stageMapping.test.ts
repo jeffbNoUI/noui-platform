@@ -216,4 +216,24 @@ describe('computeInitialState', () => {
     // All stages except submit should be completed
     expect(completed.size).toBe(stages.length - 1);
   });
+
+  it('does not mark DRO stage as completed for non-DRO case when stages include DRO (stale data)', () => {
+    // Simulate mismatch: stages composed with DRO, but hasDRO is false
+    // (e.g., calculation data includes DRO but case flags do not)
+    const stagesWithDRO = composeStages(DRO_FLAGS);
+    const droIdx = stagesWithDRO.findIndex((s) => s.id === 'dro');
+    expect(droIdx).toBeGreaterThan(-1); // precondition: DRO is in the list
+
+    // Backend at stage 4 (benefit-calc) — past the DRO stage
+    const { completed } = computeInitialState(4, stagesWithDRO, false);
+    expect(completed.has(droIdx)).toBe(false);
+  });
+
+  it('does not mark DRO stage as completed for non-DRO case at final stage', () => {
+    const stagesWithDRO = composeStages(DRO_FLAGS);
+    const droIdx = stagesWithDRO.findIndex((s) => s.id === 'dro');
+
+    const { completed } = computeInitialState(6, stagesWithDRO, false);
+    expect(completed.has(droIdx)).toBe(false);
+  });
 });

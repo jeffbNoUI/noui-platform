@@ -7,11 +7,13 @@ import {
   useAllConversationInteractions,
   useContactCommitments,
 } from '@/hooks/useCRM';
+import { useCorrespondenceHistory } from '@/hooks/useCorrespondence';
 import { PortalTimeline, ConversationThread, STAFF_THEME } from '@/components/crm';
 import { composeCrmSummary } from '@/lib/crmSummary';
 import type { CrmSummary } from '@/lib/crmSummary';
 import CrmNoteForm from '@/components/CrmNoteForm';
 import type { Conversation, Commitment } from '@/types/CRM';
+import type { Correspondence } from '@/types/Correspondence';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -35,7 +37,7 @@ interface CaseJournalPanelProps {
   memberId?: string;
 }
 
-type JournalTab = 'timeline' | 'conversations' | 'commitments';
+type JournalTab = 'timeline' | 'conversations' | 'commitments' | 'correspondence';
 
 export default function CaseJournalPanel({
   contactId: propContactId,
@@ -58,6 +60,7 @@ export default function CaseJournalPanel({
   const { data: conversations } = useMemberConversations(effectiveMemberId);
   const { data: convInteractions } = useAllConversationInteractions(selectedConvId);
   const { data: commitments } = useContactCommitments(effectiveContactId);
+  const { data: correspondence } = useCorrespondenceHistory(Number(effectiveMemberId) || 0);
 
   const contactName = resolvedContact
     ? `${resolvedContact.firstName} ${resolvedContact.lastName}`
@@ -65,6 +68,7 @@ export default function CaseJournalPanel({
 
   const convList = conversations ?? [];
   const commitmentList = commitments ?? [];
+  const correspondenceList = correspondence ?? [];
   const overdueCommitments = commitmentList.filter(
     (c) => c.status !== 'fulfilled' && c.status !== 'cancelled' && isOverdue(c.targetDate),
   );
@@ -83,6 +87,11 @@ export default function CaseJournalPanel({
       label: 'Commitments',
       count: commitmentList.filter((c) => c.status !== 'fulfilled' && c.status !== 'cancelled')
         .length,
+    },
+    {
+      key: 'correspondence',
+      label: 'Correspondence',
+      count: correspondenceList.length,
     },
   ];
 
@@ -227,6 +236,19 @@ export default function CaseJournalPanel({
             )}
           </div>
         )}
+
+        {activeTab === 'correspondence' && (
+          <div className="divide-y divide-gray-100">
+            {correspondenceList.map((item) => (
+              <CorrespondenceRow key={item.correspondenceId} item={item} />
+            ))}
+            {correspondenceList.length === 0 && (
+              <div className="px-4 py-6 text-center text-xs text-gray-500">
+                No correspondence found.
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Structured Note Form */}
@@ -357,6 +379,50 @@ function ConversationRow({
         {conversation.slaBreached && <span className="font-medium text-red-600">SLA Breached</span>}
       </div>
     </button>
+  );
+}
+
+function CorrespondenceRow({ item }: { item: Correspondence }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const statusColors: Record<string, string> = {
+    draft: 'bg-gray-100 text-gray-600',
+    final: 'bg-blue-100 text-blue-800',
+    sent: 'bg-green-100 text-green-800',
+    void: 'bg-red-100 text-red-800',
+  };
+
+  const displayDate = item.sentAt || item.createdAt;
+
+  return (
+    <div className="px-4 py-3">
+      <button onClick={() => setExpanded(!expanded)} className="w-full text-left">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm font-medium text-gray-800 truncate">
+            {item.subject || 'Untitled'}
+          </span>
+          <span
+            className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium flex-shrink-0 ${statusColors[item.status] || statusColors.draft}`}
+          >
+            {item.status}
+          </span>
+        </div>
+        <div className="mt-0.5 flex items-center gap-2 text-xs text-gray-500">
+          <span>{formatDate(displayDate)}</span>
+          {item.sentVia && (
+            <>
+              <span>&middot;</span>
+              <span>via {item.sentVia}</span>
+            </>
+          )}
+        </div>
+      </button>
+      {expanded && (
+        <pre className="mt-2 whitespace-pre-wrap text-xs text-gray-700 bg-gray-50 rounded p-3 border border-gray-200 max-h-60 overflow-y-auto">
+          {item.bodyRendered}
+        </pre>
+      )}
+    </div>
   );
 }
 
