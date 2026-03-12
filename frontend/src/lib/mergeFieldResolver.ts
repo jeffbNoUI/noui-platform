@@ -73,8 +73,7 @@ const RESOLVERS: Record<string, (ctx: MergeFieldContext) => string> = {
   },
   reduction_percent: (ctx) => {
     const p =
-      ctx.calculation?.eligibility?.reduction_pct ??
-      ctx.calculation?.eligibility?.reduction_percentage;
+      ctx.calculation?.eligibility?.reduction_pct;
     return p != null ? `${(p * 100).toFixed(0)}%` : '';
   },
 
