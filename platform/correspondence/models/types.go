@@ -51,7 +51,7 @@ type Correspondence struct {
 	TenantID         string            `json:"tenantId"`
 	TemplateID       string            `json:"templateId"`
 	MemberID         *int              `json:"memberId,omitempty"`
-	CaseID           *int              `json:"caseId,omitempty"`
+	CaseID           *string           `json:"caseId,omitempty"`
 	ContactID        *string           `json:"contactId,omitempty"`
 	Subject          string            `json:"subject"`
 	BodyRendered     string            `json:"bodyRendered"`
@@ -73,7 +73,7 @@ type Correspondence struct {
 type GenerateRequest struct {
 	TemplateID string            `json:"templateId"`
 	MemberID   *int              `json:"memberId,omitempty"`
-	CaseID     *int              `json:"caseId,omitempty"`
+	CaseID     *string           `json:"caseId,omitempty"`
 	ContactID  *string           `json:"contactId,omitempty"`
 	MergeData  map[string]string `json:"mergeData"`
 }

@@ -40,7 +40,7 @@ export interface Correspondence {
   tenantId: string;
   templateId: string;
   memberId?: number;
-  caseId?: number;
+  caseId?: string;
   contactId?: string;
   subject: string;
   bodyRendered: string;
@@ -58,7 +58,7 @@ export interface Correspondence {
 export interface GenerateCorrespondenceRequest {
   templateId: string;
   memberId?: number;
-  caseId?: number;
+  caseId?: string;
   contactId?: string;
   mergeData: Record<string, string>;
 }

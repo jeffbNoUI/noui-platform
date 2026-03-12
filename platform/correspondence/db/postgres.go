@@ -243,7 +243,7 @@ func (s *Store) CreateCorrespondence(c *models.Correspondence) error {
 }
 
 // ListHistory returns correspondence history with optional filtering.
-func (s *Store) ListHistory(tenantID string, memberID *int, contactID *string, status string, limit, offset int) ([]models.Correspondence, int, error) {
+func (s *Store) ListHistory(tenantID string, memberID *int, contactID *string, caseID *string, status string, limit, offset int) ([]models.Correspondence, int, error) {
 	where := "WHERE h.tenant_id = $1 AND h.deleted_at IS NULL"
 	args := []interface{}{tenantID}
 	argIdx := 2
@@ -256,6 +256,11 @@ func (s *Store) ListHistory(tenantID string, memberID *int, contactID *string, s
 	if contactID != nil && *contactID != "" {
 		where += fmt.Sprintf(" AND h.contact_id = $%d", argIdx)
 		args = append(args, *contactID)
+		argIdx++
+	}
+	if caseID != nil && *caseID != "" {
+		where += fmt.Sprintf(" AND h.case_id = $%d", argIdx)
+		args = append(args, *caseID)
 		argIdx++
 	}
 	if status != "" {

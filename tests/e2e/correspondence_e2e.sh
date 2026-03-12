@@ -159,6 +159,7 @@ GENERATE_PAYLOAD=$(cat <<'ENDJSON'
 {
   "templateId": "c0000000-0000-0000-0000-000000000006",
   "memberId": 10001,
+  "caseId": "RET-2026-0147",
   "mergeData": {
     "member_name": "Robert Martinez",
     "application_date": "2026-03-05",
@@ -294,6 +295,37 @@ assert_status "GET all templates (unfiltered)" "200" "$HTTP_CODE"
 
 # All templates = original 5 + 6 new = 11
 assert_json_gte "Total template count" "$BODY" ".pagination.total" "11"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TEST 5: Case-Scoped History (case_id = string)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+log_header "Test 5: Case-Scoped History"
+
+# The generate in Test 2 used caseId "RET-2026-0147" — it should be filterable
+RESPONSE=$(curl -s -w "\n%{http_code}" \
+  "${BASE_URL}/api/v1/correspondence/history?case_id=RET-2026-0147&limit=10" \
+  -H "X-Tenant-ID: ${TENANT_ID}" 2>/dev/null) || true
+
+HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+BODY=$(echo "$RESPONSE" | sed '$d')
+
+assert_status "GET history?case_id=RET-2026-0147" "200" "$HTTP_CODE"
+assert_json_gte "Case-filtered history has records" "$BODY" ".pagination.total" "1"
+
+# Verify returned record has the right case ID
+assert_json_field "First record caseId matches" "$BODY" '.data[0].caseId' "RET-2026-0147"
+
+# Verify filtering a non-existent case returns 0 records
+RESPONSE=$(curl -s -w "\n%{http_code}" \
+  "${BASE_URL}/api/v1/correspondence/history?case_id=NONEXISTENT&limit=10" \
+  -H "X-Tenant-ID: ${TENANT_ID}" 2>/dev/null) || true
+
+HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+BODY=$(echo "$RESPONSE" | sed '$d')
+
+assert_status "GET history?case_id=NONEXISTENT" "200" "$HTTP_CODE"
+assert_json_field "Non-existent case returns 0 records" "$BODY" ".pagination.total" "0"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMARY

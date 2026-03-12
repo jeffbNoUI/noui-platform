@@ -30,6 +30,7 @@ export const correspondenceAPI = {
   listHistory: (params?: {
     member_id?: number;
     contact_id?: string;
+    case_id?: string;
     status?: string;
     limit?: number;
     offset?: number;
