@@ -1,5 +1,28 @@
 # noui-platform — Build History
 
+## Bug Fix Session — DRO Case-Scoping + Dead Field Cleanup, PR #39 (2026-03-12)
+
+**Result:** Fixed 3 bugs found during E2E workflow testing. Primary fix: `CalculatePaymentOptions` and `CalculateScenario` handlers now only fetch DRO data when `dro_id` is explicitly provided, matching the existing `CalculateBenefit` pattern.
+
+**Bugs addressed:**
+| Bug | Root Cause | Fix |
+|-----|-----------|-----|
+| Bug 3: Inflated payment amounts ($85K+ vs ~$2,962) | `PaymentOptions` and `Scenario` handlers unconditionally fetched DRO per-member, not per-case | Added optional `DROID *int` to request types; DRO fetch now conditional on `dro_id` presence |
+| Bug 1: Rule sum = 0.00 display | Frontend had dead optional fields with broken fallback chains | Removed `is_vested`, `eligible_normal`, `rule_of_75_sum`, `rule_of_85_sum`, `reduction_percentage` from `EligibilityResult` type |
+| Bug 2: DRO stage on non-DRO case | Already fixed in `stageMapping.ts:152` | Confirmed with regression tests — no action needed |
+
+**Files changed (10):** `handlers.go`, `types.go` (intelligence), `EligibilityStage.tsx`, `fixtures.ts`, `useBenefitCalculation.ts`, `api.ts`, `mergeFieldResolver.ts`, `BenefitCalculation.ts`
+
+**Verification:** 21/21 Go intelligence tests, 262/262 frontend tests, 0 TS errors.
+
+**Docker E2E verified (2026-03-12):**
+- `POST /benefit/options` (no `dro_id`): base_amount = **$2,962.01** (was $85K+ pre-fix)
+- `POST /benefit/options` (`dro_id=1`): base_amount = **$2,213.35** (DRO-adjusted, ~74.7% marital fraction)
+- `POST /benefit/scenario` (no `dro_id`): $2,996.35 / $3,047.87 (non-DRO)
+- `POST /benefit/scenario` (`dro_id=1`): same amounts (DRO applies at payment level, not benefit calc)
+
+---
+
 ## Post-Correspondence Follow-Up (2026-03-12)
 
 **Result:** Completed 4 follow-up items from the correspondence enrichment work (PRs #35–#37).
@@ -64,6 +87,23 @@
 - `case_id` filtering added to correspondence history API
 
 **Verification:** 262 frontend tests, 17 Go tests, 0 TS errors.
+
+---
+
+## Tenant-Scoping for Case Management, PR #34 (2026-03-12)
+
+**Result:** Added tenant isolation to case management handlers and fixed test mock column mismatch from PR #30's `dro_id` migration.
+
+**Changes:**
+- Threaded `tenantID` from request headers into `GetCase`, `UpdateCase`, and `AdvanceStage` handlers
+- Added `GetCaseByID` for unscoped post-create re-fetch
+- Fixed test mocks: `caseCols` and `addCaseRow` helpers updated from 17→18 columns (adding `dro_id`)
+- Expanded test coverage for tenant isolation scenarios
+- Cleaned up `apiClient.ts` (21 lines removed)
+
+**Files changed (5):** `handlers.go`, `handlers_test.go`, `cases.go`, `cases_test.go` (casemanagement), `apiClient.ts`
+
+**Verification:** 52/52 casemanagement tests (32 handler + 20 db), 0 TS errors.
 
 ---
 
