@@ -1,5 +1,13 @@
 import { useState } from 'react';
-import { useDQScore, useDQChecks, useDQIssues, useUpdateDQIssue } from '@/hooks/useDataQuality';
+import {
+  useDQScore,
+  useDQScoreTrend,
+  useDQChecks,
+  useDQIssues,
+  useUpdateDQIssue,
+} from '@/hooks/useDataQuality';
+import DQScoreTrendChart from './DQScoreTrendChart';
+import DQCategoryChart from './DQCategoryChart';
 import type { DQIssue, DQCheckDefinition } from '@/types/DataQuality';
 
 /**
@@ -20,6 +28,7 @@ export default function DataQualityPanel() {
     refetch: refetchIssues,
   } = useDQIssues({ status: 'open', severity: severityFilter || undefined });
   const updateIssue = useUpdateDQIssue();
+  const { data: trendData = [] } = useDQScoreTrend();
 
   const loading = scoreLoading || checksLoading || issuesLoading;
 
@@ -68,26 +77,18 @@ export default function DataQualityPanel() {
         </div>
       )}
 
+      {/* Score Trend */}
+      {trendData.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <DQScoreTrendChart data={trendData} />
+        </div>
+      )}
+
       {/* Category Scores */}
       {score && Object.keys(score.categoryScores).length > 0 && (
         <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <h3 className="text-sm font-bold text-gray-700 mb-3">Scores by Category</h3>
-          <div className="space-y-2">
-            {Object.entries(score.categoryScores).map(([cat, catScore]) => (
-              <div key={cat} className="flex items-center gap-3">
-                <span className="text-xs text-gray-500 w-24 capitalize">{cat}</span>
-                <div className="flex-1 bg-gray-100 rounded-full h-2">
-                  <div
-                    className="bg-teal-500 rounded-full h-2"
-                    style={{ width: `${Math.min(catScore, 100)}%` }}
-                  />
-                </div>
-                <span className="text-xs font-medium text-gray-700 w-14 text-right">
-                  {catScore.toFixed(1)}%
-                </span>
-              </div>
-            ))}
-          </div>
+          <h3 className="text-sm font-bold text-gray-700 mb-2">Scores by Category</h3>
+          <DQCategoryChart categoryScores={score.categoryScores} />
         </div>
       )}
 
