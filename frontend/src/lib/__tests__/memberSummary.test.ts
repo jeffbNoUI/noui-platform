@@ -143,7 +143,25 @@ describe('generateMemberSummary', () => {
     expect(result.context).toContain('not yet vested');
   });
 
-  it('single active case shows stage name', () => {
+  it('single active case shows stage name with progress', () => {
+    const result = generateMemberSummary(
+      makeInput({
+        activeCases: [
+          {
+            caseId: 'RET-2026-0147',
+            stage: 'Benefit Calculation',
+            priority: 'standard',
+            daysOpen: 5,
+            stageIdx: 3,
+            totalStages: 7,
+          },
+        ],
+      }),
+    );
+    expect(result.context).toContain('case at Benefit Calculation (4/7)');
+  });
+
+  it('single active case without stageIdx omits progress', () => {
     const result = generateMemberSummary(
       makeInput({
         activeCases: [
@@ -157,6 +175,7 @@ describe('generateMemberSummary', () => {
       }),
     );
     expect(result.context).toContain('case at Benefit Calculation');
+    expect(result.context).not.toContain('/');
   });
 
   it('multiple active cases shows count', () => {
@@ -272,6 +291,34 @@ describe('generateMemberSummary', () => {
     expect(info.length).toBeGreaterThanOrEqual(2);
     expect(info.map((i) => i.label)).toContain('Beneficiaries on file');
     expect(info.map((i) => i.label)).toContain('No DQ issues');
+  });
+
+  it('commitment due today (not overdue status) produces medium item', () => {
+    const today = new Date().toISOString().split('T')[0];
+    const result = generateMemberSummary(
+      makeInput({
+        openCommitments: [
+          {
+            commitmentId: 'c2',
+            interactionId: 'i2',
+            description: 'Follow up call',
+            targetDate: today,
+            ownerAgent: 'Tom',
+            status: 'pending',
+            createdAt: '2026-03-01T00:00:00Z',
+            updatedAt: '2026-03-01T00:00:00Z',
+          } as any,
+        ],
+      }),
+    );
+    const medium = result.attentionItems.filter(
+      (i) => i.severity === 'medium' && i.label === 'Commitment due soon',
+    );
+    expect(medium).toHaveLength(1);
+    expect(medium[0].detail).toContain('Follow up call');
+    // Should NOT appear as critical (status is 'pending', not 'overdue')
+    const critical = result.attentionItems.filter((i) => i.severity === 'critical');
+    expect(critical).toHaveLength(0);
   });
 
   it('handles minimal data without undefined or NaN', () => {

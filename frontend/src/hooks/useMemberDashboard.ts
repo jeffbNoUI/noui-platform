@@ -38,6 +38,8 @@ export function useMemberDashboard(memberId: number) {
         stage: c.stage,
         priority: c.priority,
         daysOpen: c.daysOpen,
+        stageIdx: c.stageIdx,
+        totalStages: 7,
       })),
     [activeCases],
   );

@@ -10,6 +10,8 @@ export interface ActiveCaseItem {
   stage: string;
   priority: string;
   daysOpen: number;
+  stageIdx?: number;
+  totalStages?: number;
 }
 
 export type AttentionSeverity = 'critical' | 'high' | 'medium' | 'info';
@@ -79,7 +81,10 @@ export function generateMemberSummary(input: MemberSummaryInput): MemberSummaryR
 
   let casePart = '';
   if (activeCases.length === 1) {
-    casePart = `case at ${activeCases[0].stage}`;
+    const c = activeCases[0];
+    const progress =
+      c.stageIdx != null && c.totalStages ? ` (${c.stageIdx + 1}/${c.totalStages})` : '';
+    casePart = `case at ${c.stage}${progress}`;
   } else if (activeCases.length > 1) {
     casePart = `${activeCases.length} active cases`;
   }
@@ -139,13 +144,15 @@ export function generateMemberSummary(input: MemberSummaryInput): MemberSummaryR
     });
   }
 
-  // Medium: commitments due within 7 days
+  // Medium: commitments due within 7 days (day-level comparison, not timestamp)
   const pendingCommitments = openCommitments.filter(
     (c) => c.status !== 'overdue' && c.status !== 'fulfilled',
   );
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   for (const c of pendingCommitments) {
     const due = new Date(c.targetDate.includes('T') ? c.targetDate : c.targetDate + 'T00:00:00');
-    const daysUntil = (due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+    const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+    const daysUntil = Math.round((dueDay.getTime() - todayStart.getTime()) / (1000 * 60 * 60 * 24));
     if (daysUntil >= 0 && daysUntil <= 7) {
       const dateStr = due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       attentionItems.push({
