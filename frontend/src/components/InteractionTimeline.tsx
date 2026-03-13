@@ -1,10 +1,18 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useContactTimeline, useInteraction } from '@/hooks/useCRM';
 import type { TimelineEntry, InteractionChannel, Direction } from '@/types/CRM';
 
+export interface TimelineSelectData {
+  interactionId: string;
+  entry: TimelineEntry;
+  sourceRect: DOMRect;
+  entries: TimelineEntry[];
+  index: number;
+}
+
 interface InteractionTimelineProps {
   contactId: string;
-  onSelectInteraction?: (interactionId: string) => void;
+  onSelectInteraction?: (data: TimelineSelectData) => void;
   limit?: number;
 }
 
@@ -409,10 +417,12 @@ export default function InteractionTimeline({
           <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200" />
 
           <ul className="space-y-4">
-            {entries.map((entry) => (
+            {entries.map((entry, idx) => (
               <TimelineEntryRow
                 key={entry.interactionId}
                 entry={entry}
+                index={idx}
+                allEntries={entries}
                 expanded={expandedIds.has(entry.interactionId)}
                 onToggle={() => toggleExpand(entry.interactionId)}
                 onSelect={onSelectInteraction}
@@ -429,15 +439,20 @@ export default function InteractionTimeline({
 
 function TimelineEntryRow({
   entry,
+  index,
+  allEntries,
   expanded,
   onToggle,
   onSelect,
 }: {
   entry: TimelineEntry;
+  index: number;
+  allEntries: TimelineEntry[];
   expanded: boolean;
   onToggle: () => void;
-  onSelect?: (id: string) => void;
+  onSelect?: (data: TimelineSelectData) => void;
 }) {
+  const rowRef = useRef<HTMLLIElement>(null);
   const cfg = channelConfig[entry.channel] ?? {
     label: entry.channel,
     icon: <SystemIcon />,
@@ -446,8 +461,19 @@ function TimelineEntryRow({
   };
   const dir = directionArrow[entry.direction] ?? { arrow: '\u00b7', label: entry.direction };
 
+  const handleSelect = () => {
+    if (!onSelect || !rowRef.current) return;
+    onSelect({
+      interactionId: entry.interactionId,
+      entry,
+      sourceRect: rowRef.current.getBoundingClientRect(),
+      entries: allEntries,
+      index,
+    });
+  };
+
   return (
-    <li className="relative pl-10">
+    <li ref={rowRef} className="relative pl-10">
       {/* Timeline dot */}
       <div
         className={`absolute left-2.5 top-1.5 flex h-3 w-3 items-center justify-center rounded-full ring-2 ring-white ${cfg.dotColor}`}
@@ -510,7 +536,7 @@ function TimelineEntryRow({
             {onSelect && (
               <button
                 type="button"
-                onClick={() => onSelect(entry.interactionId)}
+                onClick={handleSelect}
                 className="rounded px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-200 transition-colors"
               >
                 View

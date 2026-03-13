@@ -48,6 +48,6 @@ describe('MemberDashboard', () => {
       />,
     );
     screen.getByText('Open CRM').click();
-    expect(onChangeView).toHaveBeenCalledWith('crm');
+    expect(onChangeView).toHaveBeenCalledWith('crm', { memberId: 10001 });
   });
 });

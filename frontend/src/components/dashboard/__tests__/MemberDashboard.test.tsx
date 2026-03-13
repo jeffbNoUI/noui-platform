@@ -89,7 +89,7 @@ describe('MemberDashboard', () => {
     renderWithProviders(<MemberDashboard {...defaultProps} />);
     const crmBtn = screen.getByText('Open CRM');
     fireEvent.click(crmBtn);
-    expect(defaultProps.onChangeView).toHaveBeenCalledWith('crm');
+    expect(defaultProps.onChangeView).toHaveBeenCalledWith('crm', { memberId: 10001 });
   });
 
   it('shows Open Active Case button when cases exist', () => {
