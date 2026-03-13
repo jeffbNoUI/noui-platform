@@ -81,6 +81,7 @@ func (h *Handler) ListCases(w http.ResponseWriter, r *http.Request) {
 		Status:     r.URL.Query().Get("status"),
 		Priority:   r.URL.Query().Get("priority"),
 		AssignedTo: r.URL.Query().Get("assigned_to"),
+		Stage:      r.URL.Query().Get("stage"),
 		MemberID:   intParam(r, "member_id", 0),
 		Limit:      intParam(r, "limit", 25),
 		Offset:     intParam(r, "offset", 0),

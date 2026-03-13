@@ -88,6 +88,11 @@ func (s *Store) ListCases(tenantID string, f models.CaseFilter) ([]models.Retire
 		args = append(args, f.MemberID)
 		idx++
 	}
+	if f.Stage != "" {
+		where = append(where, fmt.Sprintf("rc.current_stage = $%d", idx))
+		args = append(args, f.Stage)
+		idx++
+	}
 
 	whereClause := "WHERE " + strings.Join(where, " AND ")
 

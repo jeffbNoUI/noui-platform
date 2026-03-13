@@ -1115,6 +1115,41 @@ func TestUpdateCase_EmptyBody(t *testing.T) {
 	}
 }
 
+func TestListCases_WithStageFilter_HTTP(t *testing.T) {
+	h, mock := newTestHandler(t)
+
+	mock.ExpectQuery("SELECT COUNT").
+		WithArgs(defaultTenantID, "Eligibility Verification").
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+
+	dataRows := sqlmock.NewRows(caseCols)
+	addCaseRow(dataRows, "case-elig", 10001, 2, "Eligibility Verification")
+	mock.ExpectQuery("SELECT").
+		WithArgs(defaultTenantID, "Eligibility Verification", 25, 0).
+		WillReturnRows(dataRows)
+
+	mock.ExpectQuery("SELECT flag_code FROM case_flag").
+		WithArgs("case-elig").
+		WillReturnRows(sqlmock.NewRows([]string{"flag_code"}))
+
+	w := serve(h, "GET", "/api/v1/cases?stage=Eligibility+Verification", nil)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("ListCases(stage) HTTP status = %d, want %d\nbody: %s",
+			w.Code, http.StatusOK, w.Body.String())
+	}
+
+	var body struct {
+		Data []models.RetirementCase `json:"data"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	if len(body.Data) != 1 {
+		t.Errorf("expected 1 case, got %d", len(body.Data))
+	}
+}
+
 func TestGetStageHistory_Empty(t *testing.T) {
 	h, mock := newTestHandler(t)
 
