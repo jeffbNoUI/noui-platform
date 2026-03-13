@@ -85,6 +85,19 @@ VALUES (
     6
 );
 
+-- 6b. Scenario Comparison
+INSERT INTO kb_article (article_id, tenant_id, stage_id, title, context_text, checklist, next_action, sort_order)
+VALUES (
+    'a0000000-0000-0000-0000-000000000009',
+    '00000000-0000-0000-0000-000000000001',
+    'scenario',
+    'Scenario Comparison',
+    E'This member qualifies for early retirement with a benefit reduction. Review the retire-now vs. wait comparison to ensure the member understands the trade-off between retiring early with a reduced benefit and waiting for a higher unreduced benefit.',
+    E'["Compare current reduced benefit against projected unreduced benefit", "Verify the Rule of N threshold and projected date it would be met", "Confirm the member has been informed of both options", "Document the member\u2019s acknowledgment of the reduction impact"]',
+    'Review the scenario comparison with the member. Confirm they understand the reduction impact before proceeding to election.',
+    9
+);
+
 -- 7. Election
 INSERT INTO kb_article (article_id, tenant_id, stage_id, title, context_text, checklist, next_action, sort_order)
 VALUES (
@@ -147,6 +160,12 @@ VALUES
     ('a0000000-0000-0000-0000-000000000005', 'RMC-18-501', 'RMC §18-501', 'DRO requirements', 'dro', 1),
     ('a0000000-0000-0000-0000-000000000005', 'RMC-18-502', 'RMC §18-502', 'Marital fraction calculation', 'dro', 2),
     ('a0000000-0000-0000-0000-000000000005', 'RMC-18-503', 'RMC §18-503', 'Alternate payee rights', 'dro', 3);
+
+-- Scenario Comparison rules
+INSERT INTO kb_rule_reference (article_id, rule_id, rule_code, rule_description, rule_domain, sort_order)
+VALUES
+    ('a0000000-0000-0000-0000-000000000009', 'RMC-18-401b-scen', 'RMC §18-401(b)', 'Rule of 75 / Rule of 85', 'scenario', 1),
+    ('a0000000-0000-0000-0000-000000000009', 'RMC-18-401c-scen', 'RMC §18-401(c)', 'Early retirement reduction', 'scenario', 2);
 
 -- Benefit Calc rules
 INSERT INTO kb_rule_reference (article_id, rule_id, rule_code, rule_description, rule_domain, sort_order)

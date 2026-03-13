@@ -1,5 +1,26 @@
 # noui-platform — Build History
 
+## Bug Fix Sweep: Bugs 1, 2, 4, 5 from E2E Testing (2026-03-12)
+
+**Result:** Resolved 3 of 4 bugs from E2E workflow testing (Bug 4 was already fixed). All fixes in 2 files.
+
+**Bugs fixed:**
+
+| Bug | Description | Root Cause | Fix |
+|-----|-------------|------------|-----|
+| 1 | Rule sum = 0.00 in scenario stage | `useScenario()` hook never called; `ScenarioStage` never received data | Wire `useScenario()` in RetirementApplication, compute wait dates (+1/+2/+3yr), transform API response to ScenarioData shape |
+| 2 | DRO stage marked completed on non-DRO case | Race condition: `computeInitialState()` fired when stages/flags were out of sync | Add guard: skip sync when `stages.some(s => s.id === 'dro') !== flags.hasDRO` |
+| 4 | DRO seed data placeholder | Already fixed in prior session | No action — seed data has valid dates and positive division values |
+| 5 | KB 404 for scenario stage | No KB article seeded for `scenario` stage | Added article + 2 rule references in `004_knowledgebase_seed.sql` |
+
+**Files changed:**
+- `frontend/src/components/RetirementApplication.tsx` — Bug 1 (useScenario wiring) + Bug 2 (DRO guard)
+- `domains/pension/seed/004_knowledgebase_seed.sql` — Bug 5 (scenario KB article)
+
+**Verification:** 262/262 frontend tests pass, 0 TS errors.
+
+---
+
 ## Frontend Polish + Send-Message E2E (2026-03-12)
 
 **Result:** Fixed NaN SVG warnings in 2 chart components, implemented bidirectional enum normalization in API client, fixed conversation auto-select bug in portals, verified send-message E2E.
