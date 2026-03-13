@@ -62,6 +62,7 @@ type CaseFilter struct {
 	Status     string
 	Priority   string
 	AssignedTo string
+	Stage      string // filter by current_stage
 	MemberID   int
 	Limit      int
 	Offset     int
@@ -136,4 +137,57 @@ type CaseDetail struct {
 	RetirementCase
 	NoteCount     int `json:"noteCount"`
 	DocumentCount int `json:"documentCount"`
+}
+
+// CaseStats holds aggregated case metrics for supervisor dashboards.
+type CaseStats struct {
+	TotalActive     int              `json:"totalActive"`
+	CompletedMTD    int              `json:"completedMTD"`
+	AtRiskCount     int              `json:"atRiskCount"`
+	CaseloadByStage []StageCaseCount `json:"caseloadByStage"`
+	CasesByStatus   []StatusCount    `json:"casesByStatus"`
+	CasesByPriority []PriorityCount  `json:"casesByPriority"`
+	CasesByAssignee []AssigneeStats  `json:"casesByAssignee"`
+}
+
+// StageCaseCount is a stage name with its active case count.
+type StageCaseCount struct {
+	Stage    string `json:"stage"`
+	StageIdx int    `json:"stageIdx"`
+	Count    int    `json:"count"`
+}
+
+// StatusCount is a status value with its case count.
+type StatusCount struct {
+	Status string `json:"status"`
+	Count  int    `json:"count"`
+}
+
+// PriorityCount is a priority value with its case count.
+type PriorityCount struct {
+	Priority string `json:"priority"`
+	Count    int    `json:"count"`
+}
+
+// AssigneeStats is per-assignee case count and average days open.
+type AssigneeStats struct {
+	AssignedTo  string  `json:"assignedTo"`
+	Count       int     `json:"count"`
+	AvgDaysOpen float64 `json:"avgDaysOpen"`
+}
+
+// SLAStats holds SLA health metrics for active cases.
+type SLAStats struct {
+	OnTrack           int           `json:"onTrack"`
+	AtRisk            int           `json:"atRisk"`
+	Overdue           int           `json:"overdue"`
+	AvgProcessingDays float64       `json:"avgProcessingDays"`
+	Thresholds        SLAThresholds `json:"thresholds"`
+}
+
+// SLAThresholds shows the at-risk warning days per priority.
+type SLAThresholds struct {
+	Urgent   int `json:"urgent"`
+	High     int `json:"high"`
+	Standard int `json:"standard"`
 }
