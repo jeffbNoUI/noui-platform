@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useMember, useEmployment, useServiceCredit, useBeneficiaries } from '@/hooks/useMember';
 import { useContactByMemberId, useFullTimeline, useContactCommitments } from '@/hooks/useCRM';
 import { useCorrespondenceHistory } from '@/hooks/useCorrespondence';
@@ -38,6 +38,8 @@ export function useMemberDashboard(memberId: number) {
         stage: c.stage,
         priority: c.priority,
         daysOpen: c.daysOpen,
+        stageIdx: c.stageIdx,
+        totalStages: 7,
       })),
     [activeCases],
   );
@@ -52,7 +54,7 @@ export function useMemberDashboard(memberId: number) {
 
   // ─── AI summary ──────────────────────────────────────────────────────────
   const summary = useMemo(() => {
-    if (!member.data) return '';
+    if (!member.data) return null;
 
     const openCommitments = (commitments.data ?? []).filter(
       (c) => c.status === 'pending' || c.status === 'in_progress' || c.status === 'overdue',
@@ -61,6 +63,8 @@ export function useMemberDashboard(memberId: number) {
     const entries = timeline.data?.timelineEntries ?? [];
     const lastEntry = entries.length > 0 ? entries[0] : undefined;
 
+    // TODO: Wire eligibility data from intelligence service to populate
+    // context line with eligibility type and reduction percentage
     return generateMemberSummary({
       member: member.data,
       serviceCredit: serviceCredit.data?.summary,
@@ -82,6 +86,48 @@ export function useMemberDashboard(memberId: number) {
     correspondence.length,
     memberDQIssues.data.length,
   ]);
+
+  // ─── Summary log (fire-and-forget for AI training corpus) ──────────────
+  useEffect(() => {
+    if (!summary || !member.data) return;
+
+    const input = {
+      member: member.data,
+      serviceCredit: serviceCredit.data?.summary,
+      beneficiaries: beneficiaries.data,
+      activeCases: activeCaseItems,
+      openCommitments: (commitments.data ?? []).filter(
+        (c) => c.status === 'pending' || c.status === 'in_progress' || c.status === 'overdue',
+      ),
+      recentInteractionCount: timeline.data?.timelineEntries?.length ?? 0,
+      lastInteractionDate: timeline.data?.timelineEntries?.[0]?.startedAt,
+      correspondenceCount: correspondence.length,
+      dataQualityIssueCount: memberDQIssues.data.length,
+    };
+
+    const inputStr = JSON.stringify(input);
+
+    // Simple hash for dedup — not crypto, just change detection
+    let hash = 0;
+    for (let i = 0; i < inputStr.length; i++) {
+      hash = ((hash << 5) - hash + inputStr.charCodeAt(i)) | 0;
+    }
+    const inputHash = hash.toString(36);
+
+    fetch('/api/v1/summary-log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        memberId: member.data.member_id,
+        inputHash,
+        input,
+        output: summary,
+      }),
+    }).catch(() => {}); // fire-and-forget — ignore network errors
+    // Narrow deps: summary is derived from all data inputs via useMemo,
+    // so it changes whenever any input changes. No need to list every
+    // data source here — that would cause duplicate POSTs.
+  }, [summary, member.data?.member_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Loading & error states ───────────────────────────────────────────────
   const isLoading = member.isLoading;

@@ -51,7 +51,17 @@ const defaultHookReturn = {
   correspondence: mockCorrespondence,
   dqScore: mockDQScore,
   dqIssues: mockDQIssues,
-  summary: 'Test summary',
+  summary: {
+    context: 'Robert Martinez — 25 yr 3 mo Tier 1 veteran, case at Benefit Calculation (5/7).',
+    attentionItems: [
+      {
+        severity: 'high' as const,
+        label: 'No beneficiaries',
+        detail: 'No beneficiary designations on file',
+      },
+      { severity: 'info' as const, label: 'No DQ issues', detail: 'No data quality issues' },
+    ],
+  },
   isLoading: false,
   isLoadingSecondary: false,
   error: null,
@@ -158,13 +168,13 @@ describe('MemberDashboard', () => {
     expect(mockUseMemberDashboard).toHaveBeenCalledWith(10001);
   });
 
-  it('renders child cards when member is loaded', () => {
+  it('renders reference cards when member is loaded', () => {
     renderWithProviders(<MemberDashboard {...defaultProps} />);
-    // InteractionHistoryCard
-    expect(screen.getByText('Recent Interactions')).toBeInTheDocument();
-    // CorrespondenceHistoryCard
+    // ReferenceCards in the sidebar
+    expect(screen.getByText('Interactions')).toBeInTheDocument();
     expect(screen.getByText('Correspondence')).toBeInTheDocument();
-    // DataQualityCard
+    expect(screen.getByText('Service Credit')).toBeInTheDocument();
+    expect(screen.getByText('Beneficiaries')).toBeInTheDocument();
     expect(screen.getByText('Data Quality')).toBeInTheDocument();
   });
 });

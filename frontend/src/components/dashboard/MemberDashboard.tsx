@@ -1,15 +1,9 @@
-import { useState } from 'react';
 import { useMemberDashboard } from '@/hooks/useMemberDashboard';
 import MemberBanner from '@/components/MemberBanner';
 import MemberSummaryCard from '@/components/dashboard/MemberSummaryCard';
 import ActiveWorkCard from '@/components/dashboard/ActiveWorkCard';
-import InteractionHistoryCard from '@/components/dashboard/InteractionHistoryCard';
-import type { InteractionRowClickData } from '@/components/dashboard/InteractionHistoryCard';
-import InteractionDetailPanel from '@/components/dashboard/InteractionDetailPanel';
-import CorrespondenceHistoryCard from '@/components/dashboard/CorrespondenceHistoryCard';
-import ServiceCreditCard from '@/components/dashboard/ServiceCreditCard';
-import BeneficiaryCard from '@/components/dashboard/BeneficiaryCard';
-import DataQualityCard from '@/components/dashboard/DataQualityCard';
+import ReferenceCard from '@/components/dashboard/ReferenceCard';
+import { formatServiceYears } from '@/lib/formatters';
 
 interface MemberDashboardProps {
   memberId: number;
@@ -46,21 +40,27 @@ export default function MemberDashboard({
     error,
   } = useMemberDashboard(memberId);
 
-  const [selectedInteraction, setSelectedInteraction] = useState<InteractionRowClickData | null>(
-    null,
-  );
+  // ── Derived values for reference cards ──────────────────────────────────────
+  const activeBeneficiaries = beneficiaries?.filter((b) => !b.end_date) ?? [];
 
-  const handleNavigateInteraction = (newIndex: number) => {
-    if (!selectedInteraction) return;
-    const entry = selectedInteraction.entries[newIndex];
-    if (!entry) return;
-    setSelectedInteraction({
-      ...selectedInteraction,
-      interactionId: entry.interactionId,
-      entry,
-      index: newIndex,
-    });
-  };
+  const lastEntry = timeline?.timelineEntries?.[0];
+  const interactionsPreview = lastEntry
+    ? `Last: ${lastEntry.channel} ${lastEntry.direction} \u00b7 ${new Date(lastEntry.startedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+    : undefined;
+
+  const firstCorr = correspondence[0];
+  const correspondencePreview = firstCorr
+    ? `${firstCorr.subject} \u00b7 ${new Date(firstCorr.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+    : undefined;
+
+  const beneficiaryPreview =
+    activeBeneficiaries.length > 0
+      ? activeBeneficiaries
+          .map((b) => `${b.first_name} ${b.last_name} (${b.alloc_pct}%)`)
+          .join(', ')
+      : undefined;
+
+  const openDqIssues = dqIssues.filter((i) => i.status === 'open');
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -125,36 +125,82 @@ export default function MemberDashboard({
             {/* Row 2: AI Summary */}
             <MemberSummaryCard summary={summary} isLoading={isLoading} />
 
-            {/* Row 3: Two-column layout */}
+            {/* Row 3: Action zone + Reference sidebar */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left column (2/3) */}
+              {/* Left column — Action zone (2/3) */}
               <div className="lg:col-span-2 space-y-6">
                 <ActiveWorkCard
                   activeCases={activeCases}
                   commitments={commitments ?? []}
                   onOpenCase={onOpenCase}
                 />
-
-                <InteractionHistoryCard
-                  timeline={timeline}
-                  isLoading={isLoadingSecondary}
-                  onSelectInteraction={setSelectedInteraction}
-                />
-
-                <CorrespondenceHistoryCard correspondence={correspondence} />
               </div>
 
-              {/* Right column (1/3) */}
-              <div className="space-y-6">
-                <ServiceCreditCard summary={serviceCredit} isLoading={isLoadingSecondary} />
-
-                <BeneficiaryCard beneficiaries={beneficiaries} isLoading={isLoadingSecondary} />
-
-                <DataQualityCard
-                  score={dqScore}
-                  memberIssues={dqIssues}
+              {/* Right column — Reference cards (1/3) */}
+              <div className="space-y-3">
+                <ReferenceCard
+                  title="Interactions"
+                  count={timeline?.totalEntries ?? 0}
+                  preview={interactionsPreview}
                   isLoading={isLoadingSecondary}
                 />
+
+                <ReferenceCard
+                  title="Correspondence"
+                  count={correspondence.length}
+                  preview={correspondencePreview}
+                />
+
+                <ReferenceCard
+                  title="Service Credit"
+                  count={serviceCredit ? formatServiceYears(serviceCredit.total_years) : undefined}
+                  isLoading={isLoadingSecondary}
+                >
+                  {serviceCredit && (
+                    <table className="w-full text-xs">
+                      <tbody>
+                        <tr>
+                          <td className="text-gray-500 pr-2">Earned</td>
+                          <td className="text-right font-medium">
+                            {formatServiceYears(serviceCredit.earned_years)}
+                          </td>
+                        </tr>
+                        {serviceCredit.purchased_years > 0 && (
+                          <tr>
+                            <td className="text-gray-500 pr-2">Purchased</td>
+                            <td className="text-right font-medium">
+                              {formatServiceYears(serviceCredit.purchased_years)}
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  )}
+                </ReferenceCard>
+
+                <ReferenceCard
+                  title="Beneficiaries"
+                  count={activeBeneficiaries.length}
+                  preview={beneficiaryPreview}
+                  highlight={beneficiaries !== undefined && activeBeneficiaries.length === 0}
+                  isLoading={isLoadingSecondary}
+                />
+
+                <ReferenceCard
+                  title="Data Quality"
+                  count={
+                    openDqIssues.length > 0
+                      ? `${openDqIssues.length} issue${openDqIssues.length > 1 ? 's' : ''}`
+                      : dqScore
+                        ? `${Math.round(dqScore.overallScore)}%`
+                        : undefined
+                  }
+                  highlight={openDqIssues.length > 0}
+                >
+                  {openDqIssues.length > 0 ? (
+                    <p className="text-xs text-amber-700">{openDqIssues[0].description}</p>
+                  ) : null}
+                </ReferenceCard>
               </div>
             </div>
 
@@ -169,19 +215,6 @@ export default function MemberDashboard({
           </>
         )}
       </main>
-
-      {/* Interaction detail overlay */}
-      {selectedInteraction && (
-        <InteractionDetailPanel
-          interactionId={selectedInteraction.interactionId}
-          entry={selectedInteraction.entry}
-          sourceRect={selectedInteraction.sourceRect}
-          onClose={() => setSelectedInteraction(null)}
-          entries={selectedInteraction.entries}
-          currentIndex={selectedInteraction.index}
-          onNavigate={handleNavigateInteraction}
-        />
-      )}
     </div>
   );
 }
