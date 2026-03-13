@@ -28,18 +28,15 @@ function makeInput(overrides: Partial<MemberSummaryInput> = {}): MemberSummaryIn
 }
 
 describe('generateMemberSummary', () => {
+  // ── Context line tests ──────────────────────────────────────────────────
+
   it('includes member name and tier', () => {
     const result = generateMemberSummary(makeInput());
-    expect(result).toContain('Robert Martinez');
-    expect(result).toContain('Tier 1');
+    expect(result.context).toContain('Robert Martinez');
+    expect(result.context).toContain('Tier 1');
   });
 
-  it('includes department', () => {
-    const result = generateMemberSummary(makeInput());
-    expect(result).toContain('Public Works');
-  });
-
-  it('includes service credit when available', () => {
+  it('includes service years when available', () => {
     const result = generateMemberSummary(
       makeInput({
         serviceCredit: {
@@ -54,16 +51,10 @@ describe('generateMemberSummary', () => {
         },
       }),
     );
-    expect(result).toContain('27 yr 6 mo');
+    expect(result.context).toContain('27 yr 6 mo');
   });
 
-  it('works without service credit', () => {
-    const result = generateMemberSummary(makeInput());
-    expect(result).toContain('Robert Martinez');
-    expect(result).not.toContain('undefined');
-  });
-
-  it('includes eligibility info when available', () => {
+  it('includes eligibility with no reduction', () => {
     const result = generateMemberSummary(
       makeInput({
         eligibility: {
@@ -89,11 +80,11 @@ describe('generateMemberSummary', () => {
         },
       }),
     );
-    expect(result).toContain('Rule of 75');
-    expect(result).toContain('no reduction');
+    expect(result.context).toContain('Rule of 75');
+    expect(result.context).toContain('no reduction');
   });
 
-  it('flags early retirement with reduction', () => {
+  it('includes early retirement with reduction', () => {
     const result = generateMemberSummary(
       makeInput({
         eligibility: {
@@ -119,11 +110,11 @@ describe('generateMemberSummary', () => {
         },
       }),
     );
-    expect(result).toContain('Early Retirement');
-    expect(result).toContain('30%');
+    expect(result.context).toContain('Early Retirement');
+    expect(result.context).toContain('30%');
   });
 
-  it('shows not vested status', () => {
+  it('shows not yet vested status', () => {
     const result = generateMemberSummary(
       makeInput({
         eligibility: {
@@ -149,10 +140,10 @@ describe('generateMemberSummary', () => {
         },
       }),
     );
-    expect(result).toContain('Not yet vested');
+    expect(result.context).toContain('not yet vested');
   });
 
-  it('reports active cases', () => {
+  it('single active case shows stage name', () => {
     const result = generateMemberSummary(
       makeInput({
         activeCases: [
@@ -165,10 +156,10 @@ describe('generateMemberSummary', () => {
         ],
       }),
     );
-    expect(result).toContain('1 active case');
+    expect(result.context).toContain('case at Benefit Calculation');
   });
 
-  it('highlights urgent cases', () => {
+  it('multiple active cases shows count', () => {
     const result = generateMemberSummary(
       makeInput({
         activeCases: [
@@ -187,11 +178,12 @@ describe('generateMemberSummary', () => {
         ],
       }),
     );
-    expect(result).toContain('2 active cases');
-    expect(result).toContain('1 flagged as urgent');
+    expect(result.context).toContain('2 active cases');
   });
 
-  it('reports overdue commitments', () => {
+  // ── Attention items tests ───────────────────────────────────────────────
+
+  it('overdue commitments produce critical attention items', () => {
     const result = generateMemberSummary(
       makeInput({
         openCommitments: [
@@ -208,64 +200,86 @@ describe('generateMemberSummary', () => {
         ],
       }),
     );
-    expect(result).toContain('1 overdue commitment');
-    expect(result).toContain('requiring attention');
+    const critical = result.attentionItems.filter((i) => i.severity === 'critical');
+    expect(critical).toHaveLength(1);
+    expect(critical[0].label).toBe('Overdue commitment');
+    expect(critical[0].detail).toContain('Send estimate');
+    expect(critical[0].detail).toContain('Sarah');
   });
 
-  it('reports interactions', () => {
+  it('urgent cases produce high attention items', () => {
     const result = generateMemberSummary(
       makeInput({
-        recentInteractionCount: 5,
+        activeCases: [
+          {
+            caseId: 'DRO-2026-0031',
+            stage: 'Marital Share Calculation',
+            priority: 'urgent',
+            daysOpen: 18,
+          },
+        ],
       }),
     );
-    expect(result).toContain('5 interactions on record');
+    const high = result.attentionItems.filter(
+      (i) => i.severity === 'high' && i.label === 'Urgent case',
+    );
+    expect(high).toHaveLength(1);
+    expect(high[0].detail).toContain('DRO-2026-0031');
   });
 
-  it('flags missing beneficiaries', () => {
+  it('missing beneficiaries produce high attention item', () => {
     const result = generateMemberSummary(
       makeInput({
         beneficiaries: [],
       }),
     );
-    expect(result).toContain('No beneficiary designations on file');
+    const noBen = result.attentionItems.filter((i) => i.label === 'No beneficiaries');
+    expect(noBen).toHaveLength(1);
+    expect(noBen[0].severity).toBe('high');
   });
 
-  it('reports data quality issues', () => {
+  it('data quality issues produce medium attention item', () => {
     const result = generateMemberSummary(
       makeInput({
         dataQualityIssueCount: 3,
       }),
     );
-    expect(result).toContain('3 data quality issues');
+    const dq = result.attentionItems.filter((i) => i.label === 'Data quality');
+    expect(dq).toHaveLength(1);
+    expect(dq[0].severity).toBe('medium');
+    expect(dq[0].detail).toContain('3 issues');
   });
 
-  it('reports correspondence', () => {
+  it('positive confirmations produce info items', () => {
     const result = generateMemberSummary(
       makeInput({
-        correspondenceCount: 2,
+        beneficiaries: [
+          {
+            bene_id: 1,
+            member_id: 10001,
+            first_name: 'Maria',
+            last_name: 'Martinez',
+            bene_type: 'primary',
+            relationship: 'spouse',
+            alloc_pct: 100,
+            eff_date: '2020-01-01',
+          },
+        ],
+        dataQualityIssueCount: 0,
       }),
     );
-    expect(result).toContain('2 correspondence items');
+    const info = result.attentionItems.filter((i) => i.severity === 'info');
+    expect(info.length).toBeGreaterThanOrEqual(2);
+    expect(info.map((i) => i.label)).toContain('Beneficiaries on file');
+    expect(info.map((i) => i.label)).toContain('No DQ issues');
   });
 
-  it('handles minimal data (just member)', () => {
+  it('handles minimal data without undefined or NaN', () => {
     const result = generateMemberSummary(makeInput());
-    expect(result).toBeTruthy();
-    expect(result).not.toContain('undefined');
-    expect(result).not.toContain('NaN');
-  });
-
-  it('uses correct article for "active" status', () => {
-    const result = generateMemberSummary(makeInput());
-    expect(result).toContain('an active');
-  });
-
-  it('uses correct article for "retired" status', () => {
-    const result = generateMemberSummary(
-      makeInput({
-        member: { ...baseMember, status_code: 'R' },
-      }),
-    );
-    expect(result).toContain('a retired');
+    expect(result.context).toBeTruthy();
+    expect(result.context).not.toContain('undefined');
+    expect(result.context).not.toContain('NaN');
+    expect(result.attentionItems).toBeDefined();
+    expect(Array.isArray(result.attentionItems)).toBe(true);
   });
 });

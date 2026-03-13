@@ -1,7 +1,7 @@
 import type { Member, ServiceCreditSummary, Beneficiary } from '@/types/Member';
 import type { EligibilityResult } from '@/types/BenefitCalculation';
 import type { Commitment } from '@/types/CRM';
-import { formatServiceYears, statusLabel, eligibilityLabel } from '@/lib/formatters';
+import { formatServiceYears, eligibilityLabel, tierLabel } from '@/lib/formatters';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -10,6 +10,19 @@ export interface ActiveCaseItem {
   stage: string;
   priority: string;
   daysOpen: number;
+}
+
+export type AttentionSeverity = 'critical' | 'high' | 'medium' | 'info';
+
+export interface AttentionItem {
+  severity: AttentionSeverity;
+  label: string;
+  detail: string;
+}
+
+export interface MemberSummaryResult {
+  context: string;
+  attentionItems: AttentionItem[];
 }
 
 export interface MemberSummaryInput {
@@ -27,14 +40,14 @@ export interface MemberSummaryInput {
 
 // ─── Summary Generator ──────────────────────────────────────────────────────
 //
-// Deterministic natural-language summary composed from structured member data.
+// Deterministic structured summary composed from member data.
 // Designed with the same input/output signature an LLM endpoint would use,
 // so the body can be swapped to a fetch call later without changing consumers.
 //
-// Returns a concise briefing paragraph for staff use.
+// Returns a context line and prioritized attention items for staff use.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function generateMemberSummary(input: MemberSummaryInput): string {
+export function generateMemberSummary(input: MemberSummaryInput): MemberSummaryResult {
   const {
     member,
     serviceCredit,
@@ -42,125 +55,123 @@ export function generateMemberSummary(input: MemberSummaryInput): string {
     beneficiaries,
     activeCases,
     openCommitments,
-    recentInteractionCount,
-    lastInteractionDate,
-    correspondenceCount,
     dataQualityIssueCount,
   } = input;
 
-  const sentences: string[] = [];
-
-  // 1. Identity & tenure
+  // ── Build context line ──────────────────────────────────────────────────
   const name = `${member.first_name} ${member.last_name}`;
-  const status = statusLabel(member.status_code).toLowerCase();
-  const dept = member.dept_name || 'an unspecified department';
-  if (serviceCredit) {
-    sentences.push(
-      `${name} is ${article(status)} ${status} Tier ${member.tier_code} member in ${dept} with ${formatServiceYears(serviceCredit.total_years)} of total service.`,
-    );
-  } else {
-    sentences.push(
-      `${name} is ${article(status)} ${status} Tier ${member.tier_code} member in ${dept}.`,
-    );
-  }
+  const tier = tierLabel(member.tier_code);
 
-  // 2. Eligibility status
+  const tenurePart = serviceCredit
+    ? `${formatServiceYears(serviceCredit.total_years)} ${tier} veteran`
+    : `${tier} member`;
+
+  let eligPart = '';
   if (eligibility) {
-    const eligType = eligibilityLabel(eligibility.best_eligible_type);
     if (eligibility.best_eligible_type === 'NONE') {
-      sentences.push(
-        eligibility.vested
-          ? `Vested but not yet eligible for retirement.`
-          : `Not yet vested (requires 5 years of earned service).`,
-      );
+      eligPart = eligibility.vested ? 'vested but not yet eligible' : 'not yet vested';
     } else if (eligibility.reduction_pct > 0) {
-      sentences.push(
-        `Eligible for ${eligType} with a ${eligibility.reduction_pct.toFixed(0)}% early retirement reduction.`,
-      );
+      eligPart = `${eligibilityLabel(eligibility.best_eligible_type)} with ${eligibility.reduction_pct.toFixed(0)}% reduction`;
     } else {
-      sentences.push(`Eligible for ${eligType} with no reduction.`);
+      eligPart = `${eligibilityLabel(eligibility.best_eligible_type)}, no reduction`;
     }
   }
 
-  // 3. Active work items
-  if (activeCases.length > 0) {
-    const urgent = activeCases.filter((c) => c.priority === 'urgent');
-    if (urgent.length > 0) {
-      sentences.push(
-        `${activeCases.length} active case${activeCases.length > 1 ? 's' : ''}, including ${urgent.length} flagged as urgent.`,
-      );
-    } else {
-      sentences.push(
-        `${activeCases.length} active case${activeCases.length > 1 ? 's' : ''} in progress.`,
-      );
-    }
-  } else {
-    sentences.push('No active cases in progress.');
+  let casePart = '';
+  if (activeCases.length === 1) {
+    casePart = `case at ${activeCases[0].stage}`;
+  } else if (activeCases.length > 1) {
+    casePart = `${activeCases.length} active cases`;
   }
 
-  // 4. Commitments
-  const overdue = openCommitments.filter((c) => c.status === 'overdue');
-  if (overdue.length > 0) {
-    sentences.push(
-      `${overdue.length} overdue commitment${overdue.length > 1 ? 's' : ''} requiring attention.`,
-    );
-  } else if (openCommitments.length > 0) {
-    sentences.push(
-      `${openCommitments.length} open commitment${openCommitments.length > 1 ? 's' : ''}.`,
-    );
+  const contextParts = [name, '—', tenurePart];
+  if (eligPart) {
+    contextParts.push(',', eligPart);
+  }
+  if (casePart) {
+    contextParts.push(',', casePart);
   }
 
-  // 5. Recent interactions
-  if (recentInteractionCount > 0) {
-    const recency = lastInteractionDate
-      ? `, most recently on ${formatRelativeDate(lastInteractionDate)}`
-      : '';
-    sentences.push(
-      `${recentInteractionCount} interaction${recentInteractionCount > 1 ? 's' : ''} on record${recency}.`,
-    );
-  } else {
-    sentences.push('No interactions recorded.');
-  }
+  // Join parts, collapsing "— ," into proper punctuation
+  const context = contextParts.join(' ').replace(/ , /g, ', ').replace(/\s+/g, ' ').trim() + '.';
 
-  // 6. Beneficiary check
-  if (beneficiaries && beneficiaries.length === 0) {
-    sentences.push('No beneficiary designations on file.');
-  }
-
-  // 7. Correspondence
-  if (correspondenceCount > 0) {
-    sentences.push(
-      `${correspondenceCount} correspondence item${correspondenceCount > 1 ? 's' : ''} on file.`,
-    );
-  }
-
-  // 8. Data quality
-  if (dataQualityIssueCount > 0) {
-    sentences.push(
-      `${dataQualityIssueCount} data quality issue${dataQualityIssueCount > 1 ? 's' : ''} flagged for review.`,
-    );
-  }
-
-  return sentences.join(' ');
-}
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function article(word: string): string {
-  return /^[aeiou]/i.test(word) ? 'an' : 'a';
-}
-
-function formatRelativeDate(dateStr: string): string {
-  const date = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T00:00:00');
+  // ── Build attention items ───────────────────────────────────────────────
+  const attentionItems: AttentionItem[] = [];
   const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-  if (diffDays === 0) return 'today';
-  if (diffDays === 1) return 'yesterday';
-  if (diffDays < 7) return `${diffDays} days ago`;
-  if (diffDays < 30)
-    return `${Math.floor(diffDays / 7)} week${Math.floor(diffDays / 7) > 1 ? 's' : ''} ago`;
+  // Critical: overdue commitments
+  const overdue = openCommitments.filter((c) => c.status === 'overdue');
+  for (const c of overdue) {
+    const due = new Date(c.targetDate.includes('T') ? c.targetDate : c.targetDate + 'T00:00:00');
+    const dateStr = due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    attentionItems.push({
+      severity: 'critical',
+      label: 'Overdue commitment',
+      detail: `${c.description} — due ${dateStr}, owner: ${c.ownerAgent}`,
+    });
+  }
 
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  // High: urgent cases
+  const urgentCases = activeCases.filter((c) => c.priority === 'urgent');
+  for (const c of urgentCases) {
+    attentionItems.push({
+      severity: 'high',
+      label: 'Urgent case',
+      detail: `${c.caseId} at ${c.stage} (${c.daysOpen} days open)`,
+    });
+  }
+
+  // High: missing beneficiaries
+  if (beneficiaries !== undefined && beneficiaries.length === 0) {
+    attentionItems.push({
+      severity: 'high',
+      label: 'No beneficiaries',
+      detail: 'No beneficiary designations on file',
+    });
+  }
+
+  // Medium: data quality issues
+  if (dataQualityIssueCount > 0) {
+    attentionItems.push({
+      severity: 'medium',
+      label: 'Data quality',
+      detail: `${dataQualityIssueCount} issue${dataQualityIssueCount > 1 ? 's' : ''} flagged for review`,
+    });
+  }
+
+  // Medium: commitments due within 7 days
+  const pendingCommitments = openCommitments.filter(
+    (c) => c.status !== 'overdue' && c.status !== 'fulfilled',
+  );
+  for (const c of pendingCommitments) {
+    const due = new Date(c.targetDate.includes('T') ? c.targetDate : c.targetDate + 'T00:00:00');
+    const daysUntil = (due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+    if (daysUntil >= 0 && daysUntil <= 7) {
+      const dateStr = due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      attentionItems.push({
+        severity: 'medium',
+        label: 'Commitment due soon',
+        detail: `${c.description} — due ${dateStr}, owner: ${c.ownerAgent}`,
+      });
+    }
+  }
+
+  // Info: positive confirmations
+  if (beneficiaries !== undefined && beneficiaries.length > 0) {
+    attentionItems.push({
+      severity: 'info',
+      label: 'Beneficiaries on file',
+      detail: `${beneficiaries.length} beneficiary designation${beneficiaries.length > 1 ? 's' : ''} on file`,
+    });
+  }
+
+  if (dataQualityIssueCount === 0) {
+    attentionItems.push({
+      severity: 'info',
+      label: 'No DQ issues',
+      detail: 'No data quality issues',
+    });
+  }
+
+  return { context, attentionItems };
 }
