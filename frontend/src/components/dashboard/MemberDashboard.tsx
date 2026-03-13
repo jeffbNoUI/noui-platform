@@ -21,7 +21,7 @@ interface MemberDashboardProps {
     flags?: string[],
     droId?: number,
   ) => void;
-  onChangeView: (mode: string) => void;
+  onChangeView: (mode: string, context?: { memberId?: number }) => void;
 }
 
 export default function MemberDashboard({
@@ -49,6 +49,18 @@ export default function MemberDashboard({
   const [selectedInteraction, setSelectedInteraction] = useState<InteractionRowClickData | null>(
     null,
   );
+
+  const handleNavigateInteraction = (newIndex: number) => {
+    if (!selectedInteraction) return;
+    const entry = selectedInteraction.entries[newIndex];
+    if (!entry) return;
+    setSelectedInteraction({
+      ...selectedInteraction,
+      interactionId: entry.interactionId,
+      entry,
+      index: newIndex,
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -80,7 +92,7 @@ export default function MemberDashboard({
               </button>
             )}
             <button
-              onClick={() => onChangeView('crm')}
+              onClick={() => onChangeView('crm', { memberId })}
               className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 transition-colors"
             >
               Open CRM
@@ -165,6 +177,9 @@ export default function MemberDashboard({
           entry={selectedInteraction.entry}
           sourceRect={selectedInteraction.sourceRect}
           onClose={() => setSelectedInteraction(null)}
+          entries={selectedInteraction.entries}
+          currentIndex={selectedInteraction.index}
+          onNavigate={handleNavigateInteraction}
         />
       )}
     </div>

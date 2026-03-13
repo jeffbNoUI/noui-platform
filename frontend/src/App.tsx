@@ -143,6 +143,10 @@ export default function App() {
   // Member dashboard state
   const [dashboardMemberId, setDashboardMemberId] = useState(0);
 
+  // CRM context (for cross-screen navigation)
+  const [crmInitialMemberId, setCrmInitialMemberId] = useState<number | undefined>(undefined);
+  const [crmBackView, setCrmBackView] = useState<ViewMode | undefined>(undefined);
+
   const handleOpenCase = useCallback(
     (caseId: string, memberId: number, retDate: string, flags?: string[], droId?: number) => {
       setActiveCaseId(caseId);
@@ -160,9 +164,20 @@ export default function App() {
     setViewMode('member-dashboard');
   }, []);
 
-  const handleChangeView = useCallback((mode: string) => {
-    setViewMode(mode as ViewMode);
-  }, []);
+  const handleChangeView = useCallback(
+    (mode: string, context?: { memberId?: number }) => {
+      const prev = viewMode;
+      setViewMode(mode as ViewMode);
+      if (mode === 'crm') {
+        setCrmInitialMemberId(context?.memberId);
+        setCrmBackView(prev as ViewMode);
+      } else {
+        setCrmInitialMemberId(undefined);
+        setCrmBackView(undefined);
+      }
+    },
+    [viewMode],
+  );
 
   // Global ⌘K / Ctrl+K handler
   useEffect(() => {
@@ -354,7 +369,10 @@ export default function App() {
         <TopNav viewMode={viewMode} onChangeView={handleChangeView} />
         <ErrorBoundary portalName="CRM">
           <Suspense fallback={<PortalLoading />}>
-            <CRMWorkspace />
+            <CRMWorkspace
+              initialMemberId={crmInitialMemberId}
+              onBack={crmBackView ? () => setViewMode(crmBackView) : undefined}
+            />
           </Suspense>
         </ErrorBoundary>
       </>

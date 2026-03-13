@@ -9,6 +9,10 @@ interface InteractionDetailPanelProps {
   entry: TimelineEntry;
   sourceRect: DOMRect;
   onClose: () => void;
+  // Optional navigation props for prev/next browsing
+  entries?: TimelineEntry[];
+  currentIndex?: number;
+  onNavigate?: (newIndex: number) => void;
 }
 
 export default function InteractionDetailPanel({
@@ -16,9 +20,16 @@ export default function InteractionDetailPanel({
   entry,
   sourceRect,
   onClose,
+  entries,
+  currentIndex,
+  onNavigate,
 }: InteractionDetailPanelProps) {
   const { data: interaction, isLoading } = usePortalInteraction(interactionId);
   const { panelRef, isVisible, style, open, close } = useSpawnAnimation();
+
+  const canNavigate = entries && currentIndex != null && onNavigate;
+  const hasPrev = canNavigate && currentIndex > 0;
+  const hasNext = canNavigate && currentIndex < entries.length - 1;
 
   const handleClose = () => {
     close();
@@ -31,12 +42,18 @@ export default function InteractionDetailPanel({
     open(sourceRect);
   }, [open, sourceRect]);
 
-  // Escape key dismissal
+  // Keyboard: Escape to close, ArrowLeft/ArrowRight to navigate
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
         handleClose();
+      } else if (e.key === 'ArrowLeft' && hasPrev) {
+        e.preventDefault();
+        onNavigate!(currentIndex! - 1);
+      } else if (e.key === 'ArrowRight' && hasNext) {
+        e.preventDefault();
+        onNavigate!(currentIndex! + 1);
       }
     };
     window.addEventListener('keydown', handler);
@@ -88,6 +105,43 @@ export default function InteractionDetailPanel({
               >
                 {outcomeLabel}
               </span>
+            )}
+            {canNavigate && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => hasPrev && onNavigate!(currentIndex! - 1)}
+                  disabled={!hasPrev}
+                  className="p-1.5 rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors disabled:opacity-30 disabled:cursor-default disabled:hover:bg-transparent"
+                  title="Previous (←)"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 19l-7-7 7-7"
+                    />
+                  </svg>
+                </button>
+                <span className="text-xs text-gray-400 tabular-nums min-w-[4rem] text-center">
+                  {currentIndex! + 1} of {entries!.length}
+                </span>
+                <button
+                  onClick={() => hasNext && onNavigate!(currentIndex! + 1)}
+                  disabled={!hasNext}
+                  className="p-1.5 rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors disabled:opacity-30 disabled:cursor-default disabled:hover:bg-transparent"
+                  title="Next (→)"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </button>
+              </div>
             )}
             <button
               onClick={handleClose}
