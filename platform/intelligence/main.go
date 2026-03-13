@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"log"
 	"net/http"
 	"os"
@@ -14,13 +15,26 @@ import (
 	"time"
 
 	"github.com/noui/platform/intelligence/api"
+	"github.com/noui/platform/intelligence/db"
 )
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	log.Println("starting intelligence service v0.1.0")
 
-	handler := api.NewHandler()
+	var database *sql.DB
+	if os.Getenv("DB_HOST") != "" {
+		cfg := db.ConfigFromEnv()
+		var err error
+		database, err = db.Connect(cfg)
+		if err != nil {
+			log.Printf("WARNING: failed to connect to database: %v (summary-log will log to stdout only)", err)
+		} else {
+			defer database.Close()
+		}
+	}
+
+	handler := api.NewHandler(database)
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
 
