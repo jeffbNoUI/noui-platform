@@ -40,6 +40,16 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PUT /api/v1/cases/{id}", h.UpdateCase)
 	mux.HandleFunc("POST /api/v1/cases/{id}/advance", h.AdvanceStage)
 	mux.HandleFunc("GET /api/v1/cases/{id}/history", h.GetStageHistory)
+
+	// Notes
+	mux.HandleFunc("GET /api/v1/cases/{id}/notes", h.ListNotes)
+	mux.HandleFunc("POST /api/v1/cases/{id}/notes", h.CreateNote)
+	mux.HandleFunc("DELETE /api/v1/cases/{id}/notes/{noteId}", h.DeleteNote)
+
+	// Documents
+	mux.HandleFunc("GET /api/v1/cases/{id}/documents", h.ListDocuments)
+	mux.HandleFunc("POST /api/v1/cases/{id}/documents", h.CreateDocument)
+	mux.HandleFunc("DELETE /api/v1/cases/{id}/documents/{docId}", h.DeleteDocument)
 }
 
 // HealthCheck returns service health status.
@@ -98,7 +108,17 @@ func (h *Handler) GetCase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, c)
+	// Enrich with note and document counts
+	noteCount, _ := h.store.NoteCount(id)
+	docCount, _ := h.store.DocumentCount(id)
+
+	detail := models.CaseDetail{
+		RetirementCase: *c,
+		NoteCount:      noteCount,
+		DocumentCount:  docCount,
+	}
+
+	writeSuccess(w, http.StatusOK, detail)
 }
 
 func (h *Handler) CreateCase(w http.ResponseWriter, r *http.Request) {
@@ -126,6 +146,14 @@ func (h *Handler) CreateCase(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now().UTC()
+	slaTargetDays := 90
+	if req.Priority == "urgent" {
+		slaTargetDays = 30
+	} else if req.Priority == "high" {
+		slaTargetDays = 60
+	}
+	slaDeadline := now.AddDate(0, 0, slaTargetDays)
+
 	c := &models.RetirementCase{
 		CaseID:          req.CaseID,
 		TenantID:        tenantFromHeader(r),
@@ -139,6 +167,8 @@ func (h *Handler) CreateCase(w http.ResponseWriter, r *http.Request) {
 		AssignedTo:      req.AssignedTo,
 		DaysOpen:        0,
 		Status:          "active",
+		SLATargetDays:   slaTargetDays,
+		SLADeadlineAt:   slaDeadline,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
@@ -236,6 +266,134 @@ func (h *Handler) GetStageHistory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{"data": history})
+}
+
+// --- Note Handlers ---
+
+func (h *Handler) ListNotes(w http.ResponseWriter, r *http.Request) {
+	caseID := r.PathValue("id")
+
+	notes, err := h.store.ListNotes(caseID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		return
+	}
+	if notes == nil {
+		notes = []models.CaseNote{}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"data": notes})
+}
+
+func (h *Handler) CreateNote(w http.ResponseWriter, r *http.Request) {
+	caseID := r.PathValue("id")
+
+	var req models.CreateNoteRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+
+	if strings.TrimSpace(req.Author) == "" {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "author is required")
+		return
+	}
+	if strings.TrimSpace(req.Content) == "" {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "content is required")
+		return
+	}
+
+	note, err := h.store.CreateNote(caseID, req)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		return
+	}
+
+	writeSuccess(w, http.StatusCreated, note)
+}
+
+func (h *Handler) DeleteNote(w http.ResponseWriter, r *http.Request) {
+	caseID := r.PathValue("id")
+	noteID, err := strconv.Atoi(r.PathValue("noteId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid noteId")
+		return
+	}
+
+	if err := h.store.DeleteNote(caseID, noteID); err != nil {
+		if err == cmdb.ErrNotFound {
+			writeError(w, http.StatusNotFound, "NOT_FOUND", "Note not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+}
+
+// --- Document Handlers ---
+
+func (h *Handler) ListDocuments(w http.ResponseWriter, r *http.Request) {
+	caseID := r.PathValue("id")
+
+	docs, err := h.store.ListDocuments(caseID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		return
+	}
+	if docs == nil {
+		docs = []models.CaseDocument{}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"data": docs})
+}
+
+func (h *Handler) CreateDocument(w http.ResponseWriter, r *http.Request) {
+	caseID := r.PathValue("id")
+
+	var req models.CreateDocumentRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+
+	if strings.TrimSpace(req.Filename) == "" {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "filename is required")
+		return
+	}
+	if strings.TrimSpace(req.UploadedBy) == "" {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "uploadedBy is required")
+		return
+	}
+
+	doc, err := h.store.CreateDocument(caseID, req)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		return
+	}
+
+	writeSuccess(w, http.StatusCreated, doc)
+}
+
+func (h *Handler) DeleteDocument(w http.ResponseWriter, r *http.Request) {
+	caseID := r.PathValue("id")
+	docID, err := strconv.Atoi(r.PathValue("docId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid docId")
+		return
+	}
+
+	if err := h.store.DeleteDocument(caseID, docID); err != nil {
+		if err == cmdb.ErrNotFound {
+			writeError(w, http.StatusNotFound, "NOT_FOUND", "Document not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
 // --- Helper Functions ---

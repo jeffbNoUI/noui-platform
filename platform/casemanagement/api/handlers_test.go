@@ -341,24 +341,29 @@ func TestStageTransitionJSON_NullableFields(t *testing.T) {
 
 // --- DB-Dependent Handler Tests ---
 
-// caseCols must match the SELECT in caseColumns + JOINed fields (18 columns including dro_id).
+// caseCols must match the SELECT in caseColumns + JOINed fields (20 columns including dro_id + SLA).
 var caseCols = []string{
 	"case_id", "tenant_id", "member_id", "case_type",
 	"retirement_date", "priority", "sla_status",
 	"current_stage", "current_stage_idx", "assigned_to",
-	"days_open", "status", "dro_id", "created_at", "updated_at",
+	"days_open", "status", "dro_id",
+	"sla_target_days", "sla_deadline_at",
+	"created_at", "updated_at",
 	"name", "tier", "dept",
 }
 
 // addCaseRow appends a case row to an existing Rows object.
 func addCaseRow(rows *sqlmock.Rows, caseID string, memberID int, stageIdx int, stage string) *sqlmock.Rows {
 	now := time.Now().UTC()
+	deadline := now.AddDate(0, 0, 90)
 	return rows.AddRow(
 		caseID, defaultTenantID, memberID, "service",
 		time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC),
 		"standard", "on-track",
 		stage, stageIdx, sql.NullString{String: "jsmith", Valid: true},
-		15, "active", sql.NullInt64{Valid: false}, now, now,
+		15, "active", sql.NullInt64{Valid: false},
+		90, deadline,
+		now, now,
 		"Robert Martinez", 1, "Public Works",
 	)
 }
@@ -366,6 +371,16 @@ func addCaseRow(rows *sqlmock.Rows, caseID string, memberID int, stageIdx int, s
 // newCaseRows creates a Rows with a single case row.
 func newCaseRows(caseID string, memberID int, stageIdx int, stage string) *sqlmock.Rows {
 	return addCaseRow(sqlmock.NewRows(caseCols), caseID, memberID, stageIdx, stage)
+}
+
+// expectEnrichment adds NoteCount + DocumentCount mock expectations for GetCase enrichment.
+func expectEnrichment(mock sqlmock.Sqlmock, caseID string, notes, docs int) {
+	mock.ExpectQuery("SELECT COUNT").
+		WithArgs(caseID).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(notes))
+	mock.ExpectQuery("SELECT COUNT").
+		WithArgs(caseID).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(docs))
 }
 
 // --- GetCase ---
@@ -406,6 +421,9 @@ func TestGetCase_Valid(t *testing.T) {
 		WithArgs("case-001").
 		WillReturnRows(flagRows)
 
+	// GetCase enrichment: NoteCount + DocumentCount
+	expectEnrichment(mock, "case-001", 3, 1)
+
 	w := serve(h, "GET", "/api/v1/cases/case-001", nil)
 
 	if w.Code != http.StatusOK {
@@ -413,7 +431,7 @@ func TestGetCase_Valid(t *testing.T) {
 	}
 
 	var body struct {
-		Data models.RetirementCase  `json:"data"`
+		Data models.CaseDetail      `json:"data"`
 		Meta map[string]interface{} `json:"meta"`
 	}
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
@@ -926,12 +944,15 @@ func TestGetCase_NullMemberJoin(t *testing.T) {
 
 	// Member doesn't exist in member_master → COALESCE returns defaults
 	now := time.Now().UTC()
+	deadline := now.AddDate(0, 0, 90)
 	rows := sqlmock.NewRows(caseCols).AddRow(
 		"case-orphan", defaultTenantID, 99999, "service",
 		time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC),
 		"standard", "on-track",
 		"Application Intake", 0, sql.NullString{Valid: false},
-		5, "active", sql.NullInt64{Valid: false}, now, now,
+		5, "active", sql.NullInt64{Valid: false},
+		90, deadline,
+		now, now,
 		"", 0, "", // COALESCE defaults
 	)
 	mock.ExpectQuery("SELECT").
@@ -942,6 +963,9 @@ func TestGetCase_NullMemberJoin(t *testing.T) {
 		WithArgs("case-orphan").
 		WillReturnRows(sqlmock.NewRows([]string{"flag_code"}))
 
+	// GetCase enrichment
+	expectEnrichment(mock, "case-orphan", 0, 0)
+
 	w := serve(h, "GET", "/api/v1/cases/case-orphan", nil)
 
 	if w.Code != http.StatusOK {
@@ -950,7 +974,7 @@ func TestGetCase_NullMemberJoin(t *testing.T) {
 	}
 
 	var body struct {
-		Data models.RetirementCase `json:"data"`
+		Data models.CaseDetail `json:"data"`
 	}
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
 		t.Fatalf("parse error: %v", err)

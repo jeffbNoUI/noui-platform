@@ -12,24 +12,29 @@ import (
 
 // --- Test Helpers ---
 
-// caseCols matches the 18-column SELECT used by scanCase (includes dro_id).
+// caseCols matches the 20-column SELECT used by scanCase (includes dro_id + SLA columns).
 var caseCols = []string{
 	"case_id", "tenant_id", "member_id", "case_type",
 	"retirement_date", "priority", "sla_status",
 	"current_stage", "current_stage_idx", "assigned_to",
-	"days_open", "status", "dro_id", "created_at", "updated_at",
+	"days_open", "status", "dro_id",
+	"sla_target_days", "sla_deadline_at",
+	"created_at", "updated_at",
 	"name", "tier", "dept",
 }
 
 // addCaseRow appends a standard case row with the given key fields.
 func addCaseRow(rows *sqlmock.Rows, caseID string, memberID int, stageIdx int, stage string) *sqlmock.Rows {
 	now := time.Now().UTC()
+	deadline := now.AddDate(0, 0, 90)
 	return rows.AddRow(
 		caseID, "tenant-1", memberID, "service",
 		time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC),
 		"standard", "on-track",
 		stage, stageIdx, sql.NullString{String: "jsmith", Valid: true},
-		15, "active", sql.NullInt64{Valid: false}, now, now,
+		15, "active", sql.NullInt64{Valid: false},
+		90, deadline,
+		now, now,
 		"Robert Martinez", 1, "Public Works",
 	)
 }
@@ -231,12 +236,15 @@ func TestGetCase_NullMemberData(t *testing.T) {
 
 	// LEFT JOIN returns NULLs — COALESCE defaults kick in
 	now := time.Now().UTC()
+	deadline := now.AddDate(0, 0, 90)
 	rows := sqlmock.NewRows(caseCols).AddRow(
 		"case-orphan", "tenant-1", 99999, "service",
 		time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC),
 		"standard", "on-track",
 		"Application Intake", 0, sql.NullString{Valid: false}, // no assigned_to
-		5, "active", sql.NullInt64{Valid: false}, now, now,
+		5, "active", sql.NullInt64{Valid: false},
+		90, deadline,
+		now, now,
 		"", 0, "", // COALESCE defaults for missing member data
 	)
 	mock.ExpectQuery("SELECT").

@@ -3,6 +3,7 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -10,6 +11,9 @@ import (
 
 	_ "github.com/lib/pq"
 )
+
+// ErrNotFound is returned when a requested record does not exist.
+var ErrNotFound = errors.New("record not found")
 
 // Store wraps a database connection and exposes case management data-access methods.
 type Store struct {
