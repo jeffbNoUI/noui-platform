@@ -54,7 +54,7 @@ export function useMemberDashboard(memberId: number) {
 
   // ─── AI summary ──────────────────────────────────────────────────────────
   const summary = useMemo(() => {
-    if (!member.data) return '';
+    if (!member.data) return null;
 
     const openCommitments = (commitments.data ?? []).filter(
       (c) => c.status === 'pending' || c.status === 'in_progress' || c.status === 'overdue',
