@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useMember, useEmployment, useServiceCredit, useBeneficiaries } from '@/hooks/useMember';
 import { useContactByMemberId, useFullTimeline, useContactCommitments } from '@/hooks/useCRM';
 import { useCorrespondenceHistory } from '@/hooks/useCorrespondence';
@@ -84,6 +84,45 @@ export function useMemberDashboard(memberId: number) {
     correspondence.length,
     memberDQIssues.data.length,
   ]);
+
+  // ─── Summary log (fire-and-forget for AI training corpus) ──────────────
+  useEffect(() => {
+    if (!summary || !member.data) return;
+
+    const input = {
+      member: member.data,
+      serviceCredit: serviceCredit.data?.summary,
+      beneficiaries: beneficiaries.data,
+      activeCases: activeCaseItems,
+      openCommitments: (commitments.data ?? []).filter(
+        (c) => c.status === 'pending' || c.status === 'in_progress' || c.status === 'overdue',
+      ),
+      recentInteractionCount: timeline.data?.timelineEntries?.length ?? 0,
+      lastInteractionDate: timeline.data?.timelineEntries?.[0]?.startedAt,
+      correspondenceCount: correspondence.length,
+      dataQualityIssueCount: memberDQIssues.data.length,
+    };
+
+    const inputStr = JSON.stringify(input);
+
+    // Simple hash for dedup — not crypto, just change detection
+    let hash = 0;
+    for (let i = 0; i < inputStr.length; i++) {
+      hash = ((hash << 5) - hash + inputStr.charCodeAt(i)) | 0;
+    }
+    const inputHash = hash.toString(36);
+
+    fetch('/api/v1/summary-log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        memberId: member.data.member_id,
+        inputHash,
+        input,
+        output: summary,
+      }),
+    }).catch(() => {}); // fire-and-forget — ignore network errors
+  }, [summary, member.data?.member_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Loading & error states ───────────────────────────────────────────────
   const isLoading = member.isLoading;

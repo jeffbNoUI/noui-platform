@@ -39,6 +39,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/benefit/options", h.CalculatePaymentOptions)
 	mux.HandleFunc("POST /api/v1/benefit/scenario", h.CalculateScenario)
 	mux.HandleFunc("POST /api/v1/dro/calculate", h.CalculateDRO)
+	mux.HandleFunc("POST /api/v1/summary-log", h.LogSummary)
 }
 
 // HealthCheck returns service health status.
@@ -270,6 +271,41 @@ func (h *Handler) CalculateDRO(w http.ResponseWriter, r *http.Request) {
 
 	result := rules.CalculateDRO(*droData, member.HireDate, retDate, *svcCredit, grossBenefit)
 	writeSuccess(w, result)
+}
+
+// LogSummary stores a deterministic summary for future LLM training.
+// Fire-and-forget from the frontend — deduplicates by input_hash per member.
+func (h *Handler) LogSummary(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		MemberID  int             `json:"memberId"`
+		InputHash string          `json:"inputHash"`
+		Input     json.RawMessage `json:"input"`
+		Output    json.RawMessage `json:"output"`
+	}
+
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20)) // 1MB limit
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid body"})
+		return
+	}
+	if err := json.Unmarshal(body, &req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON"})
+		return
+	}
+
+	if req.MemberID == 0 || req.InputHash == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "memberId and inputHash required"})
+		return
+	}
+
+	// Log for observability — DB insert will be wired when intelligence gets a DB connection
+	hashPreview := req.InputHash
+	if len(hashPreview) > 16 {
+		hashPreview = hashPreview[:16]
+	}
+	log.Printf("summary-log: member=%d hash=%s", req.MemberID, hashPreview)
+
+	writeJSON(w, http.StatusAccepted, map[string]string{"status": "logged"})
 }
 
 // --- Connector service client methods ---
