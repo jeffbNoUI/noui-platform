@@ -29,6 +29,7 @@ services:
       - ./domains/pension/seed/009_correspondence_enrich_seed.sql:/docker-entrypoint-initdb.d/016_correspondence_enrich_seed.sql
       - ./domains/pension/schema/009_correspondence_caseid_text.sql:/docker-entrypoint-initdb.d/017_correspondence_caseid_text.sql
       - ./domains/pension/seed/010_correspondence_caseid_seed.sql:/docker-entrypoint-initdb.d/018_correspondence_caseid_seed.sql
+      - ./domains/pension/schema/010_summary_log.sql:/docker-entrypoint-initdb.d/019_summary_log.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U derp"]
       interval: 5s
@@ -64,8 +65,17 @@ services:
       PORT: "8082"
       CONNECTOR_URL: "http://dataaccess:8081"
       CORS_ORIGIN: "http://localhost:3000"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: derp
+      DB_PASSWORD: derp
+      DB_NAME: derp
+      DB_SSLMODE: disable
     depends_on:
-      - dataaccess
+      postgres:
+        condition: service_healthy
+      dataaccess:
+        condition: service_started
 
   crm:
     build:

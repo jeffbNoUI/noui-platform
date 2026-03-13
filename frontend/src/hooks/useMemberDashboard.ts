@@ -1,5 +1,6 @@
 import { useMemo, useEffect } from 'react';
 import { useMember, useEmployment, useServiceCredit, useBeneficiaries } from '@/hooks/useMember';
+import { useEligibility } from '@/hooks/useBenefitCalculation';
 import { useContactByMemberId, useFullTimeline, useContactCommitments } from '@/hooks/useCRM';
 import { useCorrespondenceHistory } from '@/hooks/useCorrespondence';
 import { useDQScore, useMemberDQIssues } from '@/hooks/useDataQuality';
@@ -20,6 +21,7 @@ export function useMemberDashboard(memberId: number) {
   const employment = useEmployment(memberId);
   const serviceCredit = useServiceCredit(memberId);
   const beneficiaries = useBeneficiaries(memberId);
+  const eligibility = useEligibility(memberId);
 
   // ─── CRM data (live API via CRM service) ──────────────────────────────────
   const contact = useContactByMemberId(String(memberId));
@@ -63,11 +65,10 @@ export function useMemberDashboard(memberId: number) {
     const entries = timeline.data?.timelineEntries ?? [];
     const lastEntry = entries.length > 0 ? entries[0] : undefined;
 
-    // TODO: Wire eligibility data from intelligence service to populate
-    // context line with eligibility type and reduction percentage
     return generateMemberSummary({
       member: member.data,
       serviceCredit: serviceCredit.data?.summary,
+      eligibility: eligibility.data,
       beneficiaries: beneficiaries.data,
       activeCases: activeCaseItems,
       openCommitments,
@@ -79,6 +80,7 @@ export function useMemberDashboard(memberId: number) {
   }, [
     member.data,
     serviceCredit.data,
+    eligibility.data,
     beneficiaries.data,
     activeCaseItems,
     commitments.data,
@@ -94,6 +96,7 @@ export function useMemberDashboard(memberId: number) {
     const input = {
       member: member.data,
       serviceCredit: serviceCredit.data?.summary,
+      eligibility: eligibility.data,
       beneficiaries: beneficiaries.data,
       activeCases: activeCaseItems,
       openCommitments: (commitments.data ?? []).filter(
@@ -163,6 +166,7 @@ export function useMemberDashboard(memberId: number) {
     isLoadingSecondary:
       employment.isLoading ||
       serviceCredit.isLoading ||
+      eligibility.isLoading ||
       contact.isLoading ||
       casesQuery.isLoading ||
       correspondenceQuery.isLoading ||

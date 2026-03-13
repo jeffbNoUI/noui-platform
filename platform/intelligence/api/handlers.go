@@ -4,6 +4,7 @@
 package api
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	intelligencedb "github.com/noui/platform/intelligence/db"
 	"github.com/noui/platform/intelligence/models"
 	"github.com/noui/platform/intelligence/rules"
 )
@@ -20,15 +22,21 @@ import (
 // Handler holds dependencies for intelligence API handlers.
 type Handler struct {
 	ConnectorURL string
+	store        *intelligencedb.Store
 }
 
 // NewHandler creates a Handler with the connector service URL.
-func NewHandler() *Handler {
+// If db is non-nil, summary logs will be persisted to PostgreSQL.
+func NewHandler(db *sql.DB) *Handler {
 	connURL := os.Getenv("CONNECTOR_URL")
 	if connURL == "" {
 		connURL = "http://localhost:8081"
 	}
-	return &Handler{ConnectorURL: connURL}
+	h := &Handler{ConnectorURL: connURL}
+	if db != nil {
+		h.store = intelligencedb.NewStore(db)
+	}
+	return h
 }
 
 // RegisterRoutes sets up all API routes.
@@ -304,12 +312,17 @@ func (h *Handler) LogSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Log for observability — DB insert will be wired when intelligence gets a DB connection
-	hashPreview := req.InputHash
-	if len(hashPreview) > 16 {
-		hashPreview = hashPreview[:16]
+	if h.store != nil {
+		if err := h.store.InsertSummaryLog(req.MemberID, req.InputHash, req.Input, req.Output); err != nil {
+			log.Printf("summary-log: insert failed for member=%d: %v", req.MemberID, err)
+		}
+	} else {
+		hashPreview := req.InputHash
+		if len(hashPreview) > 16 {
+			hashPreview = hashPreview[:16]
+		}
+		log.Printf("summary-log: member=%d hash=%s (no DB, stdout only)", req.MemberID, hashPreview)
 	}
-	log.Printf("summary-log: member=%d hash=%s", req.MemberID, hashPreview)
 
 	writeJSON(w, http.StatusAccepted, map[string]string{"status": "logged"})
 }
