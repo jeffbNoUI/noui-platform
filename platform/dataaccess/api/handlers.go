@@ -28,6 +28,7 @@ func NewHandler(db *sql.DB) *Handler {
 // RegisterRoutes sets up all API routes on the given mux.
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /healthz", h.HealthCheck)
+	mux.HandleFunc("GET /api/v1/members/search", h.SearchMembers)
 	mux.HandleFunc("GET /api/v1/members/{id}", h.GetMember)
 	mux.HandleFunc("GET /api/v1/members/{id}/employment", h.GetEmploymentHistory)
 	mux.HandleFunc("GET /api/v1/members/{id}/salary", h.GetSalaryHistory)
@@ -46,6 +47,58 @@ func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 		Version: "0.1.0",
 	}
 	writeJSON(w, http.StatusOK, resp)
+}
+
+// SearchMembers returns members matching a name or ID query.
+func (h *Handler) SearchMembers(w http.ResponseWriter, r *http.Request) {
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	if q == "" {
+		writeError(w, http.StatusBadRequest, "INVALID_QUERY", "q parameter is required")
+		return
+	}
+
+	limit := 10
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if v, err := strconv.Atoi(l); err == nil && v > 0 {
+			limit = v
+		}
+	}
+	if limit > 50 {
+		limit = 50
+	}
+
+	likePattern := "%" + strings.ToLower(q) + "%"
+
+	query := `
+		SELECT m.member_id, m.first_name, m.last_name,
+		       COALESCE(m.tier_cd, 0), COALESCE(d.dept_name, ''), m.status_cd
+		FROM member_master m
+		LEFT JOIN department_ref d ON m.dept_cd = d.dept_cd
+		WHERE LOWER(m.last_name) LIKE $1
+		   OR LOWER(m.first_name) LIKE $1
+		   OR CAST(m.member_id AS TEXT) = $2
+		ORDER BY m.last_name, m.first_name
+		LIMIT $3`
+
+	rows, err := h.DB.Query(query, likePattern, q, limit)
+	if err != nil {
+		log.Printf("error searching members: %v", err)
+		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Search query failed")
+		return
+	}
+	defer rows.Close()
+
+	results := []models.MemberSearchResult{}
+	for rows.Next() {
+		var m models.MemberSearchResult
+		if err := rows.Scan(&m.MemberID, &m.FirstName, &m.LastName, &m.Tier, &m.Dept, &m.Status); err != nil {
+			log.Printf("error scanning search result: %v", err)
+			continue
+		}
+		results = append(results, m)
+	}
+
+	writeSuccess(w, results)
 }
 
 // GetMember returns member profile with current employment info.
