@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { useContactTimeline, useInteraction } from '@/hooks/useCRM';
+import { useRef } from 'react';
+import { useContactTimeline } from '@/hooks/useCRM';
 import type { TimelineEntry, InteractionChannel, Direction } from '@/types/CRM';
 
 export interface TimelineSelectData {
@@ -228,109 +228,6 @@ function interactionTypeLabel(type: string): string {
   return labels[type] || type;
 }
 
-// ── Expandable detail sub-component ─────────────────────────────────────────
-
-function TimelineEntryDetail({ interactionId }: { interactionId: string }) {
-  const { data: interaction, isLoading } = useInteraction(interactionId);
-
-  if (isLoading) {
-    return (
-      <div className="mt-2 rounded-md bg-gray-50 p-3 text-xs text-gray-400">Loading details...</div>
-    );
-  }
-
-  if (!interaction) return null;
-
-  const notes = interaction.notes ?? [];
-  const commitments = interaction.commitments ?? [];
-
-  if (notes.length === 0 && commitments.length === 0) {
-    return (
-      <div className="mt-2 rounded-md bg-gray-50 p-3 text-xs text-gray-500">
-        No notes or commitments recorded.
-      </div>
-    );
-  }
-
-  return (
-    <div className="mt-2 space-y-2">
-      {notes.map((note) => (
-        <div key={note.noteId} className="rounded-md border border-gray-100 bg-gray-50 p-3">
-          <div className="flex items-center gap-2 text-xs flex-wrap">
-            <span className="font-medium text-gray-700">Note</span>
-            <span className="rounded bg-gray-200 px-1.5 py-0.5 text-gray-600">{note.category}</span>
-            {note.outcome && (
-              <span className="rounded bg-blue-100 px-1.5 py-0.5 text-blue-700">
-                {note.outcome.replace(/_/g, ' ')}
-              </span>
-            )}
-            {note.sentiment && note.sentiment !== 'neutral' && (
-              <span
-                className={`rounded px-1.5 py-0.5 font-medium ${
-                  note.sentiment === 'positive'
-                    ? 'bg-green-100 text-green-700'
-                    : note.sentiment === 'negative'
-                      ? 'bg-red-100 text-red-700'
-                      : note.sentiment === 'escalation_risk'
-                        ? 'bg-orange-100 text-orange-700'
-                        : 'bg-gray-100 text-gray-600'
-                }`}
-              >
-                {note.sentiment === 'escalation_risk' ? 'esc. risk' : note.sentiment}
-              </span>
-            )}
-            {note.urgentFlag && (
-              <span className="rounded bg-red-100 px-1.5 py-0.5 font-medium text-red-700">
-                Urgent
-              </span>
-            )}
-            {note.aiSuggested && (
-              <span className="rounded bg-violet-100 px-1.5 py-0.5 text-violet-700">
-                AI Suggested
-              </span>
-            )}
-          </div>
-          <p className="mt-1 text-sm text-gray-800">{note.summary}</p>
-          {note.nextStep && (
-            <p className="mt-1 text-xs text-gray-500">
-              <span className="font-medium">Next step:</span> {note.nextStep}
-            </p>
-          )}
-        </div>
-      ))}
-
-      {commitments.map((c) => (
-        <div key={c.commitmentId} className="rounded-md border border-blue-100 bg-blue-50 p-3">
-          <div className="flex items-center gap-2 text-xs">
-            <span className="font-medium text-blue-700">Commitment</span>
-            <span
-              className={`rounded px-1.5 py-0.5 font-medium ${commitmentStatusColor(c.status)}`}
-            >
-              {c.status}
-            </span>
-          </div>
-          <p className="mt-1 text-sm text-gray-800">{c.description}</p>
-          <p className="mt-1 text-xs text-gray-500">
-            Due: {new Date(c.targetDate + 'T00:00:00').toLocaleDateString()} &middot; Owner:{' '}
-            {c.ownerAgent}
-          </p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function commitmentStatusColor(status: string): string {
-  const colors: Record<string, string> = {
-    pending: 'bg-yellow-100 text-yellow-800',
-    in_progress: 'bg-blue-100 text-blue-800',
-    fulfilled: 'bg-green-100 text-green-800',
-    overdue: 'bg-red-100 text-red-800',
-    cancelled: 'bg-gray-100 text-gray-600',
-  };
-  return colors[status] || 'bg-gray-100 text-gray-600';
-}
-
 // ── Main timeline component ─────────────────────────────────────────────────
 
 export default function InteractionTimeline({
@@ -339,19 +236,6 @@ export default function InteractionTimeline({
   limit,
 }: InteractionTimelineProps) {
   const { data: timeline, isLoading, error } = useContactTimeline(contactId, limit);
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-
-  const toggleExpand = (id: string) => {
-    setExpandedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  };
 
   if (isLoading) {
     return (
@@ -423,8 +307,6 @@ export default function InteractionTimeline({
                 entry={entry}
                 index={idx}
                 allEntries={entries}
-                expanded={expandedIds.has(entry.interactionId)}
-                onToggle={() => toggleExpand(entry.interactionId)}
                 onSelect={onSelectInteraction}
               />
             ))}
@@ -441,15 +323,11 @@ function TimelineEntryRow({
   entry,
   index,
   allEntries,
-  expanded,
-  onToggle,
   onSelect,
 }: {
   entry: TimelineEntry;
   index: number;
   allEntries: TimelineEntry[];
-  expanded: boolean;
-  onToggle: () => void;
   onSelect?: (data: TimelineSelectData) => void;
 }) {
   const rowRef = useRef<HTMLLIElement>(null);
@@ -480,7 +358,8 @@ function TimelineEntryRow({
       />
 
       <div
-        className={`rounded-md border border-gray-100 p-3 transition-colors hover:border-gray-200 ${cfg.bgColor}`}
+        onClick={handleSelect}
+        className={`rounded-md border border-gray-100 p-3 transition-colors hover:border-gray-200 ${cfg.bgColor}${onSelect ? ' cursor-pointer' : ''}`}
       >
         {/* Header row */}
         <div className="flex items-center justify-between">
@@ -503,6 +382,11 @@ function TimelineEntryRow({
                 [notes]
               </span>
             )}
+            {entry.hasCommitments && (
+              <span className="rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700">
+                [commitments]
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-3 text-xs text-gray-500">
@@ -514,39 +398,10 @@ function TimelineEntryRow({
         </div>
 
         {/* Agent and summary */}
-        <div className="mt-1.5 flex items-start justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            {entry.agentId && <span className="text-xs text-gray-500">Agent: {entry.agentId}</span>}
-            {entry.summary && <p className="mt-0.5 text-sm text-gray-700">{entry.summary}</p>}
-          </div>
-
-          <div className="flex flex-shrink-0 items-center gap-2">
-            {(entry.hasNotes || entry.hasCommitments) && (
-              <button
-                type="button"
-                onClick={onToggle}
-                className="rounded px-2 py-1 text-xs font-medium text-brand-600 hover:bg-brand-50 transition-colors"
-              >
-                {expanded ? 'Collapse' : 'Expand'}
-                {entry.hasNotes && ' Notes'}
-                {entry.hasNotes && entry.hasCommitments && ' &'}
-                {entry.hasCommitments && ' Commitments'}
-              </button>
-            )}
-            {onSelect && (
-              <button
-                type="button"
-                onClick={handleSelect}
-                className="rounded px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-200 transition-colors"
-              >
-                View
-              </button>
-            )}
-          </div>
+        <div className="mt-1.5">
+          {entry.agentId && <span className="text-xs text-gray-500">Agent: {entry.agentId}</span>}
+          {entry.summary && <p className="mt-0.5 text-sm text-gray-700">{entry.summary}</p>}
         </div>
-
-        {/* Expandable detail */}
-        {expanded && <TimelineEntryDetail interactionId={entry.interactionId} />}
       </div>
     </li>
   );
