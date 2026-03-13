@@ -7,7 +7,7 @@ import {
   useAllConversationInteractions,
   useContactCommitments,
 } from '@/hooks/useCRM';
-import { useCorrespondenceHistory } from '@/hooks/useCorrespondence';
+import { useCorrespondenceHistory, useCaseCorrespondence } from '@/hooks/useCorrespondence';
 import { PortalTimeline, ConversationThread, STAFF_THEME } from '@/components/crm';
 import { composeCrmSummary } from '@/lib/crmSummary';
 import type { CrmSummary } from '@/lib/crmSummary';
@@ -35,6 +35,8 @@ interface CaseJournalPanelProps {
   /** CRM contact ID, OR a legacy member ID (will be resolved) */
   contactId?: string;
   memberId?: string;
+  /** When provided, correspondence tab filters by case instead of member. */
+  caseId?: string;
 }
 
 type JournalTab = 'timeline' | 'conversations' | 'commitments' | 'correspondence';
@@ -42,6 +44,7 @@ type JournalTab = 'timeline' | 'conversations' | 'commitments' | 'correspondence
 export default function CaseJournalPanel({
   contactId: propContactId,
   memberId,
+  caseId,
 }: CaseJournalPanelProps) {
   const [activeTab, setActiveTab] = useState<JournalTab>('timeline');
   const [selectedConvId, setSelectedConvId] = useState('');
@@ -60,7 +63,12 @@ export default function CaseJournalPanel({
   const { data: conversations } = useMemberConversations(effectiveMemberId);
   const { data: convInteractions } = useAllConversationInteractions(selectedConvId);
   const { data: commitments } = useContactCommitments(effectiveContactId);
-  const { data: correspondence } = useCorrespondenceHistory(Number(effectiveMemberId) || 0);
+  // Case-scoped correspondence when caseId is available; member-scoped fallback
+  const { data: caseCorrespondence } = useCaseCorrespondence(caseId ?? '');
+  const { data: memberCorrespondence } = useCorrespondenceHistory(
+    caseId ? 0 : Number(effectiveMemberId) || 0,
+  );
+  const correspondence = caseId ? caseCorrespondence : memberCorrespondence;
 
   const contactName = resolvedContact
     ? `${resolvedContact.firstName} ${resolvedContact.lastName}`
