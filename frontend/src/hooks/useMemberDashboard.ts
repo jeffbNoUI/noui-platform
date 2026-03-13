@@ -63,6 +63,8 @@ export function useMemberDashboard(memberId: number) {
     const entries = timeline.data?.timelineEntries ?? [];
     const lastEntry = entries.length > 0 ? entries[0] : undefined;
 
+    // TODO: Wire eligibility data from intelligence service to populate
+    // context line with eligibility type and reduction percentage
     return generateMemberSummary({
       member: member.data,
       serviceCredit: serviceCredit.data?.summary,
@@ -122,6 +124,9 @@ export function useMemberDashboard(memberId: number) {
         output: summary,
       }),
     }).catch(() => {}); // fire-and-forget — ignore network errors
+    // Narrow deps: summary is derived from all data inputs via useMemo,
+    // so it changes whenever any input changes. No need to list every
+    // data source here — that would cause duplicate POSTs.
   }, [summary, member.data?.member_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Loading & error states ───────────────────────────────────────────────
