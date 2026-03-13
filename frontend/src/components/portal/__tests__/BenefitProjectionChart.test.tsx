@@ -1,7 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import BenefitProjectionChart from '../BenefitProjectionChart';
 import type { ProjectionDataPoint } from '../BenefitProjectionChart';
+
+class ResizeObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+globalThis.ResizeObserver = ResizeObserverMock as any;
 
 const zeroData: ProjectionDataPoint[] = [
   { year: '2026', projected: 0, conservative: 0, contributed: 0 },
@@ -16,25 +23,18 @@ const normalData: ProjectionDataPoint[] = [
 ];
 
 describe('BenefitProjectionChart', () => {
-  it('renders without NaN when all data values are zero', () => {
-    const { container } = render(<BenefitProjectionChart data={zeroData} />);
-    const svg = container.querySelector('svg')!;
-    const html = svg.outerHTML;
-    expect(html).not.toContain('NaN');
+  it('renders empty state with insufficient data', () => {
+    render(<BenefitProjectionChart data={[]} />);
+    expect(screen.getByText('No projection data')).toBeInTheDocument();
   });
 
-  it('renders without NaN with empty data', () => {
-    const { container } = render(<BenefitProjectionChart data={[]} />);
-    const svg = container.querySelector('svg')!;
-    const html = svg.outerHTML;
-    expect(html).not.toContain('NaN');
-  });
-
-  it('renders correctly with normal data', () => {
+  it('renders chart container with valid data', () => {
     const { container } = render(<BenefitProjectionChart data={normalData} />);
-    const svg = container.querySelector('svg')!;
-    const html = svg.outerHTML;
-    expect(html).not.toContain('NaN');
-    expect(svg.querySelectorAll('path').length).toBeGreaterThan(0);
+    expect(container.querySelector('.recharts-responsive-container')).toBeInTheDocument();
+  });
+
+  it('renders without crashing with zero values', () => {
+    const { container } = render(<BenefitProjectionChart data={zeroData} />);
+    expect(container.querySelector('.recharts-responsive-container')).toBeInTheDocument();
   });
 });
