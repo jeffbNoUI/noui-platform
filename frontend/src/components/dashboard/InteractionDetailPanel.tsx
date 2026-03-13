@@ -1,6 +1,5 @@
-import { useEffect } from 'react';
 import { usePortalInteraction } from '@/hooks/useCRM';
-import { useSpawnAnimation } from '@/hooks/useSpawnAnimation';
+import { DetailOverlay, MetadataGrid, Section } from '@/components/DetailOverlay';
 import { CHANNEL_ICONS, CHANNEL_LABELS, OUTCOME_STYLES, OUTCOME_LABELS } from '@/lib/channelMeta';
 import type { TimelineEntry, Note, Commitment } from '@/types/CRM';
 
@@ -25,45 +24,7 @@ export default function InteractionDetailPanel({
   onNavigate,
 }: InteractionDetailPanelProps) {
   const { data: interaction, isLoading } = usePortalInteraction(interactionId);
-  const { panelRef, isVisible, style, open, close } = useSpawnAnimation();
 
-  const canNavigate = entries && currentIndex != null && onNavigate;
-  const hasPrev = canNavigate && currentIndex > 0;
-  const hasNext = canNavigate && currentIndex < entries.length - 1;
-
-  const handleClose = () => {
-    close();
-    // Wait for animation to finish before unmounting
-    setTimeout(onClose, 350);
-  };
-
-  // Trigger open animation on mount
-  useEffect(() => {
-    open(sourceRect);
-  }, [open, sourceRect]);
-
-  // Keyboard: Escape to close, ArrowLeft/ArrowRight to navigate
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        handleClose();
-      } else if (e.key === 'ArrowLeft' && hasPrev) {
-        e.preventDefault();
-        onNavigate!(currentIndex! - 1);
-      } else if (e.key === 'ArrowRight' && hasNext) {
-        e.preventDefault();
-        onNavigate!(currentIndex! + 1);
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  });
-
-  if (!isVisible) return null;
-
-  const notes = interaction?.notes ?? [];
-  const commitments = interaction?.commitments ?? [];
   const channelIcon = CHANNEL_ICONS[entry.channel] || '\ud83d\udccc';
   const channelLabel = CHANNEL_LABELS[entry.channel] || entry.channel;
   const outcomeLabel = entry.outcome
@@ -71,183 +32,99 @@ export default function InteractionDetailPanel({
     : null;
   const outcomeClass = entry.outcome ? OUTCOME_STYLES[entry.outcome] || 'text-gray-500' : '';
 
+  const notes = interaction?.notes ?? [];
+  const commitments = interaction?.commitments ?? [];
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/30 transition-opacity"
-        style={{ opacity: style.opacity, transitionDuration: '350ms' }}
-        onClick={handleClose}
-      />
+    <DetailOverlay
+      sourceRect={sourceRect}
+      onClose={onClose}
+      totalItems={entries?.length}
+      currentIndex={currentIndex}
+      onNavigate={onNavigate}
+      icon={<span>{channelIcon}</span>}
+      title={channelLabel}
+      subtitle={formatFullDate(entry.startedAt)}
+      statusBadge={
+        outcomeLabel ? (
+          <span className={`text-xs font-medium px-2 py-1 rounded-full bg-gray-50 ${outcomeClass}`}>
+            {outcomeLabel}
+          </span>
+        ) : undefined
+      }
+    >
+      {isLoading && (
+        <div className="text-sm text-gray-400 text-center py-8">Loading details...</div>
+      )}
 
-      {/* Panel */}
-      <div
-        ref={panelRef}
-        className="relative w-[55vw] max-w-3xl max-h-[70vh] rounded-xl bg-white shadow-2xl border border-gray-200 overflow-hidden flex flex-col"
-        style={{
-          ...style,
-          transformOrigin: 'center center',
-        }}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 shrink-0">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">{channelIcon}</span>
-            <div>
-              <h2 className="text-base font-semibold text-gray-900">{channelLabel}</h2>
-              <p className="text-xs text-gray-400">{formatFullDate(entry.startedAt)}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            {outcomeLabel && (
-              <span
-                className={`text-xs font-medium px-2 py-1 rounded-full bg-gray-50 ${outcomeClass}`}
-              >
-                {outcomeLabel}
-              </span>
-            )}
-            {canNavigate && (
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => hasPrev && onNavigate!(currentIndex! - 1)}
-                  disabled={!hasPrev}
-                  className="p-1.5 rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors disabled:opacity-30 disabled:cursor-default disabled:hover:bg-transparent"
-                  title="Previous (←)"
-                >
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 19l-7-7 7-7"
-                    />
-                  </svg>
-                </button>
-                <span className="text-xs text-gray-400 tabular-nums min-w-[4rem] text-center">
-                  {currentIndex! + 1} of {entries!.length}
-                </span>
-                <button
-                  onClick={() => hasNext && onNavigate!(currentIndex! + 1)}
-                  disabled={!hasNext}
-                  className="p-1.5 rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors disabled:opacity-30 disabled:cursor-default disabled:hover:bg-transparent"
-                  title="Next (→)"
-                >
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
-                </button>
-              </div>
-            )}
-            <button
-              onClick={handleClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors text-xl leading-none p-1"
-            >
-              &times;
-            </button>
-          </div>
-        </div>
+      {!isLoading && (
+        <>
+          {/* Metadata grid */}
+          <MetadataGrid
+            fields={[
+              { label: 'Direction', value: entry.direction },
+              { label: 'Type', value: entry.interactionType.replace(/_/g, ' ') },
+              {
+                label: 'Duration',
+                value: entry.durationSeconds ? formatDuration(entry.durationSeconds) : '\u2014',
+              },
+              { label: 'Agent', value: interaction?.agentId || '\u2014' },
+              entry.category ? { label: 'Category', value: entry.category } : null,
+              interaction?.queueName ? { label: 'Queue', value: interaction.queueName } : null,
+              interaction?.wrapUpCode ? { label: 'Wrap-up', value: interaction.wrapUpCode } : null,
+              interaction?.linkedCaseId
+                ? { label: 'Linked Case', value: interaction.linkedCaseId }
+                : null,
+            ].filter((f): f is { label: string; value: string } => f != null)}
+          />
 
-        {/* Body */}
-        <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
-          {isLoading && (
-            <div className="text-sm text-gray-400 text-center py-8">Loading details...</div>
+          {/* Summary */}
+          {(interaction?.summary || entry.summary) && (
+            <Section title="Summary">
+              <p className="text-sm text-gray-700 leading-relaxed">
+                {interaction?.summary || entry.summary}
+              </p>
+            </Section>
           )}
 
-          {!isLoading && (
-            <>
-              {/* Metadata grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <MetaField label="Direction" value={entry.direction} />
-                <MetaField label="Type" value={entry.interactionType.replace(/_/g, ' ')} />
-                <MetaField
-                  label="Duration"
-                  value={entry.durationSeconds ? formatDuration(entry.durationSeconds) : '\u2014'}
-                />
-                <MetaField label="Agent" value={interaction?.agentId || '\u2014'} />
-                {entry.category && <MetaField label="Category" value={entry.category} />}
-                {interaction?.queueName && (
-                  <MetaField label="Queue" value={interaction.queueName} />
-                )}
-                {interaction?.wrapUpCode && (
-                  <MetaField label="Wrap-up" value={interaction.wrapUpCode} />
-                )}
-                {interaction?.linkedCaseId && (
-                  <MetaField label="Linked Case" value={interaction.linkedCaseId} />
-                )}
+          {/* Notes */}
+          {notes.length > 0 && (
+            <Section title={`Notes (${notes.length})`}>
+              <div className="space-y-3">
+                {notes.map((note) => (
+                  <NoteCard key={note.noteId} note={note} />
+                ))}
               </div>
-
-              {/* Summary */}
-              {(interaction?.summary || entry.summary) && (
-                <Section title="Summary">
-                  <p className="text-sm text-gray-700 leading-relaxed">
-                    {interaction?.summary || entry.summary}
-                  </p>
-                </Section>
-              )}
-
-              {/* Notes */}
-              {notes.length > 0 && (
-                <Section title={`Notes (${notes.length})`}>
-                  <div className="space-y-3">
-                    {notes.map((note) => (
-                      <NoteCard key={note.noteId} note={note} />
-                    ))}
-                  </div>
-                </Section>
-              )}
-
-              {/* Commitments */}
-              {commitments.length > 0 && (
-                <Section title={`Commitments (${commitments.length})`}>
-                  <div className="space-y-3">
-                    {commitments.map((c) => (
-                      <CommitmentCard key={c.commitmentId} commitment={c} />
-                    ))}
-                  </div>
-                </Section>
-              )}
-
-              {/* Empty state */}
-              {!interaction?.summary &&
-                !entry.summary &&
-                notes.length === 0 &&
-                commitments.length === 0 && (
-                  <div className="text-sm text-gray-400 text-center py-8">
-                    No additional details recorded for this interaction.
-                  </div>
-                )}
-            </>
+            </Section>
           )}
-        </div>
-      </div>
-    </div>
+
+          {/* Commitments */}
+          {commitments.length > 0 && (
+            <Section title={`Commitments (${commitments.length})`}>
+              <div className="space-y-3">
+                {commitments.map((c) => (
+                  <CommitmentCard key={c.commitmentId} commitment={c} />
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {/* Empty state */}
+          {!interaction?.summary &&
+            !entry.summary &&
+            notes.length === 0 &&
+            commitments.length === 0 && (
+              <div className="text-sm text-gray-400 text-center py-8">
+                No additional details recorded for this interaction.
+              </div>
+            )}
+        </>
+      )}
+    </DetailOverlay>
   );
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
-
-function MetaField({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">{label}</div>
-      <div className="text-sm text-gray-800 capitalize mt-0.5">{value}</div>
-    </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{title}</h3>
-      {children}
-    </div>
-  );
-}
 
 function NoteCard({ note }: { note: Note }) {
   return (
