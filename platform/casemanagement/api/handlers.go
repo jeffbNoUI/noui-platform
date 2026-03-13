@@ -36,6 +36,11 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	// Cases
 	mux.HandleFunc("GET /api/v1/cases", h.ListCases)
 	mux.HandleFunc("POST /api/v1/cases", h.CreateCase)
+
+	// Stats (must be before {id} routes for clarity)
+	mux.HandleFunc("GET /api/v1/cases/stats", h.GetCaseStats)
+	mux.HandleFunc("GET /api/v1/cases/stats/sla", h.GetSLAStats)
+
 	mux.HandleFunc("GET /api/v1/cases/{id}", h.GetCase)
 	mux.HandleFunc("PUT /api/v1/cases/{id}", h.UpdateCase)
 	mux.HandleFunc("POST /api/v1/cases/{id}/advance", h.AdvanceStage)
@@ -395,6 +400,32 @@ func (h *Handler) DeleteDocument(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+}
+
+// --- Stats Handlers ---
+
+func (h *Handler) GetCaseStats(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantFromHeader(r)
+
+	stats, err := h.store.GetCaseStats(tenantID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		return
+	}
+
+	writeSuccess(w, http.StatusOK, stats)
+}
+
+func (h *Handler) GetSLAStats(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantFromHeader(r)
+
+	stats, err := h.store.GetSLAStats(tenantID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		return
+	}
+
+	writeSuccess(w, http.StatusOK, stats)
 }
 
 // --- Helper Functions ---
