@@ -1,5 +1,27 @@
 # noui-platform — Build History
 
+## Case Management Enrichment — Session 1 of Production Foundations (2026-03-13)
+
+**PR:** #48 (merged)
+**Goal:** Add case notes, document metadata, and SLA deadline tracking to the case management Go service.
+
+**What was built:**
+- Migration `011_case_enrichment.sql`: `case_note` table, `case_document` table, `sla_target_days`/`sla_deadline_at` columns on `retirement_case`
+- Notes CRUD: `CreateNote`, `ListNotes`, `DeleteNote`, `NoteCount` in `db/notes.go`
+- Documents CRUD: `CreateDocument`, `ListDocuments`, `DeleteDocument`, `DocumentCount` in `db/documents.go`
+- 6 new HTTP routes: GET/POST/DELETE for `/cases/{id}/notes` and `/cases/{id}/documents`
+- SLA logic: priority-based target days (urgent=30d, high=60d, standard=90d), deadline computed on `CreateCase`
+- `GET /cases/{id}` enriched to return `CaseDetail` with `noteCount` and `documentCount`
+- Seed data: 13 notes + 9 document records across all 4 demo cases
+- Docker Compose updated with migrations 010 (summary_log) + 011 + enrichment seed
+
+**Tests:** 52 → 78 Go tests (+26 new: 10 notes, 8 documents, 8 updated for SLA/enrichment)
+**Files:** 7 modified, 6 new (892 insertions, 16 deletions)
+
+**Roadmap:** This is Session 1 of 8 in the Production Foundations plan (`.claude/plans/merry-stirring-ritchie.md`). Next: Session 2 — Dashboard Aggregation API + Member Search.
+
+---
+
 ## Universal Drill-Down Overlays (2026-03-13)
 
 **Result:** Every card with repeating records now has a click-to-drill-down overlay. Shared shell component eliminates duplication across 7 overlay types. Search/filter added to 4 cards.
