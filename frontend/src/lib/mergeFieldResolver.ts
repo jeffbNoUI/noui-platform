@@ -72,8 +72,7 @@ const RESOLVERS: Record<string, (ctx: MergeFieldContext) => string> = {
     return tier === 3 ? '85' : '75';
   },
   reduction_percent: (ctx) => {
-    const p =
-      ctx.calculation?.eligibility?.reduction_pct;
+    const p = ctx.calculation?.eligibility?.reduction_pct;
     return p != null ? `${(p * 100).toFixed(0)}%` : '';
   },
 

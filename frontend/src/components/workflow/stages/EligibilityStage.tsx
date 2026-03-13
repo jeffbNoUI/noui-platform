@@ -45,18 +45,17 @@ export default function EligibilityStage({
       />
       <Field
         label="Vested"
-        value={
-          elig?.vested
-            ? `Yes — ${svc?.earned_years?.toFixed(2) || '—'} years`
-            : 'No'
-        }
+        value={elig?.vested ? `Yes — ${svc?.earned_years?.toFixed(2) || '—'} years` : 'No'}
         badge={
           elig?.vested
             ? { text: 'Met', className: 'bg-emerald-50 text-emerald-700' }
             : { text: 'Not Met', className: 'bg-red-50 text-red-700' }
         }
       />
-      <Field label="Normal Retirement (65)" value={elig?.best_eligible_type === 'NORMAL' ? 'Yes' : 'Not yet'} />
+      <Field
+        label="Normal Retirement (65)"
+        value={elig?.best_eligible_type === 'NORMAL' ? 'Yes' : 'Not yet'}
+      />
       <Field
         label={ruleLabel}
         value={elig ? `${ruleSum.toFixed(2)} ≥ ${ruleThreshold}` : `— ≥ ${ruleThreshold}`}
