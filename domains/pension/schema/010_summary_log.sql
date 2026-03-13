@@ -8,8 +8,8 @@ CREATE TABLE IF NOT EXISTS member_summary_log (
     input_hash      TEXT NOT NULL,
     input_json      JSONB NOT NULL,
     output_json     JSONB NOT NULL,
-    generated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    generated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (member_id, input_hash)
 );
 
 CREATE INDEX idx_summary_log_member ON member_summary_log(member_id);
-CREATE INDEX idx_summary_log_hash ON member_summary_log(input_hash);
