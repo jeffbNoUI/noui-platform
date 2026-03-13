@@ -1,5 +1,31 @@
 # noui-platform — Build History
 
+## Universal Drill-Down Overlays (2026-03-13)
+
+**Result:** Every card with repeating records now has a click-to-drill-down overlay. Shared shell component eliminates duplication across 7 overlay types. Search/filter added to 4 cards.
+
+**Architecture:**
+- Shared `DetailOverlay` shell (backdrop, spawn animation, keyboard nav, prev/next, header slots, scrollable body, optional footer)
+- Helper components: `MetadataGrid`, `Section`, `StatusBadge`
+- 2 existing overlays refactored to use shared shell (InteractionDetailPanel, ConversationDetailOverlay)
+- 5 new detail overlays created
+
+**New overlays:**
+| Overlay | Card | Features |
+|---------|------|----------|
+| CorrespondenceDetail | CorrespondenceHistoryCard | Status badge, merge fields table, body preview, search input |
+| BeneficiaryDetail | BeneficiaryCard | Type badge (Primary/Contingent/Death Benefit), DOB with age, allocation % |
+| DQIssueDetail | DataQualityCard | Severity filter (All/Critical/Warning/Info), inline Acknowledge/Resolve/False Positive actions |
+| CommitmentDetail | CommitmentTracker | Two-click Fulfill (with note input), Cancel action, search input |
+| OutreachDetail | OutreachQueue | Attempt/Complete/Defer actions, talking points, max-attempts warning, search input |
+
+**Files created (10):** `DetailOverlay.tsx`, 5 detail components + 5 test files
+**Files modified (5):** InteractionDetailPanel, ConversationDetailOverlay, CorrespondenceHistoryCard, BeneficiaryCard, DataQualityCard, CommitmentTracker, OutreachQueue
+**Tests:** 262 → 320 (58 new tests, 0 regressions)
+**Verification:** 320/320 tests pass, 0 TS errors.
+
+---
+
 ## Bug Fix Sweep: Bugs 1, 2, 4, 5 from E2E Testing (2026-03-12)
 
 **Result:** Resolved 3 of 4 bugs from E2E workflow testing (Bug 4 was already fixed). All fixes in 2 files.
