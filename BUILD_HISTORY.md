@@ -1,5 +1,35 @@
 # noui-platform — Build History
 
+## Dashboard Aggregation API + Member Search — Session 2 of Production Foundations (2026-03-13)
+
+**PR:** #50 (merged)
+**Goal:** Build aggregation queries for supervisor/executive dashboards and add member search to the dataaccess service.
+
+**What was built:**
+- `GET /api/v1/cases/stats` — case metrics aggregation (by stage, status, priority, assignee) with at-risk count using 20% SLA proportional thresholds
+- `GET /api/v1/cases/stats/sla` — SLA health metrics (on-track/at-risk/overdue buckets, avg processing days)
+- `GET /api/v1/cases?stage=X` — stage filter on existing ListCases endpoint for approval queue views
+- `GET /api/v1/members/search?q={query}&limit=10` — member search by name (ILIKE) or member ID, limit cap at 50
+- Migration 012: functional index on `LOWER(last_name), LOWER(first_name)` for search performance
+- Docker Compose updated with migration 012
+
+**New files:**
+- `platform/casemanagement/db/stats.go` — GetCaseStats (5 SQL queries) + GetSLAStats (FILTER WHERE bucketing)
+- `platform/casemanagement/db/stats_test.go` — 4 tests (with-data, empty, mixed-SLA, no-cases)
+- `domains/pension/schema/012_member_search_index.sql`
+
+**Modified files:**
+- `platform/casemanagement/models/types.go` — CaseStats, SLAStats, SLAThresholds + 4 supporting types
+- `platform/casemanagement/db/cases.go` — stage filter in ListCases
+- `platform/casemanagement/api/handlers.go` — GetCaseStats + GetSLAStats handlers, route registration
+- `platform/dataaccess/models/member.go` — MemberSearchResult type
+- `platform/dataaccess/api/handlers.go` — SearchMembers handler
+
+**Tests:** 78 → 86 casemanagement (+8), 39 → 44 dataaccess (+5), 327 frontend (unchanged)
+**Roadmap:** Session 2 of 8. Next: Session 3 — Wire Live Dashboards + Member Search UI.
+
+---
+
 ## Case Management Enrichment — Session 1 of Production Foundations (2026-03-13)
 
 **PR:** #48 (merged)
