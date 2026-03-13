@@ -62,7 +62,33 @@ Add `stage` (string) to `CaseFilter` so the frontend can query cases at a specif
 - All existing tests pass (78 casemanagement + dataaccess tests)
 - `go build ./...` clean in both services
 
+## Cleanup First
+
+Before starting Session 2, clean up stale worktrees and branches from previous sessions:
+
+```bash
+# Remove stale worktrees (both are from merged PRs)
+cd C:/Users/jeffb/noui-platform
+git worktree remove .claude/worktrees/suspicious-spence --force
+git worktree remove .claude/worktrees/reverent-booth --force
+
+# Delete remote tracking branches for merged PRs
+git branch -D claude/suspicious-spence 2>/dev/null
+git branch -D claude/reverent-booth 2>/dev/null
+git push origin --delete claude/suspicious-spence 2>/dev/null
+git push origin --delete claude/reverent-booth 2>/dev/null
+
+# Pull latest main (includes PR #48)
+git checkout main && git pull
+```
+
+Then start a fresh worktree for Session 2 work.
+
 ## Starter Command
 ```
-Continue noui-platform development. PR #48 (merged to main) completed Session 1 of the Production Foundations roadmap: case notes/documents CRUD, SLA tracking, 78 Go tests. State: 327 frontend tests, 78 casemanagement Go tests, all builds clean. Start Session 2: Dashboard Aggregation API + Member Search. See docs/session-starters/session2-aggregation-api.md and .claude/plans/merry-stirring-ritchie.md for full context.
+Continue noui-platform development. PR #48 (merged to main) completed Session 1 of the Production Foundations roadmap: case notes/documents CRUD, SLA tracking, 78 Go tests. State: 327 frontend tests, 78 casemanagement Go tests, all builds clean.
+
+Cleanup: worktrees suspicious-spence and reverent-booth are from merged PRs and should be removed. Run: git worktree remove .claude/worktrees/suspicious-spence --force && git worktree remove .claude/worktrees/reverent-booth --force && git branch -D claude/suspicious-spence claude/reverent-booth 2>/dev/null && git push origin --delete claude/suspicious-spence claude/reverent-booth 2>/dev/null && git pull
+
+Then start Session 2: Dashboard Aggregation API + Member Search. See docs/session-starters/session2-aggregation-api.md and .claude/plans/merry-stirring-ritchie.md for full context.
 ```
