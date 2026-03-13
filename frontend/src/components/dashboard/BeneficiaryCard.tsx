@@ -1,5 +1,7 @@
+import { useState, useRef } from 'react';
 import type { Beneficiary } from '@/types/Member';
 import CollapsibleSection from '@/components/ui/CollapsibleSection';
+import BeneficiaryDetail from '@/components/detail/BeneficiaryDetail';
 
 interface BeneficiaryCardProps {
   beneficiaries?: Beneficiary[];
@@ -14,6 +16,17 @@ const TYPE_LABELS: Record<string, string> = {
 
 export default function BeneficiaryCard({ beneficiaries, isLoading }: BeneficiaryCardProps) {
   const active = beneficiaries?.filter((b) => !b.end_date) ?? [];
+  const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+  const [sourceRect, setSourceRect] = useState<DOMRect | null>(null);
+  const rowRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+
+  const handleRowClick = (idx: number) => {
+    const el = rowRefs.current.get(idx);
+    if (el) {
+      setSourceRect(el.getBoundingClientRect());
+      setSelectedIdx(idx);
+    }
+  };
 
   return (
     <CollapsibleSection
@@ -30,8 +43,16 @@ export default function BeneficiaryCard({ beneficiaries, isLoading }: Beneficiar
 
       {active.length > 0 && (
         <div className="-mx-5 -my-4 divide-y divide-gray-100">
-          {active.map((b) => (
-            <div key={b.bene_id} className="px-5 py-3 flex items-center justify-between">
+          {active.map((b, idx) => (
+            <div
+              key={b.bene_id}
+              ref={(el) => {
+                if (el) rowRefs.current.set(idx, el);
+                else rowRefs.current.delete(idx);
+              }}
+              className="px-5 py-3 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+              onClick={() => handleRowClick(idx)}
+            >
               <div>
                 <div className="text-sm font-medium text-gray-900">
                   {b.first_name} {b.last_name}
@@ -45,6 +66,19 @@ export default function BeneficiaryCard({ beneficiaries, isLoading }: Beneficiar
             </div>
           ))}
         </div>
+      )}
+
+      {selectedIdx !== null && sourceRect && (
+        <BeneficiaryDetail
+          item={active[selectedIdx]}
+          sourceRect={sourceRect}
+          onClose={() => setSelectedIdx(null)}
+          items={active}
+          currentIndex={selectedIdx}
+          onNavigate={(newIdx) => {
+            setSelectedIdx(newIdx);
+          }}
+        />
       )}
     </CollapsibleSection>
   );
