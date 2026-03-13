@@ -162,10 +162,13 @@ func (h *Handler) CalculatePaymentOptions(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// Only fetch DRO when the case explicitly links to one
 	var dro *models.DROData
-	droData, err := h.fetchDRO(req.MemberID)
-	if err == nil && droData != nil {
-		dro = droData
+	if req.DROID != nil {
+		droData, err := h.fetchDRO(req.MemberID)
+		if err == nil && droData != nil {
+			dro = droData
+		}
 	}
 
 	result := rules.CalculateBenefit(*member, *svcCredit, *ams, dro, retDate)
@@ -198,10 +201,13 @@ func (h *Handler) CalculateScenario(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Only fetch DRO when the case explicitly links to one
 	var dro *models.DROData
-	droData, err := h.fetchDRO(req.MemberID)
-	if err == nil && droData != nil {
-		dro = droData
+	if req.DROID != nil {
+		droData, err := h.fetchDRO(req.MemberID)
+		if err == nil && droData != nil {
+			dro = droData
+		}
 	}
 
 	var dates []time.Time

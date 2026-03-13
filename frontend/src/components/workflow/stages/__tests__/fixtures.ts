@@ -43,14 +43,11 @@ export const mockCalculation: BenefitCalcResult = {
     retirement_date: '2026-04-01',
     tier: 1,
     tier_source: 'hire_date',
-    is_vested: true,
     vested: true,
     best_eligible_type: 'RULE_OF_75',
-    eligible_normal: false,
     rule_of_n_sum: 91.75,
     age_at_retirement: { completed_years: 64, years: 64, months: 11, decimal: 64.92 },
     reduction_pct: 0,
-    reduction_percentage: 0,
     reduction_factor: 1.0,
     service_credit: {
       earned_years: 27.75,
@@ -149,7 +146,6 @@ export const mockEarlyRetirementCalc = {
     ...mockCalculation.eligibility,
     best_eligible_type: 'EARLY',
     reduction_pct: 3.0,
-    reduction_percentage: 3.0,
   },
   reduction: {
     applies: true,

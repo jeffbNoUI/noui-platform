@@ -72,12 +72,14 @@ type PaymentOptionsRequest struct {
 	MemberID       int    `json:"member_id"`
 	RetirementDate string `json:"retirement_date"` // YYYY-MM-DD
 	BeneficiaryDOB string `json:"beneficiary_dob,omitempty"`
+	DROID          *int   `json:"dro_id,omitempty"` // Links to specific DRO; nil = no DRO for this case
 }
 
 // ScenarioRequest is the input for scenario comparison.
 type ScenarioRequest struct {
 	MemberID        int      `json:"member_id"`
 	RetirementDates []string `json:"retirement_dates"` // Array of YYYY-MM-DD
+	DROID           *int     `json:"dro_id,omitempty"` // Links to specific DRO; nil = no DRO for this case
 }
 
 // DROCalcRequest is the input for DRO calculation.

@@ -1,5 +1,7 @@
+import { useState, useRef, useCallback } from 'react';
 import type { DQScore, DQIssue } from '@/types/DataQuality';
 import CollapsibleSection from '@/components/ui/CollapsibleSection';
+import DQIssueDetail from '@/components/detail/DQIssueDetail';
 
 interface DataQualityCardProps {
   score?: DQScore;
@@ -13,6 +15,15 @@ const SEVERITY_STYLES: Record<string, string> = {
   info: 'bg-blue-50 text-blue-600 border-blue-200',
 };
 
+type SeverityFilter = 'all' | 'critical' | 'warning' | 'info';
+
+const FILTER_OPTIONS: { value: SeverityFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'critical', label: 'Critical' },
+  { value: 'warning', label: 'Warning' },
+  { value: 'info', label: 'Info' },
+];
+
 function scoreColor(score: number): string {
   if (score >= 95) return 'text-emerald-600';
   if (score >= 85) return 'text-amber-600';
@@ -20,8 +31,31 @@ function scoreColor(score: number): string {
 }
 
 export default function DataQualityCard({ score, memberIssues, isLoading }: DataQualityCardProps) {
+  const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('all');
+  const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+  const [sourceRect, setSourceRect] = useState<DOMRect | null>(null);
+  const rowRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+
   const openIssues = memberIssues.filter((i) => i.status === 'open');
+  const filteredIssues =
+    severityFilter === 'all' ? openIssues : openIssues.filter((i) => i.severity === severityFilter);
   const hasOpenMemberIssues = openIssues.length > 0;
+
+  const handleRowClick = useCallback((index: number) => {
+    const el = rowRefs.current.get(index);
+    if (el) {
+      setSourceRect(el.getBoundingClientRect());
+      setSelectedIdx(index);
+    }
+  }, []);
+
+  const setRowRef = useCallback((index: number, el: HTMLDivElement | null) => {
+    if (el) {
+      rowRefs.current.set(index, el);
+    } else {
+      rowRefs.current.delete(index);
+    }
+  }, []);
 
   if (isLoading && !score) {
     return (
@@ -77,14 +111,46 @@ export default function DataQualityCard({ score, memberIssues, isLoading }: Data
       {/* Member issues */}
       {openIssues.length > 0 && (
         <div>
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
-            Issues for this member
-          </span>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+              Issues for this member
+            </span>
+            {/* Severity filter */}
+            <div className="flex gap-0.5" role="group" aria-label="Filter by severity">
+              {FILTER_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setSeverityFilter(opt.value)}
+                  className={`px-1.5 py-0.5 text-[10px] font-medium rounded transition-colors ${
+                    severityFilter === opt.value
+                      ? 'bg-gray-700 text-white'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  }`}
+                  data-testid={`severity-filter-${opt.value}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div
-            className={`mt-2 -mx-5 divide-y ${hasOpenMemberIssues ? 'divide-amber-100' : 'divide-gray-100'}`}
+            className={`-mx-5 divide-y ${hasOpenMemberIssues ? 'divide-amber-100' : 'divide-gray-100'}`}
           >
-            {openIssues.map((issue) => (
-              <div key={issue.issueId} className="px-5 py-3">
+            {filteredIssues.map((issue, idx) => (
+              <div
+                key={issue.issueId}
+                ref={(el) => setRowRef(idx, el)}
+                onClick={() => handleRowClick(idx)}
+                className="px-5 py-3 cursor-pointer hover:bg-amber-50/80 transition-colors"
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleRowClick(idx);
+                  }
+                }}
+              >
                 <div className="flex items-center gap-2 mb-1">
                   <span
                     className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded border ${SEVERITY_STYLES[issue.severity]}`}
@@ -98,8 +164,26 @@ export default function DataQualityCard({ score, memberIssues, isLoading }: Data
                 <p className="text-xs text-gray-700">{issue.description}</p>
               </div>
             ))}
+            {filteredIssues.length === 0 && (
+              <div className="px-5 py-3 text-xs text-gray-400">No {severityFilter} issues</div>
+            )}
           </div>
         </div>
+      )}
+
+      {/* Detail overlay */}
+      {selectedIdx !== null && sourceRect && (
+        <DQIssueDetail
+          item={filteredIssues[selectedIdx]}
+          sourceRect={sourceRect}
+          onClose={() => {
+            setSelectedIdx(null);
+            setSourceRect(null);
+          }}
+          items={filteredIssues}
+          currentIndex={selectedIdx}
+          onNavigate={setSelectedIdx}
+        />
       )}
     </CollapsibleSection>
   );

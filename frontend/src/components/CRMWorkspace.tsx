@@ -1,17 +1,19 @@
-import { useState } from 'react';
-import { useContact, useConversations } from '@/hooks/useCRM';
+import { useState, useEffect, useRef } from 'react';
+import { useContact, useConversations, useContactByLegacyId } from '@/hooks/useCRM';
 import { useMember } from '@/hooks/useMember';
 import { useBenefitCalculation } from '@/hooks/useBenefitCalculation';
 import type { Contact } from '@/types/CRM';
 
 import ContactSearch from '@/components/ContactSearch';
 import InteractionTimeline from '@/components/InteractionTimeline';
-import ConversationPanel from '@/components/ConversationPanel';
+import type { TimelineSelectData } from '@/components/InteractionTimeline';
+import ConversationDetailOverlay from '@/components/ConversationDetailOverlay';
 import CommitmentTracker from '@/components/CommitmentTracker';
 import OutreachQueue from '@/components/OutreachQueue';
 import NoteEditor from '@/components/NoteEditor';
 import MemberBanner from '@/components/MemberBanner';
 import BenefitCalculationPanel from '@/components/BenefitCalculationPanel';
+import InteractionDetailPanel from '@/components/dashboard/InteractionDetailPanel';
 import CaseJournalPanel from '@/components/CaseJournalPanel';
 import CollapsibleSection from '@/components/ui/CollapsibleSection';
 
@@ -38,12 +40,29 @@ const securityFlagConfig: Record<string, { label: string; color: string }> = {
   },
 };
 
-export default function CRMWorkspace() {
+interface CRMWorkspaceProps {
+  initialMemberId?: number;
+  onBack?: () => void;
+}
+
+export default function CRMWorkspace({ initialMemberId, onBack }: CRMWorkspaceProps) {
   const [selectedContactId, setSelectedContactId] = useState('');
   const [selectedConversationId, setSelectedConversationId] = useState('');
   const [selectedInteractionId, setSelectedInteractionId] = useState('');
+  const [interactionOverlay, setInteractionOverlay] = useState<TimelineSelectData | null>(null);
+  const [conversationOverlay, setConversationOverlay] = useState<{
+    conversationId: string;
+    sourceRect: DOMRect;
+    index: number;
+  } | null>(null);
   const [showNoteEditor, setShowNoteEditor] = useState(false);
   const [showJournal, setShowJournal] = useState(false);
+  const convRowRefs = useRef<Map<string, HTMLLIElement>>(new Map());
+
+  // Auto-select contact when navigating from Member Dashboard
+  const legacyLookupId = initialMemberId ? String(initialMemberId) : '';
+  const { data: initialContact } = useContactByLegacyId(legacyLookupId);
+  const didAutoSelect = useRef(false);
 
   // Contact data
   const { data: contact } = useContact(selectedContactId);
@@ -70,13 +89,51 @@ export default function CRMWorkspace() {
     setShowNoteEditor(false);
   };
 
-  const handleSelectConversation = (convId: string) => {
+  useEffect(() => {
+    if (initialContact && !didAutoSelect.current) {
+      didAutoSelect.current = true;
+      handleContactSelect(initialContact);
+    }
+  }, [initialContact]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSelectConversation = (convId: string, index: number) => {
     setSelectedConversationId(convId);
+    const el = convRowRefs.current.get(convId);
+    if (el) {
+      setConversationOverlay({
+        conversationId: convId,
+        sourceRect: el.getBoundingClientRect(),
+        index,
+      });
+    }
   };
 
-  const handleSelectInteraction = (intId: string) => {
-    setSelectedInteractionId(intId);
+  const handleNavigateConversation = (newIndex: number) => {
+    const conv = conversationList[newIndex];
+    if (!conv) return;
+    setSelectedConversationId(conv.conversationId);
+    setConversationOverlay((prev) =>
+      prev ? { ...prev, conversationId: conv.conversationId, index: newIndex } : null,
+    );
+  };
+
+  const handleSelectInteraction = (data: TimelineSelectData) => {
+    setSelectedInteractionId(data.interactionId);
+    setInteractionOverlay(data);
     setShowNoteEditor(false);
+  };
+
+  const handleNavigateInteraction = (newIndex: number) => {
+    if (!interactionOverlay) return;
+    const entry = interactionOverlay.entries[newIndex];
+    if (!entry) return;
+    setSelectedInteractionId(entry.interactionId);
+    setInteractionOverlay({
+      ...interactionOverlay,
+      interactionId: entry.interactionId,
+      entry,
+      index: newIndex,
+    });
   };
 
   const conversationList = conversations?.items ?? [];
@@ -90,6 +147,18 @@ export default function CRMWorkspace() {
         <div className="mx-auto max-w-7xl px-6 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
+              {onBack && (
+                <>
+                  <button
+                    onClick={onBack}
+                    className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                  >
+                    <span className="text-lg leading-none">&larr;</span>
+                    <span>Back</span>
+                  </button>
+                  <div className="h-5 w-px bg-gray-200" />
+                </>
+              )}
               <p className="text-sm text-gray-500">Contact Relationship Management</p>
               {selectedContactId && (
                 <button
@@ -253,7 +322,7 @@ export default function CRMWorkspace() {
                       <p className="text-center text-sm text-gray-500 py-4">No conversations.</p>
                     ) : (
                       <ul className="space-y-2">
-                        {conversationList.map((conv) => {
+                        {conversationList.map((conv, idx) => {
                           const isSelected = conv.conversationId === selectedConversationId;
                           const statusColors: Record<string, string> = {
                             open: 'bg-blue-100 text-blue-800',
@@ -263,10 +332,16 @@ export default function CRMWorkspace() {
                             reopened: 'bg-orange-100 text-orange-800',
                           };
                           return (
-                            <li key={conv.conversationId}>
+                            <li
+                              key={conv.conversationId}
+                              ref={(el) => {
+                                if (el) convRowRefs.current.set(conv.conversationId, el);
+                                else convRowRefs.current.delete(conv.conversationId);
+                              }}
+                            >
                               <button
                                 type="button"
-                                onClick={() => handleSelectConversation(conv.conversationId)}
+                                onClick={() => handleSelectConversation(conv.conversationId, idx)}
                                 className={`w-full rounded-md border p-3 text-left transition-colors ${
                                   isSelected
                                     ? 'border-brand-300 bg-brand-50'
@@ -300,13 +375,7 @@ export default function CRMWorkspace() {
                     )}
                   </CollapsibleSection>
 
-                  {/* Selected conversation detail */}
-                  {selectedConversationId && (
-                    <ConversationPanel
-                      conversationId={selectedConversationId}
-                      onSelectInteraction={handleSelectInteraction}
-                    />
-                  )}
+                  {/* Conversation detail is now shown in overlay */}
                 </div>
 
                 {/* Right column: Commitments + Outreach + Note Editor */}
@@ -360,6 +429,31 @@ export default function CRMWorkspace() {
           </div>
         )}
       </main>
+
+      {/* Interaction detail overlay */}
+      {interactionOverlay && (
+        <InteractionDetailPanel
+          interactionId={interactionOverlay.interactionId}
+          entry={interactionOverlay.entry}
+          sourceRect={interactionOverlay.sourceRect}
+          onClose={() => setInteractionOverlay(null)}
+          entries={interactionOverlay.entries}
+          currentIndex={interactionOverlay.index}
+          onNavigate={handleNavigateInteraction}
+        />
+      )}
+
+      {/* Conversation detail overlay */}
+      {conversationOverlay && (
+        <ConversationDetailOverlay
+          conversationId={conversationOverlay.conversationId}
+          sourceRect={conversationOverlay.sourceRect}
+          onClose={() => setConversationOverlay(null)}
+          conversations={conversationList}
+          currentIndex={conversationOverlay.index}
+          onNavigate={handleNavigateConversation}
+        />
+      )}
     </div>
   );
 }

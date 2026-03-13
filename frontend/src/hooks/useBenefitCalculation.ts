@@ -28,10 +28,11 @@ export function useBenefitCalculation(memberID: number, retirementDate: string, 
   });
 }
 
-export function useScenario(memberID: number, dates: string[]) {
+export function useScenario(memberID: number, dates: string[], droId?: number) {
   return useQuery<ScenarioResult>({
-    queryKey: ['scenario', memberID, dates],
-    queryFn: () => intelligenceAPI.calculateScenario(memberID, dates) as Promise<ScenarioResult>,
+    queryKey: ['scenario', memberID, dates, droId],
+    queryFn: () =>
+      intelligenceAPI.calculateScenario(memberID, dates, droId) as Promise<ScenarioResult>,
     enabled: memberID > 0 && dates.length > 0,
   });
 }

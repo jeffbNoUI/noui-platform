@@ -1,5 +1,7 @@
+import { useState, useRef } from 'react';
 import { useOutreach, useUpdateOutreach } from '@/hooks/useCRM';
 import type { Outreach, OutreachStatus, OutreachListParams } from '@/types/CRM';
+import OutreachDetail from '@/components/detail/OutreachDetail';
 
 interface OutreachQueueProps {
   contactId?: string;
@@ -60,6 +62,11 @@ export default function OutreachQueue({
   const { data, isLoading, error } = useOutreach(params);
   const updateOutreach = useUpdateOutreach();
 
+  const [search, setSearch] = useState('');
+  const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+  const [sourceRect, setSourceRect] = useState<DOMRect | null>(null);
+  const rowRefs = useRef<Map<number, HTMLLIElement>>(new Map());
+
   const outreachItems = data?.items ?? [];
 
   // Sort by priority then due date
@@ -72,8 +79,19 @@ export default function OutreachQueue({
   });
 
   // Split into active and completed
-  const active = sorted.filter((o) => o.status !== 'completed' && o.status !== 'cancelled');
-  const completed = sorted.filter((o) => o.status === 'completed' || o.status === 'cancelled');
+  const allSorted = sorted;
+  const lowerSearch = search.toLowerCase();
+  const matchesSearch = (o: Outreach) =>
+    !search || (o.subject ?? '').toLowerCase().includes(lowerSearch);
+
+  const active = allSorted.filter(
+    (o) => o.status !== 'completed' && o.status !== 'cancelled' && matchesSearch(o),
+  );
+  const completed = allSorted.filter(
+    (o) => (o.status === 'completed' || o.status === 'cancelled') && matchesSearch(o),
+  );
+  const filtered = [...active, ...completed];
+  const totalBeforeFilter = allSorted.length;
 
   const handleAttempt = (outreachId: string) => {
     updateOutreach.mutate({
@@ -120,8 +138,16 @@ export default function OutreachQueue({
             <h2 className="text-lg font-semibold text-gray-900">Outreach Queue</h2>
             <p className="text-sm text-gray-500">
               {active.length} pending task{active.length !== 1 ? 's' : ''}
+              {search && ` (${filtered.length} of ${totalBeforeFilter} matching)`}
             </p>
           </div>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search outreach..."
+            className="rounded-md border border-gray-200 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+          />
           {active.some((o) => o.priority === 'urgent') && (
             <span className="flex items-center gap-1 rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-800">
               <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
@@ -145,16 +171,30 @@ export default function OutreachQueue({
             {/* Active outreach */}
             {active.length > 0 && (
               <ul className="space-y-3">
-                {active.map((outreach) => (
-                  <OutreachRow
-                    key={outreach.outreachId}
-                    outreach={outreach}
-                    onAttempt={() => handleAttempt(outreach.outreachId)}
-                    onComplete={() => handleComplete(outreach.outreachId)}
-                    onDefer={() => handleDefer(outreach.outreachId)}
-                    isMutating={updateOutreach.isPending}
-                  />
-                ))}
+                {active.map((outreach) => {
+                  const idx = filtered.indexOf(outreach);
+                  return (
+                    <OutreachRow
+                      key={outreach.outreachId}
+                      outreach={outreach}
+                      onAttempt={() => handleAttempt(outreach.outreachId)}
+                      onComplete={() => handleComplete(outreach.outreachId)}
+                      onDefer={() => handleDefer(outreach.outreachId)}
+                      isMutating={updateOutreach.isPending}
+                      rowRef={(el) => {
+                        if (el) rowRefs.current.set(idx, el);
+                        else rowRefs.current.delete(idx);
+                      }}
+                      onClick={() => {
+                        const el = rowRefs.current.get(idx);
+                        if (el) {
+                          setSourceRect(el.getBoundingClientRect());
+                          setSelectedIdx(idx);
+                        }
+                      }}
+                    />
+                  );
+                })}
               </ul>
             )}
 
@@ -165,15 +205,47 @@ export default function OutreachQueue({
                   <span className="ml-1">{completed.length} completed/cancelled</span>
                 </summary>
                 <ul className="mt-3 space-y-3">
-                  {completed.map((outreach) => (
-                    <OutreachRow key={outreach.outreachId} outreach={outreach} isMutating={false} />
-                  ))}
+                  {completed.map((outreach) => {
+                    const idx = filtered.indexOf(outreach);
+                    return (
+                      <OutreachRow
+                        key={outreach.outreachId}
+                        outreach={outreach}
+                        isMutating={false}
+                        rowRef={(el) => {
+                          if (el) rowRefs.current.set(idx, el);
+                          else rowRefs.current.delete(idx);
+                        }}
+                        onClick={() => {
+                          const el = rowRefs.current.get(idx);
+                          if (el) {
+                            setSourceRect(el.getBoundingClientRect());
+                            setSelectedIdx(idx);
+                          }
+                        }}
+                      />
+                    );
+                  })}
                 </ul>
               </details>
             )}
           </div>
         )}
       </div>
+
+      {selectedIdx !== null && sourceRect && filtered[selectedIdx] && (
+        <OutreachDetail
+          item={filtered[selectedIdx]}
+          sourceRect={sourceRect}
+          onClose={() => {
+            setSelectedIdx(null);
+            setSourceRect(null);
+          }}
+          items={filtered}
+          currentIndex={selectedIdx}
+          onNavigate={setSelectedIdx}
+        />
+      )}
     </div>
   );
 }
@@ -186,12 +258,16 @@ function OutreachRow({
   onComplete,
   onDefer,
   isMutating,
+  onClick,
+  rowRef,
 }: {
   outreach: Outreach;
   onAttempt?: () => void;
   onComplete?: () => void;
   onDefer?: () => void;
   isMutating: boolean;
+  onClick?: () => void;
+  rowRef?: (el: HTMLLIElement | null) => void;
 }) {
   const prBadge = priorityBadge[outreach.priority] ?? priorityBadge.normal;
   const stBadge = statusBadge[outreach.status] ?? {
@@ -202,7 +278,9 @@ function OutreachRow({
 
   return (
     <li
-      className={`rounded-md border p-3 ${isTerminal ? 'border-gray-100 bg-gray-50' : 'border-gray-200'}`}
+      ref={rowRef}
+      onClick={onClick}
+      className={`rounded-md border p-3 ${isTerminal ? 'border-gray-100 bg-gray-50' : 'border-gray-200'}${onClick ? ' cursor-pointer hover:bg-gray-50' : ''}`}
     >
       {/* Header */}
       <div className="flex items-start justify-between">
@@ -293,7 +371,10 @@ function OutreachRow({
             {onAttempt && outreach.attemptCount < outreach.maxAttempts && (
               <button
                 type="button"
-                onClick={onAttempt}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAttempt();
+                }}
                 disabled={isMutating}
                 className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
@@ -303,7 +384,10 @@ function OutreachRow({
             {onComplete && (
               <button
                 type="button"
-                onClick={onComplete}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onComplete();
+                }}
                 disabled={isMutating}
                 className="rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 transition-colors disabled:opacity-50"
               >
@@ -313,7 +397,10 @@ function OutreachRow({
             {onDefer && (
               <button
                 type="button"
-                onClick={onDefer}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDefer();
+                }}
                 disabled={isMutating}
                 className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
               >

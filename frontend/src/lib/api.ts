@@ -28,16 +28,23 @@ export const intelligenceAPI = {
       retirement_date: retirementDate,
       ...(droId != null && { dro_id: droId }),
     }),
-  calculateOptions: (memberID: number, retirementDate: string, beneficiaryDOB?: string) =>
+  calculateOptions: (
+    memberID: number,
+    retirementDate: string,
+    beneficiaryDOB?: string,
+    droId?: number,
+  ) =>
     postAPI(`${INTELLIGENCE_URL}/v1/benefit/options`, {
       member_id: memberID,
       retirement_date: retirementDate,
       beneficiary_dob: beneficiaryDOB,
+      ...(droId != null && { dro_id: droId }),
     }),
-  calculateScenario: (memberID: number, retirementDates: string[]) =>
+  calculateScenario: (memberID: number, retirementDates: string[], droId?: number) =>
     postAPI(`${INTELLIGENCE_URL}/v1/benefit/scenario`, {
       member_id: memberID,
       retirement_dates: retirementDates,
+      ...(droId != null && { dro_id: droId }),
     }),
   calculateDRO: (memberID: number, retirementDate: string) =>
     postAPI(`${INTELLIGENCE_URL}/v1/dro/calculate`, {

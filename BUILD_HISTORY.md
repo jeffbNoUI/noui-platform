@@ -1,5 +1,159 @@
 # noui-platform — Build History
 
+## Universal Drill-Down Overlays (2026-03-13)
+
+**Result:** Every card with repeating records now has a click-to-drill-down overlay. Shared shell component eliminates duplication across 7 overlay types. Search/filter added to 4 cards.
+
+**Architecture:**
+- Shared `DetailOverlay` shell (backdrop, spawn animation, keyboard nav, prev/next, header slots, scrollable body, optional footer)
+- Helper components: `MetadataGrid`, `Section`, `StatusBadge`
+- 2 existing overlays refactored to use shared shell (InteractionDetailPanel, ConversationDetailOverlay)
+- 5 new detail overlays created
+
+**New overlays:**
+| Overlay | Card | Features |
+|---------|------|----------|
+| CorrespondenceDetail | CorrespondenceHistoryCard | Status badge, merge fields table, body preview, search input |
+| BeneficiaryDetail | BeneficiaryCard | Type badge (Primary/Contingent/Death Benefit), DOB with age, allocation % |
+| DQIssueDetail | DataQualityCard | Severity filter (All/Critical/Warning/Info), inline Acknowledge/Resolve/False Positive actions |
+| CommitmentDetail | CommitmentTracker | Two-click Fulfill (with note input), Cancel action, search input |
+| OutreachDetail | OutreachQueue | Attempt/Complete/Defer actions, talking points, max-attempts warning, search input |
+
+**Files created (10):** `DetailOverlay.tsx`, 5 detail components + 5 test files
+**Files modified (5):** InteractionDetailPanel, ConversationDetailOverlay, CorrespondenceHistoryCard, BeneficiaryCard, DataQualityCard, CommitmentTracker, OutreachQueue
+**Tests:** 262 → 320 (58 new tests, 0 regressions)
+**Verification:** 320/320 tests pass, 0 TS errors.
+
+---
+
+## Bug Fix Sweep: Bugs 1, 2, 4, 5 from E2E Testing (2026-03-12)
+
+**Result:** Resolved 3 of 4 bugs from E2E workflow testing (Bug 4 was already fixed). All fixes in 2 files.
+
+**Bugs fixed:**
+
+| Bug | Description | Root Cause | Fix |
+|-----|-------------|------------|-----|
+| 1 | Rule sum = 0.00 in scenario stage | `useScenario()` hook never called; `ScenarioStage` never received data | Wire `useScenario()` in RetirementApplication, compute wait dates (+1/+2/+3yr), transform API response to ScenarioData shape |
+| 2 | DRO stage marked completed on non-DRO case | Race condition: `computeInitialState()` fired when stages/flags were out of sync | Add guard: skip sync when `stages.some(s => s.id === 'dro') !== flags.hasDRO` |
+| 4 | DRO seed data placeholder | Already fixed in prior session | No action — seed data has valid dates and positive division values |
+| 5 | KB 404 for scenario stage | No KB article seeded for `scenario` stage | Added article + 2 rule references in `004_knowledgebase_seed.sql` |
+
+**Files changed:**
+- `frontend/src/components/RetirementApplication.tsx` — Bug 1 (useScenario wiring) + Bug 2 (DRO guard)
+- `domains/pension/seed/004_knowledgebase_seed.sql` — Bug 5 (scenario KB article)
+
+**Verification:** 262/262 frontend tests pass, 0 TS errors.
+
+---
+
+## Bug Fix Session — DRO Case-Scoping + Dead Field Cleanup, PR #39 (2026-03-12)
+
+**Result:** Fixed 3 bugs found during E2E workflow testing. Primary fix: `CalculatePaymentOptions` and `CalculateScenario` handlers now only fetch DRO data when `dro_id` is explicitly provided, matching the existing `CalculateBenefit` pattern.
+
+**Bugs addressed:**
+| Bug | Root Cause | Fix |
+|-----|-----------|-----|
+| Bug 3: Inflated payment amounts ($85K+ vs ~$2,962) | `PaymentOptions` and `Scenario` handlers unconditionally fetched DRO per-member, not per-case | Added optional `DROID *int` to request types; DRO fetch now conditional on `dro_id` presence |
+| Bug 1: Rule sum = 0.00 display | Frontend had dead optional fields with broken fallback chains | Removed `is_vested`, `eligible_normal`, `rule_of_75_sum`, `rule_of_85_sum`, `reduction_percentage` from `EligibilityResult` type |
+| Bug 2: DRO stage on non-DRO case | Already fixed in `stageMapping.ts:152` | Confirmed with regression tests — no action needed |
+
+**Files changed (10):** `handlers.go`, `types.go` (intelligence), `EligibilityStage.tsx`, `fixtures.ts`, `useBenefitCalculation.ts`, `api.ts`, `mergeFieldResolver.ts`, `BenefitCalculation.ts`
+
+**Verification:** 21/21 Go intelligence tests, 262/262 frontend tests, 0 TS errors.
+
+**Docker E2E verified (2026-03-12):**
+- `POST /benefit/options` (no `dro_id`): base_amount = **$2,962.01** (was $85K+ pre-fix)
+- `POST /benefit/options` (`dro_id=1`): base_amount = **$2,213.35** (DRO-adjusted, ~74.7% marital fraction)
+- `POST /benefit/scenario` (no `dro_id`): $2,996.35 / $3,047.87 (non-DRO)
+- `POST /benefit/scenario` (`dro_id=1`): same amounts (DRO applies at payment level, not benefit calc)
+
+---
+
+## Post-Correspondence Follow-Up (2026-03-12)
+
+**Result:** Completed 4 follow-up items from the correspondence enrichment work (PRs #35–#37).
+
+**Changes:**
+| Item | Description |
+|------|-------------|
+| Case Journal case-scoped query | `CaseJournalPanel` now accepts optional `caseId` prop; uses `useCaseCorrespondence(caseId)` when available, falls back to `useCorrespondenceHistory(memberId)` |
+| act() warning fix | 9 act() warnings eliminated across RetirementApplication (6) and StaffPortal (1) tests by wrapping async assertions in `waitFor()` |
+| Docker E2E re-validation | Clean `docker compose down -v && up --build` + correspondence_e2e.sh — all 5 test suites passing |
+| BUILD_HISTORY.md | Added entries for PRs #35–#37 below |
+
+**Verification:** 262/262 frontend tests pass, 0 TS errors, 0 act() warnings, E2E suite green.
+
+---
+
+## Correspondence Enrichment — Tasks D+E, PR #37 (2026-03-12)
+
+**Result:** Migrated `caseId` from INTEGER to TEXT across full stack. Implemented `on_send_effects` execution in CorrespondencePanel (create_commitment, advance_stage notifications).
+
+**Changes:**
+- Migration 009: `ALTER COLUMN case_id TYPE TEXT` on correspondence_history + index
+- Seed 010: Associate existing correspondence with string case IDs (RET-2026-0001)
+- Go correspondence service: case_id parameter now TEXT in queries
+- Frontend: `useCorrespondenceSend` mutation executes `on_send_effects` after send — create_commitment (via CRM API), advance_stage (notification only)
+- `useCaseCorrespondence(caseId: string)` hook added for case-scoped queries
+- 12 new sendEffects unit tests
+
+**Verification:** 274 frontend tests (262 + 12 sendEffects), 17 Go tests, 0 TS errors.
+
+---
+
+## Correspondence Enrichment — Task C, PR #36 (2026-03-12)
+
+**Result:** Docker integration and E2E test suite for correspondence. Wired migrations 008/009 (stage_category enrichment) and 009/010 (caseId TEXT) into Docker Compose init sequence.
+
+**Changes:**
+- Docker Compose: 18 init scripts (schema + seed) in correct execution order
+- E2E test script: `tests/e2e/correspondence_e2e.sh` — 5 test suites, 27 assertions
+  - Schema verification (stage_category column)
+  - Letter generation with merge fields
+  - Correspondence → CRM bridge
+  - Stage-filtered template queries (6 stages)
+  - Case-scoped history (caseId TEXT filtering)
+
+**Verification:** All 5 E2E suites pass on clean Docker start.
+
+---
+
+## Correspondence Enrichment — Tasks A+B, PR #35 (2026-03-12)
+
+**Result:** Integrated correspondence across CRM, portals, and workflow. Stage-mapped templates, merge field auto-populate, CRM logging on send, and portal correspondence tabs.
+
+**Changes:**
+- Backend: `stage_category` + `on_send_effects` columns on `correspondence_template`
+- 9 stage-mapped templates (intake, verify-employment, eligibility, election, submit, dro)
+- `mergeFieldResolver.ts`: 30+ field auto-populate mappings from case context
+- Enhanced `CorrespondencePanel`: auto-populate merge fields, CRM interaction logging on send
+- Stage-triggered correspondence prompts after workflow advance (`stageCorrespondenceMapping.ts`)
+- Member Portal "Letters" tab, Employer Portal "Correspondence" tab
+- Case Journal correspondence tab (member-scoped)
+- `case_id` filtering added to correspondence history API
+
+**Verification:** 262 frontend tests, 17 Go tests, 0 TS errors.
+
+---
+
+## Tenant-Scoping for Case Management, PR #34 (2026-03-12)
+
+**Result:** Added tenant isolation to case management handlers and fixed test mock column mismatch from PR #30's `dro_id` migration.
+
+**Changes:**
+- Threaded `tenantID` from request headers into `GetCase`, `UpdateCase`, and `AdvanceStage` handlers
+- Added `GetCaseByID` for unscoped post-create re-fetch
+- Fixed test mocks: `caseCols` and `addCaseRow` helpers updated from 17→18 columns (adding `dro_id`)
+- Expanded test coverage for tenant isolation scenarios
+- Cleaned up `apiClient.ts` (21 lines removed)
+
+**Files changed (5):** `handlers.go`, `handlers_test.go`, `cases.go`, `cases_test.go` (casemanagement), `apiClient.ts`
+
+**Verification:** 52/52 casemanagement tests (32 handler + 20 db), 0 TS errors.
+
+---
+
 ## Frontend Polish + Send-Message E2E (2026-03-12)
 
 **Result:** Fixed NaN SVG warnings in 2 chart components, implemented bidirectional enum normalization in API client, fixed conversation auto-select bug in portals, verified send-message E2E.

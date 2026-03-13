@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useMember, useEmployment, useServiceCredit } from '@/hooks/useMember';
-import { useBenefitCalculation } from '@/hooks/useBenefitCalculation';
+import { useBenefitCalculation, useScenario } from '@/hooks/useBenefitCalculation';
 import { useCase, useAdvanceStage } from '@/hooks/useCaseManagement';
 import { composeStages, deriveCaseFlags } from '@/lib/workflowComposition';
 import { computeAdvanceSequence, computeInitialState } from '@/lib/stageMapping';
@@ -70,6 +70,24 @@ export default function RetirementApplication({
   const { data: caseData } = useCase(caseId);
   const advanceStageMutation = useAdvanceStage();
 
+  // Compute scenario comparison dates for early retirement cases.
+  // Compares current retirement date vs waiting 1–3 years.
+  const scenarioDates = useMemo(() => {
+    if (!retirementDate) return [];
+    const base = new Date(
+      retirementDate.includes('T') ? retirementDate : retirementDate + 'T00:00:00',
+    );
+    const dates = [retirementDate];
+    for (let y = 1; y <= 3; y++) {
+      const d = new Date(base);
+      d.setFullYear(d.getFullYear() + y);
+      dates.push(d.toISOString().slice(0, 10));
+    }
+    return dates;
+  }, [retirementDate]);
+
+  const { data: scenarioResult } = useScenario(memberId, scenarioDates);
+
   // Derive case flags and compose stages
   const flags = useMemo(
     () => deriveCaseFlags(member, calculation, svcCreditData, caseFlags),
@@ -91,6 +109,13 @@ export default function RetirementApplication({
   // Re-syncs when stage count changes (e.g., DRO flag resolves after calculation loads).
   useEffect(() => {
     if (!caseData || stages.length === 0) return;
+
+    // Bug 2 fix: Only sync when stages composition matches current flags.
+    // Prevents marking DRO stage as completed on non-DRO cases during the
+    // brief window where stale calculation data includes DRO but flags don't.
+    const stageHasDRO = stages.some((s) => s.id === 'dro');
+    if (stageHasDRO !== flags.hasDRO) return;
+
     const prev = syncedWith.current;
     if (!prev || prev.caseId !== caseId || prev.stageCount !== stages.length) {
       const initial = computeInitialState(caseData.stageIdx, stages, flags.hasDRO);
@@ -205,6 +230,31 @@ export default function RetirementApplication({
     };
   }, [calculation, svcCreditData]);
 
+  // Transform scenario API response into the shape ScenarioStage expects.
+  // Picks the best "wait" scenario: the first future date where Rule of N is met,
+  // or the last date if none meet it.
+  const scenarioData = useMemo(() => {
+    if (!scenarioResult?.scenarios || scenarioResult.scenarios.length < 2) return null;
+    const [, ...waitScenarios] = scenarioResult.scenarios; // skip current date
+    const best =
+      waitScenarios.find((s) => s.rule_of_n_met) || waitScenarios[waitScenarios.length - 1];
+    if (!best) return null;
+    const pctDiff =
+      best.monthly_benefit /
+      Math.max(benefitData.reducedBenefit || benefitData.monthlyBenefit || 1, 1);
+    return {
+      waitDate: new Date(best.retirement_date + 'T00:00:00').toLocaleDateString('en-US', {
+        month: 'short',
+        year: 'numeric',
+      }),
+      waitAge: best.age,
+      benefit: best.monthly_benefit,
+      multiplier: `${pctDiff.toFixed(1)}x`,
+      met: best.rule_of_n_met,
+      ruleSum: best.rule_of_n_sum,
+    };
+  }, [scenarioResult, benefitData]);
+
   const droData = useMemo(() => {
     if (!calculation?.dro?.has_dro) return null;
     return {
@@ -260,6 +310,7 @@ export default function RetirementApplication({
           return (
             <ScenarioStage
               currentBenefit={benefitData.reducedBenefit || benefitData.monthlyBenefit}
+              scenario={scenarioData}
               retirementDate={retirementDate}
             />
           );
@@ -290,6 +341,7 @@ export default function RetirementApplication({
       completed.size,
       stages.length,
       benefitData,
+      scenarioData,
       advance,
     ],
   );

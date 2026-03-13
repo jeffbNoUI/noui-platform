@@ -5,16 +5,11 @@ export interface EligibilityResult {
   tier: number;
   tier_source: string;
   vested: boolean;
-  is_vested?: boolean;
-  eligible_normal?: boolean;
   rule_of_n_sum: number;
-  rule_of_75_sum?: number;
-  rule_of_85_sum?: number;
   service_credit: ServiceCreditData;
   evaluations: RuleEvaluation[];
   best_eligible_type: string;
   reduction_pct: number;
-  reduction_percentage?: number;
   reduction_factor: number;
 }
 

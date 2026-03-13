@@ -15,7 +15,7 @@ interface MemberDashboardProps {
     flags?: string[],
     droId?: number,
   ) => void;
-  onChangeView: (mode: string) => void;
+  onChangeView: (mode: string, context?: { memberId?: number }) => void;
 }
 
 export default function MemberDashboard({
@@ -92,7 +92,7 @@ export default function MemberDashboard({
               </button>
             )}
             <button
-              onClick={() => onChangeView('crm')}
+              onClick={() => onChangeView('crm', { memberId })}
               className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 transition-colors"
             >
               Open CRM
