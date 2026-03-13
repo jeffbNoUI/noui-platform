@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useCommitments, useUpdateCommitment } from '@/hooks/useCRM';
 import type { Commitment, CommitmentStatus, CommitmentListParams } from '@/types/CRM';
+import CommitmentDetail from '@/components/detail/CommitmentDetail';
 
 interface CommitmentTrackerProps {
   contactId?: string;
@@ -85,6 +86,10 @@ export default function CommitmentTracker({ contactId, conversationId }: Commitm
 
   const [fulfillInput, setFulfillInput] = useState<Record<string, string>>({});
   const [expandedFulfill, setExpandedFulfill] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+  const [sourceRect, setSourceRect] = useState<DOMRect | null>(null);
+  const rowRefs = useRef<Map<number, HTMLLIElement>>(new Map());
 
   const commitments = data?.items ?? [];
 
@@ -102,6 +107,10 @@ export default function CommitmentTracker({ contactId, conversationId }: Commitm
     if (orderA !== orderB) return orderA - orderB;
     return new Date(a.targetDate).getTime() - new Date(b.targetDate).getTime();
   });
+
+  const filtered = search
+    ? sorted.filter((c) => c.description.toLowerCase().includes(search.toLowerCase()))
+    : sorted;
 
   const handleFulfill = (commitmentId: string) => {
     if (expandedFulfill !== commitmentId) {
@@ -165,6 +174,20 @@ export default function CommitmentTracker({ contactId, conversationId }: Commitm
               )}
             </p>
           </div>
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search commitments..."
+              className="rounded-md border border-gray-200 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            />
+            {search && (
+              <span className="text-xs text-gray-500">
+                {filtered.length} of {sorted.length}
+              </span>
+            )}
+          </div>
           {overdueCount > 0 && (
             <span className="flex items-center gap-1 rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-800">
               <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
@@ -181,11 +204,11 @@ export default function CommitmentTracker({ contactId, conversationId }: Commitm
       </div>
 
       <div className="px-6 py-4">
-        {sorted.length === 0 ? (
+        {filtered.length === 0 ? (
           <p className="text-center text-sm text-gray-500 py-4">No commitments recorded.</p>
         ) : (
           <ul className="space-y-3">
-            {sorted.map((commitment) => (
+            {filtered.map((commitment, idx) => (
               <CommitmentRow
                 key={commitment.commitmentId}
                 commitment={commitment}
@@ -197,11 +220,36 @@ export default function CommitmentTracker({ contactId, conversationId }: Commitm
                 onFulfill={() => handleFulfill(commitment.commitmentId)}
                 onCancel={() => handleCancel(commitment.commitmentId)}
                 isMutating={updateCommitment.isPending}
+                rowRef={(el) => {
+                  if (el) rowRefs.current.set(idx, el);
+                  else rowRefs.current.delete(idx);
+                }}
+                onClick={() => {
+                  const el = rowRefs.current.get(idx);
+                  if (el) {
+                    setSourceRect(el.getBoundingClientRect());
+                    setSelectedIdx(idx);
+                  }
+                }}
               />
             ))}
           </ul>
         )}
       </div>
+
+      {selectedIdx !== null && sourceRect && (
+        <CommitmentDetail
+          item={filtered[selectedIdx]}
+          sourceRect={sourceRect}
+          onClose={() => {
+            setSelectedIdx(null);
+            setSourceRect(null);
+          }}
+          items={filtered}
+          currentIndex={selectedIdx}
+          onNavigate={setSelectedIdx}
+        />
+      )}
     </div>
   );
 }
@@ -216,6 +264,8 @@ function CommitmentRow({
   onFulfill,
   onCancel,
   isMutating,
+  rowRef,
+  onClick,
 }: {
   commitment: Commitment;
   fulfillInput: string;
@@ -224,6 +274,8 @@ function CommitmentRow({
   onFulfill: () => void;
   onCancel: () => void;
   isMutating: boolean;
+  rowRef: (el: HTMLLIElement | null) => void;
+  onClick: () => void;
 }) {
   const badge = statusBadge[commitment.status] ?? {
     label: commitment.status,
@@ -234,7 +286,9 @@ function CommitmentRow({
 
   return (
     <li
-      className={`rounded-md border p-3 ${isTerminal ? 'border-gray-100 bg-gray-50' : 'border-gray-200'}`}
+      ref={rowRef}
+      onClick={onClick}
+      className={`cursor-pointer rounded-md border p-3 ${isTerminal ? 'border-gray-100 bg-gray-50' : 'border-gray-200'}`}
     >
       <div className="flex items-start justify-between">
         <div className="min-w-0 flex-1">
