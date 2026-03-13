@@ -1205,3 +1205,106 @@ func TestGetServiceCredit_AllCreditTypes(t *testing.T) {
 		t.Errorf("expected 4 credit records, got %d", len(body.Data.Credits))
 	}
 }
+
+// --- SearchMembers ---
+
+var searchCols = []string{"member_id", "first_name", "last_name", "tier_cd", "dept_name", "status_cd"}
+
+func TestSearchMembers_ByLastName(t *testing.T) {
+	h, mock := newMockHandler(t)
+
+	mock.ExpectQuery("SELECT").
+		WillReturnRows(sqlmock.NewRows(searchCols).
+			AddRow(10001, "Robert", "Martinez", 1, "Public Works", "ACTIVE"))
+
+	w := serveWithPathValue(h, "GET", "/api/v1/members/search?q=martinez&limit=10")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("SearchMembers status = %d, want %d\nbody: %s", w.Code, http.StatusOK, w.Body.String())
+	}
+
+	var body struct {
+		Data []models.MemberSearchResult `json:"data"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	if len(body.Data) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(body.Data))
+	}
+	if body.Data[0].MemberID != 10001 {
+		t.Errorf("MemberID = %d, want 10001", body.Data[0].MemberID)
+	}
+	if body.Data[0].LastName != "Martinez" {
+		t.Errorf("LastName = %q, want Martinez", body.Data[0].LastName)
+	}
+}
+
+func TestSearchMembers_ByMemberID(t *testing.T) {
+	h, mock := newMockHandler(t)
+
+	mock.ExpectQuery("SELECT").
+		WillReturnRows(sqlmock.NewRows(searchCols).
+			AddRow(10002, "Jennifer", "Kim", 2, "Finance", "ACTIVE"))
+
+	w := serveWithPathValue(h, "GET", "/api/v1/members/search?q=10002")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("SearchMembers(byID) status = %d, want %d", w.Code, http.StatusOK)
+	}
+
+	var body struct {
+		Data []models.MemberSearchResult `json:"data"`
+	}
+	json.Unmarshal(w.Body.Bytes(), &body)
+	if len(body.Data) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(body.Data))
+	}
+	if body.Data[0].MemberID != 10002 {
+		t.Errorf("MemberID = %d, want 10002", body.Data[0].MemberID)
+	}
+}
+
+func TestSearchMembers_EmptyQuery(t *testing.T) {
+	h, _ := newMockHandler(t)
+
+	w := serveWithPathValue(h, "GET", "/api/v1/members/search?q=")
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("SearchMembers(empty) status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestSearchMembers_NoResults(t *testing.T) {
+	h, mock := newMockHandler(t)
+
+	mock.ExpectQuery("SELECT").
+		WillReturnRows(sqlmock.NewRows(searchCols))
+
+	w := serveWithPathValue(h, "GET", "/api/v1/members/search?q=zzzznotfound")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("SearchMembers(no results) status = %d, want %d", w.Code, http.StatusOK)
+	}
+
+	var body struct {
+		Data []models.MemberSearchResult `json:"data"`
+	}
+	json.Unmarshal(w.Body.Bytes(), &body)
+	if len(body.Data) != 0 {
+		t.Errorf("expected 0 results, got %d", len(body.Data))
+	}
+}
+
+func TestSearchMembers_LimitCap(t *testing.T) {
+	h, mock := newMockHandler(t)
+
+	mock.ExpectQuery("SELECT").
+		WillReturnRows(sqlmock.NewRows(searchCols))
+
+	w := serveWithPathValue(h, "GET", "/api/v1/members/search?q=test&limit=100")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("SearchMembers(limit cap) status = %d, want %d", w.Code, http.StatusOK)
+	}
+}

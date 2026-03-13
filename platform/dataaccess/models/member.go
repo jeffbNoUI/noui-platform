@@ -28,15 +28,15 @@ type Member struct {
 
 // EmploymentEvent represents a single employment history record.
 type EmploymentEvent struct {
-	EventID       int        `json:"event_id"`
-	MemberID      int        `json:"member_id"`
-	EventType     string     `json:"event_type"`
-	EventDate     time.Time  `json:"event_date"`
-	DeptCode      string     `json:"dept_code,omitempty"`
-	PosCode       string     `json:"pos_code,omitempty"`
-	AnnualSalary  *float64   `json:"annual_salary,omitempty"`
-	SeparationCD  string     `json:"separation_code,omitempty"`
-	SeparationRsn string     `json:"separation_reason,omitempty"`
+	EventID       int       `json:"event_id"`
+	MemberID      int       `json:"member_id"`
+	EventType     string    `json:"event_type"`
+	EventDate     time.Time `json:"event_date"`
+	DeptCode      string    `json:"dept_code,omitempty"`
+	PosCode       string    `json:"pos_code,omitempty"`
+	AnnualSalary  *float64  `json:"annual_salary,omitempty"`
+	SeparationCD  string    `json:"separation_code,omitempty"`
+	SeparationRsn string    `json:"separation_reason,omitempty"`
 }
 
 // SalaryRecord represents a single pay period's salary data.
@@ -142,12 +142,22 @@ type ServiceCredit struct {
 
 // ServiceCreditSummary provides aggregated service credit information.
 type ServiceCreditSummary struct {
-	MemberID        int     `json:"member_id"`
-	EarnedYears     float64 `json:"earned_years"`
-	PurchasedYears  float64 `json:"purchased_years"`
-	MilitaryYears   float64 `json:"military_years"`
-	LeaveYears      float64 `json:"leave_years"`
-	TotalYears      float64 `json:"total_years"`
+	MemberID         int     `json:"member_id"`
+	EarnedYears      float64 `json:"earned_years"`
+	PurchasedYears   float64 `json:"purchased_years"`
+	MilitaryYears    float64 `json:"military_years"`
+	LeaveYears       float64 `json:"leave_years"`
+	TotalYears       float64 `json:"total_years"`
 	EligibilityYears float64 `json:"eligibility_years"` // Earned only — for Rule of 75/85, IPR
-	BenefitYears    float64 `json:"benefit_years"`      // Earned + purchased — for benefit formula
+	BenefitYears     float64 `json:"benefit_years"`     // Earned + purchased — for benefit formula
+}
+
+// MemberSearchResult is a lightweight type for search/autocomplete results.
+type MemberSearchResult struct {
+	MemberID  int    `json:"memberId"`
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
+	Tier      int    `json:"tier"`
+	Dept      string `json:"dept"`
+	Status    string `json:"status"`
 }

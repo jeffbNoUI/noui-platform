@@ -596,6 +596,38 @@ func TestCreateCase_NoFlags(t *testing.T) {
 
 // --- UpdateCase ---
 
+func TestListCases_WithStageFilter(t *testing.T) {
+	s, mock := newStore(t)
+
+	mock.ExpectQuery("SELECT COUNT").
+		WithArgs("tenant-1", "Eligibility Verification").
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+
+	dataRows := sqlmock.NewRows(caseCols)
+	addCaseRow(dataRows, "case-elig", 10001, 2, "Eligibility Verification")
+	mock.ExpectQuery("SELECT").
+		WithArgs("tenant-1", "Eligibility Verification", 25, 0).
+		WillReturnRows(dataRows)
+
+	mock.ExpectQuery("SELECT flag_code FROM case_flag").
+		WithArgs("case-elig").
+		WillReturnRows(sqlmock.NewRows([]string{"flag_code"}))
+
+	cases, total, err := s.ListCases("tenant-1", models.CaseFilter{Stage: "Eligibility Verification"})
+	if err != nil {
+		t.Fatalf("ListCases(stage) error: %v", err)
+	}
+	if total != 1 {
+		t.Errorf("total = %d, want 1", total)
+	}
+	if len(cases) != 1 {
+		t.Fatalf("len(cases) = %d, want 1", len(cases))
+	}
+	if cases[0].CurrentStage != "Eligibility Verification" {
+		t.Errorf("CurrentStage = %q, want Eligibility Verification", cases[0].CurrentStage)
+	}
+}
+
 func TestUpdateCase_NoChanges(t *testing.T) {
 	s, _ := newStore(t)
 

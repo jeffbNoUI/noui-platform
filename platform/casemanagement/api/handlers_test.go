@@ -1115,6 +1115,41 @@ func TestUpdateCase_EmptyBody(t *testing.T) {
 	}
 }
 
+func TestListCases_WithStageFilter_HTTP(t *testing.T) {
+	h, mock := newTestHandler(t)
+
+	mock.ExpectQuery("SELECT COUNT").
+		WithArgs(defaultTenantID, "Eligibility Verification").
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+
+	dataRows := sqlmock.NewRows(caseCols)
+	addCaseRow(dataRows, "case-elig", 10001, 2, "Eligibility Verification")
+	mock.ExpectQuery("SELECT").
+		WithArgs(defaultTenantID, "Eligibility Verification", 25, 0).
+		WillReturnRows(dataRows)
+
+	mock.ExpectQuery("SELECT flag_code FROM case_flag").
+		WithArgs("case-elig").
+		WillReturnRows(sqlmock.NewRows([]string{"flag_code"}))
+
+	w := serve(h, "GET", "/api/v1/cases?stage=Eligibility+Verification", nil)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("ListCases(stage) HTTP status = %d, want %d\nbody: %s",
+			w.Code, http.StatusOK, w.Body.String())
+	}
+
+	var body struct {
+		Data []models.RetirementCase `json:"data"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	if len(body.Data) != 1 {
+		t.Errorf("expected 1 case, got %d", len(body.Data))
+	}
+}
+
 func TestGetStageHistory_Empty(t *testing.T) {
 	h, mock := newTestHandler(t)
 
@@ -1142,5 +1177,113 @@ func TestGetStageHistory_Empty(t *testing.T) {
 	// Verify empty history returns empty array (not null)
 	if body.Data == nil {
 		t.Error("GetStageHistory(empty) returned nil, want empty slice")
+	}
+}
+
+// --- GetCaseStats ---
+
+func TestGetCaseStats_HTTP(t *testing.T) {
+	h, mock := newTestHandler(t)
+
+	// Query 1: CaseloadByStage
+	mock.ExpectQuery("SELECT current_stage, current_stage_idx, COUNT").
+		WithArgs(defaultTenantID).
+		WillReturnRows(sqlmock.NewRows([]string{"current_stage", "current_stage_idx", "count"}).
+			AddRow("Application Intake", 0, 2))
+
+	// Query 2: CasesByStatus
+	mock.ExpectQuery("SELECT status, COUNT").
+		WithArgs(defaultTenantID).
+		WillReturnRows(sqlmock.NewRows([]string{"status", "count"}).
+			AddRow("active", 3))
+
+	// Query 3: CasesByPriority
+	mock.ExpectQuery("SELECT priority, COUNT").
+		WithArgs(defaultTenantID).
+		WillReturnRows(sqlmock.NewRows([]string{"priority", "count"}).
+			AddRow("standard", 3))
+
+	// Query 4: CasesByAssignee
+	mock.ExpectQuery("SELECT").
+		WithArgs(defaultTenantID).
+		WillReturnRows(sqlmock.NewRows([]string{"assigned_to", "count", "avg_days_open"}).
+			AddRow("Sarah Chen", 2, 10.0))
+
+	// Query 5: Summary counts
+	mock.ExpectQuery("SELECT").
+		WithArgs(defaultTenantID).
+		WillReturnRows(sqlmock.NewRows([]string{"total_active", "completed_mtd", "at_risk_count"}).
+			AddRow(3, 0, 1))
+
+	w := serve(h, "GET", "/api/v1/cases/stats", nil)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GetCaseStats HTTP status = %d, want %d\nbody: %s", w.Code, http.StatusOK, w.Body.String())
+	}
+
+	var body struct {
+		Data models.CaseStats       `json:"data"`
+		Meta map[string]interface{} `json:"meta"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	if body.Data.TotalActive != 3 {
+		t.Errorf("TotalActive = %d, want 3", body.Data.TotalActive)
+	}
+	if len(body.Data.CaseloadByStage) != 1 {
+		t.Errorf("CaseloadByStage len = %d, want 1", len(body.Data.CaseloadByStage))
+	}
+	if body.Data.CaseloadByStage[0].Stage != "Application Intake" {
+		t.Errorf("stage[0] = %q, want Application Intake", body.Data.CaseloadByStage[0].Stage)
+	}
+	if body.Meta["requestId"] == nil || body.Meta["requestId"] == "" {
+		t.Error("meta.requestId should not be empty")
+	}
+}
+
+// --- GetSLAStats ---
+
+func TestGetSLAStats_HTTP(t *testing.T) {
+	h, mock := newTestHandler(t)
+
+	mock.ExpectQuery("SELECT").
+		WithArgs(defaultTenantID).
+		WillReturnRows(sqlmock.NewRows([]string{"on_track", "at_risk", "overdue", "avg_processing_days"}).
+			AddRow(2, 1, 1, 18.5))
+
+	w := serve(h, "GET", "/api/v1/cases/stats/sla", nil)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GetSLAStats HTTP status = %d, want %d\nbody: %s", w.Code, http.StatusOK, w.Body.String())
+	}
+
+	var body struct {
+		Data models.SLAStats        `json:"data"`
+		Meta map[string]interface{} `json:"meta"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	if body.Data.OnTrack != 2 {
+		t.Errorf("OnTrack = %d, want 2", body.Data.OnTrack)
+	}
+	if body.Data.AtRisk != 1 {
+		t.Errorf("AtRisk = %d, want 1", body.Data.AtRisk)
+	}
+	if body.Data.Overdue != 1 {
+		t.Errorf("Overdue = %d, want 1", body.Data.Overdue)
+	}
+	if body.Data.AvgProcessingDays != 18.5 {
+		t.Errorf("AvgProcessingDays = %f, want 18.5", body.Data.AvgProcessingDays)
+	}
+	if body.Data.Thresholds.Urgent != 6 {
+		t.Errorf("Thresholds.Urgent = %d, want 6", body.Data.Thresholds.Urgent)
+	}
+	if body.Data.Thresholds.High != 12 {
+		t.Errorf("Thresholds.High = %d, want 12", body.Data.Thresholds.High)
+	}
+	if body.Data.Thresholds.Standard != 18 {
+		t.Errorf("Thresholds.Standard = %d, want 18", body.Data.Thresholds.Standard)
 	}
 }
