@@ -1,4 +1,5 @@
-import { C, BODY } from '@/lib/designSystem';
+import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { C, BODY, MONO } from '@/lib/designSystem';
 
 export interface ContributionDataPoint {
   year: string;
@@ -12,59 +13,68 @@ interface Props {
   height?: number;
 }
 
-export default function ContributionBars({ data, width = 280, height = 140 }: Props) {
-  const pL = 4,
-    pR = 4,
-    pB = 20,
-    pT = 4;
-  const w = width - pL - pR,
-    h = height - pT - pB;
-  const rawMax = data.length > 0 ? Math.max(...data.map((d) => d.employee + d.employer)) : 0;
-  const max = rawMax > 0 ? rawMax : 1;
-  const barW = (w / data.length) * 0.65;
-  const gap = (w / data.length) * 0.35;
+function CustomTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div
+      style={{
+        background: C.cardBg,
+        border: `1px solid ${C.borderLight}`,
+        borderRadius: 8,
+        padding: '8px 12px',
+        fontFamily: BODY,
+        fontSize: 12,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+      }}
+    >
+      <div style={{ color: C.textTertiary, marginBottom: 4 }}>{label}</div>
+      {payload.map((entry: any) => (
+        <div key={entry.dataKey} style={{ color: entry.color, fontWeight: 500, fontFamily: MONO }}>
+          {entry.name}: ${entry.value.toLocaleString()}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default function ContributionBars({ data, height = 140 }: Props) {
+  if (data.length === 0) {
+    return (
+      <div
+        style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        className="text-xs text-gray-400"
+      >
+        No contribution data
+      </div>
+    );
+  }
 
   return (
-    <svg width="100%" viewBox={`0 0 ${width} ${height}`}>
-      {data.map((d, i) => {
-        const total = d.employee + d.employer;
-        const totalH = (total / max) * h;
-        const empH = (d.employee / max) * h;
-        const x = pL + i * (barW + gap) + gap / 2;
-        return (
-          <g key={i}>
-            <rect
-              x={x}
-              y={pT + h - totalH}
-              width={barW}
-              height={totalH - empH}
-              rx="4"
-              ry="4"
-              fill={C.sage}
-              opacity="0.7"
-            />
-            <rect
-              x={x}
-              y={pT + h - empH}
-              width={barW}
-              height={empH}
-              rx="0"
-              fill={C.gold}
-              opacity="0.7"
-            />
-            <text
-              x={x + barW / 2}
-              y={height - 4}
-              textAnchor="middle"
-              fontSize="9"
-              fill={C.textTertiary}
-              fontFamily={BODY}
-            >
-              {d.year}
-            </text>
-          </g>
-        );
-      })}
-    </svg>
+    <ResponsiveContainer width="100%" height={height}>
+      <BarChart data={data} margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
+        <XAxis
+          dataKey="year"
+          tick={{ fontSize: 9, fill: C.textTertiary, fontFamily: BODY }}
+          axisLine={false}
+          tickLine={false}
+        />
+        <Tooltip content={<CustomTooltip />} cursor={{ fill: C.borderLight, opacity: 0.3 }} />
+        <Bar
+          dataKey="employer"
+          name="Employer"
+          stackId="contributions"
+          fill={C.sage}
+          fillOpacity={0.7}
+          radius={[4, 4, 0, 0]}
+        />
+        <Bar
+          dataKey="employee"
+          name="Employee"
+          stackId="contributions"
+          fill={C.gold}
+          fillOpacity={0.7}
+        />
+      </BarChart>
+    </ResponsiveContainer>
   );
 }
