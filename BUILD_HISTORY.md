@@ -1,5 +1,40 @@
 # noui-platform — Build History
 
+## Data Quality Dashboard + Recharts Migration — Session 6 (2026-03-13)
+
+**Branch:** `claude/xenodochial-herschel`
+**Goal:** Add DQ visualization charts (score trend, category breakdown) to DataQualityPanel, write tests for existing DQ components, and migrate all hand-rolled SVG charts to Recharts.
+
+**What was built:**
+- Installed Recharts as the standard charting library for the frontend
+- `DQScoreTrendChart` — AreaChart with sage gradient fill, coral 95% reference line, custom tooltip
+- `DQCategoryChart` — Horizontal BarChart with per-category colors (sage/sky/gold), capitalize labels
+- Wired both charts into `DataQualityPanel` (trend between KPI cards and checks, category below)
+- Migrated `BenefitProjectionChart` from hand-rolled SVG to Recharts AreaChart (3 gradient series)
+- Migrated `ContributionBars` from hand-rolled SVG to Recharts stacked BarChart (employer/employee)
+- RingGauge left as raw SVG (radial gauge not a Recharts pattern)
+
+**New files (6):**
+- `frontend/src/components/admin/DQScoreTrendChart.tsx`
+- `frontend/src/components/admin/DQCategoryChart.tsx`
+- `frontend/src/components/admin/__tests__/DQScoreTrendChart.test.tsx` (4 tests)
+- `frontend/src/components/admin/__tests__/DQCategoryChart.test.tsx` (3 tests)
+- `frontend/src/components/admin/__tests__/DataQualityPanel.test.tsx` (10 tests)
+- `frontend/src/components/dashboard/__tests__/DataQualityCard.test.tsx` (6 tests, rewritten)
+
+**Modified files (5):**
+- `frontend/src/components/admin/DataQualityPanel.tsx` — imports + chart wiring
+- `frontend/src/components/portal/BenefitProjectionChart.tsx` — Recharts migration
+- `frontend/src/components/portal/ContributionBars.tsx` — Recharts migration
+- `frontend/src/components/portal/__tests__/BenefitProjectionChart.test.tsx` — Recharts test updates
+- `frontend/src/components/portal/__tests__/ContributionBars.test.tsx` — Recharts test updates
+
+**Tests:** 327 → 334 (+7 net new: 4 trend, 3 category, 10 panel, 6 card = 23 new tests, 16 replaced)
+**Design system:** All charts use "Institutional Warmth" palette (sage, coral, gold, sky) from `designSystem.ts`
+**Recharts jsdom note:** ResponsiveContainer renders at 0 width in jsdom — tests check container presence, not SVG text content
+
+---
+
 ## Dashboard Aggregation API + Member Search — Session 2 of Production Foundations (2026-03-13)
 
 **PR:** #50 (merged)
