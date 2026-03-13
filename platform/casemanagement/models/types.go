@@ -25,6 +25,8 @@ type RetirementCase struct {
 	DaysOpen        int       `json:"daysOpen"`
 	Status          string    `json:"status"`
 	DROID           *int      `json:"droId,omitempty"`
+	SLATargetDays   int       `json:"slaTargetDays"`
+	SLADeadlineAt   time.Time `json:"slaDeadlineAt"`
 	Flags           []string  `json:"flags"`
 	CreatedAt       time.Time `json:"createdAt"`
 	UpdatedAt       time.Time `json:"updatedAt"`
@@ -89,4 +91,49 @@ type UpdateCaseRequest struct {
 type AdvanceStageRequest struct {
 	TransitionedBy string `json:"transitionedBy"`
 	Note           string `json:"note,omitempty"`
+}
+
+// CaseNote is a note attached to a case.
+type CaseNote struct {
+	ID        int       `json:"id"`
+	CaseID    string    `json:"caseId"`
+	Author    string    `json:"author"`
+	Content   string    `json:"content"`
+	Category  string    `json:"category"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+// CreateNoteRequest is the JSON body for creating a case note.
+type CreateNoteRequest struct {
+	Author   string `json:"author"`
+	Content  string `json:"content"`
+	Category string `json:"category"`
+}
+
+// CaseDocument is document metadata attached to a case.
+type CaseDocument struct {
+	ID           int       `json:"id"`
+	CaseID       string    `json:"caseId"`
+	DocumentType string    `json:"documentType"`
+	Filename     string    `json:"filename"`
+	MimeType     string    `json:"mimeType"`
+	SizeBytes    int       `json:"sizeBytes"`
+	UploadedBy   string    `json:"uploadedBy"`
+	UploadedAt   time.Time `json:"uploadedAt"`
+}
+
+// CreateDocumentRequest is the JSON body for recording document metadata.
+type CreateDocumentRequest struct {
+	DocumentType string `json:"documentType"`
+	Filename     string `json:"filename"`
+	MimeType     string `json:"mimeType"`
+	SizeBytes    int    `json:"sizeBytes"`
+	UploadedBy   string `json:"uploadedBy"`
+}
+
+// CaseDetail extends RetirementCase with note and document counts.
+type CaseDetail struct {
+	RetirementCase
+	NoteCount     int `json:"noteCount"`
+	DocumentCount int `json:"documentCount"`
 }
