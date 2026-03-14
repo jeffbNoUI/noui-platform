@@ -1,5 +1,34 @@
 # noui-platform — Build History
 
+## Docker Rebuild + E2E Dashboard Verification — Session 8 (2026-03-14)
+
+**Branch:** `claude/adoring-nobel`
+**Goal:** Rebuild Docker images with Session 7 (PR #52) code, verify dashboards and member search render live API data end-to-end.
+
+**What was done:**
+- Repository cleanup: removed 5 stale worktrees, 7 merged local branches, 11 merged remote branches, killed 4 orphaned Node processes
+- Docker rebuild: stopped stale `noui-platform` stack (12hrs old, missing stats/SLA/search endpoints), rebuilt all 9 images, fresh `docker compose up`
+- Backend smoke tests: all 4 new endpoints returning valid JSON via direct port and nginx proxy
+- Frontend E2E: verified SupervisorDashboard, ExecutiveDashboard, and MemberSearch with live data — zero console errors, zero network failures
+
+**E2E Results:**
+| View | Verified |
+|------|----------|
+| SupervisorDashboard | KPIs (6 active, 0 at-risk), Caseload by Stage (6 stages × 1 case), Team Performance table, Pending Approvals (0) |
+| ExecutiveDashboard | On-Time Rate 100.0%, Avg Processing 13.4d, SLA Health Breakdown stacked bar, DQ 8 open / 98.6% score |
+| MemberSearch | "Martinez" → Robert Martinez (10001, T1, Public Works), dropdown with keyboard nav |
+
+**Repository state after cleanup:**
+- Branches: 2 (main + claude/adoring-nobel)
+- Remote branches: 1 (origin/main)
+- Worktrees: 2 (main + adoring-nobel)
+- 7 empty directory shells remain locked by Windows processes (clear on reboot)
+
+**Tests:** 355 frontend (unchanged), TypeScript clean, all Go services healthy
+**No code changes required** — full integration worked on first attempt after rebuild.
+
+---
+
 ## Data Quality Dashboard + Recharts Migration — Session 6 (2026-03-13)
 
 **Branch:** `claude/xenodochial-herschel`
