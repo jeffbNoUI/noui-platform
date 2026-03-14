@@ -8,100 +8,102 @@
 INSERT INTO retirement_case (
     case_id, member_id, case_type, retirement_date,
     priority, sla_status, current_stage, current_stage_idx,
-    assigned_to, days_open, status, dro_id, created_at, updated_at
+    assigned_to, days_open, status, dro_id,
+    sla_target_days, created_at, updated_at, sla_deadline_at
 ) VALUES
 
 -- === ON-TRACK cases (7) ===
+-- sla_deadline_at = created_at + sla_target_days
 
 -- Maria Santos — Stage 0 (Application Intake), standard, fresh intake
 (
     'RET-2026-0201', 10006, 'RET', '2026-07-01',
     'standard', 'on-track', 'Application Intake', 0,
     'Michael Torres', 2, 'active', NULL,
-    NOW() - INTERVAL '2 days', NOW() - INTERVAL '1 day'
+    90, NOW() - INTERVAL '2 days', NOW() - INTERVAL '1 day', NOW() - INTERVAL '2 days' + INTERVAL '90 days'
 ),
 -- James Wilson — Stage 1 (Document Verification), standard
 (
     'RET-2026-0202', 10007, 'RET', '2026-08-01',
     'standard', 'on-track', 'Document Verification', 1,
     'Lisa Park', 5, 'active', NULL,
-    NOW() - INTERVAL '5 days', NOW() - INTERVAL '2 days'
+    90, NOW() - INTERVAL '5 days', NOW() - INTERVAL '2 days', NOW() - INTERVAL '5 days' + INTERVAL '90 days'
 ),
 -- Lisa Park member — Stage 2 (Eligibility Review), low priority
 (
     'RET-2026-0203', 10008, 'RET', '2026-09-01',
     'low', 'on-track', 'Eligibility Review', 2,
     'James Wilson', 8, 'active', NULL,
-    NOW() - INTERVAL '8 days', NOW() - INTERVAL '3 days'
+    120, NOW() - INTERVAL '8 days', NOW() - INTERVAL '3 days', NOW() - INTERVAL '8 days' + INTERVAL '120 days'
 ),
 -- Angela Davis — Stage 4 (Benefit Calculation), high priority
 (
     'RET-2026-0204', 10010, 'RET', '2026-06-01',
     'high', 'on-track', 'Benefit Calculation', 4,
     'Sarah Chen', 15, 'active', NULL,
-    NOW() - INTERVAL '15 days', NOW() - INTERVAL '2 days'
+    60, NOW() - INTERVAL '15 days', NOW() - INTERVAL '2 days', NOW() - INTERVAL '15 days' + INTERVAL '60 days'
 ),
 -- Richard Chen — Stage 0 (Application Intake), standard, brand new
 (
     'RET-2026-0205', 10011, 'RET', '2026-10-01',
     'standard', 'on-track', 'Application Intake', 0,
     'Michael Torres', 1, 'active', NULL,
-    NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'
+    90, NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day' + INTERVAL '90 days'
 ),
 -- Patricia Moore — Stage 5 (Election Recording), standard
 (
     'RET-2026-0206', 10012, 'RET', '2026-06-01',
     'standard', 'on-track', 'Election Recording', 5,
     'Lisa Park', 20, 'active', NULL,
-    NOW() - INTERVAL '20 days', NOW() - INTERVAL '1 day'
+    90, NOW() - INTERVAL '20 days', NOW() - INTERVAL '1 day', NOW() - INTERVAL '20 days' + INTERVAL '90 days'
 ),
 -- Maria Santos DRO — Stage 3 (Marital Share Calculation), high priority
 (
     'DRO-2026-0032', 10006, 'DRO', '2026-07-01',
     'high', 'on-track', 'Marital Share Calculation', 3,
     'Sarah Chen', 10, 'active', NULL,
-    NOW() - INTERVAL '10 days', NOW() - INTERVAL '2 days'
+    60, NOW() - INTERVAL '10 days', NOW() - INTERVAL '2 days', NOW() - INTERVAL '10 days' + INTERVAL '60 days'
 ),
 
 -- === AT-RISK cases (3) ===
 
--- Thomas O'Brien — Stage 2, high priority, been open 52 days
+-- Thomas O'Brien — Stage 2, high priority, been open 52 days (60d SLA)
 (
     'RET-2026-0207', 10009, 'RET', '2026-06-01',
     'high', 'at-risk', 'Eligibility Review', 2,
     'James Wilson', 52, 'active', NULL,
-    NOW() - INTERVAL '52 days', NOW() - INTERVAL '3 days'
+    60, NOW() - INTERVAL '52 days', NOW() - INTERVAL '3 days', NOW() - INTERVAL '52 days' + INTERVAL '60 days'
 ),
--- Angela Davis — Stage 6 (Certification), urgent, close to deadline
+-- Angela Davis — Stage 6 (Certification), urgent, close to deadline (30d SLA)
 (
     'RET-2026-0208', 10010, 'RET', '2026-05-01',
     'urgent', 'at-risk', 'Certification', 6,
     'Michael Torres', 25, 'active', NULL,
-    NOW() - INTERVAL '25 days', NOW() - INTERVAL '1 day'
+    30, NOW() - INTERVAL '25 days', NOW() - INTERVAL '1 day', NOW() - INTERVAL '25 days' + INTERVAL '30 days'
 ),
--- Patricia Moore — Stage 6 (Certification), standard but very slow
+-- Patricia Moore — Stage 6 (Certification), standard but very slow (90d SLA, 78d open)
 (
     'RET-2026-0209', 10012, 'RET', '2026-04-01',
     'standard', 'at-risk', 'Certification', 6,
     'Lisa Park', 78, 'active', NULL,
-    NOW() - INTERVAL '78 days', NOW() - INTERVAL '5 days'
+    90, NOW() - INTERVAL '78 days', NOW() - INTERVAL '5 days', NOW() - INTERVAL '78 days' + INTERVAL '90 days'
 ),
 
 -- === OVERDUE cases (2) ===
 
--- James Wilson — Stage 1, urgent, stuck at document verification
+-- James Wilson — Stage 1, urgent, stuck at document verification (30d SLA, 35d open)
 (
     'RET-2026-0210', 10007, 'RET', '2026-05-01',
     'urgent', 'urgent', 'Document Verification', 1,
     'Sarah Chen', 35, 'active', NULL,
-    NOW() - INTERVAL '35 days', NOW() - INTERVAL '10 days'
+    30, NOW() - INTERVAL '35 days', NOW() - INTERVAL '10 days', NOW() - INTERVAL '35 days' + INTERVAL '30 days'
 ),
--- Richard Chen — Stage 4, low priority, severely overdue
+-- Richard Chen — Stage 4, low priority, severely overdue (120d SLA, 95d open)
 (
     'RET-2026-0211', 10011, 'RET', '2026-04-01',
     'low', 'urgent', 'Benefit Calculation', 4,
     'James Wilson', 95, 'active', NULL,
-    NOW() - INTERVAL '95 days', NOW() - INTERVAL '8 days'
+    120, NOW() - INTERVAL '95 days', NOW() - INTERVAL '8 days', NOW() - INTERVAL '95 days' + INTERVAL '120 days'
 )
 ON CONFLICT (case_id) DO NOTHING;
 
@@ -189,18 +191,7 @@ INSERT INTO case_stage_history (case_id, from_stage_idx, to_stage_idx, from_stag
 
 
 -- ============================================================
--- 4. SLA updates for new cases
--- ============================================================
-UPDATE retirement_case SET sla_target_days = 30  WHERE priority = 'urgent'   AND sla_target_days IS NULL;
-UPDATE retirement_case SET sla_target_days = 60  WHERE priority = 'high'     AND sla_target_days IS NULL;
-UPDATE retirement_case SET sla_target_days = 90  WHERE priority = 'standard' AND sla_target_days IS NULL;
-UPDATE retirement_case SET sla_target_days = 120 WHERE priority = 'low'      AND sla_target_days IS NULL;
-UPDATE retirement_case SET sla_deadline_at = created_at + (sla_target_days || ' days')::INTERVAL
-WHERE sla_deadline_at IS NULL;
-
-
--- ============================================================
--- 5. Case notes (8 notes across new cases)
+-- 4. Case notes (8 notes across new cases)
 -- ============================================================
 INSERT INTO case_note (case_id, author, content, category, created_at) VALUES
 -- Maria Santos intake
