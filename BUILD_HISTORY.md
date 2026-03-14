@@ -1,5 +1,55 @@
 # noui-platform — Build History
 
+## Seed Data Expansion + Demo Richness — Session 9 (2026-03-14)
+
+**Branch:** `claude/cool-bardeen`
+**Goal:** Expand demo data from 3 members / 6 cases to 12 members / 18 cases for realistic dashboard population.
+
+**What was built:**
+- 7 new members (10006–10012) with full history: employment, salary, contributions, service credit, beneficiaries
+- 12 new retirement cases with multi-stage, multi-priority, multi-assignee distribution
+- 7 CRM contacts + 7 conversations + 18 interactions for new members
+- Docker init sequence extended with 3 new seed files (023–025)
+
+**New files (3):**
+- `domains/pension/seed/013_expanded_members.sql` — 7 members across 5 departments, 3 tiers
+- `domains/pension/seed/014_expanded_cases.sql` — 12 cases with SLA variation (NOW()-based dates)
+- `domains/pension/seed/015_expanded_crm.sql` — CRM contacts + interactions for new members
+
+**Modified files (1):**
+- `docker-compose.yml` — 3 new volume mounts for expanded seeds
+
+**Member distribution:**
+| ID | Name | Tier | Dept | Status | Notable |
+|----|------|------|------|--------|---------|
+| 10006 | Maria Santos | 1 | Fire | A | Married, 28yr service |
+| 10007 | James Wilson | 2 | Human Svc | A | Purchased service (2yr) |
+| 10008 | Lisa Park | 3 | Tech Svc | A | Early career, 11yr |
+| 10009 | Thomas O'Brien | 1 | Police | T | Terminated, deferred vested |
+| 10010 | Angela Davis | 2 | Aviation | A | Near tier boundary |
+| 10011 | Richard Chen | 3 | Water | A | Married |
+| 10012 | Patricia Moore | 1 | City Atty | A | Leave-payout eligible |
+
+**Case distribution (18 total):**
+- Priority: standard (8), high (4), urgent (3), low (3)
+- SLA: on-track (14), at-risk (3), overdue (1)
+- Assignees: Sarah Chen (9), James Wilson (3), Lisa Park (3), Michael Torres (3)
+- Stages: 2-3 per stage across all 7 stages
+
+**E2E verification:**
+- Member search: 11+ results for query "a" (12 total members)
+- Case stats: 18 active cases, 4 at-risk, all 7 stages populated
+- SLA stats: on-track 14, at-risk 3, overdue 1, avg 23.9 days
+- Docker: 25 init scripts, zero SQL errors, all 9 services healthy
+
+**Issues encountered + fixed:**
+1. Member ID conflict: `008_additional_seed.sql` already used IDs 10004-10005 — shifted new members to 10006-10012
+2. `sla_deadline_at` NOT NULL constraint — migration 011 makes it NOT NULL after backfill, so new inserts must provide it inline
+
+**Tests:** 355 frontend (unchanged), TypeScript clean, all Go services healthy
+
+---
+
 ## Docker Rebuild + E2E Dashboard Verification — Session 8 (2026-03-14)
 
 **Branch:** `claude/adoring-nobel`
