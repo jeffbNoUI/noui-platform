@@ -1,5 +1,5 @@
 -- =============================================================================
--- Expanded CRM Seed Data — Members 10004–10010
+-- Expanded CRM Seed Data — Members 10006–10012
 -- NoUI Platform — CRM contacts, conversations, and interactions
 -- =============================================================================
 -- Extends 003_crm_seed.sql with 7 new member contacts, 7 conversations,
@@ -32,11 +32,11 @@ INSERT INTO crm_contact (
     email_deliverable, email_validated_at, phone_validated_at,
     created_at, updated_at, created_by, updated_by
 ) VALUES
--- Maria Santos (10004) — Active Tier 1 member, prefers phone
+-- Maria Santos (10006) — Active Tier 1 member, prefers phone
 (
     '00000000-0000-0000-1000-000000000006',
     '00000000-0000-0000-0000-000000000001',
-    'MEMBER', '10004',
+    'MEMBER', '10006',
     'Maria', 'Santos', '1965-07-20', 'F',
     'msantos@example.com', '303-555-0404', 'HOME',
     'en', 'PHONE',
@@ -45,11 +45,11 @@ INSERT INTO crm_contact (
     TRUE, '2026-02-10 09:55:00-07', '2026-02-10 09:58:00-07',
     '2026-01-01 08:00:00-07', '2026-02-10 10:00:00-07', 'system_import', 'mtorres'
 ),
--- James Wilson (10005) — Active Tier 2 member, prefers email
+-- James Wilson (10007) — Active Tier 2 member, prefers email
 (
     '00000000-0000-0000-1000-000000000007',
     '00000000-0000-0000-0000-000000000001',
-    'MEMBER', '10005',
+    'MEMBER', '10007',
     'James', 'Wilson', '1972-04-03', 'M',
     'jwilson@example.com', '303-555-0505', 'CELL',
     'en', 'EMAIL',
@@ -58,11 +58,11 @@ INSERT INTO crm_contact (
     TRUE, '2026-01-15 14:15:00-07', '2026-01-15 14:18:00-07',
     '2026-01-01 08:00:00-07', '2026-01-15 14:20:00-07', 'system_import', 'lpark'
 ),
--- Lisa Park member (10006) — Active Tier 3 member, prefers secure message
+-- Lisa Park member (10008) — Active Tier 3 member, prefers secure message
 (
     '00000000-0000-0000-1000-000000000008',
     '00000000-0000-0000-0000-000000000001',
-    'MEMBER', '10006',
+    'MEMBER', '10008',
     'Lisa', 'Park', '1988-12-05', 'F',
     'lpark_member@example.com', '720-555-0606', 'CELL',
     'en', 'SECURE_MESSAGE',
@@ -71,11 +71,11 @@ INSERT INTO crm_contact (
     TRUE, '2026-02-01 11:25:00-07', '2026-02-01 11:28:00-07',
     '2026-01-01 08:00:00-07', '2026-02-01 11:30:00-07', 'system_import', 'jwilson_staff'
 ),
--- Thomas O'Brien (10007) — Terminated member, no email, prefers mail
+-- Thomas O'Brien (10009) — Terminated member, no email, prefers mail
 (
     '00000000-0000-0000-1000-000000000009',
     '00000000-0000-0000-0000-000000000001',
-    'MEMBER', '10007',
+    'MEMBER', '10009',
     'Thomas', 'O''Brien', '1968-01-15', 'M',
     NULL, '303-555-0707', 'HOME',
     'en', 'MAIL',
@@ -84,11 +84,11 @@ INSERT INTO crm_contact (
     NULL, NULL, '2026-01-05 10:00:00-07',
     '2026-01-01 08:00:00-07', '2026-01-05 10:00:00-07', 'system_import', 'system_import'
 ),
--- Angela Davis (10008) — Active Tier 2 member, prefers email
+-- Angela Davis (10010) — Active Tier 2 member, prefers email
 (
     '00000000-0000-0000-1000-000000000010',
     '00000000-0000-0000-0000-000000000001',
-    'MEMBER', '10008',
+    'MEMBER', '10010',
     'Angela', 'Davis', '1975-05-28', 'F',
     'adavis@example.com', '720-555-0808', 'CELL',
     'en', 'EMAIL',
@@ -97,11 +97,11 @@ INSERT INTO crm_contact (
     TRUE, '2026-02-20 09:10:00-07', '2026-02-20 09:13:00-07',
     '2026-01-01 08:00:00-07', '2026-02-20 09:15:00-07', 'system_import', 'schen'
 ),
--- Richard Chen (10009) — Active Tier 3 member, prefers secure message
+-- Richard Chen (10011) — Active Tier 3 member, prefers secure message
 (
     '00000000-0000-0000-1000-000000000011',
     '00000000-0000-0000-0000-000000000001',
-    'MEMBER', '10009',
+    'MEMBER', '10011',
     'Richard', 'Chen', '1980-09-12', 'M',
     'rchen@example.com', '720-555-0909', 'CELL',
     'en', 'SECURE_MESSAGE',
@@ -110,11 +110,11 @@ INSERT INTO crm_contact (
     TRUE, '2026-01-28 15:40:00-07', '2026-01-28 15:43:00-07',
     '2026-01-01 08:00:00-07', '2026-01-28 15:45:00-07', 'system_import', 'mtorres'
 ),
--- Patricia Moore (10010) — Active Tier 1 member, prefers phone
+-- Patricia Moore (10012) — Active Tier 1 member, prefers phone
 (
     '00000000-0000-0000-1000-000000000012',
     '00000000-0000-0000-0000-000000000001',
-    'MEMBER', '10010',
+    'MEMBER', '10012',
     'Patricia', 'Moore', '1966-11-30', 'F',
     'pmoore@example.com', '303-555-1010', 'HOME',
     'en', 'PHONE',
@@ -143,7 +143,7 @@ INSERT INTO crm_conversation (
 (
     '00000000-0000-0000-6000-000000000007',
     '00000000-0000-0000-0000-000000000001',
-    'MEMBER', '10004',
+    'MEMBER', '10006',
     'Benefits', 'Retirement',
     'Maria Santos — Retirement estimate and payment option inquiry',
     'OPEN', NULL, NULL, NULL,
@@ -156,7 +156,7 @@ INSERT INTO crm_conversation (
 (
     '00000000-0000-0000-6000-000000000008',
     '00000000-0000-0000-0000-000000000001',
-    'MEMBER', '10005',
+    'MEMBER', '10007',
     'Benefits', 'Service Credit',
     'James Wilson — Service credit purchase inquiry for prior state employment',
     'OPEN', NULL, NULL, NULL,
@@ -169,7 +169,7 @@ INSERT INTO crm_conversation (
 (
     '00000000-0000-0000-6000-000000000009',
     '00000000-0000-0000-0000-000000000001',
-    'MEMBER', '10006',
+    'MEMBER', '10008',
     'Account', 'Beneficiary Update',
     'Lisa Park — Beneficiary designation update after marriage',
     'OPEN', NULL, NULL, NULL,
@@ -181,7 +181,7 @@ INSERT INTO crm_conversation (
 (
     '00000000-0000-0000-6000-000000000010',
     '00000000-0000-0000-0000-000000000001',
-    'MEMBER', '10007',
+    'MEMBER', '10009',
     'Benefits', 'Retirement',
     'Thomas O''Brien — Contribution refund status after termination',
     'PENDING', NULL, NULL, NULL,
@@ -194,7 +194,7 @@ INSERT INTO crm_conversation (
 (
     '00000000-0000-0000-6000-000000000011',
     '00000000-0000-0000-0000-000000000001',
-    'MEMBER', '10008',
+    'MEMBER', '10010',
     'Benefits', 'Retirement',
     'Angela Davis — Early retirement eligibility and reduction factor inquiry',
     'OPEN', NULL, NULL, NULL,
@@ -207,7 +207,7 @@ INSERT INTO crm_conversation (
 (
     '00000000-0000-0000-6000-000000000012',
     '00000000-0000-0000-0000-000000000001',
-    'MEMBER', '10009',
+    'MEMBER', '10011',
     'Contributions', 'Member Inquiry',
     'Richard Chen — Contribution history and account balance inquiry',
     'OPEN', NULL, NULL, NULL,
@@ -219,7 +219,7 @@ INSERT INTO crm_conversation (
 (
     '00000000-0000-0000-6000-000000000013',
     '00000000-0000-0000-0000-000000000001',
-    'MEMBER', '10010',
+    'MEMBER', '10012',
     'Benefits', 'Retirement',
     'Patricia Moore — Retirement application and benefit estimate follow-up',
     'OPEN', NULL, NULL, NULL,
@@ -248,7 +248,7 @@ INSERT INTO crm_interaction (
     created_at, created_by
 ) VALUES
 
--- ---- Maria Santos (10004): 3 interactions ----
+-- ---- Maria Santos (10006): 3 interactions ----
 
 -- 14. Maria called about retirement estimate
 (
@@ -296,7 +296,7 @@ INSERT INTO crm_interaction (
     '2026-02-28 14:00:00-07', 'mtorres'
 ),
 
--- ---- James Wilson (10005): 3 interactions ----
+-- ---- James Wilson (10007): 3 interactions ----
 
 -- 17. James called about purchased service credit
 (
@@ -344,7 +344,7 @@ INSERT INTO crm_interaction (
     '2026-02-20 10:45:00-07', 'lpark'
 ),
 
--- ---- Lisa Park member (10006): 2 interactions ----
+-- ---- Lisa Park member (10008): 2 interactions ----
 
 -- 20. Lisa sent portal message about beneficiary update
 (
@@ -377,7 +377,7 @@ INSERT INTO crm_interaction (
     '2026-02-05 09:30:00-07', 'jwilson_staff'
 ),
 
--- ---- Thomas O'Brien (10007): 2 interactions ----
+-- ---- Thomas O'Brien (10009): 2 interactions ----
 
 -- 22. Refund status letter mailed to Thomas
 (
@@ -410,7 +410,7 @@ INSERT INTO crm_interaction (
     '2026-01-20 13:58:00-07', 'schen'
 ),
 
--- ---- Angela Davis (10008): 3 interactions ----
+-- ---- Angela Davis (10010): 3 interactions ----
 
 -- 24. Angela walked in to office for early retirement consultation
 (
@@ -458,7 +458,7 @@ INSERT INTO crm_interaction (
     '2026-03-05 10:58:00-07', 'schen'
 ),
 
--- ---- Richard Chen (10009): 2 interactions ----
+-- ---- Richard Chen (10011): 2 interactions ----
 
 -- 27. Richard sent portal message about contribution history
 (
@@ -491,7 +491,7 @@ INSERT INTO crm_interaction (
     '2026-02-10 10:18:00-07', 'mtorres'
 ),
 
--- ---- Patricia Moore (10010): 3 interactions ----
+-- ---- Patricia Moore (10012): 3 interactions ----
 
 -- 29. Patricia called about retirement application
 (

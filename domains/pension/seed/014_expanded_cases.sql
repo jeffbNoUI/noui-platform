@@ -15,49 +15,49 @@ INSERT INTO retirement_case (
 
 -- Maria Santos — Stage 0 (Application Intake), standard, fresh intake
 (
-    'RET-2026-0201', 10004, 'RET', '2026-07-01',
+    'RET-2026-0201', 10006, 'RET', '2026-07-01',
     'standard', 'on-track', 'Application Intake', 0,
     'Michael Torres', 2, 'active', NULL,
     NOW() - INTERVAL '2 days', NOW() - INTERVAL '1 day'
 ),
 -- James Wilson — Stage 1 (Document Verification), standard
 (
-    'RET-2026-0202', 10005, 'RET', '2026-08-01',
+    'RET-2026-0202', 10007, 'RET', '2026-08-01',
     'standard', 'on-track', 'Document Verification', 1,
     'Lisa Park', 5, 'active', NULL,
     NOW() - INTERVAL '5 days', NOW() - INTERVAL '2 days'
 ),
 -- Lisa Park member — Stage 2 (Eligibility Review), low priority
 (
-    'RET-2026-0203', 10006, 'RET', '2026-09-01',
+    'RET-2026-0203', 10008, 'RET', '2026-09-01',
     'low', 'on-track', 'Eligibility Review', 2,
     'James Wilson', 8, 'active', NULL,
     NOW() - INTERVAL '8 days', NOW() - INTERVAL '3 days'
 ),
 -- Angela Davis — Stage 4 (Benefit Calculation), high priority
 (
-    'RET-2026-0204', 10008, 'RET', '2026-06-01',
+    'RET-2026-0204', 10010, 'RET', '2026-06-01',
     'high', 'on-track', 'Benefit Calculation', 4,
     'Sarah Chen', 15, 'active', NULL,
     NOW() - INTERVAL '15 days', NOW() - INTERVAL '2 days'
 ),
 -- Richard Chen — Stage 0 (Application Intake), standard, brand new
 (
-    'RET-2026-0205', 10009, 'RET', '2026-10-01',
+    'RET-2026-0205', 10011, 'RET', '2026-10-01',
     'standard', 'on-track', 'Application Intake', 0,
     'Michael Torres', 1, 'active', NULL,
     NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'
 ),
 -- Patricia Moore — Stage 5 (Election Recording), standard
 (
-    'RET-2026-0206', 10010, 'RET', '2026-06-01',
+    'RET-2026-0206', 10012, 'RET', '2026-06-01',
     'standard', 'on-track', 'Election Recording', 5,
     'Lisa Park', 20, 'active', NULL,
     NOW() - INTERVAL '20 days', NOW() - INTERVAL '1 day'
 ),
 -- Maria Santos DRO — Stage 3 (Marital Share Calculation), high priority
 (
-    'DRO-2026-0032', 10004, 'DRO', '2026-07-01',
+    'DRO-2026-0032', 10006, 'DRO', '2026-07-01',
     'high', 'on-track', 'Marital Share Calculation', 3,
     'Sarah Chen', 10, 'active', NULL,
     NOW() - INTERVAL '10 days', NOW() - INTERVAL '2 days'
@@ -67,21 +67,21 @@ INSERT INTO retirement_case (
 
 -- Thomas O'Brien — Stage 2, high priority, been open 52 days
 (
-    'RET-2026-0207', 10007, 'RET', '2026-06-01',
+    'RET-2026-0207', 10009, 'RET', '2026-06-01',
     'high', 'at-risk', 'Eligibility Review', 2,
     'James Wilson', 52, 'active', NULL,
     NOW() - INTERVAL '52 days', NOW() - INTERVAL '3 days'
 ),
 -- Angela Davis — Stage 6 (Certification), urgent, close to deadline
 (
-    'RET-2026-0208', 10008, 'RET', '2026-05-01',
+    'RET-2026-0208', 10010, 'RET', '2026-05-01',
     'urgent', 'at-risk', 'Certification', 6,
     'Michael Torres', 25, 'active', NULL,
     NOW() - INTERVAL '25 days', NOW() - INTERVAL '1 day'
 ),
 -- Patricia Moore — Stage 6 (Certification), standard but very slow
 (
-    'RET-2026-0209', 10010, 'RET', '2026-04-01',
+    'RET-2026-0209', 10012, 'RET', '2026-04-01',
     'standard', 'at-risk', 'Certification', 6,
     'Lisa Park', 78, 'active', NULL,
     NOW() - INTERVAL '78 days', NOW() - INTERVAL '5 days'
@@ -91,14 +91,14 @@ INSERT INTO retirement_case (
 
 -- James Wilson — Stage 1, urgent, stuck at document verification
 (
-    'RET-2026-0210', 10005, 'RET', '2026-05-01',
+    'RET-2026-0210', 10007, 'RET', '2026-05-01',
     'urgent', 'urgent', 'Document Verification', 1,
     'Sarah Chen', 35, 'active', NULL,
     NOW() - INTERVAL '35 days', NOW() - INTERVAL '10 days'
 ),
 -- Richard Chen — Stage 4, low priority, severely overdue
 (
-    'RET-2026-0211', 10009, 'RET', '2026-04-01',
+    'RET-2026-0211', 10011, 'RET', '2026-04-01',
     'low', 'urgent', 'Benefit Calculation', 4,
     'James Wilson', 95, 'active', NULL,
     NOW() - INTERVAL '95 days', NOW() - INTERVAL '8 days'
