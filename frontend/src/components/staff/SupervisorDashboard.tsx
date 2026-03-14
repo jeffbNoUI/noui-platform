@@ -12,48 +12,29 @@ const STAGE_COLORS: Record<string, string> = {
   'Final Certification': 'bg-iw-navy',
 };
 
-const TEAM_MEMBERS = [
-  {
-    name: 'Sarah Chen',
-    cases: 4,
-    proficiency: 'Expert' as const,
-    avgDays: 6.2,
-    efficiency: 94,
-    signal: 'Expert — high efficiency',
-  },
-  {
-    name: 'Michael Torres',
-    cases: 6,
-    proficiency: 'Assisted' as const,
-    avgDays: 8.5,
-    efficiency: 82,
-    signal: 'Ready for Expert',
-  },
-  {
-    name: 'Lisa Park',
-    cases: 3,
-    proficiency: 'Guided' as const,
-    avgDays: 12.1,
-    efficiency: 68,
-    signal: 'On track',
-  },
-  {
-    name: 'James Wilson',
-    cases: 5,
-    proficiency: 'Assisted' as const,
-    avgDays: 7.8,
-    efficiency: 87,
-    signal: 'Near Expert threshold',
-  },
-  {
-    name: 'Amanda Roberts',
-    cases: 2,
-    proficiency: 'Guided' as const,
-    avgDays: 15.3,
-    efficiency: 55,
-    signal: 'Needs mentoring',
-  },
-];
+// SLA target baseline for efficiency calculation (standard priority = 90 days)
+const SLA_BASELINE_DAYS = 90;
+
+function computeEfficiency(avgDaysOpen: number): number {
+  // Efficiency = how far under the SLA baseline the analyst averages
+  // 0 days = 100%, SLA_BASELINE_DAYS = 0%, capped at [0, 100]
+  const eff = Math.round(Math.max(0, Math.min(100, (1 - avgDaysOpen / SLA_BASELINE_DAYS) * 100)));
+  return eff;
+}
+
+function deriveProficiency(efficiency: number): 'Expert' | 'Assisted' | 'Guided' {
+  if (efficiency >= 90) return 'Expert';
+  if (efficiency >= 70) return 'Assisted';
+  return 'Guided';
+}
+
+function deriveSignal(proficiency: 'Expert' | 'Assisted' | 'Guided', efficiency: number): string {
+  if (proficiency === 'Expert') return 'Expert — high efficiency';
+  if (proficiency === 'Assisted' && efficiency >= 85) return 'Near Expert threshold';
+  if (proficiency === 'Assisted') return 'Ready for Expert';
+  if (efficiency >= 55) return 'On track';
+  return 'Needs mentoring';
+}
 
 const PROFICIENCY_STYLES = {
   Guided: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -71,6 +52,20 @@ export default function SupervisorDashboard() {
   const atRisk = stats?.atRiskCount ?? 0;
   const caseloadByStage = stats?.caseloadByStage ?? [];
   const maxStageCount = Math.max(1, ...caseloadByStage.map((s) => s.count));
+
+  // Derive team performance from live assignee stats
+  const teamMembers = (stats?.casesByAssignee ?? []).map((a) => {
+    const efficiency = computeEfficiency(a.avgDaysOpen);
+    const proficiency = deriveProficiency(efficiency);
+    return {
+      name: a.assignedTo,
+      cases: a.count,
+      proficiency,
+      avgDays: Math.round(a.avgDaysOpen * 10) / 10,
+      efficiency,
+      signal: deriveSignal(proficiency, efficiency),
+    };
+  });
 
   // Approval queue: cases at certification stage
   const approvalQueue = certCases.slice(0, 10);
@@ -127,52 +122,68 @@ export default function SupervisorDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {TEAM_MEMBERS.map((tm) => (
-                  <tr key={tm.name} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-iw-sageLight flex items-center justify-center text-xs font-bold text-iw-sage">
-                          {tm.name
-                            .split(' ')
-                            .map((n) => n[0])
-                            .join('')}
+                {statsLoading ? (
+                  Array.from({ length: 3 }, (_, i) => (
+                    <tr key={i} className="border-b border-gray-100">
+                      <td className="px-4 py-3" colSpan={6}>
+                        <div className="h-5 bg-gray-200 rounded animate-pulse" />
+                      </td>
+                    </tr>
+                  ))
+                ) : teamMembers.length > 0 ? (
+                  teamMembers.map((tm) => (
+                    <tr key={tm.name} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-iw-sageLight flex items-center justify-center text-xs font-bold text-iw-sage">
+                            {tm.name
+                              .split(' ')
+                              .map((n) => n[0])
+                              .join('')}
+                          </div>
+                          <span className="text-sm font-medium text-gray-900">{tm.name}</span>
                         </div>
-                        <span className="text-sm font-medium text-gray-900">{tm.name}</span>
-                      </div>
-                    </td>
-                    <td className="text-center px-3 py-3 text-sm font-mono text-gray-700">
-                      {tm.cases}
-                    </td>
-                    <td className="text-center px-3 py-3">
-                      <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${PROFICIENCY_STYLES[tm.proficiency]}`}
-                      >
-                        {tm.proficiency}
-                      </span>
-                    </td>
-                    <td className="text-center px-3 py-3 text-sm font-mono text-gray-700">
-                      {tm.avgDays}
-                    </td>
-                    <td className="px-3 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all ${
-                              tm.efficiency >= 90
-                                ? 'bg-emerald-400'
-                                : tm.efficiency >= 70
-                                  ? 'bg-amber-400'
-                                  : 'bg-red-400'
-                            }`}
-                            style={{ width: `${tm.efficiency}%` }}
-                          />
+                      </td>
+                      <td className="text-center px-3 py-3 text-sm font-mono text-gray-700">
+                        {tm.cases}
+                      </td>
+                      <td className="text-center px-3 py-3">
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${PROFICIENCY_STYLES[tm.proficiency]}`}
+                        >
+                          {tm.proficiency}
+                        </span>
+                      </td>
+                      <td className="text-center px-3 py-3 text-sm font-mono text-gray-700">
+                        {tm.avgDays}
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${
+                                tm.efficiency >= 90
+                                  ? 'bg-emerald-400'
+                                  : tm.efficiency >= 70
+                                    ? 'bg-amber-400'
+                                    : 'bg-red-400'
+                              }`}
+                              style={{ width: `${tm.efficiency}%` }}
+                            />
+                          </div>
+                          <span className="text-xs text-gray-500 font-mono">{tm.efficiency}%</span>
                         </div>
-                        <span className="text-xs text-gray-500 font-mono">{tm.efficiency}%</span>
-                      </div>
+                      </td>
+                      <td className="px-3 py-3 text-xs text-gray-500 italic">{tm.signal}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-6 text-center text-xs text-gray-400">
+                      No team data available
                     </td>
-                    <td className="px-3 py-3 text-xs text-gray-500 italic">{tm.signal}</td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>

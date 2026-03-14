@@ -1,6 +1,9 @@
 package db
 
 import (
+	"strconv"
+	"time"
+
 	"github.com/noui/platform/casemanagement/models"
 )
 
@@ -115,6 +118,55 @@ func (s *Store) GetCaseStats(tenantID string) (*models.CaseStats, error) {
 	}
 
 	return stats, nil
+}
+
+// GetVolumeStats returns monthly case creation counts for the last N months.
+func (s *Store) GetVolumeStats(tenantID string, months int) (*models.VolumeStats, error) {
+	if months <= 0 {
+		months = 6
+	}
+
+	rows, err := s.DB.Query(
+		`SELECT DATE_TRUNC('month', created_at) AS m, COUNT(*)
+		 FROM retirement_case
+		 WHERE tenant_id = $1
+		   AND created_at >= DATE_TRUNC('month', NOW()) - ($2 || ' months')::INTERVAL
+		 GROUP BY m
+		 ORDER BY m`, tenantID, strconv.Itoa(months-1))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Collect raw results keyed by "YYYY-MM"
+	raw := map[string]int{}
+	for rows.Next() {
+		var t time.Time
+		var count int
+		if err := rows.Scan(&t, &count); err != nil {
+			return nil, err
+		}
+		raw[t.Format("2006-01")] = count
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Build contiguous month list (fills gaps with 0)
+	now := time.Now().UTC()
+	result := &models.VolumeStats{Months: make([]models.MonthlyVolume, 0, months)}
+	for i := months - 1; i >= 0; i-- {
+		t := now.AddDate(0, -i, 0)
+		key := t.Format("2006-01")
+		count := raw[key]
+		result.Months = append(result.Months, models.MonthlyVolume{
+			Month: t.Format("Jan"),
+			Year:  t.Year(),
+			Count: count,
+		})
+	}
+
+	return result, nil
 }
 
 // GetSLAStats returns SLA health metrics for active cases in a tenant.

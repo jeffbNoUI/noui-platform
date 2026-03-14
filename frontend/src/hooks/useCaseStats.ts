@@ -4,7 +4,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { caseAPI } from '@/lib/caseApi';
-import type { CaseStats, SLAStats } from '@/types/Case';
+import type { CaseStats, SLAStats, VolumeStats } from '@/types/Case';
 
 export function useCaseStats() {
   return useQuery<CaseStats>({
@@ -19,5 +19,13 @@ export function useSLAStats() {
     queryKey: ['cases', 'stats', 'sla'],
     queryFn: () => caseAPI.getSLAStats(),
     staleTime: 30 * 1000,
+  });
+}
+
+export function useVolumeStats(months = 6) {
+  return useQuery<VolumeStats>({
+    queryKey: ['cases', 'stats', 'volume', months],
+    queryFn: () => caseAPI.getVolumeStats(months),
+    staleTime: 60 * 1000,
   });
 }

@@ -119,3 +119,13 @@ export interface SLAStats {
   avgProcessingDays: number;
   thresholds: SLAThresholds;
 }
+
+export interface MonthlyVolume {
+  month: string; // "Jan", "Feb", etc.
+  year: number;
+  count: number;
+}
+
+export interface VolumeStats {
+  months: MonthlyVolume[];
+}

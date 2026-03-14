@@ -146,11 +146,22 @@ describe('SupervisorDashboard', () => {
     expect(screen.getByText('No cases pending approval')).toBeInTheDocument();
   });
 
-  it('renders static team performance table', () => {
+  it('renders team performance table from live assignee data', () => {
     renderWithProviders(<SupervisorDashboard />);
 
     expect(screen.getByText('Team Performance')).toBeInTheDocument();
-    expect(screen.getByText('Sarah Chen')).toBeInTheDocument();
-    expect(screen.getByText('Expert')).toBeInTheDocument();
+    // Sarah Chen (4 cases, 6.2 avg days → ~93% efficiency → Expert)
+    expect(screen.getAllByText('Sarah Chen').length).toBeGreaterThanOrEqual(1);
+    // Michael Torres (6 cases, 8.5 avg days → ~91% efficiency → Expert)
+    expect(screen.getByText('Michael Torres')).toBeInTheDocument();
+    // Both should show Expert proficiency (avgDays < 9 → efficiency > 90%)
+    expect(screen.getAllByText('Expert').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('shows empty team table when no assignee data', () => {
+    mockStatsData = { ...mockStats, casesByAssignee: [] };
+    renderWithProviders(<SupervisorDashboard />);
+
+    expect(screen.getByText('No team data available')).toBeInTheDocument();
   });
 });
