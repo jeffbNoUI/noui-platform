@@ -22,7 +22,12 @@ export function useStages() {
   });
 }
 
-export function useCases(params?: { status?: string; priority?: string; assignedTo?: string }) {
+export function useCases(params?: {
+  status?: string;
+  priority?: string;
+  assignedTo?: string;
+  stage?: string;
+}) {
   return useQuery<RetirementCase[]>({
     queryKey: ['cases', 'list', params],
     queryFn: async () => {

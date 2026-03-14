@@ -11,6 +11,8 @@ import type {
   CreateCaseRequest,
   UpdateCaseRequest,
   AdvanceStageRequest,
+  CaseStats,
+  SLAStats,
 } from '@/types/Case';
 
 const CASE_URL = import.meta.env.VITE_CASE_URL || '/api';
@@ -22,10 +24,17 @@ export const caseAPI = {
 
   // ── Cases ───────────────────────────────────────────────────────────────
 
+  // ── Stats ──────────────────────────────────────────────────────────────
+  getCaseStats: () => fetchAPI<CaseStats>(`${CASE_URL}/v1/cases/stats`),
+  getSLAStats: () => fetchAPI<SLAStats>(`${CASE_URL}/v1/cases/stats/sla`),
+
+  // ── Cases ───────────────────────────────────────────────────────────────
+
   listCases: (params?: {
     status?: string;
     priority?: string;
     assignedTo?: string;
+    stage?: string;
     memberId?: number;
     limit?: number;
     offset?: number;
@@ -35,6 +44,7 @@ export const caseAPI = {
         status: params?.status,
         priority: params?.priority,
         assigned_to: params?.assignedTo,
+        stage: params?.stage,
         member_id: params?.memberId,
         limit: params?.limit,
         offset: params?.offset,
