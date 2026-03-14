@@ -33,6 +33,9 @@ services:
       - ./domains/pension/schema/011_case_enrichment.sql:/docker-entrypoint-initdb.d/020_case_enrichment.sql
       - ./domains/pension/seed/011_case_enrichment_seed.sql:/docker-entrypoint-initdb.d/021_case_enrichment_seed.sql
       - ./domains/pension/schema/012_member_search_index.sql:/docker-entrypoint-initdb.d/022_member_search_index.sql
+      - ./domains/pension/seed/013_expanded_members.sql:/docker-entrypoint-initdb.d/023_expanded_members.sql
+      - ./domains/pension/seed/014_expanded_cases.sql:/docker-entrypoint-initdb.d/024_expanded_cases.sql
+      - ./domains/pension/seed/015_expanded_crm.sql:/docker-entrypoint-initdb.d/025_expanded_crm.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U derp"]
       interval: 5s
