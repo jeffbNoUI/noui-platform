@@ -70,3 +70,52 @@ export interface AdvanceStageRequest {
   transitionedBy: string;
   note?: string;
 }
+
+// ─── Dashboard Stats Types ────────────────────────────────────────────────────
+// Matches Go models in platform/casemanagement/models/types.go.
+
+export interface StageCaseCount {
+  stage: string;
+  stageIdx: number;
+  count: number;
+}
+
+export interface StatusCount {
+  status: string;
+  count: number;
+}
+
+export interface PriorityCount {
+  priority: string;
+  count: number;
+}
+
+export interface AssigneeStats {
+  assignedTo: string;
+  count: number;
+  avgDaysOpen: number;
+}
+
+export interface CaseStats {
+  totalActive: number;
+  completedMTD: number;
+  atRiskCount: number;
+  caseloadByStage: StageCaseCount[];
+  casesByStatus: StatusCount[];
+  casesByPriority: PriorityCount[];
+  casesByAssignee: AssigneeStats[];
+}
+
+export interface SLAThresholds {
+  urgent: number;
+  high: number;
+  standard: number;
+}
+
+export interface SLAStats {
+  onTrack: number;
+  atRisk: number;
+  overdue: number;
+  avgProcessingDays: number;
+  thresholds: SLAThresholds;
+}

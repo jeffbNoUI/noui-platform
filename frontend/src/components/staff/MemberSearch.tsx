@@ -1,21 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-
-interface SearchResult {
-  memberId: number;
-  name: string;
-  tier: number;
-  dept: string;
-  status: string;
-}
-
-const DEMO_MEMBERS: SearchResult[] = [
-  { memberId: 10001, name: 'Robert Martinez', tier: 1, dept: 'Public Works', status: 'Active' },
-  { memberId: 10002, name: 'Jennifer Kim', tier: 2, dept: 'Finance', status: 'Active' },
-  { memberId: 10003, name: 'David Washington', tier: 3, dept: 'Parks & Rec', status: 'Active' },
-  { memberId: 10004, name: 'Maria Gonzalez', tier: 1, dept: 'Human Services', status: 'Active' },
-  { memberId: 10005, name: 'Thomas Anderson', tier: 2, dept: 'IT', status: 'Active' },
-  { memberId: 10006, name: 'Patricia Williams', tier: 1, dept: 'Administration', status: 'Retired' },
-];
+import { useMemberSearch } from '@/hooks/useMemberSearch';
 
 const TIER_STYLES: Record<number, string> = {
   1: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -28,20 +12,11 @@ interface MemberSearchProps {
 }
 
 export default function MemberSearch({ onSelect }: MemberSearchProps) {
-  const [query, setQuery] = useState('');
+  const { query, setQuery, results, loading } = useMemberSearch();
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const results = query.length > 0
-    ? DEMO_MEMBERS.filter(
-        (m) =>
-          m.name.toLowerCase().includes(query.toLowerCase()) ||
-          m.memberId.toString().includes(query) ||
-          m.dept.toLowerCase().includes(query.toLowerCase())
-      )
-    : [];
 
   useEffect(() => {
     setSelectedIdx(0);
@@ -49,8 +24,12 @@ export default function MemberSearch({ onSelect }: MemberSearchProps) {
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node) &&
-          inputRef.current && !inputRef.current.contains(e.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node) &&
+        inputRef.current &&
+        !inputRef.current.contains(e.target as Node)
+      ) {
         setShowDropdown(false);
       }
     };
@@ -89,9 +68,12 @@ export default function MemberSearch({ onSelect }: MemberSearchProps) {
           }}
           onFocus={() => query.length > 0 && setShowDropdown(true)}
           onKeyDown={handleKeyDown}
-          placeholder="Search by name, member ID, SSN, or department..."
+          placeholder="Search by name, member ID, or department..."
           className="flex-1 text-sm outline-none bg-transparent text-gray-900 placeholder:text-gray-400"
         />
+        {loading && (
+          <div className="w-4 h-4 border-2 border-gray-300 border-t-iw-sage rounded-full animate-spin" />
+        )}
       </div>
 
       {/* Dropdown results */}
@@ -100,44 +82,55 @@ export default function MemberSearch({ onSelect }: MemberSearchProps) {
           ref={dropdownRef}
           className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg border border-gray-200 shadow-lg z-30 overflow-hidden"
         >
-          {results.map((r, i) => (
-            <button
-              key={r.memberId}
-              onClick={() => {
-                onSelect(r.memberId);
-                setShowDropdown(false);
-                setQuery('');
-              }}
-              onMouseEnter={() => setSelectedIdx(i)}
-              className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors ${
-                i === selectedIdx ? 'bg-iw-sageLight/50' : 'hover:bg-gray-50'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${TIER_STYLES[r.tier]}`}>
-                  T{r.tier}
-                </span>
-                <div>
-                  <div className="text-sm font-medium text-gray-900">{r.name}</div>
-                  <div className="text-xs text-gray-500">ID: {r.memberId} · {r.dept}</div>
+          {results.map((r, i) => {
+            const fullName = `${r.firstName} ${r.lastName}`;
+            return (
+              <button
+                key={r.memberId}
+                onClick={() => {
+                  onSelect(r.memberId);
+                  setShowDropdown(false);
+                  setQuery('');
+                }}
+                onMouseEnter={() => setSelectedIdx(i)}
+                className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors ${
+                  i === selectedIdx ? 'bg-iw-sageLight/50' : 'hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${TIER_STYLES[r.tier] ?? 'bg-gray-50 text-gray-700 border-gray-200'}`}
+                  >
+                    T{r.tier}
+                  </span>
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">{fullName}</div>
+                    <div className="text-xs text-gray-500">
+                      ID: {r.memberId} · {r.dept}
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                r.status === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'
-              }`}>
-                {r.status}
-              </span>
-            </button>
-          ))}
+                <span
+                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                    r.status === 'Active'
+                      ? 'bg-emerald-50 text-emerald-700'
+                      : 'bg-gray-100 text-gray-500'
+                  }`}
+                >
+                  {r.status}
+                </span>
+              </button>
+            );
+          })}
           <div className="px-4 py-2 border-t border-gray-100 text-[10px] text-gray-400">
             {results.length} result{results.length !== 1 ? 's' : ''} · ↑↓ navigate · ↵ select
           </div>
         </div>
       )}
 
-      {showDropdown && query.length > 0 && results.length === 0 && (
+      {showDropdown && query.length > 0 && !loading && results.length === 0 && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg border border-gray-200 shadow-lg z-30 px-4 py-6 text-center text-sm text-gray-400">
-          No members found matching "{query}"
+          No members found matching &ldquo;{query}&rdquo;
         </div>
       )}
     </div>
