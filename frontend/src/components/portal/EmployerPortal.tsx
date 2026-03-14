@@ -48,72 +48,6 @@ interface EmployerPortalProps {
 
 type PortalTab = 'communications' | 'reporting' | 'enrollment' | 'correspondence';
 
-// ── Demo contribution reporting data ────────────────────────────────────────
-const DEMO_REPORTING_PERIODS = [
-  {
-    period: 'January 2026',
-    dueDate: '2026-02-15',
-    status: 'submitted',
-    members: 142,
-    eeTotal: 48230.5,
-    erTotal: 72345.75,
-    submittedDate: '2026-02-12',
-  },
-  {
-    period: 'December 2025',
-    dueDate: '2026-01-15',
-    status: 'accepted',
-    members: 140,
-    eeTotal: 47890.0,
-    erTotal: 71835.0,
-    submittedDate: '2025-01-10',
-  },
-  {
-    period: 'November 2025',
-    dueDate: '2025-12-15',
-    status: 'accepted',
-    members: 140,
-    eeTotal: 47890.0,
-    erTotal: 71835.0,
-    submittedDate: '2025-12-08',
-  },
-  {
-    period: 'October 2025',
-    dueDate: '2025-11-15',
-    status: 'accepted',
-    members: 139,
-    eeTotal: 47560.25,
-    erTotal: 71340.38,
-    submittedDate: '2025-11-14',
-  },
-  {
-    period: 'September 2025',
-    dueDate: '2025-10-15',
-    status: 'accepted',
-    members: 138,
-    eeTotal: 47120.0,
-    erTotal: 70680.0,
-    submittedDate: '2025-10-11',
-  },
-  {
-    period: 'August 2025',
-    dueDate: '2025-09-15',
-    status: 'accepted',
-    members: 138,
-    eeTotal: 47120.0,
-    erTotal: 70680.0,
-    submittedDate: '2025-09-09',
-  },
-];
-
-const REPORT_STATUS_STYLES: Record<string, { bg: string; text: string; label: string }> = {
-  draft: { bg: '#F1F5F9', text: '#64748B', label: 'Draft' },
-  submitted: { bg: '#DBEAFE', text: '#1E40AF', label: 'Submitted' },
-  accepted: { bg: '#ECFDF5', text: '#059669', label: 'Accepted' },
-  rejected: { bg: '#FEF2F2', text: '#DC2626', label: 'Rejected' },
-  overdue: { bg: '#FEF2F2', text: '#DC2626', label: 'Overdue' },
-};
-
 export default function EmployerPortal({ onChangeView }: EmployerPortalProps) {
   const [selectedOrgId, setSelectedOrgId] = useState('');
   const [selectedConvId, setSelectedConvId] = useState('');
@@ -402,196 +336,71 @@ export default function EmployerPortal({ onChangeView }: EmployerPortalProps) {
       <div style={{ maxWidth: 1320, margin: '0 auto', padding: '24px 32px 60px' }}>
         {/* ── REPORTING TAB ── */}
         {activeTab === 'reporting' && (
-          <div>
-            {/* Stats row */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: 400,
+              background: EC.cardBg,
+              border: `1px solid ${EC.border}`,
+              borderRadius: 12,
+              padding: 48,
+              textAlign: 'center',
+            }}
+          >
             <div
               style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(4, 1fr)',
-                gap: 16,
+                width: 64,
+                height: 64,
+                borderRadius: 16,
+                background: EC.accentLight,
+                border: `1px solid ${EC.border}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 28,
+                marginBottom: 20,
+              }}
+            >
+              {'\ud83d\udcca'}
+            </div>
+            <h2
+              style={{
+                fontFamily: DISPLAY,
+                fontSize: 22,
+                fontWeight: 700,
+                color: EC.navy,
+                marginBottom: 8,
+              }}
+            >
+              Contribution Reporting
+            </h2>
+            <p
+              style={{
+                fontSize: 14,
+                color: EC.textSecondary,
+                maxWidth: 420,
+                lineHeight: 1.6,
                 marginBottom: 24,
               }}
             >
-              {[
-                { label: 'Current Period', value: 'Feb 2026', sub: 'Due Mar 15, 2026' },
-                {
-                  label: 'Active Members',
-                  value: String(org?.memberCount ?? 142),
-                  sub: 'Eligible for contributions',
-                },
-                { label: 'YTD Employee', value: '$96,120.50', sub: '2 periods reported' },
-                { label: 'YTD Employer', value: '$144,181', sub: '2 periods reported' },
-              ].map((s) => (
-                <div
-                  key={s.label}
-                  style={{
-                    background: EC.cardBg,
-                    border: `1px solid ${EC.border}`,
-                    borderRadius: 12,
-                    padding: 20,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 11,
-                      color: EC.textTertiary,
-                      textTransform: 'uppercase' as const,
-                      letterSpacing: '0.5px',
-                      fontWeight: 600,
-                    }}
-                  >
-                    {s.label}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 22,
-                      fontWeight: 700,
-                      color: EC.navy,
-                      fontFamily: DISPLAY,
-                      marginTop: 4,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {s.value}
-                  </div>
-                  <div style={{ fontSize: 12, color: EC.textSecondary, marginTop: 2 }}>{s.sub}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Actions bar */}
+              Online contribution reporting is coming soon. You will be able to submit, track, and
+              review contribution reports directly from this portal.
+            </p>
             <div
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: 16,
-              }}
-            >
-              <h2 style={{ fontFamily: DISPLAY, fontSize: 18, fontWeight: 600, color: EC.navy }}>
-                Contribution Reports
-              </h2>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  style={{
-                    padding: '8px 16px',
-                    borderRadius: 8,
-                    border: `1px solid ${EC.border}`,
-                    background: EC.cardBg,
-                    color: EC.accent,
-                    fontSize: 13,
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                    fontFamily: BODY,
-                  }}
-                >
-                  Download Template
-                </button>
-                <button
-                  style={{
-                    padding: '8px 16px',
-                    borderRadius: 8,
-                    border: 'none',
-                    background: EC.navy,
-                    color: '#fff',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    fontFamily: BODY,
-                  }}
-                >
-                  Submit New Report
-                </button>
-              </div>
-            </div>
-
-            {/* Reports table */}
-            <div
-              style={{
-                background: EC.cardBg,
+                padding: '8px 20px',
+                borderRadius: 20,
+                background: EC.accentLight,
                 border: `1px solid ${EC.border}`,
-                borderRadius: 12,
-                overflow: 'hidden',
+                color: EC.accent,
+                fontSize: 12,
+                fontWeight: 600,
               }}
             >
-              {/* Header */}
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '2fr 1.5fr 1fr 1.5fr 1.5fr 1.5fr 1fr',
-                  gap: 8,
-                  padding: '12px 20px',
-                  background: '#F8FAFC',
-                  borderBottom: `1px solid ${EC.border}`,
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: EC.textTertiary,
-                  textTransform: 'uppercase' as const,
-                  letterSpacing: '0.5px',
-                }}
-              >
-                <div>Period</div>
-                <div>Due Date</div>
-                <div>Members</div>
-                <div style={{ textAlign: 'right' }}>Employee Total</div>
-                <div style={{ textAlign: 'right' }}>Employer Total</div>
-                <div>Submitted</div>
-                <div>Status</div>
-              </div>
-
-              {/* Rows */}
-              {DEMO_REPORTING_PERIODS.map((r) => {
-                const st = REPORT_STATUS_STYLES[r.status] || REPORT_STATUS_STYLES.draft;
-                return (
-                  <div
-                    key={r.period}
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '2fr 1.5fr 1fr 1.5fr 1.5fr 1.5fr 1fr',
-                      gap: 8,
-                      padding: '14px 20px',
-                      borderBottom: `1px solid ${EC.borderLight}`,
-                      fontSize: 13,
-                      color: EC.text,
-                      alignItems: 'center',
-                      cursor: 'pointer',
-                    }}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLDivElement).style.background = EC.accentLight;
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLDivElement).style.background = 'transparent';
-                    }}
-                  >
-                    <div style={{ fontWeight: 600 }}>{r.period}</div>
-                    <div style={{ color: EC.textSecondary }}>{fmtDate(r.dueDate)}</div>
-                    <div>{r.members}</div>
-                    <div style={{ textAlign: 'right', fontFamily: 'monospace' }}>
-                      ${r.eeTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </div>
-                    <div style={{ textAlign: 'right', fontFamily: 'monospace' }}>
-                      ${r.erTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </div>
-                    <div style={{ color: EC.textSecondary }}>{fmtDate(r.submittedDate)}</div>
-                    <div>
-                      <span
-                        style={{
-                          padding: '3px 10px',
-                          borderRadius: 12,
-                          background: st.bg,
-                          color: st.text,
-                          fontSize: 11,
-                          fontWeight: 600,
-                        }}
-                      >
-                        {st.label}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
+              Coming Soon
             </div>
           </div>
         )}
