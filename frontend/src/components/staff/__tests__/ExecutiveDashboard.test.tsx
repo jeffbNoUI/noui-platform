@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { renderWithProviders } from '@/test/helpers';
 import ExecutiveDashboard from '../ExecutiveDashboard';
 import type { SLAStats, VolumeStats } from '@/types/Case';
@@ -65,65 +65,91 @@ describe('ExecutiveDashboard', () => {
     mockVolumeLoading = false;
   });
 
-  it('renders SLA-based On-Time Rate KPI', () => {
+  it('renders SLA-based On-Time Rate KPI', async () => {
     renderWithProviders(<ExecutiveDashboard />);
 
     // 18 / (18+3+1) = 81.8%
-    expect(screen.getByText('81.8%')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('81.8%')).toBeInTheDocument();
+    });
   });
 
-  it('renders Avg Processing from SLA stats', () => {
+  it('renders Avg Processing from SLA stats', async () => {
     renderWithProviders(<ExecutiveDashboard />);
 
-    expect(screen.getByText('3.2d')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('3.2d')).toBeInTheDocument();
+    });
   });
 
-  it('renders SLA health breakdown bar', () => {
+  it('renders SLA health breakdown bar', async () => {
     renderWithProviders(<ExecutiveDashboard />);
 
-    expect(screen.getByText('SLA Health Breakdown')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('SLA Health Breakdown')).toBeInTheDocument();
+    });
     expect(screen.getByText('On Track')).toBeInTheDocument();
     expect(screen.getByText('At Risk')).toBeInTheDocument();
     expect(screen.getByText('Overdue')).toBeInTheDocument();
   });
 
-  it('shows SLA sub-text with threshold details', () => {
+  it('shows SLA sub-text with threshold details', async () => {
     renderWithProviders(<ExecutiveDashboard />);
 
-    expect(screen.getByText(/30d urgent/)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/30d urgent/)).toBeInTheDocument();
+    });
   });
 
-  it('shows loading placeholders when SLA data is loading', () => {
+  it('shows loading placeholders when SLA data is loading', async () => {
     mockSLALoading = true;
     mockSLAData = undefined;
     renderWithProviders(<ExecutiveDashboard />);
 
     // Both On-Time Rate and Avg Processing show '...' when loading
-    const placeholders = screen.getAllByText('...');
-    expect(placeholders.length).toBe(2);
+    await waitFor(() => {
+      const placeholders = screen.getAllByText('...');
+      expect(placeholders.length).toBe(2);
+    });
   });
 
-  it('renders processing volume chart from live data', () => {
+  it('renders processing volume chart from live data', async () => {
     renderWithProviders(<ExecutiveDashboard />);
 
-    expect(screen.getByText('Processing Volume (6 months)')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Processing Volume (6 months)')).toBeInTheDocument();
+    });
     // Volume months are rendered — check for a month label
     expect(screen.getByText('Mar')).toBeInTheDocument();
     expect(screen.getByText('Oct')).toBeInTheDocument();
   });
 
-  it('shows empty state when no volume data', () => {
+  it('shows empty state when no volume data', async () => {
     mockVolumeData = { months: [] };
     renderWithProviders(<ExecutiveDashboard />);
 
-    expect(screen.getByText('No volume data available')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('No volume data available')).toBeInTheDocument();
+    });
   });
 
-  it('renders system health section', () => {
+  it('renders system health section', async () => {
     renderWithProviders(<ExecutiveDashboard />);
 
-    expect(screen.getByText('System Health')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('System Health')).toBeInTheDocument();
+    });
     expect(screen.getByText('Data Connector')).toBeInTheDocument();
     expect(screen.getByText('Rules Engine')).toBeInTheDocument();
+  });
+
+  it('renders live DQ score after async fetch', async () => {
+    renderWithProviders(<ExecutiveDashboard />);
+
+    // After the DQ score resolves, it should show live data
+    await waitFor(() => {
+      expect(screen.getByText('4 open')).toBeInTheDocument();
+      expect(screen.getByText(/96\.5% score/)).toBeInTheDocument();
+    });
   });
 });

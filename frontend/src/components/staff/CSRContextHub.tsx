@@ -1,31 +1,7 @@
 import { useState } from 'react';
-
-const MEMBERS = [
-  {
-    id: 'M-4721',
-    name: 'Robert Martinez',
-    tier: 1,
-    status: 'Active',
-    dept: 'Public Works',
-    alert: 'Retirement app in progress',
-  },
-  {
-    id: 'M-8293',
-    name: 'Jennifer Kim',
-    tier: 2,
-    status: 'Active',
-    dept: 'Parks & Recreation',
-    alert: 'Approaching Rule of 75',
-  },
-  {
-    id: 'M-6102',
-    name: 'David Washington',
-    tier: 3,
-    status: 'Active',
-    dept: 'Finance',
-    alert: null,
-  },
-];
+import { useMemberSearch } from '@/hooks/useMemberSearch';
+import { useMember, useServiceCredit, useContributions, useBeneficiaries } from '@/hooks/useMember';
+import type { MemberSearchResult } from '@/lib/memberSearchApi';
 
 const TIER_COLORS: Record<number, string> = {
   1: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -33,56 +9,96 @@ const TIER_COLORS: Record<number, string> = {
   3: 'bg-emerald-50 text-emerald-700 border-emerald-200',
 };
 
+function initials(first: string, last: string): string {
+  return `${first[0] ?? ''}${last[0] ?? ''}`.toUpperCase();
+}
+
+function fmtYearsMonths(years: number): string {
+  const y = Math.floor(years);
+  const m = Math.round((years - y) * 12);
+  return `${y}y ${m}m`;
+}
+
+function fmtDollars(amount: number): string {
+  return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 /**
- * CSR Context Hub — Member search + context cards + Log Call button.
+ * CSR Context Hub — Live member search + context cards + Log Call button.
+ * Searches members via the dataaccess API and shows service credit,
+ * contribution, and beneficiary data from the connector service.
  */
 export default function CSRContextHub() {
-  const [query, setQuery] = useState('');
-  const [selectedMember, setSelectedMember] = useState<(typeof MEMBERS)[0] | null>(null);
+  const { query, setQuery, results, loading: searchLoading } = useMemberSearch();
+  const [selectedResult, setSelectedResult] = useState<MemberSearchResult | null>(null);
 
-  const filtered = MEMBERS.filter(
-    (m) =>
-      query.length > 0 &&
-      (m.name.toLowerCase().includes(query.toLowerCase()) ||
-        m.id.toLowerCase().includes(query.toLowerCase()) ||
-        m.dept.toLowerCase().includes(query.toLowerCase()))
-  );
+  const memberId = selectedResult?.memberId ?? 0;
 
-  const contextCards = selectedMember
+  // Detail hooks — only fire when a member is selected (enabled: memberID > 0)
+  const { data: member, isLoading: memberLoading } = useMember(memberId);
+  const { data: scData, isLoading: scLoading } = useServiceCredit(memberId);
+  const { data: contribs, isLoading: contribLoading } = useContributions(memberId);
+  const { data: beneficiaries, isLoading: beneLoading } = useBeneficiaries(memberId);
+
+  const detailLoading = memberLoading || scLoading || contribLoading || beneLoading;
+  const sc = scData?.summary;
+
+  // Build context cards from live data
+  const contextCards = selectedResult
     ? [
-        {
-          icon: '\ud83d\udce5',
-          title: 'Open Tasks',
-          content: selectedMember.alert || 'No open tasks',
-          highlight: !!selectedMember.alert,
-        },
-        { icon: '\ud83d\udd52', title: 'Recent Activity', content: 'Salary update posted Feb 1, 2026' },
-        {
-          icon: '\ud83d\udcca',
-          title: 'Benefit Estimate',
-          content: selectedMember.tier === 1 ? '$5,087/mo (Rule of 75)' : '$1,633/mo (early)',
-        },
         {
           icon: '\ud83c\udfc5',
           title: 'Service Credit',
-          content:
-            selectedMember.tier === 1
-              ? '28y 9m earned'
-              : '18y 2m earned + 3y purchased',
+          content: sc
+            ? `${fmtYearsMonths(sc.earned_years)} earned${sc.purchased_years > 0 ? ` + ${fmtYearsMonths(sc.purchased_years)} purchased` : ''}`
+            : scLoading
+              ? 'Loading...'
+              : 'No service credit data',
+          highlight: false,
         },
-        { icon: '\ud83d\udcb0', title: 'Contributions', content: '$142,847.33 total contributions' },
+        {
+          icon: '\ud83d\udcb0',
+          title: 'Contributions',
+          content: contribs
+            ? `${fmtDollars(contribs.total_ee_contributions + contribs.total_er_contributions)} total contributions`
+            : contribLoading
+              ? 'Loading...'
+              : 'No contribution data',
+          highlight: false,
+        },
         {
           icon: '\ud83d\udc65',
           title: 'Beneficiary Info',
-          content:
-            selectedMember.tier === 1
-              ? 'Elena Martinez (spouse)'
-              : 'No beneficiary on file \u26a0',
+          content: beneficiaries
+            ? beneficiaries.length > 0
+              ? beneficiaries
+                  .map(
+                    (b) =>
+                      `${b.first_name} ${b.last_name}${b.relationship ? ` (${b.relationship})` : ''}`,
+                  )
+                  .join(', ')
+              : 'No beneficiary on file \u26a0'
+            : beneLoading
+              ? 'Loading...'
+              : 'No beneficiary data',
+          highlight: beneficiaries ? beneficiaries.length === 0 : false,
         },
-        { icon: '\ud83d\udcc4', title: 'Documents', content: '3 documents on file' },
-        { icon: '\ud83d\udce7', title: 'Contact Info', content: '303-555-0147 \u00b7 robert.m@email.com' },
+        {
+          icon: '\ud83d\udcca',
+          title: 'Member Details',
+          content: member
+            ? `Hired ${new Date(member.hire_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} \u00b7 ${member.marital_status}`
+            : memberLoading
+              ? 'Loading...'
+              : 'No member data',
+          highlight: false,
+        },
       ]
     : [];
+
+  const displayName = selectedResult
+    ? `${selectedResult.firstName} ${selectedResult.lastName}`
+    : '';
 
   return (
     <div className="space-y-6">
@@ -94,16 +110,16 @@ export default function CSRContextHub() {
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
-              setSelectedMember(null);
+              setSelectedResult(null);
             }}
-            placeholder="Search by name, member ID, or last 4 SSN..."
+            placeholder="Search by name, member ID, or department..."
             className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-iw-sage focus:ring-1 focus:ring-iw-sage outline-none"
           />
           {query.length > 0 && (
             <button
               onClick={() => {
                 setQuery('');
-                setSelectedMember(null);
+                setSelectedResult(null);
               }}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm"
             >
@@ -113,31 +129,33 @@ export default function CSRContextHub() {
         </div>
 
         {/* Search results */}
-        {filtered.length > 0 && !selectedMember && (
+        {searchLoading && (
+          <div className="mt-2 text-xs text-gray-400 text-center py-3">Searching...</div>
+        )}
+        {results.length > 0 && !selectedResult && (
           <div className="mt-2 border border-gray-200 rounded-lg overflow-hidden">
-            {filtered.map((m) => (
+            {results.map((m) => (
               <button
-                key={m.id}
+                key={m.memberId}
                 onClick={() => {
-                  setSelectedMember(m);
-                  setQuery(m.name);
+                  setSelectedResult(m);
+                  setQuery(`${m.firstName} ${m.lastName}`);
                 }}
                 className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-0 transition-colors"
               >
                 <div className="w-8 h-8 rounded-full bg-iw-sageLight flex items-center justify-center text-xs font-bold text-iw-sage">
-                  {m.name
-                    .split(' ')
-                    .map((n) => n[0])
-                    .join('')}
+                  {initials(m.firstName, m.lastName)}
                 </div>
                 <div className="flex-1">
-                  <div className="text-sm font-medium text-gray-900">{m.name}</div>
+                  <div className="text-sm font-medium text-gray-900">
+                    {m.firstName} {m.lastName}
+                  </div>
                   <div className="text-[10px] text-gray-500">
-                    {m.id} \u00b7 {m.dept} \u00b7 {m.status}
+                    #{m.memberId} \u00b7 {m.dept} \u00b7 {m.status}
                   </div>
                 </div>
                 <span
-                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${TIER_COLORS[m.tier]}`}
+                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${TIER_COLORS[m.tier] ?? 'bg-gray-50 text-gray-700 border-gray-200'}`}
                 >
                   T{m.tier}
                 </span>
@@ -145,32 +163,34 @@ export default function CSRContextHub() {
             ))}
           </div>
         )}
+        {query.length > 0 && !searchLoading && results.length === 0 && !selectedResult && (
+          <div className="mt-2 text-xs text-gray-400 text-center py-3">
+            No members found for &ldquo;{query}&rdquo;
+          </div>
+        )}
       </div>
 
       {/* Member banner */}
-      {selectedMember && (
+      {selectedResult && (
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-iw-sageLight flex items-center justify-center text-sm font-bold text-iw-sage">
-                {selectedMember.name
-                  .split(' ')
-                  .map((n) => n[0])
-                  .join('')}
+                {initials(selectedResult.firstName, selectedResult.lastName)}
               </div>
               <div>
-                <div className="text-base font-bold text-gray-900">{selectedMember.name}</div>
+                <div className="text-base font-bold text-gray-900">{displayName}</div>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span
-                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${TIER_COLORS[selectedMember.tier]}`}
+                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${TIER_COLORS[selectedResult.tier] ?? 'bg-gray-50 text-gray-700 border-gray-200'}`}
                   >
-                    Tier {selectedMember.tier}
+                    Tier {selectedResult.tier}
                   </span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-semibold">
-                    {selectedMember.status}
+                    {selectedResult.status}
                   </span>
                   <span className="text-xs text-gray-400">
-                    {selectedMember.id} \u00b7 {selectedMember.dept}
+                    #{selectedResult.memberId} \u00b7 {selectedResult.dept}
                   </span>
                 </div>
               </div>
@@ -179,38 +199,37 @@ export default function CSRContextHub() {
               \ud83d\udcde Log Call
             </button>
           </div>
-
-          {selectedMember.alert && (
-            <div className="mt-3 flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200">
-              <span className="text-xs text-amber-600 font-medium">
-                \u26a0 {selectedMember.alert}
-              </span>
-            </div>
-          )}
         </div>
       )}
 
       {/* Context cards grid */}
-      {selectedMember && (
+      {selectedResult && (
         <div className="grid grid-cols-2 gap-3">
-          {contextCards.map((card) => (
-            <div
-              key={card.title}
-              className={`bg-white rounded-lg border p-3 cursor-pointer hover:shadow-sm transition-shadow ${
-                card.highlight ? 'border-amber-200' : 'border-gray-200'
-              }`}
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-sm">{card.icon}</span>
-                <span className="text-xs font-semibold text-gray-700">{card.title}</span>
-              </div>
-              <div className="text-xs text-gray-500 pl-6">{card.content}</div>
-            </div>
-          ))}
+          {detailLoading && contextCards.every((c) => c.content === 'Loading...')
+            ? Array.from({ length: 4 }, (_, i) => (
+                <div key={i} className="bg-white rounded-lg border border-gray-200 p-3">
+                  <div className="h-3 w-24 bg-gray-200 rounded animate-pulse mb-2" />
+                  <div className="h-3 w-32 bg-gray-100 rounded animate-pulse ml-6" />
+                </div>
+              ))
+            : contextCards.map((card) => (
+                <div
+                  key={card.title}
+                  className={`bg-white rounded-lg border p-3 cursor-pointer hover:shadow-sm transition-shadow ${
+                    card.highlight ? 'border-amber-200' : 'border-gray-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm">{card.icon}</span>
+                    <span className="text-xs font-semibold text-gray-700">{card.title}</span>
+                  </div>
+                  <div className="text-xs text-gray-500 pl-6">{card.content}</div>
+                </div>
+              ))}
         </div>
       )}
 
-      {!selectedMember && (
+      {!selectedResult && (
         <div className="text-center text-gray-400 text-sm py-12">
           Search for a member to view their context cards.
         </div>
