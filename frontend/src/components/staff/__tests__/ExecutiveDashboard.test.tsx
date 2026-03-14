@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@/test/helpers';
 import ExecutiveDashboard from '../ExecutiveDashboard';
-import type { SLAStats } from '@/types/Case';
+import type { SLAStats, VolumeStats } from '@/types/Case';
 
 // ── Mock data ────────────────────────────────────────────────────────────────
 
@@ -16,13 +16,30 @@ const mockSLA: SLAStats = {
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
+const mockVolume: VolumeStats = {
+  months: [
+    { month: 'Oct', year: 2025, count: 3 },
+    { month: 'Nov', year: 2025, count: 5 },
+    { month: 'Dec', year: 2025, count: 2 },
+    { month: 'Jan', year: 2026, count: 7 },
+    { month: 'Feb', year: 2026, count: 4 },
+    { month: 'Mar', year: 2026, count: 18 },
+  ],
+};
+
 let mockSLAData: SLAStats | undefined = mockSLA;
 let mockSLALoading = false;
+let mockVolumeData: VolumeStats | undefined = mockVolume;
+let mockVolumeLoading = false;
 
 vi.mock('@/hooks/useCaseStats', () => ({
   useSLAStats: () => ({
     data: mockSLAData,
     isLoading: mockSLALoading,
+  }),
+  useVolumeStats: () => ({
+    data: mockVolumeData,
+    isLoading: mockVolumeLoading,
   }),
 }));
 
@@ -44,6 +61,8 @@ describe('ExecutiveDashboard', () => {
   beforeEach(() => {
     mockSLAData = mockSLA;
     mockSLALoading = false;
+    mockVolumeData = mockVolume;
+    mockVolumeLoading = false;
   });
 
   it('renders SLA-based On-Time Rate KPI', () => {
@@ -84,11 +103,20 @@ describe('ExecutiveDashboard', () => {
     expect(placeholders.length).toBe(2);
   });
 
-  it('renders processing volume chart', () => {
+  it('renders processing volume chart from live data', () => {
     renderWithProviders(<ExecutiveDashboard />);
 
     expect(screen.getByText('Processing Volume (6 months)')).toBeInTheDocument();
-    expect(screen.getByText('127')).toBeInTheDocument(); // Feb value
+    // Volume months are rendered — check for a month label
+    expect(screen.getByText('Mar')).toBeInTheDocument();
+    expect(screen.getByText('Oct')).toBeInTheDocument();
+  });
+
+  it('shows empty state when no volume data', () => {
+    mockVolumeData = { months: [] };
+    renderWithProviders(<ExecutiveDashboard />);
+
+    expect(screen.getByText('No volume data available')).toBeInTheDocument();
   });
 
   it('renders system health section', () => {

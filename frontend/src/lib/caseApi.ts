@@ -13,6 +13,7 @@ import type {
   AdvanceStageRequest,
   CaseStats,
   SLAStats,
+  VolumeStats,
 } from '@/types/Case';
 
 const CASE_URL = import.meta.env.VITE_CASE_URL || '/api';
@@ -27,6 +28,8 @@ export const caseAPI = {
   // ── Stats ──────────────────────────────────────────────────────────────
   getCaseStats: () => fetchAPI<CaseStats>(`${CASE_URL}/v1/cases/stats`),
   getSLAStats: () => fetchAPI<SLAStats>(`${CASE_URL}/v1/cases/stats/sla`),
+  getVolumeStats: (months = 6) =>
+    fetchAPI<VolumeStats>(`${CASE_URL}/v1/cases/stats/volume?months=${months}`),
 
   // ── Cases ───────────────────────────────────────────────────────────────
 
