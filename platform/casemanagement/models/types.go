@@ -191,3 +191,15 @@ type SLAThresholds struct {
 	High     int `json:"high"`
 	Standard int `json:"standard"`
 }
+
+// MonthlyVolume is one month's case creation count.
+type MonthlyVolume struct {
+	Month string `json:"month"` // "Jan", "Feb", etc.
+	Year  int    `json:"year"`
+	Count int    `json:"count"`
+}
+
+// VolumeStats holds monthly case creation counts.
+type VolumeStats struct {
+	Months []MonthlyVolume `json:"months"`
+}

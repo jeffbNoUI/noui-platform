@@ -40,6 +40,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	// Stats (must be before {id} routes for clarity)
 	mux.HandleFunc("GET /api/v1/cases/stats", h.GetCaseStats)
 	mux.HandleFunc("GET /api/v1/cases/stats/sla", h.GetSLAStats)
+	mux.HandleFunc("GET /api/v1/cases/stats/volume", h.GetVolumeStats)
 
 	mux.HandleFunc("GET /api/v1/cases/{id}", h.GetCase)
 	mux.HandleFunc("PUT /api/v1/cases/{id}", h.UpdateCase)
@@ -420,6 +421,19 @@ func (h *Handler) GetSLAStats(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantFromHeader(r)
 
 	stats, err := h.store.GetSLAStats(tenantID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		return
+	}
+
+	writeSuccess(w, http.StatusOK, stats)
+}
+
+func (h *Handler) GetVolumeStats(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantFromHeader(r)
+	months := intParam(r, "months", 6)
+
+	stats, err := h.store.GetVolumeStats(tenantID, months)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return

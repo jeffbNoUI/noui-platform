@@ -1,16 +1,7 @@
 import { useEffect, useState } from 'react';
 import { dqAPI } from '@/lib/dqApi';
-import { useSLAStats } from '@/hooks/useCaseStats';
+import { useSLAStats, useVolumeStats } from '@/hooks/useCaseStats';
 import type { DQScore } from '@/types/DataQuality';
-
-const VOLUME_DATA = [
-  { month: 'Sep', value: 98 },
-  { month: 'Oct', value: 112 },
-  { month: 'Nov', value: 105 },
-  { month: 'Dec', value: 89 },
-  { month: 'Jan', value: 118 },
-  { month: 'Feb', value: 127 },
-];
 
 const STATIC_HEALTH = [
   { name: 'Data Connector', status: 'Healthy', healthy: true },
@@ -27,6 +18,7 @@ const STATIC_HEALTH = [
 export default function ExecutiveDashboard() {
   const [dqScore, setDqScore] = useState<DQScore | null>(null);
   const { data: sla, isLoading: slaLoading } = useSLAStats();
+  const { data: volumeData, isLoading: volumeLoading } = useVolumeStats(6);
 
   useEffect(() => {
     dqAPI
@@ -90,7 +82,8 @@ export default function ExecutiveDashboard() {
 
   const SYSTEM_HEALTH = [...STATIC_HEALTH, dqHealth];
 
-  const maxVolume = Math.max(...VOLUME_DATA.map((d) => d.value));
+  const volumeMonths = volumeData?.months ?? [];
+  const maxVolume = Math.max(1, ...volumeMonths.map((d) => d.count));
 
   return (
     <div className="space-y-6">
@@ -163,24 +156,46 @@ export default function ExecutiveDashboard() {
             <h3 className="text-sm font-bold text-gray-700">Processing Volume (6 months)</h3>
           </div>
           <div className="p-6">
-            <div className="flex items-end gap-3 h-32">
-              {VOLUME_DATA.map((d, i) => {
-                const height = (d.value / maxVolume) * 100;
-                const isCurrent = i === VOLUME_DATA.length - 1;
-                return (
-                  <div key={d.month} className="flex-1 flex flex-col items-center gap-1">
-                    <span className="text-[10px] font-mono text-gray-500">{d.value}</span>
+            {volumeLoading ? (
+              <div className="flex items-end gap-3 h-32">
+                {Array.from({ length: 6 }, (_, i) => (
+                  <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                    <div className="h-3 w-6 bg-gray-200 rounded animate-pulse" />
                     <div
-                      className={`w-full rounded-t transition-all ${
-                        isCurrent ? 'bg-iw-sage' : 'bg-iw-sage/30'
-                      }`}
-                      style={{ height: `${height}%` }}
+                      className="w-full bg-gray-100 rounded-t animate-pulse"
+                      style={{ height: `${30 + i * 10}%` }}
                     />
-                    <span className="text-[10px] text-gray-400">{d.month}</span>
+                    <div className="h-3 w-6 bg-gray-200 rounded animate-pulse" />
                   </div>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            ) : volumeMonths.length > 0 ? (
+              <div className="flex items-end gap-3 h-32">
+                {volumeMonths.map((d, i) => {
+                  const height = (d.count / maxVolume) * 100;
+                  const isCurrent = i === volumeMonths.length - 1;
+                  return (
+                    <div
+                      key={`${d.month}-${d.year}`}
+                      className="flex-1 flex flex-col items-center gap-1"
+                    >
+                      <span className="text-[10px] font-mono text-gray-500">{d.count}</span>
+                      <div
+                        className={`w-full rounded-t transition-all ${
+                          isCurrent ? 'bg-iw-sage' : 'bg-iw-sage/30'
+                        }`}
+                        style={{ height: `${height}%` }}
+                      />
+                      <span className="text-[10px] text-gray-400">{d.month}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="h-32 flex items-center justify-center text-xs text-gray-400">
+                No volume data available
+              </div>
+            )}
           </div>
         </div>
 
