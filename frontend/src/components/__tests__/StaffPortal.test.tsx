@@ -5,6 +5,7 @@ import StaffPortal from '@/components/StaffPortal';
 
 // Mock case management hooks
 vi.mock('@/hooks/useCaseManagement', () => ({
+  useMemberCases: () => ({ data: [], isLoading: false, error: null }),
   useCases: () => ({
     data: [
       {
