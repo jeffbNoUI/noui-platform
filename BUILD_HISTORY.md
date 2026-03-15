@@ -1,5 +1,45 @@
 # noui-platform — Build History
 
+## Workflow Non-Stage Component Tests — Session 15 (2026-03-15)
+
+**Branch:** `claude/naughty-germain`
+**Goal:** Add test coverage for all 14 workflow non-stage components (view modes, navigation controls, support panels, correspondence). Coverage 0% → 100%.
+
+**What was built:**
+- 82 new tests across 14 test files + 1 shared fixture file
+- View layouts: GuidedView (8), ExpertView (6), DeckView (7), OrbitView (8)
+- Navigation controls: ModeToggle (4), StageCard (8), ProgressIndicator (5)
+- Support panels: ContextualHelp (8), LiveSummary (7), PreviewStack (4)
+- Selectors: NavigationModelPicker (5), ProficiencySelector (4)
+- Correspondence: CorrespondencePanel (5), StageCorrespondencePrompt (3)
+
+**New files (15):**
+- `frontend/src/components/workflow/__tests__/fixtures.ts` — shared StageDescriptor test data
+- `frontend/src/components/workflow/__tests__/ModeToggle.test.tsx` — 4 tests
+- `frontend/src/components/workflow/__tests__/StageCard.test.tsx` — 8 tests
+- `frontend/src/components/workflow/__tests__/ProgressIndicator.test.tsx` — 5 tests
+- `frontend/src/components/workflow/__tests__/GuidedView.test.tsx` — 8 tests
+- `frontend/src/components/workflow/__tests__/ExpertView.test.tsx` — 6 tests
+- `frontend/src/components/workflow/__tests__/DeckView.test.tsx` — 7 tests
+- `frontend/src/components/workflow/__tests__/OrbitView.test.tsx` — 8 tests
+- `frontend/src/components/workflow/__tests__/ContextualHelp.test.tsx` — 8 tests
+- `frontend/src/components/workflow/__tests__/LiveSummary.test.tsx` — 7 tests
+- `frontend/src/components/workflow/__tests__/PreviewStack.test.tsx` — 4 tests
+- `frontend/src/components/workflow/__tests__/NavigationModelPicker.test.tsx` — 5 tests
+- `frontend/src/components/workflow/__tests__/ProficiencySelector.test.tsx` — 4 tests
+- `frontend/src/components/workflow/__tests__/CorrespondencePanel.test.tsx` — 5 tests
+- `frontend/src/components/workflow/__tests__/StageCorrespondencePrompt.test.tsx` — 3 tests
+
+**Testing patterns used:**
+- `Element.prototype.scrollIntoView = vi.fn()` for ExpertView/DeckView/OrbitView (jsdom limitation)
+- Regex matchers for JSX literal unicode escapes (`\u2190`, `\u2713` render literally in JSX text)
+- `vi.mock()` for ContextualHelp (kbAPI + helpContent) and CorrespondencePanel (correspondenceApi + useCorrespondenceSend)
+
+**Tests:** 426 → 508 (+82 new, 0 regressions)
+**TypeScript:** 0 errors
+
+---
+
 ## CSR Context Hub Live APIs + VendorPortal Tests — Session 10 (2026-03-15)
 
 **Branch:** `claude/hardcore-mclaren`
