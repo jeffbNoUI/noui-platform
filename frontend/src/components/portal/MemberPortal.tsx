@@ -281,12 +281,6 @@ const DEMO_CONTRIBUTIONS = {
   current_er_balance: 244430,
 };
 
-const DEMO_BENEFICIARY = {
-  first_name: 'Maria',
-  last_name: 'Martinez',
-  relationship: 'Spouse',
-};
-
 const DEMO_MONTHLY_BENEFIT = 4847;
 
 // ── Main Component ───────────────────────────────────────────────────────────
@@ -400,7 +394,7 @@ export default function MemberPortal({
   const milestones = buildMilestones(effectiveMember);
 
   // Beneficiary
-  const primaryBeneficiary = beneficiaries?.[0] ?? (useDemo ? DEMO_BENEFICIARY : null);
+  const primaryBeneficiary = beneficiaries?.[0] ?? null;
   const beneficiaryText = primaryBeneficiary
     ? `${primaryBeneficiary.first_name} ${primaryBeneficiary.last_name} (${primaryBeneficiary.relationship})`
     : 'Not on file';
