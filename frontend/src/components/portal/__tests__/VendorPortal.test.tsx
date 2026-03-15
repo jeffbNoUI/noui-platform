@@ -16,32 +16,11 @@ describe('VendorPortal', () => {
     expect(screen.getByText('Avg IPR Benefit')).toBeInTheDocument();
   });
 
-  it('renders enrollment queue with 4 records', () => {
+  it('renders enrollment queue with Coming Soon placeholder', () => {
     renderWithProviders(<VendorPortal />);
-    expect(screen.getByText('Robert Martinez')).toBeInTheDocument();
-    expect(screen.getByText('David Washington')).toBeInTheDocument();
-    expect(screen.getByText('Patricia Morales')).toBeInTheDocument();
-    expect(screen.getByText('James Butler')).toBeInTheDocument();
-  });
-
-  it('displays IPR amounts formatted as currency', () => {
-    renderWithProviders(<VendorPortal />);
-    expect(screen.getByText('$359.38')).toBeInTheDocument();
-    expect(screen.getByText('$169.75')).toBeInTheDocument();
-  });
-
-  it('renders status badges with correct text', () => {
-    renderWithProviders(<VendorPortal />);
-    expect(screen.getByText('Pending Verification')).toBeInTheDocument();
-    expect(screen.getAllByText('Enrolled')).toHaveLength(2);
-    expect(screen.getByText('Pending Docs')).toBeInTheDocument();
-  });
-
-  it('renders enrollment IDs and plan names', () => {
-    renderWithProviders(<VendorPortal />);
-    expect(screen.getByText(/ENR-2026-0041/)).toBeInTheDocument();
-    expect(screen.getAllByText(/Kaiser HMO/)).toHaveLength(3);
-    expect(screen.getByText(/Cigna PPO/)).toBeInTheDocument();
+    expect(screen.getByText('Enrollment Queue')).toBeInTheDocument();
+    expect(screen.getByText('Coming Soon')).toBeInTheDocument();
+    expect(screen.getByText(/enrollment processing is coming soon/i)).toBeInTheDocument();
   });
 
   it('renders footer with vendor identifier', () => {
