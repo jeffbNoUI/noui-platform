@@ -1,5 +1,38 @@
 # noui-platform — Build History
 
+## CSR Context Hub Live APIs + VendorPortal Tests — Session 10 (2026-03-15)
+
+**Branch:** `claude/hardcore-mclaren`
+**Goal:** Wire CSRContextHub to live backend APIs (replacing hardcoded demo data) with a working Log Call CRM action, and add component tests for both CSRContextHub and VendorPortal.
+
+**What was built:**
+- `useCSRContext` aggregating hook — composes 8 sub-hooks (member, service credit, beneficiaries, contributions, eligibility, CRM contact, timeline, cases) into formatted card data
+- `useLogCall` mutation hook — thin wrapper around `useCreateInteraction` for phone_inbound CRM interactions
+- CSRContextHub rewritten — `MemberSearch` for live search, `useCSRContext` for card data, inline Log Call form with auto-dismiss on success
+- VendorPortal component tests — 10 tests covering rendering, navigation, data display (VendorPortal stays on demo data for now)
+
+**New files (5):**
+- `frontend/src/hooks/useCSRContext.ts` — aggregating hook (207 lines)
+- `frontend/src/hooks/useLogCall.ts` — CRM mutation hook (27 lines)
+- `frontend/src/hooks/__tests__/useCSRContext.test.ts` — 8 hook unit tests
+- `frontend/src/components/staff/__tests__/CSRContextHub.test.tsx` — 8 component tests
+- `frontend/src/components/portal/__tests__/VendorPortal.test.tsx` — 10 component tests
+
+**Modified files (2):**
+- `frontend/src/components/staff/CSRContextHub.tsx` — full rewrite (166→204 lines)
+- `frontend/src/components/__tests__/StaffPortal.test.tsx` — added `useMemberCases` mock
+
+**E2E verification (Docker):**
+- Member search: "Martinez" → Robert Martinez (10001, T1, Public Works) from live dataaccess API
+- Context cards: all 8 populated with live data (Open Tasks, Recent Activity, Benefit Estimate, Service Credit, Contributions, Beneficiary Info, Cases, Contact Info)
+- Log Call: form opens, accepts note, submits to CRM API, shows ✓ Logged, auto-dismisses
+- Vendor Portal: renders enrollment queue, stats cards, status badges
+
+**Tests:** 355 → 381 (+26 new: 8 useCSRContext, 8 CSRContextHub, 10 VendorPortal)
+**TypeScript:** 0 errors
+
+---
+
 ## Seed Data Expansion + Demo Richness — Session 9 (2026-03-14)
 
 **Branch:** `claude/cool-bardeen`
