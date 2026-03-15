@@ -1,5 +1,43 @@
 # noui-platform — Build History
 
+## Root Component Tests Batch 1 — Session 16 (2026-03-15)
+
+**Branch:** `claude/infallible-knuth`
+**PR:** #67 (merged)
+**Goal:** Add test coverage for root-level components batch 1 — case/workflow orchestration, CRM contact panels, and benefit calculation display components.
+
+**Key decision: Network-layer fetch mocking (not hook mocking)**
+User directed that all tests should mock at the `fetch` boundary, not at the hook level. This means real hooks, React Query caching, and `apiClient.ts` enum normalization all run in tests. Props-based components need no mocking at all. This is the testing strategy going forward.
+
+**What was built:**
+- 45 new tests across 6 test files for root-level components
+- CaseJournalPanel (8 tests) — cascading contact resolution via fetch mocks for 7+ API endpoints, tab switching between timeline/conversations/commitments/correspondence
+- CommitmentTracker (7 tests) — paginated list rendering, search filtering, status badges, action buttons
+- OutreachQueue (9 tests) — queue rendering, priority/status badges, max attempts warning, talking points
+- InteractionTimeline (7 tests) — timeline entries, channel badges, direction indicators, duration formatting
+- BenefitCalculationPanel (8 tests) — benefit display with CollapsibleSections, AMS, formula, reduction, leave payout
+- IPRCalculator (6 tests) — IPR amounts, medicare/non-medicare highlighting, fractional service years
+
+**New files (7):**
+- `frontend/src/components/__tests__/CaseJournalPanel.test.tsx` — 8 tests
+- `frontend/src/components/__tests__/CommitmentTracker.test.tsx` — 7 tests
+- `frontend/src/components/__tests__/OutreachQueue.test.tsx` — 9 tests
+- `frontend/src/components/__tests__/InteractionTimeline.test.tsx` — 7 tests
+- `frontend/src/components/__tests__/BenefitCalculationPanel.test.tsx` — 8 tests
+- `frontend/src/components/__tests__/IPRCalculator.test.tsx` — 6 tests
+- `docs/session-starters/session17-root-components-batch2.md` — next session starter
+
+**Testing patterns established:**
+- `setupFetch()` helper for URL-pattern-based fetch mocking (reusable across test files)
+- `renderWithProviders()` for components using React Query hooks
+- `getAllByText()` for CollapsibleSection badge duplication (CSS grid `0fr` keeps content in DOM)
+- Regex matchers for text split across elements
+
+**Tests:** 508 → 592 (+45 new from Session 16, +39 from Session 15's PR merge, 0 regressions)
+**TypeScript:** 0 errors
+
+---
+
 ## Workflow Non-Stage Component Tests — Session 15 (2026-03-15)
 
 **Branch:** `claude/naughty-germain`
