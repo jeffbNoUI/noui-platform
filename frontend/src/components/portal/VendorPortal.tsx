@@ -1,55 +1,10 @@
-function fmt(n: number | null | undefined): string {
-  if (n == null) return '\u2014';
-  return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-const ENROLLMENT_QUEUE = [
-  {
-    id: 'ENR-2026-0041',
-    member: 'Robert Martinez',
-    plan: 'Kaiser HMO',
-    status: 'Pending Verification',
-    date: 'Mar 15, 2026',
-    ipr: 359.38,
-  },
-  {
-    id: 'ENR-2026-0038',
-    member: 'David Washington',
-    plan: 'Kaiser HMO',
-    status: 'Enrolled',
-    date: 'Mar 12, 2026',
-    ipr: 169.75,
-  },
-  {
-    id: 'ENR-2026-0035',
-    member: 'Patricia Morales',
-    plan: 'Cigna PPO',
-    status: 'Pending Docs',
-    date: 'Mar 10, 2026',
-    ipr: 212.5,
-  },
-  {
-    id: 'ENR-2026-0029',
-    member: 'James Butler',
-    plan: 'Kaiser HMO',
-    status: 'Enrolled',
-    date: 'Mar 5, 2026',
-    ipr: 293.75,
-  },
-];
-
-const STATUS_STYLES: Record<string, string> = {
-  Enrolled: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  'Pending Docs': 'bg-amber-50 text-amber-700 border-amber-200',
-  'Pending Verification': 'bg-teal-50 text-teal-700 border-teal-200',
-};
-
 interface VendorPortalProps {
   onChangeView?: (mode: string) => void;
 }
 
 /**
- * Vendor Portal — Health insurance enrollment queue with IPR amounts.
+ * Vendor Portal — Health insurance enrollment specialist view.
+ * Enrollment queue replaced with Coming Soon placeholder (no enrollment API exists).
  */
 export default function VendorPortal({ onChangeView }: VendorPortalProps) {
   return (
@@ -75,7 +30,7 @@ export default function VendorPortal({ onChangeView }: VendorPortalProps) {
                   onClick={() => onChangeView('staff')}
                   className="text-xs text-[#6b9691] hover:text-[#3d6660] transition-colors"
                 >
-                  \u2190 Back to Staff
+                  {'\u2190'} Back to Staff
                 </button>
               )}
               <div className="flex items-center gap-2">
@@ -111,42 +66,24 @@ export default function VendorPortal({ onChangeView }: VendorPortalProps) {
           ))}
         </div>
 
-        {/* Enrollment queue */}
+        {/* Enrollment queue — Coming Soon */}
         <div className="bg-white rounded-lg border border-[#c8dbd8] overflow-hidden shadow-sm">
           <div className="px-4 py-3 border-b border-[#e2edeb]">
             <h2 className="text-sm font-bold text-[#14312d]">Enrollment Queue</h2>
           </div>
-
-          {ENROLLMENT_QUEUE.map((q) => (
-            <div
-              key={q.id}
-              className="flex items-center justify-between px-4 py-3.5 border-b border-[#e2edeb] hover:bg-[#f0f5f4] transition-colors"
-            >
-              <div>
-                <div className="text-sm font-semibold text-[#14312d]">{q.member}</div>
-                <div className="text-[11px] text-[#6b9691]">
-                  {q.id} \u00b7 {q.plan} \u00b7 {q.date}
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <div className="text-[10px] text-[#6b9691]">IPR</div>
-                  <div className="text-sm font-semibold font-mono text-teal-600">{fmt(q.ipr)}</div>
-                </div>
-                <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                    STATUS_STYLES[q.status] || STATUS_STYLES['Pending Verification']
-                  }`}
-                >
-                  {q.status}
-                </span>
-              </div>
-            </div>
-          ))}
+          <div className="flex flex-col items-center justify-center py-12 px-4">
+            <p className="text-sm text-[#6b9691] text-center max-w-md mb-4">
+              Online enrollment processing is coming soon. You will be able to review, verify, and
+              manage health insurance enrollments directly from this portal.
+            </p>
+            <span className="text-xs font-semibold px-4 py-1.5 rounded-full bg-teal-50 text-teal-700 border border-[#c8dbd8]">
+              Coming Soon
+            </span>
+          </div>
         </div>
 
         <footer className="mt-6 text-center text-[10px] text-[#a3bfbb]">
-          Vendor Portal \u00b7 Kaiser Permanente \u00b7 Enrollment Specialist View
+          Vendor Portal {'\u00b7'} Kaiser Permanente {'\u00b7'} Enrollment Specialist View
         </footer>
       </main>
     </div>
