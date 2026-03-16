@@ -35,8 +35,18 @@ func main() {
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
 
-	// CORS middleware for frontend development
-	wrappedMux := corsMiddleware(logging.RequestLogger(logger)(auth.Middleware(mux)))
+	// Auth context extractor — runs inside the logging middleware to capture
+	// tenant_id and user_role from the auth-enriched request context.
+	authExtractor := func(r *http.Request) []slog.Attr {
+		return []slog.Attr{
+			slog.String("tenant_id", auth.TenantID(r.Context())),
+			slog.String("user_role", auth.UserRole(r.Context())),
+		}
+	}
+
+	// Middleware order: CORS → Auth → Logging → Handler
+	// Auth runs first so the request context is enriched before logging reads it.
+	wrappedMux := corsMiddleware(auth.Middleware(logging.RequestLogger(logger, authExtractor)(mux)))
 
 	port := os.Getenv("PORT")
 	if port == "" {

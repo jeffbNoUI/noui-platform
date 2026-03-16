@@ -35,7 +35,13 @@ func main() {
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
 
-	wrappedMux := corsMiddleware(logging.RequestLogger(logger)(auth.Middleware(mux)))
+	authExtractor := func(r *http.Request) []slog.Attr {
+		return []slog.Attr{
+			slog.String("tenant_id", auth.TenantID(r.Context())),
+			slog.String("user_role", auth.UserRole(r.Context())),
+		}
+	}
+	wrappedMux := corsMiddleware(auth.Middleware(logging.RequestLogger(logger, authExtractor)(mux)))
 
 	port := os.Getenv("PORT")
 	if port == "" {

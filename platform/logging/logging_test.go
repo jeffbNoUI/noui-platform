@@ -3,6 +3,7 @@ package logging
 import (
 	"bytes"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -40,7 +41,6 @@ func TestRequestLogger_LogsRequestFields(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/cases", nil)
 	req.Header.Set("X-Request-ID", "req-123")
-	req.Header.Set("X-Tenant-ID", "tenant-456")
 	rr := httptest.NewRecorder()
 
 	server.ServeHTTP(rr, req)
@@ -58,9 +58,6 @@ func TestRequestLogger_LogsRequestFields(t *testing.T) {
 	}
 	if entry["request_id"] != "req-123" {
 		t.Errorf("expected request_id=req-123, got %v", entry["request_id"])
-	}
-	if entry["tenant_id"] != "tenant-456" {
-		t.Errorf("expected tenant_id=tenant-456, got %v", entry["tenant_id"])
 	}
 	if _, ok := entry["status"]; !ok {
 		t.Error("expected status field to be present")
@@ -130,5 +127,41 @@ func TestRequestLogger_CapturesStatusCode(t *testing.T) {
 	}
 	if int(status) != 404 {
 		t.Errorf("expected status=404, got %v", status)
+	}
+}
+
+func TestRequestLogger_WithContextExtractor(t *testing.T) {
+	var buf bytes.Buffer
+	logger := Setup("test-service", &buf)
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	extractor := func(r *http.Request) []slog.Attr {
+		return []slog.Attr{
+			slog.String("tenant_id", "tenant-789"),
+			slog.String("user_role", "admin"),
+		}
+	}
+
+	middleware := RequestLogger(logger, extractor)
+	server := middleware(handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/test", nil)
+	rr := httptest.NewRecorder()
+
+	server.ServeHTTP(rr, req)
+
+	var entry map[string]interface{}
+	if err := json.Unmarshal(buf.Bytes(), &entry); err != nil {
+		t.Fatalf("expected valid JSON log output, got error: %v\nraw: %s", err, buf.String())
+	}
+
+	if entry["tenant_id"] != "tenant-789" {
+		t.Errorf("expected tenant_id=tenant-789, got %v", entry["tenant_id"])
+	}
+	if entry["user_role"] != "admin" {
+		t.Errorf("expected user_role=admin, got %v", entry["user_role"])
 	}
 }

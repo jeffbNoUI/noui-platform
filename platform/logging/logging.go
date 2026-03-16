@@ -42,9 +42,15 @@ func (sw *statusWriter) Flush() {
 	}
 }
 
+// ContextExtractor returns additional slog attributes to include in a request
+// log line. Extractors run after the inner handler completes, so they can read
+// values that downstream middleware (e.g. auth) stored in the request context.
+type ContextExtractor func(r *http.Request) []slog.Attr
+
 // RequestLogger returns HTTP middleware that logs every request as a JSON line.
-// Log fields: method, path, status, duration_ms, request_id, tenant_id.
-func RequestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
+// Log fields: method, path, status, duration_ms, request_id, plus any fields
+// returned by the optional extractors.
+func RequestLogger(logger *slog.Logger, extractors ...ContextExtractor) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
@@ -52,14 +58,19 @@ func RequestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
 
 			next.ServeHTTP(sw, r)
 
-			logger.Info("request",
+			attrs := []any{
 				"method", r.Method,
 				"path", r.URL.Path,
 				"status", sw.code,
 				"duration_ms", time.Since(start).Milliseconds(),
 				"request_id", r.Header.Get("X-Request-ID"),
-				"tenant_id", r.Header.Get("X-Tenant-ID"),
-			)
+			}
+			for _, ext := range extractors {
+				for _, a := range ext(r) {
+					attrs = append(attrs, a)
+				}
+			}
+			logger.Info("request", attrs...)
 		})
 	}
 }
