@@ -1,5 +1,58 @@
 # noui-platform — Build History
 
+## Quality & Tech Debt Session 5: TypeScript Strictness, Timeouts, Deduplication (2026-03-16)
+
+**Branch:** `claude/happy-galileo`
+**Goal:** Address quality review items (Q4.2 TypeScript `any` elimination, P2.4 request timeouts) and tech debt from Session 4.
+
+**What was built:**
+
+### Q4.2: TypeScript `any` Elimination
+- Replaced all `any` types in production code with proper types:
+  - `apiClient.ts`: `rawRequest` returns `unknown`, enum transforms use `Record<string, unknown>`
+  - `workflowComposition.ts`: new `WorkflowData` and `WorkflowCalculationData` structural interfaces
+  - 4 Recharts chart components: inline tooltip prop types replace `any`
+- Replaced all `any` types in 14 test files with `as unknown as T` double-assertion pattern
+- Zero `any` remains in entire frontend codebase
+
+### P2.4: Request Timeouts
+- `apiClient.ts`: 30s AbortController timeout on all API requests (configurable via `FetchOptions`)
+- `nginx.conf`: proxy timeouts aligned with Go WriteTimeout (connect 5s, send 10s, read 35s)
+- AbortError explicitly not retried (thrown as `APIError('Request timed out', 0, ...)`)
+
+### Tech Debt from Session 4
+- **Shared `platform/envutil/` package**: `GetEnv`, `GetEnvInt`, `GetEnvFloat` — 9 tests
+- **8 services wired**: eliminated 119 lines of duplicated `getEnv`/`getEnvInt`/`getEnvFloat`
+- **Rate limiter `MiddlewareWithContext`**: accepts `context.Context` for graceful goroutine shutdown
+- **Computed `Retry-After`**: `math.Ceil(1.0 / cfg.IPRate)` instead of hardcoded "1"
+- **DevRoleSwitcher**: gated behind `import.meta.env.DEV`
+
+**Test results:**
+- 8 Go modules: all build and pass
+- Frontend: 113 test files, 818 tests passing (+1), typecheck clean
+- Zero `any` in production or test code
+
+**Commits (9):**
+```
+78260bc [frontend] Replace any with proper types in test files
+ccd6ca7 [platform/ratelimit] Add context-based shutdown and computed Retry-After
+05dee65 [platform/*] Replace duplicated env helpers with shared envutil package
+b033ded [frontend] Add 30s AbortController request timeout to apiClient
+6703ad8 [frontend] Replace any with proper types in Recharts CustomTooltip components
+ef63321 [infrastructure] Add proxy timeout configuration to nginx
+b9695ca [frontend] Replace any with structural types in workflowComposition
+968b8d0 [frontend] Replace any with unknown in apiClient enum transforms
+1668e82 [frontend] Gate DevRoleSwitcher behind import.meta.env.DEV
+```
+
+**Session 4 tech debt — all resolved:**
+- ~~`getEnvInt` helper duplicated across 7 services~~ → shared `envutil` package
+- ~~Rate limiter cleanup goroutine has no shutdown mechanism~~ → `MiddlewareWithContext` with context cancellation
+- ~~`Retry-After` header hardcoded to "1"~~ → computed from config
+- ~~DevRoleSwitcher not gated behind `import.meta.env.DEV`~~ → gated
+
+---
+
 ## Security Hardening Session 4: Pool Sizing, Rate Limiting, Route Guards (2026-03-16)
 
 **Branch:** `claude/hopeful-goldstine`
