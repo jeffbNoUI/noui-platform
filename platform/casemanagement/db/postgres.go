@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -27,23 +28,27 @@ func NewStore(db *sql.DB) *Store {
 
 // Config holds database connection parameters.
 type Config struct {
-	Host     string
-	Port     string
-	User     string
-	Password string
-	DBName   string
-	SSLMode  string
+	Host         string
+	Port         string
+	User         string
+	Password     string
+	DBName       string
+	SSLMode      string
+	MaxOpenConns int
+	MaxIdleConns int
 }
 
 // ConfigFromEnv creates a Config from environment variables with sensible defaults.
 func ConfigFromEnv() Config {
 	return Config{
-		Host:     getEnv("DB_HOST", "localhost"),
-		Port:     getEnv("DB_PORT", "5432"),
-		User:     getEnv("DB_USER", "derp"),
-		Password: getEnv("DB_PASSWORD", "derp"),
-		DBName:   getEnv("DB_NAME", "derp"),
-		SSLMode:  getEnv("DB_SSLMODE", "disable"),
+		Host:         getEnv("DB_HOST", "localhost"),
+		Port:         getEnv("DB_PORT", "5432"),
+		User:         getEnv("DB_USER", "derp"),
+		Password:     getEnv("DB_PASSWORD", "derp"),
+		DBName:       getEnv("DB_NAME", "derp"),
+		SSLMode:      getEnv("DB_SSLMODE", "disable"),
+		MaxOpenConns: getEnvInt("DB_MAX_OPEN_CONNS", 12),
+		MaxIdleConns: getEnvInt("DB_MAX_IDLE_CONNS", 5),
 	}
 }
 
@@ -73,11 +78,11 @@ func Connect(cfg Config) (*sql.DB, error) {
 			continue
 		}
 
-		db.SetMaxOpenConns(25)
-		db.SetMaxIdleConns(5)
+		db.SetMaxOpenConns(cfg.MaxOpenConns)
+		db.SetMaxIdleConns(cfg.MaxIdleConns)
 		db.SetConnMaxLifetime(5 * time.Minute)
 
-		slog.Info("database connected", "host", cfg.Host, "dbname", cfg.DBName)
+		slog.Info("database connected", "host", cfg.Host, "dbname", cfg.DBName, "max_open_conns", cfg.MaxOpenConns, "max_idle_conns", cfg.MaxIdleConns)
 		return db, nil
 	}
 
@@ -87,6 +92,15 @@ func Connect(cfg Config) (*sql.DB, error) {
 func getEnv(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
+	}
+	return fallback
+}
+
+func getEnvInt(key string, fallback int) int {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
 	}
 	return fallback
 }
