@@ -14,6 +14,7 @@ import (
 	"github.com/noui/platform/auth"
 	"github.com/noui/platform/dataquality/api"
 	"github.com/noui/platform/dataquality/db"
+	"github.com/noui/platform/dbcontext"
 	"github.com/noui/platform/logging"
 )
 
@@ -34,13 +35,22 @@ func main() {
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
 
+	claimsExtractor := func(r *http.Request) dbcontext.Params {
+		return dbcontext.Params{
+			TenantID: auth.TenantID(r.Context()),
+			MemberID: auth.MemberID(r.Context()),
+			UserRole: auth.UserRole(r.Context()),
+		}
+	}
+
 	authExtractor := func(r *http.Request) []slog.Attr {
 		return []slog.Attr{
 			slog.String("tenant_id", auth.TenantID(r.Context())),
 			slog.String("user_role", auth.UserRole(r.Context())),
 		}
 	}
-	wrappedMux := corsMiddleware(auth.Middleware(logging.RequestLogger(logger, authExtractor)(mux)))
+	// Middleware order: CORS → Auth → DBContext → Logging → Handler
+	wrappedMux := corsMiddleware(auth.Middleware(dbcontext.DBMiddleware(database, claimsExtractor)(logging.RequestLogger(logger, authExtractor)(mux))))
 
 	port := os.Getenv("PORT")
 	if port == "" {
