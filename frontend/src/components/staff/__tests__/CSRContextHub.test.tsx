@@ -2,13 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, fireEvent } from '@testing-library/react';
 import { renderWithProviders } from '@/test/helpers';
 import CSRContextHub from '../CSRContextHub';
+import type { Member } from '@/types/Member';
 
 // ── Mock data ────────────────────────────────────────────────────────────────
 
 let csrReturn = {
   cards: [] as { icon: string; title: string; content: string; highlight?: boolean }[],
   contactId: '',
-  member: null as any,
+  member: null as Member | null,
   isLoading: false,
   isLoadingSecondary: false,
   error: null as Error | null,
@@ -44,6 +45,15 @@ vi.mock('@/hooks/useMemberSearch', () => ({
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 
+const testMember = {
+  member_id: 10001,
+  first_name: 'Robert',
+  last_name: 'Martinez',
+  tier_code: 1,
+  status_code: 'Active',
+  dept_name: 'Public Works',
+} as unknown as Member;
+
 describe('CSRContextHub', () => {
   beforeEach(() => {
     csrReturn = {
@@ -73,14 +83,7 @@ describe('CSRContextHub', () => {
   });
 
   it('renders member banner when member is loaded', () => {
-    csrReturn.member = {
-      member_id: 10001,
-      first_name: 'Robert',
-      last_name: 'Martinez',
-      tier_code: 1,
-      status_code: 'Active',
-      dept_name: 'Public Works',
-    };
+    csrReturn.member = testMember;
 
     renderWithProviders(<CSRContextHub />);
 
@@ -91,14 +94,7 @@ describe('CSRContextHub', () => {
   });
 
   it('renders context cards from hook', () => {
-    csrReturn.member = {
-      member_id: 10001,
-      first_name: 'Robert',
-      last_name: 'Martinez',
-      tier_code: 1,
-      status_code: 'Active',
-      dept_name: 'Public Works',
-    };
+    csrReturn.member = testMember;
     csrReturn.cards = [
       { icon: 'tasks', title: 'Open Tasks', content: '3 pending' },
       { icon: 'benefit', title: 'Benefit Estimate', content: '$2,450/mo' },
@@ -145,14 +141,7 @@ describe('CSRContextHub', () => {
   });
 
   it('shows skeleton cards when isLoadingSecondary', () => {
-    csrReturn.member = {
-      member_id: 10001,
-      first_name: 'Robert',
-      last_name: 'Martinez',
-      tier_code: 1,
-      status_code: 'Active',
-      dept_name: 'Public Works',
-    };
+    csrReturn.member = testMember;
     csrReturn.isLoadingSecondary = true;
 
     const { container } = renderWithProviders(<CSRContextHub />);
@@ -164,14 +153,7 @@ describe('CSRContextHub', () => {
   });
 
   it('opens log call form on button click', () => {
-    csrReturn.member = {
-      member_id: 10001,
-      first_name: 'Robert',
-      last_name: 'Martinez',
-      tier_code: 1,
-      status_code: 'Active',
-      dept_name: 'Public Works',
-    };
+    csrReturn.member = testMember;
 
     renderWithProviders(<CSRContextHub />);
 
@@ -186,14 +168,7 @@ describe('CSRContextHub', () => {
   });
 
   it('calls logCall on form submit', async () => {
-    csrReturn.member = {
-      member_id: 10001,
-      first_name: 'Robert',
-      last_name: 'Martinez',
-      tier_code: 1,
-      status_code: 'Active',
-      dept_name: 'Public Works',
-    };
+    csrReturn.member = testMember;
     csrReturn.contactId = 'contact-abc-123';
 
     renderWithProviders(<CSRContextHub />);
@@ -215,14 +190,7 @@ describe('CSRContextHub', () => {
   });
 
   it('highlights cards with highlight flag', () => {
-    csrReturn.member = {
-      member_id: 10001,
-      first_name: 'Robert',
-      last_name: 'Martinez',
-      tier_code: 1,
-      status_code: 'Active',
-      dept_name: 'Public Works',
-    };
+    csrReturn.member = testMember;
     csrReturn.cards = [
       { icon: 'tasks', title: 'Open Tasks', content: '3 pending', highlight: true },
       { icon: 'benefit', title: 'Benefit Estimate', content: '$2,450/mo', highlight: false },

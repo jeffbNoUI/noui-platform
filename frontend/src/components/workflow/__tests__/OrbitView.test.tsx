@@ -6,7 +6,7 @@ import { testStages } from './fixtures';
 
 beforeAll(() => {
   Element.prototype.scrollIntoView = vi.fn();
-  Element.prototype.scrollTo = vi.fn() as any;
+  Element.prototype.scrollTo = vi.fn() as unknown as typeof Element.prototype.scrollTo;
 });
 
 const defaultProps = {

@@ -8,7 +8,7 @@ class ResizeObserverMock {
   unobserve() {}
   disconnect() {}
 }
-globalThis.ResizeObserver = ResizeObserverMock as any;
+globalThis.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver;
 
 const zeroData: ProjectionDataPoint[] = [
   { year: '2026', projected: 0, conservative: 0, contributed: 0 },

@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { crmAPI } from '@/lib/crmApi';
+import type {
+  CreateInteractionRequest,
+  UpdateConversationRequest,
+  CreateNoteRequest,
+  CommitmentListParams,
+} from '@/types/CRM';
 
 function setupFetch() {
   const fetchMock = vi.fn().mockImplementation(() =>
@@ -59,9 +65,9 @@ describe('crmAPI', () => {
       conversationId: 'conv-1',
       channel: 'phone_inbound',
       direction: 'inbound',
-      interactionType: 'call',
+      interactionType: 'inquiry',
       summary: 'Called about retirement',
-    } as any);
+    } as unknown as CreateInteractionRequest);
     const [url, opts] = fetchMock.mock.calls[0];
     expect(url).toContain('/v1/crm/interactions');
     expect(opts.method).toBe('POST');
@@ -87,7 +93,7 @@ describe('crmAPI', () => {
   });
 
   it('updateConversation sends PATCH', async () => {
-    await crmAPI.updateConversation('conv-1', { status: 'closed' } as any);
+    await crmAPI.updateConversation('conv-1', { status: 'closed' } as UpdateConversationRequest);
     const [url, opts] = fetchMock.mock.calls[0];
     expect(url).toContain('/v1/crm/conversations/conv-1');
     expect(opts.method).toBe('PATCH');
@@ -96,14 +102,20 @@ describe('crmAPI', () => {
   // ─── Notes & Commitments ──────────────────────────────────────────────────
 
   it('createNote sends POST to notes endpoint', async () => {
-    await crmAPI.createNote({ contactId: 'c-1', content: 'Test note' } as any);
+    await crmAPI.createNote({
+      contactId: 'c-1',
+      content: 'Test note',
+    } as unknown as CreateNoteRequest);
     const [url, opts] = fetchMock.mock.calls[0];
     expect(url).toContain('/v1/crm/notes');
     expect(opts.method).toBe('POST');
   });
 
   it('listCommitments passes filter params', async () => {
-    await crmAPI.listCommitments({ contact_id: 'c-1', status: 'pending' } as any);
+    await crmAPI.listCommitments({
+      contact_id: 'c-1',
+      status: 'pending',
+    } as unknown as CommitmentListParams);
     const url = fetchMock.mock.calls[0][0] as string;
     expect(url).toContain('/v1/crm/commitments');
     expect(url).toContain('contact_id=c-1');

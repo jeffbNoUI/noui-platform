@@ -7,7 +7,7 @@ class ResizeObserverMock {
   unobserve() {}
   disconnect() {}
 }
-globalThis.ResizeObserver = ResizeObserverMock as any;
+globalThis.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver;
 
 describe('DQCategoryChart', () => {
   it('renders bars for each category', () => {

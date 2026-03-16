@@ -17,13 +17,19 @@ describe('EmployerCorrespondenceTab', () => {
   });
 
   it('shows loading state', () => {
-    mockUseContactCorrespondence.mockReturnValue({ data: undefined, isLoading: true } as any);
+    mockUseContactCorrespondence.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+    } as unknown as ReturnType<typeof useContactCorrespondence>);
     renderWithProviders(<EmployerCorrespondenceTab contactId="contact-1" />);
     expect(screen.getByText(/Loading correspondence/)).toBeInTheDocument();
   });
 
   it('shows empty state when no correspondence', () => {
-    mockUseContactCorrespondence.mockReturnValue({ data: [], isLoading: false } as any);
+    mockUseContactCorrespondence.mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useContactCorrespondence>);
     renderWithProviders(<EmployerCorrespondenceTab contactId="contact-1" />);
     expect(screen.getByText('No correspondence on file')).toBeInTheDocument();
     expect(screen.getByText(/Letters and notices will appear here/)).toBeInTheDocument();
@@ -50,7 +56,7 @@ describe('EmployerCorrespondenceTab', () => {
         },
       ],
       isLoading: false,
-    } as any);
+    } as unknown as ReturnType<typeof useContactCorrespondence>);
     renderWithProviders(<EmployerCorrespondenceTab contactId="contact-1" />);
     expect(screen.getByText('Correspondence')).toBeInTheDocument();
     expect(screen.getByText('2 items')).toBeInTheDocument();
@@ -71,7 +77,7 @@ describe('EmployerCorrespondenceTab', () => {
         },
       ],
       isLoading: false,
-    } as any);
+    } as unknown as ReturnType<typeof useContactCorrespondence>);
     renderWithProviders(<EmployerCorrespondenceTab contactId="contact-1" />);
 
     // Body should not be visible initially
