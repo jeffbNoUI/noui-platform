@@ -4,11 +4,12 @@
 package ratelimit
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
+	"math"
 	"net"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -17,6 +18,7 @@ import (
 	"golang.org/x/time/rate"
 
 	"github.com/noui/platform/auth"
+	"github.com/noui/platform/envutil"
 )
 
 // Config holds rate limiter configuration.
@@ -33,10 +35,10 @@ type Config struct {
 // Defaults: 60 req/min per IP (1/sec, burst 20), 120 req/min per tenant (2/sec, burst 40).
 func DefaultConfig() Config {
 	return Config{
-		IPRate:          getEnvFloat("RATE_LIMIT_IP_RATE", 1.0),
-		IPBurst:         getEnvInt("RATE_LIMIT_IP_BURST", 20),
-		TenantRate:      getEnvFloat("RATE_LIMIT_TENANT_RATE", 2.0),
-		TenantBurst:     getEnvInt("RATE_LIMIT_TENANT_BURST", 40),
+		IPRate:          envutil.GetEnvFloat("RATE_LIMIT_IP_RATE", 1.0),
+		IPBurst:         envutil.GetEnvInt("RATE_LIMIT_IP_BURST", 20),
+		TenantRate:      envutil.GetEnvFloat("RATE_LIMIT_TENANT_RATE", 2.0),
+		TenantBurst:     envutil.GetEnvInt("RATE_LIMIT_TENANT_BURST", 40),
 		CleanupInterval: 5 * time.Minute,
 		StaleAfter:      10 * time.Minute,
 	}
@@ -107,20 +109,24 @@ var bypassPaths = map[string]bool{
 	"/metrics": true,
 }
 
-// Middleware returns HTTP middleware that enforces per-IP and per-tenant rate limits.
-// It reads tenant_id from the request context (set by auth middleware).
-// Returns 429 Too Many Requests with Retry-After header when limit is exceeded.
-func Middleware(cfg Config) func(http.Handler) http.Handler {
+// MiddlewareWithContext is like Middleware but accepts a context for graceful shutdown.
+// When the context is cancelled, the background cleanup goroutine stops.
+func MiddlewareWithContext(ctx context.Context, cfg Config) func(http.Handler) http.Handler {
 	ipLimiter := NewLimiter(cfg.IPRate, cfg.IPBurst)
 	tenantLimiter := NewLimiter(cfg.TenantRate, cfg.TenantBurst)
 
-	// Start background cleanup goroutine.
+	// Background cleanup with context cancellation.
 	go func() {
 		ticker := time.NewTicker(cfg.CleanupInterval)
 		defer ticker.Stop()
-		for range ticker.C {
-			ipLimiter.Cleanup(cfg.StaleAfter)
-			tenantLimiter.Cleanup(cfg.StaleAfter)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				ipLimiter.Cleanup(cfg.StaleAfter)
+				tenantLimiter.Cleanup(cfg.StaleAfter)
+			}
 		}
 	}()
 
@@ -133,31 +139,34 @@ func Middleware(cfg Config) func(http.Handler) http.Handler {
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Bypass rate limiting for health endpoints.
 			if bypassPaths[r.URL.Path] {
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			// Per-IP check.
 			ip := extractIP(r)
 			if !ipLimiter.Allow(ip) {
 				slog.Warn("rate limit exceeded (IP)", "ip", ip, "path", r.URL.Path)
-				writeTooManyRequests(w, "per-IP rate limit exceeded")
+				writeTooManyRequests(w, cfg, "per-IP rate limit exceeded")
 				return
 			}
 
-			// Per-tenant check (tenant_id is in context from auth middleware).
 			tenantID := auth.TenantID(r.Context())
 			if tenantID != "" && !tenantLimiter.Allow(tenantID) {
 				slog.Warn("rate limit exceeded (tenant)", "tenant_id", tenantID, "path", r.URL.Path)
-				writeTooManyRequests(w, "per-tenant rate limit exceeded")
+				writeTooManyRequests(w, cfg, "per-tenant rate limit exceeded")
 				return
 			}
 
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// Middleware returns HTTP middleware with no shutdown control (background cleanup runs forever).
+// Prefer MiddlewareWithContext for production services with graceful shutdown.
+func Middleware(cfg Config) func(http.Handler) http.Handler {
+	return MiddlewareWithContext(context.Background(), cfg)
 }
 
 func extractIP(r *http.Request) string {
@@ -180,9 +189,13 @@ func extractIP(r *http.Request) string {
 	return host
 }
 
-func writeTooManyRequests(w http.ResponseWriter, message string) {
+func writeTooManyRequests(w http.ResponseWriter, cfg Config, message string) {
+	retryAfter := 1
+	if cfg.IPRate > 0 {
+		retryAfter = int(math.Ceil(1.0 / cfg.IPRate))
+	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Retry-After", "1")
+	w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
 	w.WriteHeader(http.StatusTooManyRequests)
 	json.NewEncoder(w).Encode(map[string]map[string]string{
 		"error": {
@@ -190,26 +203,4 @@ func writeTooManyRequests(w http.ResponseWriter, message string) {
 			"message": message,
 		},
 	})
-}
-
-func getEnvInt(key string, fallback int) int {
-	if v := os.Getenv(key); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			return n
-		}
-		slog.Warn("ignoring invalid integer env var, using default",
-			"key", key, "value", v, "default", fallback)
-	}
-	return fallback
-}
-
-func getEnvFloat(key string, fallback float64) float64 {
-	if v := os.Getenv(key); v != "" {
-		if f, err := strconv.ParseFloat(v, 64); err == nil && f > 0 {
-			return f
-		}
-		slog.Warn("ignoring invalid float env var, using default",
-			"key", key, "value", v, "default", fallback)
-	}
-	return fallback
 }

@@ -4,15 +4,37 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement, type ReactNode } from 'react';
 import { useCSRContext } from '../useCSRContext';
 
-// Mock all upstream hooks
-const mockMember = { data: undefined as any, isLoading: false, error: null };
-const mockServiceCredit = { data: undefined as any, isLoading: false };
-const mockBeneficiaries = { data: undefined as any, isLoading: false };
-const mockContributions = { data: undefined as any, isLoading: false };
-const mockEligibility = { data: undefined as any, isLoading: false };
-const mockContact = { data: undefined as any, isLoading: false };
-const mockTimeline = { data: undefined as any, isLoading: false };
-const mockCases = { data: undefined as any, isLoading: false };
+// Mock all upstream hooks — data typed as unknown to allow flexible test assignments
+const mockMember: { data: unknown; isLoading: boolean; error: Error | null } = {
+  data: undefined,
+  isLoading: false,
+  error: null,
+};
+const mockServiceCredit: { data: unknown; isLoading: boolean } = {
+  data: undefined,
+  isLoading: false,
+};
+const mockBeneficiaries: { data: unknown; isLoading: boolean } = {
+  data: undefined,
+  isLoading: false,
+};
+const mockContributions: { data: unknown; isLoading: boolean } = {
+  data: undefined,
+  isLoading: false,
+};
+const mockEligibility: { data: unknown; isLoading: boolean } = {
+  data: undefined,
+  isLoading: false,
+};
+const mockContact: { data: unknown; isLoading: boolean } = {
+  data: undefined,
+  isLoading: false,
+};
+const mockTimeline: { data: unknown; isLoading: boolean } = {
+  data: undefined,
+  isLoading: false,
+};
+const mockCases: { data: unknown; isLoading: boolean } = { data: undefined, isLoading: false };
 
 vi.mock('@/hooks/useMember', () => ({
   useMember: () => mockMember,

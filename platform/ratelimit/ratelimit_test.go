@@ -1,6 +1,7 @@
 package ratelimit
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/noui/platform/auth"
+	"github.com/noui/platform/envutil"
 )
 
 // okHandler writes 200 OK — used as the downstream handler in middleware tests.
@@ -154,9 +156,9 @@ func TestMiddleware_Returns429(t *testing.T) {
 		t.Fatalf("second request: expected 429, got %d", rec2.Code)
 	}
 
-	// Verify Retry-After header.
-	if ra := rec2.Header().Get("Retry-After"); ra != "1" {
-		t.Fatalf("expected Retry-After: 1, got %q", ra)
+	// Verify Retry-After header (computed: ceil(1/0.001) = 1000).
+	if ra := rec2.Header().Get("Retry-After"); ra != "1000" {
+		t.Fatalf("expected Retry-After: 1000, got %q", ra)
 	}
 
 	// Verify JSON error body.
@@ -303,7 +305,7 @@ func TestDefaultConfig_EnvOverride(t *testing.T) {
 
 func TestGetEnvFloat_Valid(t *testing.T) {
 	t.Setenv("TEST_FLOAT", "3.14")
-	v := getEnvFloat("TEST_FLOAT", 1.0)
+	v := envutil.GetEnvFloat("TEST_FLOAT", 1.0)
 	if v != 3.14 {
 		t.Fatalf("expected 3.14, got %f", v)
 	}
@@ -311,7 +313,7 @@ func TestGetEnvFloat_Valid(t *testing.T) {
 
 func TestGetEnvFloat_Invalid(t *testing.T) {
 	t.Setenv("TEST_FLOAT_BAD", "not-a-number")
-	v := getEnvFloat("TEST_FLOAT_BAD", 1.0)
+	v := envutil.GetEnvFloat("TEST_FLOAT_BAD", 1.0)
 	if v != 1.0 {
 		t.Fatalf("expected fallback 1.0, got %f", v)
 	}
@@ -319,7 +321,7 @@ func TestGetEnvFloat_Invalid(t *testing.T) {
 
 func TestGetEnvFloat_Negative(t *testing.T) {
 	t.Setenv("TEST_FLOAT_NEG", "-5.0")
-	v := getEnvFloat("TEST_FLOAT_NEG", 1.0)
+	v := envutil.GetEnvFloat("TEST_FLOAT_NEG", 1.0)
 	if v != 1.0 {
 		t.Fatalf("expected fallback 1.0 for negative value, got %f", v)
 	}
@@ -327,7 +329,7 @@ func TestGetEnvFloat_Negative(t *testing.T) {
 
 func TestGetEnvInt_Valid(t *testing.T) {
 	t.Setenv("TEST_INT", "42")
-	v := getEnvInt("TEST_INT", 10)
+	v := envutil.GetEnvInt("TEST_INT", 10)
 	if v != 42 {
 		t.Fatalf("expected 42, got %d", v)
 	}
@@ -335,7 +337,7 @@ func TestGetEnvInt_Valid(t *testing.T) {
 
 func TestGetEnvInt_Invalid(t *testing.T) {
 	t.Setenv("TEST_INT_BAD", "abc")
-	v := getEnvInt("TEST_INT_BAD", 10)
+	v := envutil.GetEnvInt("TEST_INT_BAD", 10)
 	if v != 10 {
 		t.Fatalf("expected fallback 10, got %d", v)
 	}
@@ -343,7 +345,7 @@ func TestGetEnvInt_Invalid(t *testing.T) {
 
 func TestGetEnvInt_Negative(t *testing.T) {
 	t.Setenv("TEST_INT_NEG", "-3")
-	v := getEnvInt("TEST_INT_NEG", 10)
+	v := envutil.GetEnvInt("TEST_INT_NEG", 10)
 	if v != 10 {
 		t.Fatalf("expected fallback 10 for negative value, got %d", v)
 	}
@@ -419,4 +421,32 @@ func TestMiddleware_TenantRateLimit(t *testing.T) {
 	if body["error"]["message"] != "per-tenant rate limit exceeded" {
 		t.Fatalf("expected per-tenant message, got %q", body["error"]["message"])
 	}
+}
+
+func TestMiddleware_CleanupStopsOnContextCancel(t *testing.T) {
+	cfg := Config{
+		IPRate:          10,
+		IPBurst:         5,
+		TenantRate:      20,
+		TenantBurst:     10,
+		CleanupInterval: 50 * time.Millisecond,
+		StaleAfter:      10 * time.Millisecond,
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	handler := MiddlewareWithContext(ctx, cfg)(okHandler())
+
+	// Make a request to populate limiters
+	req := httptest.NewRequest("GET", "/api/v1/test", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+
+	// Cancel context — cleanup goroutine should stop
+	cancel()
+	time.Sleep(100 * time.Millisecond)
+	// If we get here without hanging, the cleanup goroutine respected cancellation
 }

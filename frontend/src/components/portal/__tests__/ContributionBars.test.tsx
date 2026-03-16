@@ -8,7 +8,7 @@ class ResizeObserverMock {
   unobserve() {}
   disconnect() {}
 }
-globalThis.ResizeObserver = ResizeObserverMock as any;
+globalThis.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver;
 
 const zeroData: ContributionDataPoint[] = [
   { year: '2024', employee: 0, employer: 0 },

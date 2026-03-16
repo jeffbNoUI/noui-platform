@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { generateMemberSummary, type MemberSummaryInput } from '@/lib/memberSummary';
 import type { Member } from '@/types/Member';
+import type { Commitment } from '@/types/CRM';
 
 const baseMember: Member = {
   member_id: 10001,
@@ -215,7 +216,7 @@ describe('generateMemberSummary', () => {
             status: 'overdue',
             createdAt: '2026-01-15T00:00:00Z',
             updatedAt: '2026-01-15T00:00:00Z',
-          } as any,
+          } as unknown as Commitment,
         ],
       }),
     );
@@ -307,7 +308,7 @@ describe('generateMemberSummary', () => {
             status: 'pending',
             createdAt: '2026-03-01T00:00:00Z',
             updatedAt: '2026-03-01T00:00:00Z',
-          } as any,
+          } as unknown as Commitment,
         ],
       }),
     );

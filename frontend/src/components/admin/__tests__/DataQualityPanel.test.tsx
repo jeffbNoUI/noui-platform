@@ -3,7 +3,7 @@ import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@/test/helpers';
 import DataQualityPanel from '../DataQualityPanel';
 import { mockDQScore, mockDQIssues } from '@/components/dashboard/__tests__/fixtures';
-import type { DQCheckDefinition } from '@/types/DataQuality';
+import type { DQCheckDefinition, DQScore, DQScoreTrend, DQIssue } from '@/types/DataQuality';
 
 // Mock ResizeObserver for Recharts
 class ResizeObserverMock {
@@ -11,7 +11,7 @@ class ResizeObserverMock {
   unobserve() {}
   disconnect() {}
 }
-globalThis.ResizeObserver = ResizeObserverMock as any;
+globalThis.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver;
 
 const mockChecks: DQCheckDefinition[] = [
   {
@@ -45,11 +45,11 @@ const mockChecks: DQCheckDefinition[] = [
 
 const mockMutate = vi.fn();
 
-let mockScoreData: any = mockDQScore;
+let mockScoreData: DQScore | undefined = mockDQScore;
 let mockScoreLoading = false;
-let mockTrendData: any = [];
-let mockChecksData: any = mockChecks;
-let mockIssuesData: any = mockDQIssues;
+let mockTrendData: DQScoreTrend[] = [];
+let mockChecksData: DQCheckDefinition[] | undefined = mockChecks;
+let mockIssuesData: DQIssue[] | undefined = mockDQIssues;
 
 vi.mock('@/hooks/useDataQuality', () => ({
   useDQScore: () => ({

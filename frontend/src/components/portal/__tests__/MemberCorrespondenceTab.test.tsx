@@ -17,13 +17,19 @@ describe('MemberCorrespondenceTab', () => {
   });
 
   it('shows loading state', () => {
-    mockUseSentCorrespondence.mockReturnValue({ data: undefined, isLoading: true } as any);
+    mockUseSentCorrespondence.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+    } as unknown as ReturnType<typeof useSentCorrespondence>);
     renderWithProviders(<MemberCorrespondenceTab memberId={10001} />);
     expect(screen.getByText(/Loading correspondence/)).toBeInTheDocument();
   });
 
   it('shows empty state when no correspondence', () => {
-    mockUseSentCorrespondence.mockReturnValue({ data: [], isLoading: false } as any);
+    mockUseSentCorrespondence.mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useSentCorrespondence>);
     renderWithProviders(<MemberCorrespondenceTab memberId={10001} />);
     expect(screen.getByText('No correspondence on file')).toBeInTheDocument();
   });
@@ -49,7 +55,7 @@ describe('MemberCorrespondenceTab', () => {
         },
       ],
       isLoading: false,
-    } as any);
+    } as unknown as ReturnType<typeof useSentCorrespondence>);
     renderWithProviders(<MemberCorrespondenceTab memberId={10001} />);
     expect(screen.getByText('Letters & Notices')).toBeInTheDocument();
     expect(screen.getByText('2 items')).toBeInTheDocument();
@@ -70,7 +76,7 @@ describe('MemberCorrespondenceTab', () => {
         },
       ],
       isLoading: false,
-    } as any);
+    } as unknown as ReturnType<typeof useSentCorrespondence>);
     renderWithProviders(<MemberCorrespondenceTab memberId={10001} />);
 
     expect(screen.queryByText('Welcome to DERP, your pension fund.')).not.toBeInTheDocument();

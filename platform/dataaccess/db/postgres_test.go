@@ -2,6 +2,8 @@ package db
 
 import (
 	"testing"
+
+	"github.com/noui/platform/envutil"
 )
 
 // ─── ConfigFromEnv ───────────────────────────────────────────────────────────
@@ -71,17 +73,17 @@ func TestConfigFromEnv_InvalidPoolSize(t *testing.T) {
 func TestGetEnvInt_Fallback(t *testing.T) {
 	t.Setenv("TEST_INT_UNSET", "")
 
-	got := getEnvInt("TEST_INT_UNSET", 42)
+	got := envutil.GetEnvInt("TEST_INT_UNSET", 42)
 	if got != 42 {
-		t.Errorf("getEnvInt() = %d, want 42", got)
+		t.Errorf("envutil.GetEnvInt() = %d, want 42", got)
 	}
 }
 
 func TestGetEnvInt_ValidValue(t *testing.T) {
 	t.Setenv("TEST_INT_VALID", "99")
 
-	got := getEnvInt("TEST_INT_VALID", 42)
+	got := envutil.GetEnvInt("TEST_INT_VALID", 42)
 	if got != 99 {
-		t.Errorf("getEnvInt() = %d, want 99", got)
+		t.Errorf("envutil.GetEnvInt() = %d, want 99", got)
 	}
 }

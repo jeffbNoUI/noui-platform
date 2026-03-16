@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"os"
 	"testing"
+
+	"github.com/noui/platform/envutil"
 )
 
 // ─── NewStore ────────────────────────────────────────────────────────────────
@@ -41,7 +43,7 @@ func TestGetEnv_Fallback(t *testing.T) {
 	key := "CRM_TEST_NONEXISTENT_VAR_12345"
 	os.Unsetenv(key)
 
-	got := getEnv(key, "default_val")
+	got := envutil.GetEnv(key, "default_val")
 	if got != "default_val" {
 		t.Errorf("expected fallback %q, got %q", "default_val", got)
 	}
@@ -52,7 +54,7 @@ func TestGetEnv_EnvSet(t *testing.T) {
 	os.Setenv(key, "from_env")
 	defer os.Unsetenv(key)
 
-	got := getEnv(key, "fallback")
+	got := envutil.GetEnv(key, "fallback")
 	if got != "from_env" {
 		t.Errorf("expected %q, got %q", "from_env", got)
 	}
@@ -63,7 +65,7 @@ func TestGetEnv_EmptyUsesFallback(t *testing.T) {
 	os.Setenv(key, "")
 	defer os.Unsetenv(key)
 
-	got := getEnv(key, "fallback")
+	got := envutil.GetEnv(key, "fallback")
 	if got != "fallback" {
 		t.Errorf("expected fallback %q when env is empty, got %q", "fallback", got)
 	}

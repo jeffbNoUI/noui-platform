@@ -8,7 +8,7 @@ class ResizeObserverMock {
   unobserve() {}
   disconnect() {}
 }
-globalThis.ResizeObserver = ResizeObserverMock as any;
+globalThis.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver;
 
 const mockTrend: DQScoreTrend[] = [
   { date: '2026-02-11', score: 92.5 },
