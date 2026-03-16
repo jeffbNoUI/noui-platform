@@ -2,6 +2,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"github.com/noui/platform/correspondence/models"
+	"github.com/noui/platform/dbcontext"
 )
 
 // Store wraps a database connection and exposes Correspondence data-access methods.
@@ -96,7 +98,7 @@ func getEnv(key, fallback string) string {
 // ============================================================
 
 // ListTemplates returns templates filtered by optional parameters.
-func (s *Store) ListTemplates(tenantID, category, stageCategory string, activeOnly bool, limit, offset int) ([]models.Template, int, error) {
+func (s *Store) ListTemplates(ctx context.Context, tenantID, category, stageCategory string, activeOnly bool, limit, offset int) ([]models.Template, int, error) {
 	where := "WHERE t.tenant_id = $1 AND t.deleted_at IS NULL"
 	args := []interface{}{tenantID}
 	argIdx := 2
@@ -116,7 +118,7 @@ func (s *Store) ListTemplates(tenantID, category, stageCategory string, activeOn
 	}
 
 	var total int
-	if err := s.DB.QueryRow("SELECT COUNT(*) FROM correspondence_template t "+where, args...).Scan(&total); err != nil {
+	if err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, "SELECT COUNT(*) FROM correspondence_template t "+where, args...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count templates: %w", err)
 	}
 
@@ -132,7 +134,7 @@ func (s *Store) ListTemplates(tenantID, category, stageCategory string, activeOn
 	`, where, argIdx, argIdx+1)
 	args = append(args, limit, offset)
 
-	rows, err := s.DB.Query(query, args...)
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list templates: %w", err)
 	}
@@ -151,8 +153,8 @@ func (s *Store) ListTemplates(tenantID, category, stageCategory string, activeOn
 }
 
 // GetTemplate returns a single template by ID.
-func (s *Store) GetTemplate(templateID string) (*models.Template, error) {
-	row := s.DB.QueryRow(`
+func (s *Store) GetTemplate(ctx context.Context, templateID string) (*models.Template, error) {
+	row := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, `
 		SELECT template_id, tenant_id, template_code, template_name, description,
 		       category, body_template, merge_fields, output_format,
 		       stage_category, on_send_effects,
@@ -224,13 +226,13 @@ func RenderTemplate(tmpl *models.Template, mergeData map[string]string) (string,
 // ============================================================
 
 // CreateCorrespondence inserts a new correspondence record.
-func (s *Store) CreateCorrespondence(c *models.Correspondence) error {
+func (s *Store) CreateCorrespondence(ctx context.Context, c *models.Correspondence) error {
 	mergeDataJSON, err := json.Marshal(c.MergeData)
 	if err != nil {
 		return fmt.Errorf("marshal merge data: %w", err)
 	}
 
-	_, err = s.DB.Exec(`
+	_, err = dbcontext.DB(ctx, s.DB).ExecContext(ctx, `
 		INSERT INTO correspondence_history (
 			correspondence_id, tenant_id, template_id, member_id, case_id, contact_id,
 			subject, body_rendered, merge_data, status, generated_by, created_at, updated_at
@@ -243,7 +245,7 @@ func (s *Store) CreateCorrespondence(c *models.Correspondence) error {
 }
 
 // ListHistory returns correspondence history with optional filtering.
-func (s *Store) ListHistory(tenantID string, memberID *int, contactID *string, caseID *string, status string, limit, offset int) ([]models.Correspondence, int, error) {
+func (s *Store) ListHistory(ctx context.Context, tenantID string, memberID *int, contactID *string, caseID *string, status string, limit, offset int) ([]models.Correspondence, int, error) {
 	where := "WHERE h.tenant_id = $1 AND h.deleted_at IS NULL"
 	args := []interface{}{tenantID}
 	argIdx := 2
@@ -270,7 +272,7 @@ func (s *Store) ListHistory(tenantID string, memberID *int, contactID *string, c
 	}
 
 	var total int
-	if err := s.DB.QueryRow("SELECT COUNT(*) FROM correspondence_history h "+where, args...).Scan(&total); err != nil {
+	if err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, "SELECT COUNT(*) FROM correspondence_history h "+where, args...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count history: %w", err)
 	}
 
@@ -286,7 +288,7 @@ func (s *Store) ListHistory(tenantID string, memberID *int, contactID *string, c
 	`, where, argIdx, argIdx+1)
 	args = append(args, limit, offset)
 
-	rows, err := s.DB.Query(query, args...)
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list history: %w", err)
 	}
@@ -305,8 +307,8 @@ func (s *Store) ListHistory(tenantID string, memberID *int, contactID *string, c
 }
 
 // GetCorrespondence returns a single correspondence record.
-func (s *Store) GetCorrespondence(corrID string) (*models.Correspondence, error) {
-	row := s.DB.QueryRow(`
+func (s *Store) GetCorrespondence(ctx context.Context, corrID string) (*models.Correspondence, error) {
+	row := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, `
 		SELECT correspondence_id, tenant_id, template_id, member_id, case_id,
 		       contact_id, subject, body_rendered, merge_data, status,
 		       generated_by, sent_at, sent_via, delivery_address,
@@ -333,8 +335,8 @@ func (s *Store) GetCorrespondence(corrID string) (*models.Correspondence, error)
 }
 
 // UpdateCorrespondence updates mutable fields on a correspondence record.
-func (s *Store) UpdateCorrespondence(c *models.Correspondence) error {
-	_, err := s.DB.Exec(`
+func (s *Store) UpdateCorrespondence(ctx context.Context, c *models.Correspondence) error {
+	_, err := dbcontext.DB(ctx, s.DB).ExecContext(ctx, `
 		UPDATE correspondence_history
 		SET status = $2, sent_at = $3, sent_via = $4, delivery_address = $5, updated_at = NOW()
 		WHERE correspondence_id = $1

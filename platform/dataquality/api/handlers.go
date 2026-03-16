@@ -64,7 +64,7 @@ func (h *Handler) ListChecks(w http.ResponseWriter, r *http.Request) {
 	limit := intParam(r, "limit", 25)
 	offset := intParam(r, "offset", 0)
 
-	checks, total, err := h.store.ListChecks(tenantID, category, activeOnly, limit, offset)
+	checks, total, err := h.store.ListChecks(r.Context(), tenantID, category, activeOnly, limit, offset)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
@@ -75,7 +75,7 @@ func (h *Handler) ListChecks(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetCheck(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	check, err := h.store.GetCheck(id)
+	check, err := h.store.GetCheck(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			writeError(w, http.StatusNotFound, "NOT_FOUND", "Check not found")
@@ -95,7 +95,7 @@ func (h *Handler) ListResults(w http.ResponseWriter, r *http.Request) {
 	checkID := r.URL.Query().Get("check_id")
 	limit := intParam(r, "limit", 50)
 
-	results, err := h.store.ListResults(tenantID, checkID, limit)
+	results, err := h.store.ListResults(r.Context(), tenantID, checkID, limit)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
@@ -109,7 +109,7 @@ func (h *Handler) ListResults(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetScore(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantID(r)
 
-	score, err := h.store.GetScore(tenantID)
+	score, err := h.store.GetScore(r.Context(), tenantID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
@@ -122,7 +122,7 @@ func (h *Handler) GetScoreTrend(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantID(r)
 	days := intParam(r, "days", 30)
 
-	trend, err := h.store.GetScoreTrend(tenantID, days)
+	trend, err := h.store.GetScoreTrend(r.Context(), tenantID, days)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
@@ -140,7 +140,7 @@ func (h *Handler) ListIssues(w http.ResponseWriter, r *http.Request) {
 	limit := intParam(r, "limit", 25)
 	offset := intParam(r, "offset", 0)
 
-	issues, total, err := h.store.ListIssues(tenantID, severity, status, limit, offset)
+	issues, total, err := h.store.ListIssues(r.Context(), tenantID, severity, status, limit, offset)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
@@ -152,7 +152,7 @@ func (h *Handler) ListIssues(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 
-	existing, err := h.store.GetIssue(id)
+	existing, err := h.store.GetIssue(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			writeError(w, http.StatusNotFound, "NOT_FOUND", "Issue not found")
@@ -181,7 +181,7 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 		existing.ResolutionNote = req.ResolutionNote
 	}
 
-	if err := h.store.UpdateIssue(existing); err != nil {
+	if err := h.store.UpdateIssue(r.Context(), existing); err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}

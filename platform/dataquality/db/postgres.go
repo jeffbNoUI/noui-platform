@@ -2,6 +2,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log/slog"
@@ -11,6 +12,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"github.com/noui/platform/dataquality/models"
+	"github.com/noui/platform/dbcontext"
 )
 
 // Store wraps a database connection and exposes Data Quality data-access methods.
@@ -94,7 +96,7 @@ func getEnv(key, fallback string) string {
 // ============================================================
 
 // ListChecks returns check definitions filtered by optional parameters.
-func (s *Store) ListChecks(tenantID, category string, activeOnly bool, limit, offset int) ([]models.DQCheckDefinition, int, error) {
+func (s *Store) ListChecks(ctx context.Context, tenantID, category string, activeOnly bool, limit, offset int) ([]models.DQCheckDefinition, int, error) {
 	where := "WHERE d.tenant_id = $1 AND d.deleted_at IS NULL"
 	args := []interface{}{tenantID}
 	argIdx := 2
@@ -109,7 +111,7 @@ func (s *Store) ListChecks(tenantID, category string, activeOnly bool, limit, of
 	}
 
 	var total int
-	if err := s.DB.QueryRow("SELECT COUNT(*) FROM dq_check_definition d "+where, args...).Scan(&total); err != nil {
+	if err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, "SELECT COUNT(*) FROM dq_check_definition d "+where, args...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count checks: %w", err)
 	}
 
@@ -124,7 +126,7 @@ func (s *Store) ListChecks(tenantID, category string, activeOnly bool, limit, of
 	`, where, argIdx, argIdx+1)
 	args = append(args, limit, offset)
 
-	rows, err := s.DB.Query(query, args...)
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list checks: %w", err)
 	}
@@ -147,8 +149,8 @@ func (s *Store) ListChecks(tenantID, category string, activeOnly bool, limit, of
 }
 
 // GetCheck returns a single check definition with its latest result.
-func (s *Store) GetCheck(checkID string) (*models.DQCheckDefinition, error) {
-	row := s.DB.QueryRow(`
+func (s *Store) GetCheck(ctx context.Context, checkID string) (*models.DQCheckDefinition, error) {
+	row := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, `
 		SELECT check_id, tenant_id, check_name, check_code, description,
 		       category, severity, target_table, check_query, threshold,
 		       is_active, schedule, created_at, updated_at, created_by, updated_by
@@ -166,7 +168,7 @@ func (s *Store) GetCheck(checkID string) (*models.DQCheckDefinition, error) {
 	}
 
 	// Get latest result
-	result, err := s.getLatestResult(checkID)
+	result, err := s.getLatestResult(ctx, checkID)
 	if err == nil {
 		c.LatestResult = result
 	}
@@ -178,8 +180,8 @@ func (s *Store) GetCheck(checkID string) (*models.DQCheckDefinition, error) {
 // CHECK RESULT QUERIES
 // ============================================================
 
-func (s *Store) getLatestResult(checkID string) (*models.DQCheckResult, error) {
-	row := s.DB.QueryRow(`
+func (s *Store) getLatestResult(ctx context.Context, checkID string) (*models.DQCheckResult, error) {
+	row := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, `
 		SELECT result_id, check_id, tenant_id, run_at, records_checked,
 		       records_passed, records_failed, pass_rate, status, duration_ms,
 		       error_message, created_at
@@ -201,7 +203,7 @@ func (s *Store) getLatestResult(checkID string) (*models.DQCheckResult, error) {
 }
 
 // ListResults returns check results with optional filtering.
-func (s *Store) ListResults(tenantID, checkID string, limit int) ([]models.DQCheckResult, error) {
+func (s *Store) ListResults(ctx context.Context, tenantID, checkID string, limit int) ([]models.DQCheckResult, error) {
 	where := "WHERE r.tenant_id = $1"
 	args := []interface{}{tenantID}
 	argIdx := 2
@@ -223,7 +225,7 @@ func (s *Store) ListResults(tenantID, checkID string, limit int) ([]models.DQChe
 	`, where, argIdx)
 	args = append(args, limit)
 
-	rows, err := s.DB.Query(query, args...)
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list results: %w", err)
 	}
@@ -250,8 +252,8 @@ func (s *Store) ListResults(tenantID, checkID string, limit int) ([]models.DQChe
 
 // GetScore calculates the aggregate DQ score from latest results.
 // Critical checks have 3x weight, warning 2x, info 1x.
-func (s *Store) GetScore(tenantID string) (*models.DQScore, error) {
-	rows, err := s.DB.Query(`
+func (s *Store) GetScore(ctx context.Context, tenantID string) (*models.DQScore, error) {
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, `
 		SELECT d.category, d.severity, r.pass_rate, r.run_at
 		FROM dq_check_definition d
 		INNER JOIN LATERAL (
@@ -324,12 +326,12 @@ func (s *Store) GetScore(tenantID string) (*models.DQScore, error) {
 	}
 
 	// Count open issues
-	s.DB.QueryRow(`
+	dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, `
 		SELECT COUNT(*) FROM dq_issue
 		WHERE tenant_id = $1 AND status = 'open'
 	`, tenantID).Scan(&score.OpenIssues)
 
-	s.DB.QueryRow(`
+	dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, `
 		SELECT COUNT(*) FROM dq_issue
 		WHERE tenant_id = $1 AND status = 'open' AND severity = 'critical'
 	`, tenantID).Scan(&score.CriticalIssues)
@@ -338,8 +340,8 @@ func (s *Store) GetScore(tenantID string) (*models.DQScore, error) {
 }
 
 // GetScoreTrend returns daily scores for the specified number of days.
-func (s *Store) GetScoreTrend(tenantID string, days int) ([]models.DQScoreTrend, error) {
-	rows, err := s.DB.Query(`
+func (s *Store) GetScoreTrend(ctx context.Context, tenantID string, days int) ([]models.DQScoreTrend, error) {
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, `
 		SELECT DATE(r.run_at) AS run_date,
 		       SUM(r.pass_rate * CASE d.severity
 		           WHEN 'critical' THEN 3 WHEN 'warning' THEN 2 ELSE 1 END) /
@@ -372,7 +374,7 @@ func (s *Store) GetScoreTrend(tenantID string, days int) ([]models.DQScoreTrend,
 // ============================================================
 
 // ListIssues returns DQ issues with optional filtering.
-func (s *Store) ListIssues(tenantID, severity, status string, limit, offset int) ([]models.DQIssue, int, error) {
+func (s *Store) ListIssues(ctx context.Context, tenantID, severity, status string, limit, offset int) ([]models.DQIssue, int, error) {
 	where := "WHERE i.tenant_id = $1"
 	args := []interface{}{tenantID}
 	argIdx := 2
@@ -389,7 +391,7 @@ func (s *Store) ListIssues(tenantID, severity, status string, limit, offset int)
 	}
 
 	var total int
-	if err := s.DB.QueryRow("SELECT COUNT(*) FROM dq_issue i "+where, args...).Scan(&total); err != nil {
+	if err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, "SELECT COUNT(*) FROM dq_issue i "+where, args...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count issues: %w", err)
 	}
 
@@ -407,7 +409,7 @@ func (s *Store) ListIssues(tenantID, severity, status string, limit, offset int)
 	`, where, argIdx, argIdx+1)
 	args = append(args, limit, offset)
 
-	rows, err := s.DB.Query(query, args...)
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list issues: %w", err)
 	}
@@ -431,8 +433,8 @@ func (s *Store) ListIssues(tenantID, severity, status string, limit, offset int)
 }
 
 // GetIssue returns a single issue.
-func (s *Store) GetIssue(issueID string) (*models.DQIssue, error) {
-	row := s.DB.QueryRow(`
+func (s *Store) GetIssue(ctx context.Context, issueID string) (*models.DQIssue, error) {
+	row := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, `
 		SELECT issue_id, result_id, check_id, tenant_id, severity,
 		       record_table, record_id, field_name, current_value,
 		       expected_pattern, description, status, resolved_at,
@@ -455,8 +457,8 @@ func (s *Store) GetIssue(issueID string) (*models.DQIssue, error) {
 }
 
 // UpdateIssue updates an issue's status and resolution fields.
-func (s *Store) UpdateIssue(iss *models.DQIssue) error {
-	_, err := s.DB.Exec(`
+func (s *Store) UpdateIssue(ctx context.Context, iss *models.DQIssue) error {
+	_, err := dbcontext.DB(ctx, s.DB).ExecContext(ctx, `
 		UPDATE dq_issue
 		SET status = $2, resolved_at = $3, resolved_by = $4, resolution_note = $5, updated_at = NOW()
 		WHERE issue_id = $1

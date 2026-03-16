@@ -62,7 +62,7 @@ func (h *Handler) ListTemplates(w http.ResponseWriter, r *http.Request) {
 	limit := intParam(r, "limit", 25)
 	offset := intParam(r, "offset", 0)
 
-	templates, total, err := h.store.ListTemplates(tenantID, category, stageCategory, activeOnly, limit, offset)
+	templates, total, err := h.store.ListTemplates(r.Context(), tenantID, category, stageCategory, activeOnly, limit, offset)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
@@ -73,7 +73,7 @@ func (h *Handler) ListTemplates(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetTemplate(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	tmpl, err := h.store.GetTemplate(id)
+	tmpl, err := h.store.GetTemplate(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			writeError(w, http.StatusNotFound, "NOT_FOUND", "Template not found")
@@ -96,7 +96,7 @@ func (h *Handler) Generate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch the template
-	tmpl, err := h.store.GetTemplate(req.TemplateID)
+	tmpl, err := h.store.GetTemplate(r.Context(), req.TemplateID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			writeError(w, http.StatusNotFound, "NOT_FOUND", "Template not found")
@@ -136,7 +136,7 @@ func (h *Handler) Generate(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt:        now,
 	}
 
-	if err := h.store.CreateCorrespondence(&corr); err != nil {
+	if err := h.store.CreateCorrespondence(r.Context(), &corr); err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
@@ -169,7 +169,7 @@ func (h *Handler) ListHistory(w http.ResponseWriter, r *http.Request) {
 		caseID = &caseid
 	}
 
-	history, total, err := h.store.ListHistory(tenantID, memberID, contactID, caseID, status, limit, offset)
+	history, total, err := h.store.ListHistory(r.Context(), tenantID, memberID, contactID, caseID, status, limit, offset)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
@@ -180,7 +180,7 @@ func (h *Handler) ListHistory(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetCorrespondence(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	corr, err := h.store.GetCorrespondence(id)
+	corr, err := h.store.GetCorrespondence(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			writeError(w, http.StatusNotFound, "NOT_FOUND", "Correspondence not found")
@@ -196,7 +196,7 @@ func (h *Handler) GetCorrespondence(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UpdateCorrespondence(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 
-	existing, err := h.store.GetCorrespondence(id)
+	existing, err := h.store.GetCorrespondence(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			writeError(w, http.StatusNotFound, "NOT_FOUND", "Correspondence not found")
@@ -226,7 +226,7 @@ func (h *Handler) UpdateCorrespondence(w http.ResponseWriter, r *http.Request) {
 		existing.DeliveryAddress = req.DeliveryAddress
 	}
 
-	if err := h.store.UpdateCorrespondence(existing); err != nil {
+	if err := h.store.UpdateCorrespondence(r.Context(), existing); err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
