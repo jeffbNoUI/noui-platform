@@ -14,6 +14,7 @@ import (
 	"github.com/noui/platform/auth"
 	dqdb "github.com/noui/platform/dataquality/db"
 	"github.com/noui/platform/dataquality/models"
+	"github.com/noui/platform/validation"
 )
 
 // Handler holds dependencies for Data Quality API handlers.
@@ -61,8 +62,7 @@ func (h *Handler) ListChecks(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantID(r)
 	category := r.URL.Query().Get("category")
 	activeOnly := r.URL.Query().Get("is_active") != "false"
-	limit := intParam(r, "limit", 25)
-	offset := intParam(r, "offset", 0)
+	limit, offset := validation.Pagination(intParam(r, "limit", 25), intParam(r, "offset", 0), 100)
 
 	checks, total, err := h.store.ListChecks(r.Context(), tenantID, category, activeOnly, limit, offset)
 	if err != nil {
@@ -93,7 +93,7 @@ func (h *Handler) GetCheck(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListResults(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantID(r)
 	checkID := r.URL.Query().Get("check_id")
-	limit := intParam(r, "limit", 50)
+	limit, _ := validation.Pagination(intParam(r, "limit", 50), 0, 100)
 
 	results, err := h.store.ListResults(r.Context(), tenantID, checkID, limit)
 	if err != nil {
@@ -122,6 +122,13 @@ func (h *Handler) GetScoreTrend(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantID(r)
 	days := intParam(r, "days", 30)
 
+	var errs validation.Errors
+	errs.IntRange("days", days, 1, 365)
+	if errs.HasErrors() {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		return
+	}
+
 	trend, err := h.store.GetScoreTrend(r.Context(), tenantID, days)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
@@ -137,8 +144,7 @@ func (h *Handler) ListIssues(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantID(r)
 	severity := r.URL.Query().Get("severity")
 	status := r.URL.Query().Get("status")
-	limit := intParam(r, "limit", 25)
-	offset := intParam(r, "offset", 0)
+	limit, offset := validation.Pagination(intParam(r, "limit", 25), intParam(r, "offset", 0), 100)
 
 	issues, total, err := h.store.ListIssues(r.Context(), tenantID, severity, status, limit, offset)
 	if err != nil {
@@ -165,6 +171,18 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 	var req models.UpdateIssueRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+
+	var errs validation.Errors
+	if req.Status != nil {
+		errs.Enum("status", *req.Status, []string{"open", "resolved", "false_positive"})
+	}
+	if req.ResolutionNote != nil {
+		errs.MaxLen("resolutionNote", *req.ResolutionNote, 5000)
+	}
+	if errs.HasErrors() {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
 		return
 	}
 

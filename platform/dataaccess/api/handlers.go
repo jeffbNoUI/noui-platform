@@ -5,6 +5,7 @@ package api
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -14,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/noui/platform/dataaccess/models"
 	"github.com/noui/platform/dbcontext"
+	"github.com/noui/platform/validation"
 )
 
 // Handler holds dependencies for API handlers.
@@ -58,15 +60,14 @@ func (h *Handler) SearchMembers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	limit := 10
-	if l := r.URL.Query().Get("limit"); l != "" {
-		if v, err := strconv.Atoi(l); err == nil && v > 0 {
-			limit = v
-		}
+	var errs validation.Errors
+	errs.MaxLen("q", q, 200)
+	if errs.HasErrors() {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		return
 	}
-	if limit > 50 {
-		limit = 50
-	}
+
+	limit, _ := validation.Pagination(intParam(r, "limit", 10), 0, 50)
 
 	likePattern := "%" + strings.ToLower(q) + "%"
 
@@ -644,7 +645,16 @@ func parseMemberID(r *http.Request) (int, error) {
 		idStr = strings.TrimPrefix(r.URL.Path, "/api/v1/members/")
 		idStr = strings.Split(idStr, "/")[0]
 	}
-	return strconv.Atoi(idStr)
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		return 0, err
+	}
+	var errs validation.Errors
+	errs.PositiveInt("member_id", id)
+	if errs.HasErrors() {
+		return 0, fmt.Errorf(errs.Error())
+	}
+	return id, nil
 }
 
 func nullStr(ns sql.NullString) string {
@@ -682,4 +692,16 @@ func writeError(w http.ResponseWriter, status int, code, message string) {
 		},
 	}
 	writeJSON(w, status, resp)
+}
+
+func intParam(r *http.Request, name string, defaultVal int) int {
+	s := r.URL.Query().Get(name)
+	if s == "" {
+		return defaultVal
+	}
+	v, err := strconv.Atoi(s)
+	if err != nil {
+		return defaultVal
+	}
+	return v
 }

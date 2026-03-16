@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/noui/platform/auth"
 	kbdb "github.com/noui/platform/knowledgebase/db"
+	"github.com/noui/platform/validation"
 )
 
 // Handler holds dependencies for Knowledge Base API handlers.
@@ -60,8 +61,7 @@ func (h *Handler) ListArticles(w http.ResponseWriter, r *http.Request) {
 	stageID := r.URL.Query().Get("stage_id")
 	topic := r.URL.Query().Get("topic")
 	query := r.URL.Query().Get("q")
-	limit := intParam(r, "limit", 25)
-	offset := intParam(r, "offset", 0)
+	limit, offset := validation.Pagination(intParam(r, "limit", 25), intParam(r, "offset", 0), 100)
 
 	articles, total, err := h.store.ListArticles(r.Context(), tenantID, stageID, topic, query, limit, offset)
 	if err != nil {
@@ -111,8 +111,15 @@ func (h *Handler) SearchArticles(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "Search query 'q' is required")
 		return
 	}
-	limit := intParam(r, "limit", 25)
-	offset := intParam(r, "offset", 0)
+
+	var errs validation.Errors
+	errs.MaxLen("q", query, 200)
+	if errs.HasErrors() {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		return
+	}
+
+	limit, offset := validation.Pagination(intParam(r, "limit", 25), intParam(r, "offset", 0), 100)
 
 	articles, total, err := h.store.SearchArticles(r.Context(), tenantID, query, limit, offset)
 	if err != nil {
@@ -127,8 +134,7 @@ func (h *Handler) SearchArticles(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListRules(w http.ResponseWriter, r *http.Request) {
 	domain := r.URL.Query().Get("domain")
-	limit := intParam(r, "limit", 50)
-	offset := intParam(r, "offset", 0)
+	limit, offset := validation.Pagination(intParam(r, "limit", 50), intParam(r, "offset", 0), 100)
 
 	rules, total, err := h.store.ListRules(r.Context(), domain, limit, offset)
 	if err != nil {

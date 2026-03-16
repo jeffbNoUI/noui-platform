@@ -17,6 +17,7 @@ import (
 	intelligencedb "github.com/noui/platform/intelligence/db"
 	"github.com/noui/platform/intelligence/models"
 	"github.com/noui/platform/intelligence/rules"
+	"github.com/noui/platform/validation"
 )
 
 // Handler holds dependencies for intelligence API handlers.
@@ -67,6 +68,16 @@ func (h *Handler) EvaluateEligibility(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var errs validation.Errors
+	errs.PositiveInt("member_id", req.MemberID)
+	if req.RetirementDate != "" {
+		errs.DateYMD("retirement_date", req.RetirementDate)
+	}
+	if errs.HasErrors() {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		return
+	}
+
 	member, err := h.fetchMember(req.MemberID)
 	if err != nil {
 		writeError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
@@ -81,12 +92,7 @@ func (h *Handler) EvaluateEligibility(w http.ResponseWriter, r *http.Request) {
 
 	retDate := time.Now()
 	if req.RetirementDate != "" {
-		parsed, err := time.Parse("2006-01-02", req.RetirementDate)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "INVALID_DATE", "retirement_date must be YYYY-MM-DD")
-			return
-		}
-		retDate = parsed
+		retDate, _ = time.Parse("2006-01-02", req.RetirementDate)
 	}
 
 	result := rules.EvaluateEligibility(*member, *svcCredit, retDate)
@@ -101,11 +107,16 @@ func (h *Handler) CalculateBenefit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	retDate, err := time.Parse("2006-01-02", req.RetirementDate)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_DATE", "retirement_date must be YYYY-MM-DD")
+	var errs validation.Errors
+	errs.PositiveInt("member_id", req.MemberID)
+	errs.Required("retirement_date", req.RetirementDate)
+	errs.DateYMD("retirement_date", req.RetirementDate)
+	if errs.HasErrors() {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
 		return
 	}
+
+	retDate, _ := time.Parse("2006-01-02", req.RetirementDate)
 
 	member, err := h.fetchMember(req.MemberID)
 	if err != nil {
@@ -146,11 +157,19 @@ func (h *Handler) CalculatePaymentOptions(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	retDate, err := time.Parse("2006-01-02", req.RetirementDate)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_DATE", "retirement_date must be YYYY-MM-DD")
+	var errs validation.Errors
+	errs.PositiveInt("member_id", req.MemberID)
+	errs.Required("retirement_date", req.RetirementDate)
+	errs.DateYMD("retirement_date", req.RetirementDate)
+	if req.BeneficiaryDOB != "" {
+		errs.DateYMD("beneficiary_dob", req.BeneficiaryDOB)
+	}
+	if errs.HasErrors() {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
 		return
 	}
+
+	retDate, _ := time.Parse("2006-01-02", req.RetirementDate)
 
 	member, err := h.fetchMember(req.MemberID)
 	if err != nil {
@@ -191,6 +210,16 @@ func (h *Handler) CalculateScenario(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var errs validation.Errors
+	errs.PositiveInt("member_id", req.MemberID)
+	for i, ds := range req.RetirementDates {
+		errs.DateYMD(fmt.Sprintf("retirement_dates[%d]", i), ds)
+	}
+	if errs.HasErrors() {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		return
+	}
+
 	member, err := h.fetchMember(req.MemberID)
 	if err != nil {
 		writeError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
@@ -220,11 +249,7 @@ func (h *Handler) CalculateScenario(w http.ResponseWriter, r *http.Request) {
 
 	var dates []time.Time
 	for _, ds := range req.RetirementDates {
-		t, err := time.Parse("2006-01-02", ds)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "INVALID_DATE", fmt.Sprintf("invalid date: %s", ds))
-			return
-		}
+		t, _ := time.Parse("2006-01-02", ds) // already validated above
 		dates = append(dates, t)
 	}
 
@@ -240,16 +265,16 @@ func (h *Handler) CalculateDRO(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.RetirementDate == "" {
-		writeError(w, http.StatusBadRequest, "MISSING_DATE", "retirement_date is required")
+	var errs validation.Errors
+	errs.PositiveInt("member_id", req.MemberID)
+	errs.Required("retirement_date", req.RetirementDate)
+	errs.DateYMD("retirement_date", req.RetirementDate)
+	if errs.HasErrors() {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
 		return
 	}
 
-	retDate, err := time.Parse("2006-01-02", req.RetirementDate)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_DATE", "retirement_date must be YYYY-MM-DD")
-		return
-	}
+	retDate, _ := time.Parse("2006-01-02", req.RetirementDate)
 
 	droData, err := h.fetchDRO(req.MemberID)
 	if err != nil || droData == nil || !droData.HasDRO {
