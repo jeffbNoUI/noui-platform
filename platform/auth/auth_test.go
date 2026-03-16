@@ -9,29 +9,35 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
-// testToken creates a valid HS256 JWT for testing.
+const testSecret = "test-secret-for-unit-tests"
+
+// testToken creates a valid HS256 JWT for testing using the default dev secret.
 func testToken(t *testing.T, tenantID, role, memberID string) string {
 	t.Helper()
-
-	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"HS256","typ":"JWT"}`))
-
-	claims := map[string]string{
+	return signToken(t, []byte("dev-secret-do-not-use-in-production"), `{"alg":"HS256","typ":"JWT"}`, map[string]interface{}{
 		"sub":       "user-123",
 		"tenant_id": tenantID,
 		"role":      role,
 		"member_id": memberID,
-	}
+	})
+}
+
+// signToken creates a JWT with a custom header, claims map, and secret.
+func signToken(t *testing.T, secret []byte, headerJSON string, claims map[string]interface{}) string {
+	t.Helper()
+
+	header := base64.RawURLEncoding.EncodeToString([]byte(headerJSON))
+
 	claimsJSON, err := json.Marshal(claims)
 	if err != nil {
 		t.Fatalf("marshal claims: %v", err)
 	}
 	payload := base64.RawURLEncoding.EncodeToString(claimsJSON)
 
-	// Sign with the default dev secret
-	secret := "dev-secret-do-not-use-in-production"
-	mac := hmac.New(sha256.New, []byte(secret))
+	mac := hmac.New(sha256.New, secret)
 	mac.Write([]byte(header + "." + payload))
 	sig := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 
@@ -247,5 +253,125 @@ func TestMiddleware_MissingRoleInToken_Returns401(t *testing.T) {
 
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401 for empty role, got %d", rec.Code)
+	}
+}
+
+func TestMiddleware_ExpiredToken_Returns401(t *testing.T) {
+	secret := []byte(testSecret)
+	token := signToken(t, secret, `{"alg":"HS256","typ":"JWT"}`, map[string]interface{}{
+		"sub":       "user-123",
+		"tenant_id": "tenant-abc",
+		"role":      "staff",
+		"member_id": "m1",
+		"exp":       time.Now().Add(-1 * time.Hour).Unix(),
+	})
+
+	handler := NewMiddleware(secret)(echoHandler())
+	req := httptest.NewRequest(http.MethodGet, "/api/data", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for expired token, got %d", rec.Code)
+	}
+}
+
+func TestMiddleware_FutureExpToken_Returns200(t *testing.T) {
+	secret := []byte(testSecret)
+	token := signToken(t, secret, `{"alg":"HS256","typ":"JWT"}`, map[string]interface{}{
+		"sub":       "user-123",
+		"tenant_id": "tenant-abc",
+		"role":      "staff",
+		"member_id": "m1",
+		"exp":       time.Now().Add(1 * time.Hour).Unix(),
+	})
+
+	handler := NewMiddleware(secret)(echoHandler())
+	req := httptest.NewRequest(http.MethodGet, "/api/data", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for valid future-exp token, got %d; body: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestMiddleware_NoExpClaim_StillAccepted(t *testing.T) {
+	secret := []byte(testSecret)
+	token := signToken(t, secret, `{"alg":"HS256","typ":"JWT"}`, map[string]interface{}{
+		"sub":       "user-123",
+		"tenant_id": "tenant-abc",
+		"role":      "staff",
+		"member_id": "m1",
+	})
+
+	handler := NewMiddleware(secret)(echoHandler())
+	req := httptest.NewRequest(http.MethodGet, "/api/data", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for token without exp (backwards compat), got %d", rec.Code)
+	}
+}
+
+func TestMiddleware_AlgNone_Returns401(t *testing.T) {
+	secret := []byte(testSecret)
+	// Sign with alg:"none" header — should be rejected even with valid signature
+	token := signToken(t, secret, `{"alg":"none","typ":"JWT"}`, map[string]interface{}{
+		"sub":       "user-123",
+		"tenant_id": "tenant-abc",
+		"role":      "staff",
+	})
+
+	handler := NewMiddleware(secret)(echoHandler())
+	req := httptest.NewRequest(http.MethodGet, "/api/data", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for alg:none token, got %d", rec.Code)
+	}
+}
+
+func TestNewMiddleware_UsesProvidedSecret(t *testing.T) {
+	secret := []byte("custom-test-secret")
+	token := signToken(t, secret, `{"alg":"HS256","typ":"JWT"}`, map[string]interface{}{
+		"sub":       "user-123",
+		"tenant_id": "tenant-abc",
+		"role":      "staff",
+		"member_id": "m1",
+	})
+
+	// Should work with matching secret
+	handler := NewMiddleware(secret)(echoHandler())
+	req := httptest.NewRequest(http.MethodGet, "/api/data", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 with matching secret, got %d", rec.Code)
+	}
+
+	// Should fail with wrong secret
+	handler2 := NewMiddleware([]byte("wrong-secret"))(echoHandler())
+	req2 := httptest.NewRequest(http.MethodGet, "/api/data", nil)
+	req2.Header.Set("Authorization", "Bearer "+token)
+	rec2 := httptest.NewRecorder()
+
+	handler2.ServeHTTP(rec2, req2)
+
+	if rec2.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 with wrong secret, got %d", rec2.Code)
 	}
 }
