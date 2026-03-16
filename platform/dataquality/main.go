@@ -4,25 +4,29 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/noui/platform/auth"
 	"github.com/noui/platform/dataquality/api"
 	"github.com/noui/platform/dataquality/db"
+	"github.com/noui/platform/logging"
 )
 
 func main() {
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	log.Println("starting Data Quality service v0.1.0")
+	logger := logging.Setup("dataquality", nil)
+	slog.SetDefault(logger)
+	slog.Info("starting Data Quality service v0.1.0")
 
 	cfg := db.ConfigFromEnv()
 	database, err := db.Connect(cfg)
 	if err != nil {
-		log.Fatalf("failed to connect to database: %v", err)
+		slog.Error("failed to connect to database", "error", err)
+		os.Exit(1)
 	}
 	defer database.Close()
 
@@ -30,7 +34,7 @@ func main() {
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
 
-	wrappedMux := corsMiddleware(mux)
+	wrappedMux := corsMiddleware(logging.RequestLogger(logger)(auth.Middleware(mux)))
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -49,23 +53,25 @@ func main() {
 	signal.Notify(done, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
-		log.Printf("Data Quality service listening on :%s", port)
+		slog.Info("Data Quality service listening", "port", port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("server error: %v", err)
+			slog.Error("server error", "error", err)
+			os.Exit(1)
 		}
 	}()
 
 	<-done
-	log.Println("shutting down Data Quality service...")
+	slog.Info("shutting down Data Quality service...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		log.Fatalf("shutdown error: %v", err)
+		slog.Error("shutdown error", "error", err)
+		os.Exit(1)
 	}
 
-	log.Println("Data Quality service stopped")
+	slog.Info("Data Quality service stopped")
 }
 
 func corsMiddleware(next http.Handler) http.Handler {

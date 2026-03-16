@@ -41,20 +41,19 @@ func TestHealthCheck(t *testing.T) {
 
 // --- Helper Functions ---
 
-func TestTenantFromHeader_Default(t *testing.T) {
+func TestTenantID_Default(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)
-	got := tenantFromHeader(req)
+	got := tenantID(req)
 	if got != defaultTenantID {
-		t.Errorf("tenantFromHeader(no header) = %q, want %q", got, defaultTenantID)
+		t.Errorf("tenantID(no context) = %q, want %q", got, defaultTenantID)
 	}
 }
 
-func TestTenantFromHeader_Custom(t *testing.T) {
+func TestTenantID_FallbackWithoutMiddleware(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)
-	req.Header.Set("X-Tenant-ID", "custom-tenant-789")
-	got := tenantFromHeader(req)
-	if got != "custom-tenant-789" {
-		t.Errorf("tenantFromHeader(custom) = %q, want %q", got, "custom-tenant-789")
+	got := tenantID(req)
+	if got != defaultTenantID {
+		t.Errorf("tenantID(empty context) = %q, want %q", got, defaultTenantID)
 	}
 }
 

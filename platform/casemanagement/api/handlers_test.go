@@ -86,20 +86,19 @@ func TestHealthCheck(t *testing.T) {
 
 // --- Helper Function Tests ---
 
-func TestTenantFromHeader_Default(t *testing.T) {
+func TestTenantID_Default(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)
-	got := tenantFromHeader(req)
+	got := tenantID(req)
 	if got != defaultTenantID {
-		t.Errorf("tenantFromHeader(no header) = %q, want %q", got, defaultTenantID)
+		t.Errorf("tenantID(no context) = %q, want %q", got, defaultTenantID)
 	}
 }
 
-func TestTenantFromHeader_Custom(t *testing.T) {
+func TestTenantID_FallbackWithoutMiddleware(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)
-	req.Header.Set("X-Tenant-ID", "custom-tenant-id")
-	got := tenantFromHeader(req)
-	if got != "custom-tenant-id" {
-		t.Errorf("tenantFromHeader(custom) = %q, want %q", got, "custom-tenant-id")
+	got := tenantID(req)
+	if got != defaultTenantID {
+		t.Errorf("tenantID(empty context) = %q, want %q", got, defaultTenantID)
 	}
 }
 
@@ -1054,10 +1053,12 @@ func TestCreateCase_MalformedJSON(t *testing.T) {
 func TestGetCase_CrossTenant(t *testing.T) {
 	h, mock := newTestHandler(t)
 
-	// Case exists under defaultTenantID but request comes with "other-tenant"
-	// The tenant-scoped query returns ErrNoRows because tenant doesn't match
+	// Without auth middleware, tenantID() falls back to defaultTenantID regardless
+	// of X-Tenant-ID header. Cross-tenant isolation is enforced by JWT middleware
+	// at the integration level. Here we verify the handler uses defaultTenantID
+	// and returns NOT_FOUND when the case doesn't exist for that tenant.
 	mock.ExpectQuery("SELECT").
-		WithArgs("case-001", "other-tenant").
+		WithArgs("case-001", defaultTenantID).
 		WillReturnError(sql.ErrNoRows)
 
 	w := serveWithTenant(h, "GET", "/api/v1/cases/case-001", "other-tenant", nil)

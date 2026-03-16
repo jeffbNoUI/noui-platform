@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
@@ -314,14 +314,14 @@ func (h *Handler) LogSummary(w http.ResponseWriter, r *http.Request) {
 
 	if h.store != nil {
 		if err := h.store.InsertSummaryLog(req.MemberID, req.InputHash, req.Input, req.Output); err != nil {
-			log.Printf("summary-log: insert failed for member=%d: %v", req.MemberID, err)
+			slog.Error("summary-log insert failed", "memberID", req.MemberID, "error", err)
 		}
 	} else {
 		hashPreview := req.InputHash
 		if len(hashPreview) > 16 {
 			hashPreview = hashPreview[:16]
 		}
-		log.Printf("summary-log: member=%d hash=%s (no DB, stdout only)", req.MemberID, hashPreview)
+		slog.Info("summary-log", "memberID", req.MemberID, "hash", hashPreview, "note", "no DB, stdout only")
 	}
 
 	writeJSON(w, http.StatusAccepted, map[string]string{"status": "logged"})
@@ -464,7 +464,7 @@ func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(v); err != nil {
-		log.Printf("error encoding JSON response: %v", err)
+		slog.Error("error encoding JSON response", "error", err)
 	}
 }
 

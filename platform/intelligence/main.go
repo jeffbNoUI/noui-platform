@@ -7,20 +7,23 @@ package main
 import (
 	"context"
 	"database/sql"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/noui/platform/auth"
 	"github.com/noui/platform/intelligence/api"
 	"github.com/noui/platform/intelligence/db"
+	"github.com/noui/platform/logging"
 )
 
 func main() {
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	log.Println("starting intelligence service v0.1.0")
+	logger := logging.Setup("intelligence", nil)
+	slog.SetDefault(logger)
+	slog.Info("starting intelligence service v0.1.0")
 
 	var database *sql.DB
 	if os.Getenv("DB_HOST") != "" {
@@ -28,7 +31,7 @@ func main() {
 		var err error
 		database, err = db.Connect(cfg)
 		if err != nil {
-			log.Printf("WARNING: failed to connect to database: %v (summary-log will log to stdout only)", err)
+			slog.Warn("failed to connect to database, summary-log will log to stdout only", "error", err)
 		} else {
 			defer database.Close()
 		}
@@ -38,7 +41,7 @@ func main() {
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
 
-	wrappedMux := corsMiddleware(mux)
+	wrappedMux := corsMiddleware(logging.RequestLogger(logger)(auth.Middleware(mux)))
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -57,23 +60,25 @@ func main() {
 	signal.Notify(done, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
-		log.Printf("intelligence service listening on :%s", port)
+		slog.Info("intelligence service listening", "port", port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("server error: %v", err)
+			slog.Error("server error", "error", err)
+			os.Exit(1)
 		}
 	}()
 
 	<-done
-	log.Println("shutting down intelligence service...")
+	slog.Info("shutting down intelligence service...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		log.Fatalf("shutdown error: %v", err)
+		slog.Error("shutdown error", "error", err)
+		os.Exit(1)
 	}
 
-	log.Println("intelligence service stopped")
+	slog.Info("intelligence service stopped")
 }
 
 func corsMiddleware(next http.Handler) http.Handler {

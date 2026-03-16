@@ -5,12 +5,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/noui/platform/auth"
 	kbdb "github.com/noui/platform/knowledgebase/db"
 )
 
@@ -55,7 +56,7 @@ func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 // --- Article Handlers ---
 
 func (h *Handler) ListArticles(w http.ResponseWriter, r *http.Request) {
-	tenantID := tenantFromHeader(r)
+	tenantID := tenantID(r)
 	stageID := r.URL.Query().Get("stage_id")
 	topic := r.URL.Query().Get("topic")
 	query := r.URL.Query().Get("q")
@@ -87,7 +88,7 @@ func (h *Handler) GetArticle(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetStageHelp(w http.ResponseWriter, r *http.Request) {
-	tenantID := tenantFromHeader(r)
+	tenantID := tenantID(r)
 	stageID := r.PathValue("stageId")
 
 	article, err := h.store.GetStageHelp(tenantID, stageID)
@@ -104,7 +105,7 @@ func (h *Handler) GetStageHelp(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) SearchArticles(w http.ResponseWriter, r *http.Request) {
-	tenantID := tenantFromHeader(r)
+	tenantID := tenantID(r)
 	query := r.URL.Query().Get("q")
 	if query == "" {
 		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "Search query 'q' is required")
@@ -161,12 +162,11 @@ func (h *Handler) GetRule(w http.ResponseWriter, r *http.Request) {
 
 const defaultTenantID = "00000000-0000-0000-0000-000000000001"
 
-func tenantFromHeader(r *http.Request) string {
-	tid := r.Header.Get("X-Tenant-ID")
-	if tid == "" {
-		return defaultTenantID
+func tenantID(r *http.Request) string {
+	if tid := auth.TenantID(r.Context()); tid != "" {
+		return tid
 	}
-	return tid
+	return defaultTenantID
 }
 
 func decodeJSON(r *http.Request, v interface{}) error {
@@ -181,7 +181,7 @@ func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(v); err != nil {
-		log.Printf("error encoding JSON response: %v", err)
+		slog.Error("error encoding JSON response", "error", err)
 	}
 }
 
