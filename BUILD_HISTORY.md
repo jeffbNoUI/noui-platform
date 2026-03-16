@@ -1,5 +1,44 @@
 # noui-platform — Build History
 
+## Security Hardening Session 1: Auth Middleware + Structured Logging (2026-03-15)
+
+**Branch:** `claude/silly-antonelli`
+**Goal:** Add JWT authentication and structured logging to all 7 platform services as part of the comprehensive quality/security/performance review initiative.
+
+**What was built:**
+- `platform/auth/` — JWT HS256 middleware package (199 lines, 14 tests)
+  - Validates Bearer token signatures, algorithm (HS256 only), and expiration
+  - Extracts tenant_id, member_id, role, user_id from claims into request context
+  - Strips spoofed `X-Tenant-ID` headers — tenant comes from token only
+  - Health/readiness endpoints bypass auth
+  - `NewMiddleware(secret)` constructor for testability
+- `platform/logging/` — Structured JSON logging package (80 lines, 6 tests)
+  - `Setup(serviceName)` creates JSON logger with service attribute
+  - `RequestLogger` middleware logs method, path, status, duration_ms, request_id
+  - `ContextExtractor` pattern for auth claims without coupling to auth package
+  - `statusWriter` implements `http.Flusher` for SSE/streaming compatibility
+- All 7 services wired: dataaccess, intelligence, crm, correspondence, dataquality, knowledgebase, casemanagement
+  - Middleware chain: CORS → Auth → Logging → Handler
+  - All `log.Printf` replaced with `slog.Info`/`slog.Error`/`slog.Warn`
+  - `tenantFromHeader` replaced with context-aware `tenantID` helper (fallback for tests)
+
+**New files (6):**
+- `platform/auth/go.mod`, `platform/auth/auth.go`, `platform/auth/auth_test.go`
+- `platform/logging/go.mod`, `platform/logging/logging.go`, `platform/logging/logging_test.go`
+
+**Modified files (33):** All 7 services' main.go, api/handlers.go, db/postgres.go, go.mod
+
+**Security findings documented:** 13 findings (F-001 through F-013) in `docs/SECURITY_FINDINGS.md`. 8 resolved in this session, 5 tracked for future sessions. Prevention rules added to CLAUDE.md.
+
+**Design documents:**
+- `docs/plans/2026-03-15-quality-security-performance-review-design.md`
+- `docs/plans/2026-03-15-quality-security-performance-review-plan.md`
+
+**Tests:** 794 frontend (0 regressions), 14 auth, 6 logging, all Go service tests pass
+**TypeScript:** 0 errors
+
+---
+
 ## Root Component Tests Batch 1 — Session 16 (2026-03-15)
 
 **Branch:** `claude/infallible-knuth`
