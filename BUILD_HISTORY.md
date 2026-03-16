@@ -1,5 +1,84 @@
 # noui-platform — Build History
 
+## Security Hardening Session 3: Input Validation (2026-03-15)
+
+**Branch:** `claude/bold-albattani`
+**Goal:** Create shared input validation package and wire into all 7 platform services, resolving F-010 (HIGH) from the security review.
+
+**What was built:**
+
+### Shared Validation Package (F-010 — HIGH → RESOLVED)
+
+- **`platform/validation/`** — New Go module (stdlib only, no external deps)
+  - `Errors` collector type with 11 validator methods: Required, MaxLen, MinLen, Enum, EnumOptional, UUID, UUIDOptional, DateYMD, DateYMDOptional, PositiveInt, IntRange
+  - `Pagination()` helper: clamps limit (default 25, configurable max), clamps offset ≥ 0
+  - 14 test functions, 34 subtests — all passing
+
+### Service Wiring (all 7 platform services)
+
+- **casemanagement** — 5 handlers validated: CreateCase (7 checks), UpdateCase (4 enum/length checks), AdvanceStage (3 checks), CreateNote (5 checks), CreateDocument (6 checks). Pagination on ListCases (max 100).
+- **crm** — 10+ handlers validated: CreateContact, UpdateContact, CreateConversation, UpdateConversation, CreateInteraction, CreateNote, CreateCommitment, UpdateCommitment, CreateOutreach, UpdateOutreach, CreateOrganization. Pagination on 7 list endpoints (max 100, audit max 200).
+- **correspondence** — Generate (Required templateId), UpdateCorrespondence (Enum status). Pagination on 2 list endpoints.
+- **dataquality** — UpdateIssue (Enum status, MaxLen). IntRange(days, 1-365) on trend endpoint. Pagination on 3 list endpoints.
+- **knowledgebase** — MaxLen(q, 200) on search. Pagination on 3 list endpoints.
+- **intelligence** — PositiveInt(member_id) on all 5 POST handlers. DateYMD/DateYMDOptional replacing inline date parsing.
+- **dataaccess** — MaxLen(q, 200) on search. Pagination(limit, 0, 50). PositiveInt on member ID.
+
+**New files:** `platform/validation/` (go.mod, validation.go, validation_test.go), `docs/plans/2026-03-15-input-validation.md`
+
+**Modified files:** 14 files across 7 services (go.mod + handlers.go per service)
+
+**Tests:** All 7 platform services build and test clean. Validation package: 34 subtests passing.
+
+---
+
+## Security Hardening Session 2: Row-Level Security + CORS Lockdown (2026-03-15)
+
+**Branch:** `claude/bold-albattani`
+**Goal:** Implement PostgreSQL Row-Level Security (RLS) and lock down wildcard CORS, resolving F-009 (CRITICAL) and F-004 (MEDIUM) from the security review.
+
+**What was built:**
+
+### RLS Infrastructure (F-009 — CRITICAL → RESOLVED)
+
+- **`domains/pension/schema/013_row_level_security.sql`** — 407-line migration enabling RLS on 35 content tables with FORCE ROW LEVEL SECURITY. Three policy tiers:
+  - Direct: 17 tables with tenant_id column (retirement_case, crm_contact, etc.)
+  - Child: 7 tables joined via parent FK (case_flag → retirement_case, etc.)
+  - Legacy: 11 tables without tenant_id (member_master, salary_hist, etc.) — join through retirement_case with staff/member role branching
+  - Supporting index: `idx_case_tenant_member` on `retirement_case(tenant_id, member_id)`
+  - 3 reference tables excluded (department_ref, position_ref, case_stage_definition)
+
+- **`platform/dbcontext/`** — New package for RLS connection scoping (122 lines, 7 tests)
+  - `ScopedConn()` — acquires `*sql.Conn` from pool, calls `set_config('app.tenant_id', ...)` etc.
+  - `DBMiddleware` — extracts auth claims → injects scoped conn into request context
+  - `Querier` interface — satisfied by `*sql.DB`, `*sql.Conn`, `*sql.Tx` for transparent routing
+  - `DB(ctx, fallback)` — single routing point: returns scoped conn if available, pool otherwise
+
+- **Store migration** — All 6 DB services migrated to route queries through `dbcontext.DB(ctx, s.DB)`:
+  - casemanagement: 25+ methods + handlers + all tests updated
+  - crm: 10+ store files + handlers updated
+  - correspondence, dataquality, knowledgebase: db/postgres.go + handlers updated
+  - dataaccess: already used `dbcontext.DB()` directly in handlers
+
+- **Middleware wiring** — `DBMiddleware` added to all 6 DB service `main.go` files. Middleware chain: CORS → Auth → DBContext → Logging → Handler
+
+- **RLS integration tests** — 5 tests in `platform/dataaccess/db/rls_test.go` (skip with `-short`):
+  - Tenant isolation (cases), member isolation (salary), staff visibility, wrong-tenant empty result, cross-tenant member blocking
+
+### CORS Lockdown (F-004 — MEDIUM → RESOLVED)
+
+- `connector/service/handlers.go` + `connector/dashboard/server.go` — replaced wildcard `*` CORS with `os.Getenv("CORS_ORIGIN")` defaulting to `http://localhost:3000`
+- Added Authorization, X-Request-ID headers, credentials support, Max-Age caching
+- Helm values updated for dataaccess and intelligence services
+
+**New files:** `platform/dbcontext/` (go.mod, dbcontext.go, dbcontext_test.go), `domains/pension/schema/013_row_level_security.sql`, `platform/dataaccess/db/rls_test.go`, `docs/plans/2026-03-15-rls-cors-lockdown.md`
+
+**Modified files:** 27+ files across 6 services (main.go, handlers, stores, tests)
+
+**Tests:** All 7 platform services build and test clean. Frontend unaffected (794 tests, 0 regressions).
+
+---
+
 ## Security Hardening Session 1: Auth Middleware + Structured Logging (2026-03-15)
 
 **Branch:** `claude/silly-antonelli`

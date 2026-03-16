@@ -2,6 +2,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 
 	_ "github.com/lib/pq"
 
+	"github.com/noui/platform/dbcontext"
 	"github.com/noui/platform/knowledgebase/models"
 )
 
@@ -96,7 +98,7 @@ func getEnv(key, fallback string) string {
 // ============================================================
 
 // ListArticles returns articles filtered by optional parameters.
-func (s *Store) ListArticles(tenantID, stageID, topic, query string, limit, offset int) ([]models.KBArticle, int, error) {
+func (s *Store) ListArticles(ctx context.Context, tenantID, stageID, topic, query string, limit, offset int) ([]models.KBArticle, int, error) {
 	// Build WHERE clause dynamically
 	where := "WHERE a.tenant_id = $1 AND a.deleted_at IS NULL AND a.is_active = true"
 	args := []interface{}{tenantID}
@@ -121,7 +123,7 @@ func (s *Store) ListArticles(tenantID, stageID, topic, query string, limit, offs
 	// Count
 	countQuery := "SELECT COUNT(*) FROM kb_article a " + where
 	var total int
-	if err := s.DB.QueryRow(countQuery, args...).Scan(&total); err != nil {
+	if err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count articles: %w", err)
 	}
 
@@ -137,7 +139,7 @@ func (s *Store) ListArticles(tenantID, stageID, topic, query string, limit, offs
 	`, where, argIdx, argIdx+1)
 	args = append(args, limit, offset)
 
-	rows, err := s.DB.Query(dataQuery, args...)
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, dataQuery, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list articles: %w", err)
 	}
@@ -156,8 +158,8 @@ func (s *Store) ListArticles(tenantID, stageID, topic, query string, limit, offs
 }
 
 // GetArticle returns a single article with its rule references.
-func (s *Store) GetArticle(articleID string) (*models.KBArticle, error) {
-	row := s.DB.QueryRow(`
+func (s *Store) GetArticle(ctx context.Context, articleID string) (*models.KBArticle, error) {
+	row := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, `
 		SELECT article_id, tenant_id, stage_id, topic, title,
 		       context_text, checklist, next_action, sort_order, is_active,
 		       created_at, updated_at, created_by, updated_by
@@ -170,7 +172,7 @@ func (s *Store) GetArticle(articleID string) (*models.KBArticle, error) {
 		return nil, err
 	}
 
-	refs, err := s.getRuleReferences(articleID)
+	refs, err := s.getRuleReferences(ctx, articleID)
 	if err != nil {
 		return nil, err
 	}
@@ -180,8 +182,8 @@ func (s *Store) GetArticle(articleID string) (*models.KBArticle, error) {
 }
 
 // GetStageHelp returns the article for a specific stage with rule references.
-func (s *Store) GetStageHelp(tenantID, stageID string) (*models.KBArticle, error) {
-	row := s.DB.QueryRow(`
+func (s *Store) GetStageHelp(ctx context.Context, tenantID, stageID string) (*models.KBArticle, error) {
+	row := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, `
 		SELECT article_id, tenant_id, stage_id, topic, title,
 		       context_text, checklist, next_action, sort_order, is_active,
 		       created_at, updated_at, created_by, updated_by
@@ -196,7 +198,7 @@ func (s *Store) GetStageHelp(tenantID, stageID string) (*models.KBArticle, error
 		return nil, err
 	}
 
-	refs, err := s.getRuleReferences(a.ArticleID)
+	refs, err := s.getRuleReferences(ctx, a.ArticleID)
 	if err != nil {
 		return nil, err
 	}
@@ -206,16 +208,16 @@ func (s *Store) GetStageHelp(tenantID, stageID string) (*models.KBArticle, error
 }
 
 // SearchArticles performs full-text search across articles.
-func (s *Store) SearchArticles(tenantID, query string, limit, offset int) ([]models.KBArticle, int, error) {
-	return s.ListArticles(tenantID, "", "", query, limit, offset)
+func (s *Store) SearchArticles(ctx context.Context, tenantID, query string, limit, offset int) ([]models.KBArticle, int, error) {
+	return s.ListArticles(ctx, tenantID, "", "", query, limit, offset)
 }
 
 // ============================================================
 // RULE REFERENCE QUERIES
 // ============================================================
 
-func (s *Store) getRuleReferences(articleID string) ([]models.KBRuleReference, error) {
-	rows, err := s.DB.Query(`
+func (s *Store) getRuleReferences(ctx context.Context, articleID string) ([]models.KBRuleReference, error) {
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, `
 		SELECT reference_id, article_id, rule_id, rule_code, rule_description,
 		       rule_domain, sort_order, created_at, created_by
 		FROM kb_rule_reference
@@ -244,7 +246,7 @@ func (s *Store) getRuleReferences(articleID string) ([]models.KBRuleReference, e
 }
 
 // ListRules returns all rule references, optionally filtered by domain.
-func (s *Store) ListRules(domain string, limit, offset int) ([]models.KBRuleReference, int, error) {
+func (s *Store) ListRules(ctx context.Context, domain string, limit, offset int) ([]models.KBRuleReference, int, error) {
 	where := "WHERE 1=1"
 	args := []interface{}{}
 	argIdx := 1
@@ -258,7 +260,7 @@ func (s *Store) ListRules(domain string, limit, offset int) ([]models.KBRuleRefe
 	// Count
 	var total int
 	countQuery := "SELECT COUNT(*) FROM kb_rule_reference r " + where
-	if err := s.DB.QueryRow(countQuery, args...).Scan(&total); err != nil {
+	if err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count rules: %w", err)
 	}
 
@@ -273,7 +275,7 @@ func (s *Store) ListRules(domain string, limit, offset int) ([]models.KBRuleRefe
 	`, where, argIdx, argIdx+1)
 	args = append(args, limit, offset)
 
-	rows, err := s.DB.Query(dataQuery, args...)
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, dataQuery, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list rules: %w", err)
 	}
@@ -296,8 +298,8 @@ func (s *Store) ListRules(domain string, limit, offset int) ([]models.KBRuleRefe
 }
 
 // GetRule returns a single rule reference by rule_id with linked articles.
-func (s *Store) GetRule(ruleID string) (*models.KBRuleReference, []models.KBArticle, error) {
-	row := s.DB.QueryRow(`
+func (s *Store) GetRule(ctx context.Context, ruleID string) (*models.KBRuleReference, []models.KBArticle, error) {
+	row := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, `
 		SELECT reference_id, article_id, rule_id, rule_code, rule_description,
 		       rule_domain, sort_order, created_at, created_by
 		FROM kb_rule_reference
@@ -315,7 +317,7 @@ func (s *Store) GetRule(ruleID string) (*models.KBRuleReference, []models.KBArti
 	}
 
 	// Get all articles linked to this rule_id
-	artRows, err := s.DB.Query(`
+	artRows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, `
 		SELECT a.article_id, a.tenant_id, a.stage_id, a.topic, a.title,
 		       a.context_text, a.checklist, a.next_action, a.sort_order, a.is_active,
 		       a.created_at, a.updated_at, a.created_by, a.updated_by

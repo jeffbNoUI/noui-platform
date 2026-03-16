@@ -352,10 +352,10 @@ func (s *Server) handleTrends(w http.ResponseWriter, r *http.Request) {
 
 // TrendResponse is the top-level trend analysis output.
 type TrendResponse struct {
-	DataPoints     int              `json:"data_points"`
-	TimeRange      TimeRange        `json:"time_range"`
-	BaselineTrends []BaselineTrend  `json:"baseline_trends"`
-	CheckTimeline  []CheckTimeline  `json:"check_timeline"`
+	DataPoints     int             `json:"data_points"`
+	TimeRange      TimeRange       `json:"time_range"`
+	BaselineTrends []BaselineTrend `json:"baseline_trends"`
+	CheckTimeline  []CheckTimeline `json:"check_timeline"`
 }
 
 // TimeRange describes the span of history data.
@@ -366,9 +366,9 @@ type TimeRange struct {
 
 // BaselineTrend shows how a baseline metric has drifted over time.
 type BaselineTrend struct {
-	MetricName string          `json:"metric_name"`
-	Points     []TrendPoint    `json:"points"`
-	Drift      float64         `json:"drift_pct"` // percentage change from first to last
+	MetricName string       `json:"metric_name"`
+	Points     []TrendPoint `json:"points"`
+	Drift      float64      `json:"drift_pct"` // percentage change from first to last
 }
 
 // TrendPoint is a single data point in a baseline trend.
@@ -379,9 +379,9 @@ type TrendPoint struct {
 
 // CheckTimeline shows the status history of a single check.
 type CheckTimeline struct {
-	CheckName string              `json:"check_name"`
-	Points    []CheckTimePoint    `json:"points"`
-	Changes   int                 `json:"status_changes"`
+	CheckName string           `json:"check_name"`
+	Points    []CheckTimePoint `json:"points"`
+	Changes   int              `json:"status_changes"`
 }
 
 // CheckTimePoint is a single status data point.
@@ -522,14 +522,20 @@ func writeError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, map[string]string{"error": message})
 }
 
-// withCORS wraps a handler to add CORS headers for local development.
+// withCORS wraps a handler to add CORS headers with env-configured origin.
 func withCORS(next http.Handler) http.Handler {
+	origin := os.Getenv("CORS_ORIGIN")
+	if origin == "" {
+		origin = "http://localhost:3000"
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Origin", origin)
 		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Request-ID")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
 
 		if r.Method == http.MethodOptions {
+			w.Header().Set("Access-Control-Max-Age", "86400")
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}

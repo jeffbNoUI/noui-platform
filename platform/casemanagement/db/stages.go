@@ -1,10 +1,15 @@
 package db
 
-import "github.com/noui/platform/casemanagement/models"
+import (
+	"context"
+
+	"github.com/noui/platform/casemanagement/models"
+	"github.com/noui/platform/dbcontext"
+)
 
 // ListStages returns all stage definitions ordered by sort_order.
-func (s *Store) ListStages() ([]models.StageDefinition, error) {
-	rows, err := s.DB.Query(`
+func (s *Store) ListStages(ctx context.Context) ([]models.StageDefinition, error) {
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, `
 		SELECT stage_idx, stage_name, COALESCE(description, ''), sort_order
 		FROM case_stage_definition
 		ORDER BY sort_order
@@ -26,9 +31,9 @@ func (s *Store) ListStages() ([]models.StageDefinition, error) {
 }
 
 // GetStage returns a single stage definition by index.
-func (s *Store) GetStage(stageIdx int) (*models.StageDefinition, error) {
+func (s *Store) GetStage(ctx context.Context, stageIdx int) (*models.StageDefinition, error) {
 	var st models.StageDefinition
-	err := s.DB.QueryRow(`
+	err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, `
 		SELECT stage_idx, stage_name, COALESCE(description, ''), sort_order
 		FROM case_stage_definition
 		WHERE stage_idx = $1

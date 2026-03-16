@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/noui/platform/auth"
 	kbdb "github.com/noui/platform/knowledgebase/db"
+	"github.com/noui/platform/validation"
 )
 
 // Handler holds dependencies for Knowledge Base API handlers.
@@ -60,10 +61,9 @@ func (h *Handler) ListArticles(w http.ResponseWriter, r *http.Request) {
 	stageID := r.URL.Query().Get("stage_id")
 	topic := r.URL.Query().Get("topic")
 	query := r.URL.Query().Get("q")
-	limit := intParam(r, "limit", 25)
-	offset := intParam(r, "offset", 0)
+	limit, offset := validation.Pagination(intParam(r, "limit", 25), intParam(r, "offset", 0), 100)
 
-	articles, total, err := h.store.ListArticles(tenantID, stageID, topic, query, limit, offset)
+	articles, total, err := h.store.ListArticles(r.Context(), tenantID, stageID, topic, query, limit, offset)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
@@ -74,7 +74,7 @@ func (h *Handler) ListArticles(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetArticle(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	article, err := h.store.GetArticle(id)
+	article, err := h.store.GetArticle(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			writeError(w, http.StatusNotFound, "NOT_FOUND", "Article not found")
@@ -91,7 +91,7 @@ func (h *Handler) GetStageHelp(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantID(r)
 	stageID := r.PathValue("stageId")
 
-	article, err := h.store.GetStageHelp(tenantID, stageID)
+	article, err := h.store.GetStageHelp(r.Context(), tenantID, stageID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			writeError(w, http.StatusNotFound, "NOT_FOUND", "No help found for stage: "+stageID)
@@ -111,10 +111,17 @@ func (h *Handler) SearchArticles(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "Search query 'q' is required")
 		return
 	}
-	limit := intParam(r, "limit", 25)
-	offset := intParam(r, "offset", 0)
 
-	articles, total, err := h.store.SearchArticles(tenantID, query, limit, offset)
+	var errs validation.Errors
+	errs.MaxLen("q", query, 200)
+	if errs.HasErrors() {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		return
+	}
+
+	limit, offset := validation.Pagination(intParam(r, "limit", 25), intParam(r, "offset", 0), 100)
+
+	articles, total, err := h.store.SearchArticles(r.Context(), tenantID, query, limit, offset)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
@@ -127,10 +134,9 @@ func (h *Handler) SearchArticles(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListRules(w http.ResponseWriter, r *http.Request) {
 	domain := r.URL.Query().Get("domain")
-	limit := intParam(r, "limit", 50)
-	offset := intParam(r, "offset", 0)
+	limit, offset := validation.Pagination(intParam(r, "limit", 50), intParam(r, "offset", 0), 100)
 
-	rules, total, err := h.store.ListRules(domain, limit, offset)
+	rules, total, err := h.store.ListRules(r.Context(), domain, limit, offset)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
@@ -142,7 +148,7 @@ func (h *Handler) ListRules(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetRule(w http.ResponseWriter, r *http.Request) {
 	ruleID := r.PathValue("ruleId")
 
-	rule, articles, err := h.store.GetRule(ruleID)
+	rule, articles, err := h.store.GetRule(r.Context(), ruleID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			writeError(w, http.StatusNotFound, "NOT_FOUND", "Rule not found: "+ruleID)

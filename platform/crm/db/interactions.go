@@ -1,11 +1,13 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"time"
 
 	"github.com/noui/platform/crm/models"
+	"github.com/noui/platform/dbcontext"
 )
 
 // InteractionFilter contains the filter parameters for listing interactions.
@@ -20,7 +22,7 @@ type InteractionFilter struct {
 
 // ListInteractions retrieves interactions for a tenant with optional filters.
 // Returns matching interactions, total count, and any error.
-func (s *Store) ListInteractions(tenantID string, filter InteractionFilter) ([]models.Interaction, int, error) {
+func (s *Store) ListInteractions(ctx context.Context, tenantID string, filter InteractionFilter) ([]models.Interaction, int, error) {
 	query := `
 		SELECT
 			interaction_id, tenant_id, conversation_id,
@@ -77,7 +79,7 @@ func (s *Store) ListInteractions(tenantID string, filter InteractionFilter) ([]m
 		argIdx++
 	}
 
-	rows, err := s.DB.Query(query, args...)
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("listing interactions: %w", err)
 	}
@@ -103,7 +105,7 @@ func (s *Store) ListInteractions(tenantID string, filter InteractionFilter) ([]m
 }
 
 // GetInteraction retrieves a single interaction by ID, including notes and commitments.
-func (s *Store) GetInteraction(interactionID string) (*models.Interaction, error) {
+func (s *Store) GetInteraction(ctx context.Context, interactionID string) (*models.Interaction, error) {
 	query := `
 		SELECT
 			interaction_id, tenant_id, conversation_id,
@@ -135,7 +137,7 @@ func (s *Store) GetInteraction(interactionID string) (*models.Interaction, error
 	var wrapUpCode sql.NullString
 	var wrapUpSeconds sql.NullInt64
 
-	err := s.DB.QueryRow(query, interactionID).Scan(
+	err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, query, interactionID).Scan(
 		&i.InteractionID, &i.TenantID, &conversationID,
 		&contactID, &orgID, &agentID,
 		&i.Channel, &i.InteractionType, &category, &subcategory,
@@ -180,14 +182,14 @@ func (s *Store) GetInteraction(interactionID string) (*models.Interaction, error
 	i.WrapUpSeconds = nullInt64ToIntPtr(wrapUpSeconds)
 
 	// Load notes
-	notes, err := s.GetNotesByInteraction(interactionID)
+	notes, err := s.GetNotesByInteraction(ctx, interactionID)
 	if err != nil {
 		return nil, fmt.Errorf("getting notes for interaction %s: %w", interactionID, err)
 	}
 	i.Notes = notes
 
 	// Load commitments
-	commitments, err := s.getCommitmentsByInteraction(interactionID)
+	commitments, err := s.getCommitmentsByInteraction(ctx, interactionID)
 	if err != nil {
 		return nil, fmt.Errorf("getting commitments for interaction %s: %w", interactionID, err)
 	}
@@ -197,7 +199,7 @@ func (s *Store) GetInteraction(interactionID string) (*models.Interaction, error
 }
 
 // CreateInteraction inserts a new interaction record.
-func (s *Store) CreateInteraction(i *models.Interaction) error {
+func (s *Store) CreateInteraction(ctx context.Context, i *models.Interaction) error {
 	query := `
 		INSERT INTO crm_interaction (
 			interaction_id, tenant_id, conversation_id,
@@ -230,7 +232,7 @@ func (s *Store) CreateInteraction(i *models.Interaction) error {
 		)
 		RETURNING created_at`
 
-	return s.DB.QueryRow(
+	return dbcontext.DB(ctx, s.DB).QueryRowContext(ctx,
 		query,
 		i.InteractionID, i.TenantID, i.ConversationID,
 		i.ContactID, i.OrgID, i.AgentID,
@@ -249,7 +251,7 @@ func (s *Store) CreateInteraction(i *models.Interaction) error {
 }
 
 // GetContactTimeline builds a chronological timeline of interactions for a contact.
-func (s *Store) GetContactTimeline(contactID string, limit, offset int) (*models.ContactTimeline, error) {
+func (s *Store) GetContactTimeline(ctx context.Context, contactID string, limit, offset int) (*models.ContactTimeline, error) {
 	query := `
 		SELECT
 			i.interaction_id, i.channel, i.interaction_type,
@@ -265,7 +267,7 @@ func (s *Store) GetContactTimeline(contactID string, limit, offset int) (*models
 		ORDER BY i.started_at DESC
 		LIMIT $2 OFFSET $3`
 
-	rows, err := s.DB.Query(query, contactID, limit, offset)
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, query, contactID, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("getting contact timeline: %w", err)
 	}
@@ -399,7 +401,7 @@ func scanInteractionRow(rows *sql.Rows) (models.Interaction, int, error) {
 }
 
 // getCommitmentsByInteraction retrieves all commitments for an interaction.
-func (s *Store) getCommitmentsByInteraction(interactionID string) ([]models.Commitment, error) {
+func (s *Store) getCommitmentsByInteraction(ctx context.Context, interactionID string) ([]models.Commitment, error) {
 	query := `
 		SELECT
 			commitment_id, tenant_id, interaction_id,
@@ -413,7 +415,7 @@ func (s *Store) getCommitmentsByInteraction(interactionID string) ([]models.Comm
 		WHERE interaction_id = $1
 		ORDER BY target_date`
 
-	rows, err := s.DB.Query(query, interactionID)
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, query, interactionID)
 	if err != nil {
 		return nil, err
 	}

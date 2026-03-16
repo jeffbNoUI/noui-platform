@@ -1,15 +1,17 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
 	"github.com/noui/platform/crm/models"
+	"github.com/noui/platform/dbcontext"
 )
 
 // ListOutreach retrieves outreach tasks for a tenant with optional filters.
 // Returns matching outreach records, total count, and any error.
-func (s *Store) ListOutreach(tenantID string, status, assignedAgent string, limit, offset int) ([]models.Outreach, int, error) {
+func (s *Store) ListOutreach(ctx context.Context, tenantID string, status, assignedAgent string, limit, offset int) ([]models.Outreach, int, error) {
 	query := `
 		SELECT
 			outreach_id, tenant_id,
@@ -55,7 +57,7 @@ func (s *Store) ListOutreach(tenantID string, status, assignedAgent string, limi
 		argIdx++
 	}
 
-	rows, err := s.DB.Query(query, args...)
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("listing outreach: %w", err)
 	}
@@ -118,7 +120,7 @@ func (s *Store) ListOutreach(tenantID string, status, assignedAgent string, limi
 }
 
 // GetOutreach retrieves a single outreach task by ID.
-func (s *Store) GetOutreach(outreachID string) (*models.Outreach, error) {
+func (s *Store) GetOutreach(ctx context.Context, outreachID string) (*models.Outreach, error) {
 	query := `
 		SELECT
 			outreach_id, tenant_id,
@@ -143,7 +145,7 @@ func (s *Store) GetOutreach(outreachID string) (*models.Outreach, error) {
 	var lastAttemptAt, completedAt, scheduledFor, dueBy sql.NullTime
 	var resultInteractionID, resultOutcome sql.NullString
 
-	err := s.DB.QueryRow(query, outreachID).Scan(
+	err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, query, outreachID).Scan(
 		&o.OutreachID, &o.TenantID,
 		&contactID, &orgID,
 		&o.TriggerType, &triggerDetail,
@@ -179,7 +181,7 @@ func (s *Store) GetOutreach(outreachID string) (*models.Outreach, error) {
 }
 
 // CreateOutreach inserts a new outreach task.
-func (s *Store) CreateOutreach(o *models.Outreach) error {
+func (s *Store) CreateOutreach(ctx context.Context, o *models.Outreach) error {
 	query := `
 		INSERT INTO crm_outreach (
 			outreach_id, tenant_id,
@@ -206,7 +208,7 @@ func (s *Store) CreateOutreach(o *models.Outreach) error {
 		)
 		RETURNING created_at, updated_at`
 
-	return s.DB.QueryRow(
+	return dbcontext.DB(ctx, s.DB).QueryRowContext(ctx,
 		query,
 		o.OutreachID, o.TenantID,
 		o.ContactID, o.OrgID,
@@ -222,7 +224,7 @@ func (s *Store) CreateOutreach(o *models.Outreach) error {
 }
 
 // UpdateOutreach modifies mutable fields on an existing outreach task.
-func (s *Store) UpdateOutreach(o *models.Outreach) error {
+func (s *Store) UpdateOutreach(ctx context.Context, o *models.Outreach) error {
 	query := `
 		UPDATE crm_outreach SET
 			status = $2,
@@ -239,7 +241,7 @@ func (s *Store) UpdateOutreach(o *models.Outreach) error {
 		WHERE outreach_id = $1
 		RETURNING updated_at`
 
-	err := s.DB.QueryRow(
+	err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx,
 		query,
 		o.OutreachID,
 		o.Status,

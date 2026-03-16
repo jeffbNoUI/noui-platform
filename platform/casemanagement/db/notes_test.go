@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -19,7 +20,7 @@ func TestCreateNote_WithCategory(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"id", "case_id", "author", "content", "category", "created_at"}).
 			AddRow(1, "case-001", "jsmith", "Verified employment records", "decision", now))
 
-	note, err := s.CreateNote("case-001", models.CreateNoteRequest{
+	note, err := s.CreateNote(context.Background(), "case-001", models.CreateNoteRequest{
 		Author:   "jsmith",
 		Content:  "Verified employment records",
 		Category: "decision",
@@ -48,7 +49,7 @@ func TestCreateNote_DefaultCategory(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"id", "case_id", "author", "content", "category", "created_at"}).
 			AddRow(2, "case-001", "jdoe", "Some note content", "general", now))
 
-	note, err := s.CreateNote("case-001", models.CreateNoteRequest{
+	note, err := s.CreateNote(context.Background(), "case-001", models.CreateNoteRequest{
 		Author:  "jdoe",
 		Content: "Some note content",
 	})
@@ -74,7 +75,7 @@ func TestListNotes_Multiple(t *testing.T) {
 			AddRow(2, "case-001", "jdoe", "Follow-up note", "review", now).
 			AddRow(1, "case-001", "jsmith", "Initial review", "general", earlier))
 
-	notes, err := s.ListNotes("case-001")
+	notes, err := s.ListNotes(context.Background(), "case-001")
 	if err != nil {
 		t.Fatalf("ListNotes error: %v", err)
 	}
@@ -97,7 +98,7 @@ func TestListNotes_Empty(t *testing.T) {
 		WithArgs("case-no-notes").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "case_id", "author", "content", "category", "created_at"}))
 
-	notes, err := s.ListNotes("case-no-notes")
+	notes, err := s.ListNotes(context.Background(), "case-no-notes")
 	if err != nil {
 		t.Fatalf("ListNotes error: %v", err)
 	}
@@ -115,7 +116,7 @@ func TestDeleteNote_Success(t *testing.T) {
 		WithArgs(1, "case-001").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err := s.DeleteNote("case-001", 1)
+	err := s.DeleteNote(context.Background(), "case-001", 1)
 	if err != nil {
 		t.Fatalf("DeleteNote error: %v", err)
 	}
@@ -128,7 +129,7 @@ func TestDeleteNote_NotFound(t *testing.T) {
 		WithArgs(999, "case-001").
 		WillReturnResult(sqlmock.NewResult(0, 0))
 
-	err := s.DeleteNote("case-001", 999)
+	err := s.DeleteNote(context.Background(), "case-001", 999)
 	if err != ErrNotFound {
 		t.Errorf("DeleteNote(nonexistent) error = %v, want ErrNotFound", err)
 	}
@@ -142,7 +143,7 @@ func TestDeleteNote_WrongCase(t *testing.T) {
 		WithArgs(1, "case-002").
 		WillReturnResult(sqlmock.NewResult(0, 0))
 
-	err := s.DeleteNote("case-002", 1)
+	err := s.DeleteNote(context.Background(), "case-002", 1)
 	if err != ErrNotFound {
 		t.Errorf("DeleteNote(wrong case) error = %v, want ErrNotFound", err)
 	}
@@ -157,7 +158,7 @@ func TestNoteCount_Zero(t *testing.T) {
 		WithArgs("case-empty").
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
 
-	count, err := s.NoteCount("case-empty")
+	count, err := s.NoteCount(context.Background(), "case-empty")
 	if err != nil {
 		t.Fatalf("NoteCount error: %v", err)
 	}
@@ -173,7 +174,7 @@ func TestNoteCount_Multiple(t *testing.T) {
 		WithArgs("case-001").
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(5))
 
-	count, err := s.NoteCount("case-001")
+	count, err := s.NoteCount(context.Background(), "case-001")
 	if err != nil {
 		t.Fatalf("NoteCount error: %v", err)
 	}

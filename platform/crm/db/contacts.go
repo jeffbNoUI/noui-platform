@@ -1,16 +1,18 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
 
 	"github.com/noui/platform/crm/models"
+	"github.com/noui/platform/dbcontext"
 )
 
 // ListContacts searches contacts by name, email, phone, or legacy member ID with pagination.
 // Returns matching contacts, total count, and any error.
-func (s *Store) ListContacts(tenantID string, params models.ContactSearchParams) ([]models.Contact, int, error) {
+func (s *Store) ListContacts(ctx context.Context, tenantID string, params models.ContactSearchParams) ([]models.Contact, int, error) {
 	query := `
 		SELECT
 			contact_id, tenant_id, contact_type, legacy_mbr_id,
@@ -63,7 +65,7 @@ func (s *Store) ListContacts(tenantID string, params models.ContactSearchParams)
 		argIdx++
 	}
 
-	rows, err := s.DB.Query(query, args...)
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("listing contacts: %w", err)
 	}
@@ -133,7 +135,7 @@ func (s *Store) ListContacts(tenantID string, params models.ContactSearchParams)
 }
 
 // GetContact retrieves a single contact by ID, including addresses and preferences.
-func (s *Store) GetContact(contactID string) (*models.Contact, error) {
+func (s *Store) GetContact(ctx context.Context, contactID string) (*models.Contact, error) {
 	query := `
 		SELECT
 			contact_id, tenant_id, contact_type, legacy_mbr_id,
@@ -162,7 +164,7 @@ func (s *Store) GetContact(contactID string) (*models.Contact, error) {
 	var mergedIntoID sql.NullString
 	var mergeDate sql.NullTime
 
-	err := s.DB.QueryRow(query, contactID).Scan(
+	err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, query, contactID).Scan(
 		&c.ContactID, &c.TenantID, &c.ContactType, &legacyMbrID,
 		&c.FirstName, &c.LastName, &middleName, &suffix,
 		&dob, &gender,
@@ -202,14 +204,14 @@ func (s *Store) GetContact(contactID string) (*models.Contact, error) {
 	c.MergeDate = nullTimeToPtr(mergeDate)
 
 	// Load addresses
-	addresses, err := s.getContactAddresses(contactID)
+	addresses, err := s.getContactAddresses(ctx, contactID)
 	if err != nil {
 		return nil, fmt.Errorf("getting addresses for contact %s: %w", contactID, err)
 	}
 	c.Addresses = addresses
 
 	// Load preferences
-	preferences, err := s.getContactPreferences(contactID)
+	preferences, err := s.getContactPreferences(ctx, contactID)
 	if err != nil {
 		return nil, fmt.Errorf("getting preferences for contact %s: %w", contactID, err)
 	}
@@ -219,7 +221,7 @@ func (s *Store) GetContact(contactID string) (*models.Contact, error) {
 }
 
 // CreateContact inserts a new contact record.
-func (s *Store) CreateContact(c *models.Contact) error {
+func (s *Store) CreateContact(ctx context.Context, c *models.Contact) error {
 	query := `
 		INSERT INTO crm_contact (
 			contact_id, tenant_id, contact_type, legacy_mbr_id,
@@ -240,7 +242,7 @@ func (s *Store) CreateContact(c *models.Contact) error {
 		)
 		RETURNING created_at, updated_at`
 
-	return s.DB.QueryRow(
+	return dbcontext.DB(ctx, s.DB).QueryRowContext(ctx,
 		query,
 		c.ContactID, c.TenantID, c.ContactType, c.LegacyMemberID,
 		c.FirstName, c.LastName, c.MiddleName, c.Suffix,
@@ -253,7 +255,7 @@ func (s *Store) CreateContact(c *models.Contact) error {
 }
 
 // UpdateContact modifies mutable fields on an existing contact.
-func (s *Store) UpdateContact(c *models.Contact) error {
+func (s *Store) UpdateContact(ctx context.Context, c *models.Contact) error {
 	query := `
 		UPDATE crm_contact SET
 			first_name = $2,
@@ -272,7 +274,7 @@ func (s *Store) UpdateContact(c *models.Contact) error {
 		WHERE contact_id = $1 AND deleted_at IS NULL
 		RETURNING updated_at`
 
-	err := s.DB.QueryRow(
+	err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx,
 		query,
 		c.ContactID,
 		c.FirstName, c.LastName, c.MiddleName, c.Suffix,
@@ -288,7 +290,7 @@ func (s *Store) UpdateContact(c *models.Contact) error {
 }
 
 // GetContactByLegacyID retrieves a contact by tenant and legacy member ID.
-func (s *Store) GetContactByLegacyID(tenantID, legacyMbrID string) (*models.Contact, error) {
+func (s *Store) GetContactByLegacyID(ctx context.Context, tenantID, legacyMbrID string) (*models.Contact, error) {
 	query := `
 		SELECT contact_id
 		FROM crm_contact
@@ -296,7 +298,7 @@ func (s *Store) GetContactByLegacyID(tenantID, legacyMbrID string) (*models.Cont
 		LIMIT 1`
 
 	var contactID string
-	err := s.DB.QueryRow(query, tenantID, legacyMbrID).Scan(&contactID)
+	err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, query, tenantID, legacyMbrID).Scan(&contactID)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -304,11 +306,11 @@ func (s *Store) GetContactByLegacyID(tenantID, legacyMbrID string) (*models.Cont
 		return nil, fmt.Errorf("looking up legacy member %s: %w", legacyMbrID, err)
 	}
 
-	return s.GetContact(contactID)
+	return s.GetContact(ctx, contactID)
 }
 
 // getContactAddresses retrieves all addresses for a contact.
-func (s *Store) getContactAddresses(contactID string) ([]models.ContactAddress, error) {
+func (s *Store) getContactAddresses(ctx context.Context, contactID string) ([]models.ContactAddress, error) {
 	query := `
 		SELECT
 			address_id, contact_id, address_type, is_primary,
@@ -319,7 +321,7 @@ func (s *Store) getContactAddresses(contactID string) ([]models.ContactAddress, 
 		WHERE contact_id = $1
 		ORDER BY is_primary DESC, effective_from DESC`
 
-	rows, err := s.DB.Query(query, contactID)
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, query, contactID)
 	if err != nil {
 		return nil, err
 	}
@@ -354,7 +356,7 @@ func (s *Store) getContactAddresses(contactID string) ([]models.ContactAddress, 
 }
 
 // getContactPreferences retrieves all preferences for a contact.
-func (s *Store) getContactPreferences(contactID string) ([]models.ContactPreference, error) {
+func (s *Store) getContactPreferences(ctx context.Context, contactID string) ([]models.ContactPreference, error) {
 	query := `
 		SELECT
 			preference_id, contact_id,
@@ -364,7 +366,7 @@ func (s *Store) getContactPreferences(contactID string) ([]models.ContactPrefere
 		WHERE contact_id = $1
 		ORDER BY preference_type`
 
-	rows, err := s.DB.Query(query, contactID)
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, query, contactID)
 	if err != nil {
 		return nil, err
 	}

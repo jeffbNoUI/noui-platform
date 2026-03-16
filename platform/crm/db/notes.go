@@ -1,14 +1,16 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
 	"github.com/noui/platform/crm/models"
+	"github.com/noui/platform/dbcontext"
 )
 
 // CreateNote inserts a new note attached to an interaction.
-func (s *Store) CreateNote(n *models.Note) error {
+func (s *Store) CreateNote(ctx context.Context, n *models.Note) error {
 	query := `
 		INSERT INTO crm_note (
 			note_id, interaction_id,
@@ -29,7 +31,7 @@ func (s *Store) CreateNote(n *models.Note) error {
 		)
 		RETURNING created_at, updated_at`
 
-	return s.DB.QueryRow(
+	return dbcontext.DB(ctx, s.DB).QueryRowContext(ctx,
 		query,
 		n.NoteID, n.InteractionID,
 		n.TemplateID, n.Category, n.Subcategory,
@@ -42,7 +44,7 @@ func (s *Store) CreateNote(n *models.Note) error {
 }
 
 // GetNotesByInteraction retrieves all notes for an interaction.
-func (s *Store) GetNotesByInteraction(interactionID string) ([]models.Note, error) {
+func (s *Store) GetNotesByInteraction(ctx context.Context, interactionID string) ([]models.Note, error) {
 	query := `
 		SELECT
 			note_id, interaction_id,
@@ -56,7 +58,7 @@ func (s *Store) GetNotesByInteraction(interactionID string) ([]models.Note, erro
 		WHERE interaction_id = $1
 		ORDER BY created_at`
 
-	rows, err := s.DB.Query(query, interactionID)
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, query, interactionID)
 	if err != nil {
 		return nil, fmt.Errorf("getting notes for interaction %s: %w", interactionID, err)
 	}

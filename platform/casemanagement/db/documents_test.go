@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -19,7 +20,7 @@ func TestCreateDocument_WithType(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"id", "case_id", "document_type", "filename", "mime_type", "size_bytes", "uploaded_by", "uploaded_at"}).
 			AddRow(1, "case-001", "birth_cert", "birth_certificate.pdf", "application/pdf", 102400, "jsmith", now))
 
-	doc, err := s.CreateDocument("case-001", models.CreateDocumentRequest{
+	doc, err := s.CreateDocument(context.Background(), "case-001", models.CreateDocumentRequest{
 		DocumentType: "birth_cert",
 		Filename:     "birth_certificate.pdf",
 		MimeType:     "application/pdf",
@@ -50,7 +51,7 @@ func TestCreateDocument_Defaults(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"id", "case_id", "document_type", "filename", "mime_type", "size_bytes", "uploaded_by", "uploaded_at"}).
 			AddRow(2, "case-001", "other", "unknown.pdf", "application/pdf", 5000, "jdoe", now))
 
-	doc, err := s.CreateDocument("case-001", models.CreateDocumentRequest{
+	doc, err := s.CreateDocument(context.Background(), "case-001", models.CreateDocumentRequest{
 		Filename:   "unknown.pdf",
 		SizeBytes:  5000,
 		UploadedBy: "jdoe",
@@ -80,7 +81,7 @@ func TestListDocuments_Multiple(t *testing.T) {
 			AddRow(2, "case-001", "employment_verification", "employment.pdf", "application/pdf", 50000, "jdoe", now).
 			AddRow(1, "case-001", "birth_cert", "birth_cert.pdf", "application/pdf", 102400, "jsmith", earlier))
 
-	docs, err := s.ListDocuments("case-001")
+	docs, err := s.ListDocuments(context.Background(), "case-001")
 	if err != nil {
 		t.Fatalf("ListDocuments error: %v", err)
 	}
@@ -103,7 +104,7 @@ func TestListDocuments_Empty(t *testing.T) {
 		WithArgs("case-no-docs").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "case_id", "document_type", "filename", "mime_type", "size_bytes", "uploaded_by", "uploaded_at"}))
 
-	docs, err := s.ListDocuments("case-no-docs")
+	docs, err := s.ListDocuments(context.Background(), "case-no-docs")
 	if err != nil {
 		t.Fatalf("ListDocuments error: %v", err)
 	}
@@ -121,7 +122,7 @@ func TestDeleteDocument_Success(t *testing.T) {
 		WithArgs(1, "case-001").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err := s.DeleteDocument("case-001", 1)
+	err := s.DeleteDocument(context.Background(), "case-001", 1)
 	if err != nil {
 		t.Fatalf("DeleteDocument error: %v", err)
 	}
@@ -134,7 +135,7 @@ func TestDeleteDocument_NotFound(t *testing.T) {
 		WithArgs(999, "case-001").
 		WillReturnResult(sqlmock.NewResult(0, 0))
 
-	err := s.DeleteDocument("case-001", 999)
+	err := s.DeleteDocument(context.Background(), "case-001", 999)
 	if err != ErrNotFound {
 		t.Errorf("DeleteDocument(nonexistent) error = %v, want ErrNotFound", err)
 	}
@@ -148,7 +149,7 @@ func TestDeleteDocument_WrongCase(t *testing.T) {
 		WithArgs(1, "case-002").
 		WillReturnResult(sqlmock.NewResult(0, 0))
 
-	err := s.DeleteDocument("case-002", 1)
+	err := s.DeleteDocument(context.Background(), "case-002", 1)
 	if err != ErrNotFound {
 		t.Errorf("DeleteDocument(wrong case) error = %v, want ErrNotFound", err)
 	}
@@ -163,7 +164,7 @@ func TestDocumentCount_Zero(t *testing.T) {
 		WithArgs("case-empty").
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
 
-	count, err := s.DocumentCount("case-empty")
+	count, err := s.DocumentCount(context.Background(), "case-empty")
 	if err != nil {
 		t.Fatalf("DocumentCount error: %v", err)
 	}
@@ -179,7 +180,7 @@ func TestDocumentCount_Multiple(t *testing.T) {
 		WithArgs("case-001").
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(3))
 
-	count, err := s.DocumentCount("case-001")
+	count, err := s.DocumentCount(context.Background(), "case-001")
 	if err != nil {
 		t.Fatalf("DocumentCount error: %v", err)
 	}
