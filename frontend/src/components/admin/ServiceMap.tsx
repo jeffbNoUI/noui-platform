@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ServiceMapLayers from './ServiceMapLayers';
 
 type Recommendation = 'BUILD' | 'HYBRID' | 'BUY';
 type PocStatus = true | 'proto' | false;
@@ -19,65 +20,155 @@ const SERVICES: Category[] = [
   {
     cat: 'Workflow & Process',
     services: [
-      { name: 'Process Orchestrator', rec: 'BUILD', poc: true, desc: 'Stage-based lifecycle with entry/exit criteria' },
-      { name: 'Work Queue Management', rec: 'BUILD', poc: true, desc: 'Priority-driven case assignment and tracking' },
-      { name: 'Task Scheduling & SLA', rec: 'BUILD', poc: false, desc: 'Deadline tracking, 15th-of-month cutoffs' },
-      { name: 'Business Rules Engine', rec: 'BUILD', poc: true, desc: 'Deterministic calculations, all tiers' },
+      {
+        name: 'Process Orchestrator',
+        rec: 'BUILD',
+        poc: true,
+        desc: 'Stage-based lifecycle with entry/exit criteria',
+      },
+      {
+        name: 'Work Queue Management',
+        rec: 'BUILD',
+        poc: true,
+        desc: 'Priority-driven case assignment and tracking',
+      },
+      {
+        name: 'Task Scheduling & SLA',
+        rec: 'BUILD',
+        poc: false,
+        desc: 'Deadline tracking, 15th-of-month cutoffs',
+      },
+      {
+        name: 'Business Rules Engine',
+        rec: 'BUILD',
+        poc: true,
+        desc: 'Deterministic calculations, all tiers',
+      },
     ],
   },
   {
     cat: 'Case Management',
     services: [
       { name: 'Case Lifecycle', rec: 'BUILD', poc: true, desc: 'Intake through certification' },
-      { name: 'Document Tracking', rec: 'HYBRID', poc: 'proto', desc: 'Required docs, receipt, verification' },
-      { name: 'Notes & Comments', rec: 'BUILD', poc: false, desc: 'Case-level and stage-level notes' },
+      {
+        name: 'Document Tracking',
+        rec: 'HYBRID',
+        poc: 'proto',
+        desc: 'Required docs, receipt, verification',
+      },
+      {
+        name: 'Notes & Comments',
+        rec: 'BUILD',
+        poc: false,
+        desc: 'Case-level and stage-level notes',
+      },
     ],
   },
   {
     cat: 'Document Management',
     services: [
       { name: 'Document Storage', rec: 'BUY', poc: false, desc: 'Secure document repository' },
-      { name: 'Template Engine', rec: 'BUILD', poc: false, desc: 'Letters, notices, forms generation' },
+      {
+        name: 'Template Engine',
+        rec: 'BUILD',
+        poc: false,
+        desc: 'Letters, notices, forms generation',
+      },
       { name: 'E-Signature', rec: 'BUY', poc: false, desc: 'Electronic signature capture' },
     ],
   },
   {
     cat: 'Communication',
     services: [
-      { name: 'Notification Engine', rec: 'BUILD', poc: false, desc: 'Email, SMS, in-app notifications' },
-      { name: 'Correspondence Tracking', rec: 'BUILD', poc: false, desc: 'Inbound/outbound mail log' },
-      { name: 'CRM Integration', rec: 'HYBRID', poc: true, desc: 'Contact management and interaction history' },
+      {
+        name: 'Notification Engine',
+        rec: 'BUILD',
+        poc: false,
+        desc: 'Email, SMS, in-app notifications',
+      },
+      {
+        name: 'Correspondence Tracking',
+        rec: 'BUILD',
+        poc: false,
+        desc: 'Inbound/outbound mail log',
+      },
+      {
+        name: 'CRM Integration',
+        rec: 'HYBRID',
+        poc: true,
+        desc: 'Contact management and interaction history',
+      },
     ],
   },
   {
     cat: 'Reporting & Analytics',
     services: [
       { name: 'Executive Dashboard', rec: 'BUILD', poc: true, desc: 'KPIs, volume, system health' },
-      { name: 'Operational Reports', rec: 'HYBRID', poc: false, desc: 'Caseload, SLA, processing metrics' },
-      { name: 'Actuarial Extracts', rec: 'HYBRID', poc: false, desc: 'Data feeds for actuarial valuations' },
+      {
+        name: 'Operational Reports',
+        rec: 'HYBRID',
+        poc: false,
+        desc: 'Caseload, SLA, processing metrics',
+      },
+      {
+        name: 'Actuarial Extracts',
+        rec: 'HYBRID',
+        poc: false,
+        desc: 'Data feeds for actuarial valuations',
+      },
     ],
   },
   {
     cat: 'Audit & Compliance',
     services: [
-      { name: 'Audit Trail', rec: 'BUILD', poc: 'proto', desc: 'Immutable action log, regulatory compliance' },
-      { name: 'QA Sampling', rec: 'BUILD', poc: false, desc: 'Random case selection for quality review' },
-      { name: 'Compliance Checker', rec: 'BUILD', poc: false, desc: 'Rule validation against statutory requirements' },
+      {
+        name: 'Audit Trail',
+        rec: 'BUILD',
+        poc: 'proto',
+        desc: 'Immutable action log, regulatory compliance',
+      },
+      {
+        name: 'QA Sampling',
+        rec: 'BUILD',
+        poc: false,
+        desc: 'Random case selection for quality review',
+      },
+      {
+        name: 'Compliance Checker',
+        rec: 'BUILD',
+        poc: false,
+        desc: 'Rule validation against statutory requirements',
+      },
     ],
   },
   {
     cat: 'Identity & Access',
     services: [
-      { name: 'Role-Based Access', rec: 'HYBRID', poc: 'proto', desc: '9 role definitions, context-aware navigation' },
+      {
+        name: 'Role-Based Access',
+        rec: 'HYBRID',
+        poc: 'proto',
+        desc: '9 role definitions, context-aware navigation',
+      },
       { name: 'SSO Integration', rec: 'BUY', poc: false, desc: 'Enterprise single sign-on' },
-      { name: 'Member Authentication', rec: 'BUY', poc: false, desc: 'Portal login for self-service' },
+      {
+        name: 'Member Authentication',
+        rec: 'BUY',
+        poc: false,
+        desc: 'Portal login for self-service',
+      },
     ],
   },
   {
     cat: 'Data Management',
     services: [
       { name: 'Data Connector', rec: 'BUILD', poc: true, desc: 'Schema discovery, legacy adapter' },
-      { name: 'Data Quality Engine', rec: 'BUILD', poc: true, desc: 'Anomaly detection, statistical baselines' },
+      {
+        name: 'Data Quality Engine',
+        rec: 'BUILD',
+        poc: true,
+        desc: 'Anomaly detection, statistical baselines',
+      },
       { name: 'ETL/Migration', rec: 'HYBRID', poc: false, desc: 'Legacy data transformation' },
     ],
   },
@@ -86,13 +177,23 @@ const SERVICES: Category[] = [
     services: [
       { name: 'Guided Mode', rec: 'BUILD', poc: true, desc: 'Training wheels for new analysts' },
       { name: 'Proficiency Tracking', rec: 'BUILD', poc: true, desc: 'Analyst skill progression' },
-      { name: 'Contextual Help', rec: 'BUILD', poc: true, desc: 'Stage-aware help panel with rule references' },
+      {
+        name: 'Contextual Help',
+        rec: 'BUILD',
+        poc: true,
+        desc: 'Stage-aware help panel with rule references',
+      },
     ],
   },
   {
     cat: 'Infrastructure',
     services: [
-      { name: 'API Gateway', rec: 'BUY', poc: false, desc: 'Rate limiting, authentication, routing' },
+      {
+        name: 'API Gateway',
+        rec: 'BUY',
+        poc: false,
+        desc: 'Rate limiting, authentication, routing',
+      },
       { name: 'Monitoring & Logging', rec: 'BUY', poc: false, desc: 'Application observability' },
       { name: 'Backup & DR', rec: 'BUY', poc: false, desc: 'Disaster recovery and data backup' },
     ],
@@ -117,13 +218,6 @@ const POC_LABELS: Record<string, string> = {
   false: 'DEFERRED',
 };
 
-const LAYERS = [
-  { layer: 'L1: Data Connector', color: 'bg-gray-700', services: ['Data Quality', 'Legacy Adapter', 'Backup/DR'] },
-  { layer: 'L2: Business Intelligence', color: 'bg-teal-700', services: ['Rules Engine', 'Process Orchestrator', 'Knowledge Base', 'Compliance'] },
-  { layer: 'L3: Relevance Engine', color: 'bg-amber-600', services: ['Queue Priority', 'Predictive Routing', 'Proficiency Tracking'] },
-  { layer: 'L4: Dynamic Workspace', color: 'bg-purple-700', services: ['Guided/Expert Mode', 'Notifications', 'Document UI', 'Case Notes'] },
-];
-
 /**
  * Platform Service Map — 30 services, 10 categories, BUILD/HYBRID/BUY classification.
  */
@@ -140,10 +234,22 @@ export default function ServiceMap() {
   };
 
   const totalServices = SERVICES.reduce((a, c) => a + c.services.length, 0);
-  const buildCount = SERVICES.reduce((a, c) => a + c.services.filter((s) => s.rec === 'BUILD').length, 0);
-  const hybridCount = SERVICES.reduce((a, c) => a + c.services.filter((s) => s.rec === 'HYBRID').length, 0);
-  const buyCount = SERVICES.reduce((a, c) => a + c.services.filter((s) => s.rec === 'BUY').length, 0);
-  const pocCount = SERVICES.reduce((a, c) => a + c.services.filter((s) => s.poc === true).length, 0);
+  const buildCount = SERVICES.reduce(
+    (a, c) => a + c.services.filter((s) => s.rec === 'BUILD').length,
+    0,
+  );
+  const hybridCount = SERVICES.reduce(
+    (a, c) => a + c.services.filter((s) => s.rec === 'HYBRID').length,
+    0,
+  );
+  const buyCount = SERVICES.reduce(
+    (a, c) => a + c.services.filter((s) => s.rec === 'BUY').length,
+    0,
+  );
+  const pocCount = SERVICES.reduce(
+    (a, c) => a + c.services.filter((s) => s.poc === true).length,
+    0,
+  );
 
   return (
     <div className="space-y-6">
@@ -157,32 +263,16 @@ export default function ServiceMap() {
           { label: 'In POC', value: pocCount, color: 'text-iw-sage' },
         ].map((s) => (
           <div key={s.label} className="bg-white rounded-lg border border-gray-200 p-4">
-            <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">{s.label}</div>
+            <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">
+              {s.label}
+            </div>
             <div className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</div>
           </div>
         ))}
       </div>
 
       {/* Architecture layers */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-          <h3 className="text-sm font-bold text-gray-700">Four-Layer Architecture</h3>
-        </div>
-        <div className="grid grid-cols-4 gap-2 p-4">
-          {LAYERS.map((l) => (
-            <div key={l.layer} className={`rounded-lg p-3 ${l.color}/5 border border-${l.color}/20`}>
-              <div className={`text-[11px] font-bold mb-2 ${l.color.replace('bg-', 'text-')}`}>
-                {l.layer}
-              </div>
-              <div className="space-y-1">
-                {l.services.map((s) => (
-                  <div key={s} className="text-[10px] text-gray-500">{s}</div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      <ServiceMapLayers />
 
       {/* Service catalog */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -190,7 +280,10 @@ export default function ServiceMap() {
           <h3 className="text-sm font-bold text-gray-700">Service Catalog</h3>
           <div className="flex gap-2">
             {(['BUILD', 'HYBRID', 'BUY'] as Recommendation[]).map((r) => (
-              <span key={r} className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${REC_STYLES[r]}`}>
+              <span
+                key={r}
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${REC_STYLES[r]}`}
+              >
                 {r}
               </span>
             ))}
@@ -240,18 +333,22 @@ export default function ServiceMap() {
                         service.rec === 'BUILD'
                           ? 'bg-emerald-500'
                           : service.rec === 'HYBRID'
-                          ? 'bg-blue-500'
-                          : 'bg-gray-400'
+                            ? 'bg-blue-500'
+                            : 'bg-gray-400'
                       }`}
                     />
                     <div className="flex-1 min-w-0">
                       <div className="text-xs font-medium text-gray-700">{service.name}</div>
                       <div className="text-[10px] text-gray-400">{service.desc}</div>
                     </div>
-                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${REC_STYLES[service.rec]}`}>
+                    <span
+                      className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${REC_STYLES[service.rec]}`}
+                    >
                       {service.rec}
                     </span>
-                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${POC_STYLES[String(service.poc)]}`}>
+                    <span
+                      className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${POC_STYLES[String(service.poc)]}`}
+                    >
                       {POC_LABELS[String(service.poc)]}
                     </span>
                   </div>

@@ -3,12 +3,8 @@ import { useMemberDashboard } from '@/hooks/useMemberDashboard';
 import MemberBanner from '@/components/MemberBanner';
 import MemberSummaryCard from '@/components/dashboard/MemberSummaryCard';
 import ActiveWorkCard from '@/components/dashboard/ActiveWorkCard';
-import ReferenceCard from '@/components/dashboard/ReferenceCard';
-import InteractionDetailPanel from '@/components/dashboard/InteractionDetailPanel';
-import CorrespondenceDetail from '@/components/detail/CorrespondenceDetail';
-import BeneficiaryDetail from '@/components/detail/BeneficiaryDetail';
-import DQIssueDetail from '@/components/detail/DQIssueDetail';
-import { formatServiceYears } from '@/lib/formatters';
+import MemberDashboardReferenceCards from '@/components/dashboard/MemberDashboardReferenceCards';
+import MemberDashboardOverlays from '@/components/dashboard/MemberDashboardOverlays';
 import type { ViewMode } from '@/types/auth';
 
 type OverlayKind = 'interactions' | 'correspondence' | 'beneficiaries' | 'dq';
@@ -167,144 +163,39 @@ export default function MemberDashboard({
               </div>
 
               {/* Right column — Reference cards (1/3) */}
-              <div className="space-y-3">
-                <div ref={interactionsRef}>
-                  <ReferenceCard
-                    title="Interactions"
-                    count={timeline?.totalEntries ?? 0}
-                    preview={interactionsPreview}
-                    isLoading={isLoadingSecondary}
-                    onViewAll={
-                      (timeline?.timelineEntries?.length ?? 0) > 0
-                        ? () => openOverlay('interactions', interactionsRef)
-                        : undefined
-                    }
-                  />
-                </div>
-
-                <div ref={correspondenceRef}>
-                  <ReferenceCard
-                    title="Correspondence"
-                    count={correspondence.length}
-                    preview={correspondencePreview}
-                    onViewAll={
-                      correspondence.length > 0
-                        ? () => openOverlay('correspondence', correspondenceRef)
-                        : undefined
-                    }
-                  />
-                </div>
-
-                <ReferenceCard
-                  title="Service Credit"
-                  count={serviceCredit ? formatServiceYears(serviceCredit.total_years) : undefined}
-                  isLoading={isLoadingSecondary}
-                >
-                  {serviceCredit && (
-                    <table className="w-full text-xs">
-                      <tbody>
-                        <tr>
-                          <td className="text-gray-500 pr-2">Earned</td>
-                          <td className="text-right font-medium">
-                            {formatServiceYears(serviceCredit.earned_years)}
-                          </td>
-                        </tr>
-                        {serviceCredit.purchased_years > 0 && (
-                          <tr>
-                            <td className="text-gray-500 pr-2">Purchased</td>
-                            <td className="text-right font-medium">
-                              {formatServiceYears(serviceCredit.purchased_years)}
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  )}
-                </ReferenceCard>
-
-                <div ref={beneficiariesRef}>
-                  <ReferenceCard
-                    title="Beneficiaries"
-                    count={activeBeneficiaries.length}
-                    preview={beneficiaryPreview}
-                    highlight={beneficiaries !== undefined && activeBeneficiaries.length === 0}
-                    isLoading={isLoadingSecondary}
-                    onViewAll={
-                      activeBeneficiaries.length > 0
-                        ? () => openOverlay('beneficiaries', beneficiariesRef)
-                        : undefined
-                    }
-                  />
-                </div>
-
-                <div ref={dqRef}>
-                  <ReferenceCard
-                    title="Data Quality"
-                    count={
-                      openDqIssues.length > 0
-                        ? `${openDqIssues.length} issue${openDqIssues.length > 1 ? 's' : ''}`
-                        : dqScore
-                          ? `${Math.round(dqScore.overallScore)}%`
-                          : undefined
-                    }
-                    highlight={openDqIssues.length > 0}
-                    onViewAll={dqIssues.length > 0 ? () => openOverlay('dq', dqRef) : undefined}
-                  >
-                    {openDqIssues.length > 0 ? (
-                      <p className="text-xs text-amber-700">{openDqIssues[0].description}</p>
-                    ) : null}
-                  </ReferenceCard>
-                </div>
-              </div>
+              <MemberDashboardReferenceCards
+                timeline={timeline}
+                correspondence={correspondence}
+                serviceCredit={serviceCredit}
+                activeBeneficiaries={activeBeneficiaries}
+                beneficiaries={beneficiaries}
+                dqScore={dqScore}
+                dqIssues={dqIssues}
+                openDqIssues={openDqIssues}
+                isLoadingSecondary={isLoadingSecondary}
+                interactionsPreview={interactionsPreview}
+                correspondencePreview={correspondencePreview}
+                beneficiaryPreview={beneficiaryPreview}
+                interactionsRef={interactionsRef}
+                correspondenceRef={correspondenceRef}
+                beneficiariesRef={beneficiariesRef}
+                dqRef={dqRef}
+                openOverlay={openOverlay}
+              />
             </div>
 
             {/* ── Drill-down overlays ─────────────────────────────────────── */}
-            {activeOverlay === 'interactions' &&
-              timeline?.timelineEntries &&
-              timeline.timelineEntries.length > 0 && (
-                <InteractionDetailPanel
-                  interactionId={timeline.timelineEntries[overlayIndex].interactionId}
-                  entry={timeline.timelineEntries[overlayIndex]}
-                  sourceRect={overlayRect}
-                  onClose={closeOverlay}
-                  entries={timeline.timelineEntries}
-                  currentIndex={overlayIndex}
-                  onNavigate={setOverlayIndex}
-                />
-              )}
-
-            {activeOverlay === 'correspondence' && correspondence.length > 0 && (
-              <CorrespondenceDetail
-                item={correspondence[overlayIndex]}
-                sourceRect={overlayRect}
-                onClose={closeOverlay}
-                items={correspondence}
-                currentIndex={overlayIndex}
-                onNavigate={setOverlayIndex}
-              />
-            )}
-
-            {activeOverlay === 'beneficiaries' && activeBeneficiaries.length > 0 && (
-              <BeneficiaryDetail
-                item={activeBeneficiaries[overlayIndex]}
-                sourceRect={overlayRect}
-                onClose={closeOverlay}
-                items={activeBeneficiaries}
-                currentIndex={overlayIndex}
-                onNavigate={setOverlayIndex}
-              />
-            )}
-
-            {activeOverlay === 'dq' && dqIssues.length > 0 && (
-              <DQIssueDetail
-                item={dqIssues[overlayIndex]}
-                sourceRect={overlayRect}
-                onClose={closeOverlay}
-                items={dqIssues}
-                currentIndex={overlayIndex}
-                onNavigate={setOverlayIndex}
-              />
-            )}
+            <MemberDashboardOverlays
+              activeOverlay={activeOverlay}
+              overlayIndex={overlayIndex}
+              overlayRect={overlayRect}
+              onClose={closeOverlay}
+              onNavigate={setOverlayIndex}
+              timeline={timeline}
+              correspondence={correspondence}
+              activeBeneficiaries={activeBeneficiaries}
+              dqIssues={dqIssues}
+            />
 
             {/* Footer */}
             <footer className="rounded-lg bg-gray-100 px-6 py-4 text-center text-xs text-gray-500">

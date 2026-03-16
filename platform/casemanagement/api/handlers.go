@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/noui/platform/auth"
+	"github.com/noui/platform/cache"
 	cmdb "github.com/noui/platform/casemanagement/db"
 	"github.com/noui/platform/casemanagement/models"
 	"github.com/noui/platform/validation"
@@ -20,11 +21,16 @@ import (
 // Handler holds dependencies for Case Management API handlers.
 type Handler struct {
 	store *cmdb.Store
+	cache *cache.Cache
 }
 
 // NewHandler creates a Handler with the given database connection.
+// Starts an in-memory cache with 10-minute TTL for stage definitions.
 func NewHandler(database *sql.DB) *Handler {
-	return &Handler{store: cmdb.NewStore(database)}
+	return &Handler{
+		store: cmdb.NewStore(database),
+		cache: cache.New(10 * time.Minute),
+	}
 }
 
 // RegisterRoutes sets up all case management API routes.
@@ -71,12 +77,25 @@ func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 // --- Stage Handlers ---
 
 func (h *Handler) ListStages(w http.ResponseWriter, r *http.Request) {
+	const cacheKey = "stages:all"
+	if cached, ok := h.cache.Get(cacheKey); ok {
+		w.Header().Set("Cache-Control", "public, max-age=600")
+		w.Header().Set("X-Cache", "HIT")
+		writeJSON(w, http.StatusOK, cached)
+		return
+	}
+
 	stages, err := h.store.ListStages(r.Context())
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": stages})
+
+	resp := map[string]any{"data": stages}
+	h.cache.Set(cacheKey, resp)
+	w.Header().Set("Cache-Control", "public, max-age=600")
+	w.Header().Set("X-Cache", "MISS")
+	writeJSON(w, http.StatusOK, resp)
 }
 
 // --- Case Handlers ---

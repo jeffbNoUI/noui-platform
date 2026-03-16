@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/noui/platform/auth"
+	"github.com/noui/platform/cache"
 	kbdb "github.com/noui/platform/knowledgebase/db"
 	"github.com/noui/platform/validation"
 )
@@ -19,11 +20,16 @@ import (
 // Handler holds dependencies for Knowledge Base API handlers.
 type Handler struct {
 	store *kbdb.Store
+	cache *cache.Cache
 }
 
 // NewHandler creates a Handler with the given database connection.
+// Starts an in-memory cache with 5-minute TTL for list and stage help responses.
 func NewHandler(database *sql.DB) *Handler {
-	return &Handler{store: kbdb.NewStore(database)}
+	return &Handler{
+		store: kbdb.NewStore(database),
+		cache: cache.New(5 * time.Minute),
+	}
 }
 
 // RegisterRoutes sets up all Knowledge Base API routes.
@@ -63,13 +69,25 @@ func (h *Handler) ListArticles(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 	limit, offset := validation.Pagination(intParam(r, "limit", 25), intParam(r, "offset", 0), 100)
 
+	cacheKey := fmt.Sprintf("articles:%s:%s:%s:%s:%d:%d", tenantID, stageID, topic, query, limit, offset)
+	if cached, ok := h.cache.Get(cacheKey); ok {
+		w.Header().Set("Cache-Control", "public, max-age=300")
+		w.Header().Set("X-Cache", "HIT")
+		writeJSON(w, http.StatusOK, cached)
+		return
+	}
+
 	articles, total, err := h.store.ListArticles(r.Context(), tenantID, stageID, topic, query, limit, offset)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
-	writePaginated(w, articles, total, limit, offset)
+	resp := paginatedResponse(articles, total, limit, offset)
+	h.cache.Set(cacheKey, resp)
+	w.Header().Set("Cache-Control", "public, max-age=300")
+	w.Header().Set("X-Cache", "MISS")
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func (h *Handler) GetArticle(w http.ResponseWriter, r *http.Request) {
@@ -91,6 +109,14 @@ func (h *Handler) GetStageHelp(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantID(r)
 	stageID := r.PathValue("stageId")
 
+	cacheKey := fmt.Sprintf("stagehelp:%s:%s", tenantID, stageID)
+	if cached, ok := h.cache.Get(cacheKey); ok {
+		w.Header().Set("Cache-Control", "public, max-age=300")
+		w.Header().Set("X-Cache", "HIT")
+		writeJSON(w, http.StatusOK, cached)
+		return
+	}
+
 	article, err := h.store.GetStageHelp(r.Context(), tenantID, stageID)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -101,7 +127,11 @@ func (h *Handler) GetStageHelp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, article)
+	resp := successResponse(article)
+	h.cache.Set(cacheKey, resp)
+	w.Header().Set("Cache-Control", "public, max-age=300")
+	w.Header().Set("X-Cache", "MISS")
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func (h *Handler) SearchArticles(w http.ResponseWriter, r *http.Request) {
@@ -136,13 +166,25 @@ func (h *Handler) ListRules(w http.ResponseWriter, r *http.Request) {
 	domain := r.URL.Query().Get("domain")
 	limit, offset := validation.Pagination(intParam(r, "limit", 50), intParam(r, "offset", 0), 100)
 
+	cacheKey := fmt.Sprintf("rules:%s:%d:%d", domain, limit, offset)
+	if cached, ok := h.cache.Get(cacheKey); ok {
+		w.Header().Set("Cache-Control", "public, max-age=300")
+		w.Header().Set("X-Cache", "HIT")
+		writeJSON(w, http.StatusOK, cached)
+		return
+	}
+
 	rules, total, err := h.store.ListRules(r.Context(), domain, limit, offset)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
-	writePaginated(w, rules, total, limit, offset)
+	resp := paginatedResponse(rules, total, limit, offset)
+	h.cache.Set(cacheKey, resp)
+	w.Header().Set("Cache-Control", "public, max-age=300")
+	w.Header().Set("X-Cache", "MISS")
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func (h *Handler) GetRule(w http.ResponseWriter, r *http.Request) {
@@ -204,8 +246,8 @@ func writeSuccess(w http.ResponseWriter, status int, data interface{}) {
 	writeJSON(w, status, resp)
 }
 
-func writePaginated(w http.ResponseWriter, data interface{}, total, limit, offset int) {
-	resp := map[string]interface{}{
+func paginatedResponse(data interface{}, total, limit, offset int) map[string]interface{} {
+	return map[string]interface{}{
 		"data": data,
 		"pagination": map[string]interface{}{
 			"total":   total,
@@ -220,7 +262,22 @@ func writePaginated(w http.ResponseWriter, data interface{}, total, limit, offse
 			"version":   "v1",
 		},
 	}
-	writeJSON(w, http.StatusOK, resp)
+}
+
+func writePaginated(w http.ResponseWriter, data interface{}, total, limit, offset int) {
+	writeJSON(w, http.StatusOK, paginatedResponse(data, total, limit, offset))
+}
+
+func successResponse(data interface{}) map[string]interface{} {
+	return map[string]interface{}{
+		"data": data,
+		"meta": map[string]interface{}{
+			"requestId": uuid.New().String(),
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+			"service":   "knowledgebase",
+			"version":   "v1",
+		},
+	}
 }
 
 func writeError(w http.ResponseWriter, status int, code, message string) {

@@ -1,5 +1,47 @@
 # noui-platform — Build History
 
+## Quality Session 8: Server-Side Caching + Component Decomposition (2026-03-16)
+
+**Branch:** `claude/priceless-hermann`
+**Goal:** Server-side caching (Task 25) and frontend component decomposition (Task 29) from the master quality review plan.
+
+**What was built:**
+
+### Task 25: Server-Side Caching (`platform/cache/`)
+- New `platform/cache` Go package: generic in-memory TTL cache with `sync.RWMutex` concurrency safety
+  - `New(ttl)`, `Get(key)`, `Set(key, value)`, `Delete(key)`, `Clear()`, `Len()` API
+  - Background cleanup goroutine evicts expired entries every TTL interval
+  - 6 unit tests covering TTL expiry, overwrite, delete, clear, and concurrent access
+- **Knowledgebase service**: cached `ListArticles` and `GetStageHelp` with 5-minute TTL
+  - Cache keys include tenant, stage, topic, query, pagination params for isolation
+  - `Cache-Control: public, max-age=300` + `X-Cache: HIT/MISS` headers
+- **Case management service**: cached `ListStages` with 5-minute TTL
+- **Dataaccess service**: cached stage definition taxonomy with 10-minute TTL
+  - Taxonomy is read-only reference data, rarely changes — longer TTL appropriate
+
+### Task 29: Component Decomposition (20 oversized components)
+- Decomposed 20 frontend components that exceeded the 250-line guideline
+- Extracted 45+ focused sub-components and helper modules
+- **Net reduction: ~4,500 lines removed** from parent components
+- Key decompositions:
+  - `MemberPortal.tsx` (1,372 → ~400): 12 sub-components (Hero, Dashboard, Milestones, Projections, Messages, etc.)
+  - `EmployerPortal.tsx` (750 → ~250): 6 sub-components (Nav, OrgBanner, Enrollment, Reporting, Communications, Constants)
+  - `RetirementApplication.tsx` (489 → ~200): 5 sub-components (Header, StatusBar, Content, StageRenderer, CorrespondencePanel)
+  - `InteractionTimeline.tsx` (311 → ~100): 2 sub-components (EntryRow, Icons)
+  - `CRMWorkspace.tsx`, `ConversationPanel.tsx`, `CommitmentTracker.tsx`, `StaffPortal.tsx`, etc.
+- All existing tests continue to pass — decomposition preserved all behavior
+
+**Test results:**
+- `platform/cache`: 6 tests passing
+- `platform/knowledgebase`: build and tests pass
+- `platform/casemanagement`: build and tests pass
+- `platform/dataaccess`: build and tests pass
+- Frontend: typecheck clean, 869 tests passing
+
+**Files changed:** 26 modified, 48 new files (+~2,500 / -~4,900 net)
+
+---
+
 ## Database Performance Session 7: Indexes, Pagination, PgBouncer (2026-03-16)
 
 **Branch:** `claude/hungry-ellis`
