@@ -15,6 +15,7 @@ env:
   DB_USER: derp
   DB_NAME: derp
   DB_SSLMODE: disable
+  CORS_ORIGIN: "http://localhost:3000"
 
 resources:
   limits:
