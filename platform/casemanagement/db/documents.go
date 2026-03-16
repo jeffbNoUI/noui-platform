@@ -1,11 +1,14 @@
 package db
 
 import (
+	"context"
+
 	"github.com/noui/platform/casemanagement/models"
+	"github.com/noui/platform/dbcontext"
 )
 
 // CreateDocument inserts document metadata and returns it with the generated ID.
-func (s *Store) CreateDocument(caseID string, req models.CreateDocumentRequest) (*models.CaseDocument, error) {
+func (s *Store) CreateDocument(ctx context.Context, caseID string, req models.CreateDocumentRequest) (*models.CaseDocument, error) {
 	docType := req.DocumentType
 	if docType == "" {
 		docType = "other"
@@ -16,7 +19,7 @@ func (s *Store) CreateDocument(caseID string, req models.CreateDocumentRequest) 
 	}
 
 	var doc models.CaseDocument
-	err := s.DB.QueryRow(`
+	err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, `
 		INSERT INTO case_document (case_id, document_type, filename, mime_type, size_bytes, uploaded_by)
 		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id, case_id, document_type, filename, mime_type, size_bytes, uploaded_by, uploaded_at
@@ -31,8 +34,8 @@ func (s *Store) CreateDocument(caseID string, req models.CreateDocumentRequest) 
 }
 
 // ListDocuments returns all document metadata for a case, newest first.
-func (s *Store) ListDocuments(caseID string) ([]models.CaseDocument, error) {
-	rows, err := s.DB.Query(`
+func (s *Store) ListDocuments(ctx context.Context, caseID string) ([]models.CaseDocument, error) {
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, `
 		SELECT id, case_id, document_type, filename, mime_type, size_bytes, uploaded_by, uploaded_at
 		FROM case_document
 		WHERE case_id = $1
@@ -58,8 +61,8 @@ func (s *Store) ListDocuments(caseID string) ([]models.CaseDocument, error) {
 }
 
 // DeleteDocument removes a document record by ID, scoped to a case.
-func (s *Store) DeleteDocument(caseID string, docID int) error {
-	result, err := s.DB.Exec(`
+func (s *Store) DeleteDocument(ctx context.Context, caseID string, docID int) error {
+	result, err := dbcontext.DB(ctx, s.DB).ExecContext(ctx, `
 		DELETE FROM case_document WHERE id = $1 AND case_id = $2
 	`, docID, caseID)
 	if err != nil {
@@ -73,8 +76,8 @@ func (s *Store) DeleteDocument(caseID string, docID int) error {
 }
 
 // DocumentCount returns the number of documents for a case.
-func (s *Store) DocumentCount(caseID string) (int, error) {
+func (s *Store) DocumentCount(ctx context.Context, caseID string) (int, error) {
 	var count int
-	err := s.DB.QueryRow(`SELECT COUNT(*) FROM case_document WHERE case_id = $1`, caseID).Scan(&count)
+	err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, `SELECT COUNT(*) FROM case_document WHERE case_id = $1`, caseID).Scan(&count)
 	return count, err
 }

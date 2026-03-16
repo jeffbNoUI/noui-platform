@@ -1,12 +1,14 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/noui/platform/casemanagement/models"
+	"github.com/noui/platform/dbcontext"
 )
 
 // caseColumns is the shared SELECT list for case queries.
@@ -63,7 +65,7 @@ func scanCase(scanner interface{ Scan(dest ...any) error }) (*models.RetirementC
 }
 
 // ListCases returns cases matching the filter, enriched with member data.
-func (s *Store) ListCases(tenantID string, f models.CaseFilter) ([]models.RetirementCase, int, error) {
+func (s *Store) ListCases(ctx context.Context, tenantID string, f models.CaseFilter) ([]models.RetirementCase, int, error) {
 	where := []string{"rc.tenant_id = $1"}
 	args := []any{tenantID}
 	idx := 2
@@ -99,7 +101,7 @@ func (s *Store) ListCases(tenantID string, f models.CaseFilter) ([]models.Retire
 	// Count total
 	var total int
 	countQ := "SELECT COUNT(*) FROM retirement_case rc " + whereClause
-	if err := s.DB.QueryRow(countQ, args...).Scan(&total); err != nil {
+	if err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, countQ, args...).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
@@ -119,7 +121,7 @@ func (s *Store) ListCases(tenantID string, f models.CaseFilter) ([]models.Retire
 	)
 	args = append(args, limit, offset)
 
-	rows, err := s.DB.Query(query, args...)
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -136,7 +138,7 @@ func (s *Store) ListCases(tenantID string, f models.CaseFilter) ([]models.Retire
 
 	// Load flags for each case
 	for i := range cases {
-		flags, err := s.GetCaseFlags(cases[i].CaseID)
+		flags, err := s.GetCaseFlags(ctx, cases[i].CaseID)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -147,14 +149,14 @@ func (s *Store) ListCases(tenantID string, f models.CaseFilter) ([]models.Retire
 }
 
 // GetCase returns a single case by ID, scoped to the given tenant.
-func (s *Store) GetCase(tenantID, caseID string) (*models.RetirementCase, error) {
+func (s *Store) GetCase(ctx context.Context, tenantID, caseID string) (*models.RetirementCase, error) {
 	query := fmt.Sprintf("SELECT %s %s WHERE rc.case_id = $1 AND rc.tenant_id = $2", caseColumns, caseFrom)
-	c, err := scanCase(s.DB.QueryRow(query, caseID, tenantID))
+	c, err := scanCase(dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, query, caseID, tenantID))
 	if err != nil {
 		return nil, err
 	}
 
-	flags, err := s.GetCaseFlags(caseID)
+	flags, err := s.GetCaseFlags(ctx, caseID)
 	if err != nil {
 		return nil, err
 	}
@@ -164,14 +166,14 @@ func (s *Store) GetCase(tenantID, caseID string) (*models.RetirementCase, error)
 }
 
 // GetCaseByID returns a case without tenant scoping (internal use only, e.g. after CreateCase).
-func (s *Store) GetCaseByID(caseID string) (*models.RetirementCase, error) {
+func (s *Store) GetCaseByID(ctx context.Context, caseID string) (*models.RetirementCase, error) {
 	query := fmt.Sprintf("SELECT %s %s WHERE rc.case_id = $1", caseColumns, caseFrom)
-	c, err := scanCase(s.DB.QueryRow(query, caseID))
+	c, err := scanCase(dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, query, caseID))
 	if err != nil {
 		return nil, err
 	}
 
-	flags, err := s.GetCaseFlags(caseID)
+	flags, err := s.GetCaseFlags(ctx, caseID)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +183,7 @@ func (s *Store) GetCaseByID(caseID string) (*models.RetirementCase, error) {
 }
 
 // CreateCase inserts a new case and its flags.
-func (s *Store) CreateCase(c *models.RetirementCase, flags []string) error {
+func (s *Store) CreateCase(ctx context.Context, c *models.RetirementCase, flags []string) error {
 	tx, err := s.DB.Begin()
 	if err != nil {
 		return err
@@ -230,7 +232,7 @@ func (s *Store) CreateCase(c *models.RetirementCase, flags []string) error {
 }
 
 // UpdateCase updates mutable fields on an existing case, scoped to tenant.
-func (s *Store) UpdateCase(tenantID, caseID string, req models.UpdateCaseRequest) error {
+func (s *Store) UpdateCase(ctx context.Context, tenantID, caseID string, req models.UpdateCaseRequest) error {
 	sets := []string{"updated_at = NOW()"}
 	args := []any{}
 	idx := 1
@@ -266,12 +268,12 @@ func (s *Store) UpdateCase(tenantID, caseID string, req models.UpdateCaseRequest
 	)
 	args = append(args, caseID, tenantID)
 
-	_, err := s.DB.Exec(query, args...)
+	_, err := dbcontext.DB(ctx, s.DB).ExecContext(ctx, query, args...)
 	return err
 }
 
 // AdvanceStage moves a case to the next stage and records the transition, scoped to tenant.
-func (s *Store) AdvanceStage(tenantID, caseID string, transitionedBy, note string) (*models.RetirementCase, error) {
+func (s *Store) AdvanceStage(ctx context.Context, tenantID, caseID string, transitionedBy, note string) (*models.RetirementCase, error) {
 	tx, err := s.DB.Begin()
 	if err != nil {
 		return nil, err
@@ -334,12 +336,12 @@ func (s *Store) AdvanceStage(tenantID, caseID string, transitionedBy, note strin
 	}
 
 	// Return refreshed case
-	return s.GetCase(tenantID, caseID)
+	return s.GetCase(ctx, tenantID, caseID)
 }
 
 // GetCaseFlags returns flag codes for a case.
-func (s *Store) GetCaseFlags(caseID string) ([]string, error) {
-	rows, err := s.DB.Query(
+func (s *Store) GetCaseFlags(ctx context.Context, caseID string) ([]string, error) {
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx,
 		`SELECT flag_code FROM case_flag WHERE case_id = $1 ORDER BY flag_code`,
 		caseID,
 	)
@@ -360,8 +362,8 @@ func (s *Store) GetCaseFlags(caseID string) ([]string, error) {
 }
 
 // GetStageHistory returns the transition history for a case, scoped to tenant.
-func (s *Store) GetStageHistory(tenantID, caseID string) ([]models.StageTransition, error) {
-	rows, err := s.DB.Query(`
+func (s *Store) GetStageHistory(ctx context.Context, tenantID, caseID string) ([]models.StageTransition, error) {
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, `
 		SELECT csh.id, csh.case_id, csh.from_stage_idx, csh.to_stage_idx, csh.from_stage, csh.to_stage,
 			   COALESCE(csh.transitioned_by, ''), COALESCE(csh.note, ''), csh.transitioned_at
 		FROM case_stage_history csh

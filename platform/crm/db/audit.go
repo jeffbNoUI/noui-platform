@@ -1,9 +1,12 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"time"
+
+	"github.com/noui/platform/dbcontext"
 )
 
 // AuditEntry represents a single row in the crm_audit_log table.
@@ -24,7 +27,7 @@ type AuditEntry struct {
 }
 
 // WriteAuditLog appends a new entry to the CRM audit log.
-func (s *Store) WriteAuditLog(entry *AuditEntry) error {
+func (s *Store) WriteAuditLog(ctx context.Context, entry *AuditEntry) error {
 	query := `
 		INSERT INTO crm_audit_log (
 			tenant_id, event_time, event_type,
@@ -41,7 +44,7 @@ func (s *Store) WriteAuditLog(entry *AuditEntry) error {
 		)
 		RETURNING audit_id, event_time`
 
-	return s.DB.QueryRow(
+	return dbcontext.DB(ctx, s.DB).QueryRowContext(ctx,
 		query,
 		entry.TenantID, entry.EventTime, entry.EventType,
 		entry.EntityType, entry.EntityID,
@@ -54,7 +57,7 @@ func (s *Store) WriteAuditLog(entry *AuditEntry) error {
 // GetAuditLog retrieves audit log entries for a given entity or tenant scope.
 // If entityType and entityID are provided, results are scoped to that entity.
 // If only entityType is provided, results are scoped to that entity type within the tenant.
-func (s *Store) GetAuditLog(tenantID string, entityType string, entityID string, limit int) ([]AuditEntry, error) {
+func (s *Store) GetAuditLog(ctx context.Context, tenantID string, entityType string, entityID string, limit int) ([]AuditEntry, error) {
 	query := `
 		SELECT
 			audit_id, tenant_id, event_time, event_type,
@@ -87,7 +90,7 @@ func (s *Store) GetAuditLog(tenantID string, entityType string, entityID string,
 		argIdx++
 	}
 
-	rows, err := s.DB.Query(query, args...)
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("getting audit log: %w", err)
 	}

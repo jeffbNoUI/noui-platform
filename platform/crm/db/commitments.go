@@ -1,15 +1,17 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
 	"github.com/noui/platform/crm/models"
+	"github.com/noui/platform/dbcontext"
 )
 
 // ListCommitments retrieves commitments for a tenant with optional filters.
 // Returns matching commitments, total count, and any error.
-func (s *Store) ListCommitments(tenantID string, status, ownerAgent string, limit, offset int) ([]models.Commitment, int, error) {
+func (s *Store) ListCommitments(ctx context.Context, tenantID string, status, ownerAgent string, limit, offset int) ([]models.Commitment, int, error) {
 	query := `
 		SELECT
 			commitment_id, tenant_id, interaction_id,
@@ -50,7 +52,7 @@ func (s *Store) ListCommitments(tenantID string, status, ownerAgent string, limi
 		argIdx++
 	}
 
-	rows, err := s.DB.Query(query, args...)
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("listing commitments: %w", err)
 	}
@@ -98,7 +100,7 @@ func (s *Store) ListCommitments(tenantID string, status, ownerAgent string, limi
 }
 
 // GetCommitment retrieves a single commitment by ID.
-func (s *Store) GetCommitment(commitmentID string) (*models.Commitment, error) {
+func (s *Store) GetCommitment(ctx context.Context, commitmentID string) (*models.Commitment, error) {
 	query := `
 		SELECT
 			commitment_id, tenant_id, interaction_id,
@@ -117,7 +119,7 @@ func (s *Store) GetCommitment(commitmentID string) (*models.Commitment, error) {
 	var fulfilledAt sql.NullTime
 	var fulfilledBy, fulfillmentNote sql.NullString
 
-	err := s.DB.QueryRow(query, commitmentID).Scan(
+	err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, query, commitmentID).Scan(
 		&c.CommitmentID, &c.TenantID, &c.InteractionID,
 		&contactID, &conversationID,
 		&c.Description, &c.TargetDate, &c.OwnerAgent, &ownerTeam,
@@ -141,7 +143,7 @@ func (s *Store) GetCommitment(commitmentID string) (*models.Commitment, error) {
 }
 
 // CreateCommitment inserts a new commitment record.
-func (s *Store) CreateCommitment(c *models.Commitment) error {
+func (s *Store) CreateCommitment(ctx context.Context, c *models.Commitment) error {
 	query := `
 		INSERT INTO crm_commitment (
 			commitment_id, tenant_id, interaction_id,
@@ -160,7 +162,7 @@ func (s *Store) CreateCommitment(c *models.Commitment) error {
 		)
 		RETURNING created_at, updated_at`
 
-	return s.DB.QueryRow(
+	return dbcontext.DB(ctx, s.DB).QueryRowContext(ctx,
 		query,
 		c.CommitmentID, c.TenantID, c.InteractionID,
 		c.ContactID, c.ConversationID,
@@ -172,7 +174,7 @@ func (s *Store) CreateCommitment(c *models.Commitment) error {
 }
 
 // UpdateCommitment modifies mutable fields on an existing commitment.
-func (s *Store) UpdateCommitment(c *models.Commitment) error {
+func (s *Store) UpdateCommitment(ctx context.Context, c *models.Commitment) error {
 	query := `
 		UPDATE crm_commitment SET
 			status = $2,
@@ -185,7 +187,7 @@ func (s *Store) UpdateCommitment(c *models.Commitment) error {
 		WHERE commitment_id = $1
 		RETURNING updated_at`
 
-	err := s.DB.QueryRow(
+	err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx,
 		query,
 		c.CommitmentID,
 		c.Status,

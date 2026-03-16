@@ -97,7 +97,7 @@ func (h *Handler) SearchContacts(w http.ResponseWriter, r *http.Request) {
 		Offset:      intParam(r, "offset", 0),
 	}
 
-	contacts, total, err := h.store.ListContacts(tenantID, params)
+	contacts, total, err := h.store.ListContacts(r.Context(), tenantID, params)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
@@ -137,7 +137,7 @@ func (h *Handler) CreateContact(w http.ResponseWriter, r *http.Request) {
 		UpdatedBy:         "system",
 	}
 
-	if err := h.store.CreateContact(&contact); err != nil {
+	if err := h.store.CreateContact(r.Context(), &contact); err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
@@ -147,7 +147,7 @@ func (h *Handler) CreateContact(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetContact(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	contact, err := h.store.GetContact(id)
+	contact, err := h.store.GetContact(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			writeError(w, http.StatusNotFound, "NOT_FOUND", "Contact not found")
@@ -163,7 +163,7 @@ func (h *Handler) GetContact(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UpdateContact(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 
-	existing, err := h.store.GetContact(id)
+	existing, err := h.store.GetContact(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			writeError(w, http.StatusNotFound, "NOT_FOUND", "Contact not found")
@@ -183,7 +183,7 @@ func (h *Handler) UpdateContact(w http.ResponseWriter, r *http.Request) {
 	existing.UpdatedAt = time.Now().UTC()
 	existing.UpdatedBy = "system"
 
-	if err := h.store.UpdateContact(existing); err != nil {
+	if err := h.store.UpdateContact(r.Context(), existing); err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
@@ -195,7 +195,7 @@ func (h *Handler) GetContactByLegacyID(w http.ResponseWriter, r *http.Request) {
 	legacyID := r.PathValue("legacyId")
 	tenantID := tenantID(r)
 
-	contact, err := h.store.GetContactByLegacyID(tenantID, legacyID)
+	contact, err := h.store.GetContactByLegacyID(r.Context(), tenantID, legacyID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			writeError(w, http.StatusNotFound, "NOT_FOUND", "Contact not found for legacy ID")
@@ -213,7 +213,7 @@ func (h *Handler) GetContactTimeline(w http.ResponseWriter, r *http.Request) {
 	limit := intParam(r, "limit", 50)
 	offset := intParam(r, "offset", 0)
 
-	timeline, err := h.store.GetContactTimeline(contactID, limit, offset)
+	timeline, err := h.store.GetContactTimeline(r.Context(), contactID, limit, offset)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
@@ -232,7 +232,7 @@ func (h *Handler) ListConversations(w http.ResponseWriter, r *http.Request) {
 	limit := intParam(r, "limit", 25)
 	offset := intParam(r, "offset", 0)
 
-	conversations, total, err := h.store.ListConversations(tenantID, status, anchorType, anchorID, limit, offset)
+	conversations, total, err := h.store.ListConversations(r.Context(), tenantID, status, anchorType, anchorID, limit, offset)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
@@ -266,7 +266,7 @@ func (h *Handler) CreateConversation(w http.ResponseWriter, r *http.Request) {
 		UpdatedBy:        "system",
 	}
 
-	if err := h.store.CreateConversation(&conv); err != nil {
+	if err := h.store.CreateConversation(r.Context(), &conv); err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
@@ -276,7 +276,7 @@ func (h *Handler) CreateConversation(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetConversation(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	conv, err := h.store.GetConversation(id)
+	conv, err := h.store.GetConversation(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			writeError(w, http.StatusNotFound, "NOT_FOUND", "Conversation not found")
@@ -292,7 +292,7 @@ func (h *Handler) GetConversation(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UpdateConversation(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 
-	existing, err := h.store.GetConversation(id)
+	existing, err := h.store.GetConversation(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			writeError(w, http.StatusNotFound, "NOT_FOUND", "Conversation not found")
@@ -312,7 +312,7 @@ func (h *Handler) UpdateConversation(w http.ResponseWriter, r *http.Request) {
 	existing.UpdatedAt = time.Now().UTC()
 	existing.UpdatedBy = "system"
 
-	if err := h.store.UpdateConversation(existing); err != nil {
+	if err := h.store.UpdateConversation(r.Context(), existing); err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
@@ -333,7 +333,7 @@ func (h *Handler) ListInteractions(w http.ResponseWriter, r *http.Request) {
 		Offset:         intParam(r, "offset", 0),
 	}
 
-	interactions, total, err := h.store.ListInteractions(tenantID, filter)
+	interactions, total, err := h.store.ListInteractions(r.Context(), tenantID, filter)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
@@ -375,7 +375,7 @@ func (h *Handler) CreateInteraction(w http.ResponseWriter, r *http.Request) {
 		CreatedBy:       "system",
 	}
 
-	if err := h.store.CreateInteraction(&interaction); err != nil {
+	if err := h.store.CreateInteraction(r.Context(), &interaction); err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
@@ -385,7 +385,7 @@ func (h *Handler) CreateInteraction(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetInteraction(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	interaction, err := h.store.GetInteraction(id)
+	interaction, err := h.store.GetInteraction(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			writeError(w, http.StatusNotFound, "NOT_FOUND", "Interaction not found")
@@ -436,7 +436,7 @@ func (h *Handler) CreateNote(w http.ResponseWriter, r *http.Request) {
 		note.AIConfidence = &v
 	}
 
-	if err := h.store.CreateNote(&note); err != nil {
+	if err := h.store.CreateNote(r.Context(), &note); err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
@@ -453,7 +453,7 @@ func (h *Handler) ListCommitments(w http.ResponseWriter, r *http.Request) {
 	limit := intParam(r, "limit", 25)
 	offset := intParam(r, "offset", 0)
 
-	commitments, total, err := h.store.ListCommitments(tenantID, status, ownerAgent, limit, offset)
+	commitments, total, err := h.store.ListCommitments(r.Context(), tenantID, status, ownerAgent, limit, offset)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
@@ -493,7 +493,7 @@ func (h *Handler) CreateCommitment(w http.ResponseWriter, r *http.Request) {
 		UpdatedBy:       "system",
 	}
 
-	if err := h.store.CreateCommitment(&commitment); err != nil {
+	if err := h.store.CreateCommitment(r.Context(), &commitment); err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
@@ -504,7 +504,7 @@ func (h *Handler) CreateCommitment(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UpdateCommitment(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 
-	existing, err := h.store.GetCommitment(id)
+	existing, err := h.store.GetCommitment(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			writeError(w, http.StatusNotFound, "NOT_FOUND", "Commitment not found")
@@ -524,7 +524,7 @@ func (h *Handler) UpdateCommitment(w http.ResponseWriter, r *http.Request) {
 	existing.UpdatedAt = time.Now().UTC()
 	existing.UpdatedBy = "system"
 
-	if err := h.store.UpdateCommitment(existing); err != nil {
+	if err := h.store.UpdateCommitment(r.Context(), existing); err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
@@ -541,7 +541,7 @@ func (h *Handler) ListOutreach(w http.ResponseWriter, r *http.Request) {
 	limit := intParam(r, "limit", 25)
 	offset := intParam(r, "offset", 0)
 
-	outreach, total, err := h.store.ListOutreach(tenantID, status, assignedAgent, limit, offset)
+	outreach, total, err := h.store.ListOutreach(r.Context(), tenantID, status, assignedAgent, limit, offset)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
@@ -586,7 +586,7 @@ func (h *Handler) CreateOutreach(w http.ResponseWriter, r *http.Request) {
 		UpdatedBy:     "system",
 	}
 
-	if err := h.store.CreateOutreach(&outreach); err != nil {
+	if err := h.store.CreateOutreach(r.Context(), &outreach); err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
@@ -597,7 +597,7 @@ func (h *Handler) CreateOutreach(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UpdateOutreach(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 
-	existing, err := h.store.GetOutreach(id)
+	existing, err := h.store.GetOutreach(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			writeError(w, http.StatusNotFound, "NOT_FOUND", "Outreach not found")
@@ -617,7 +617,7 @@ func (h *Handler) UpdateOutreach(w http.ResponseWriter, r *http.Request) {
 	existing.UpdatedAt = time.Now().UTC()
 	existing.UpdatedBy = "system"
 
-	if err := h.store.UpdateOutreach(existing); err != nil {
+	if err := h.store.UpdateOutreach(r.Context(), existing); err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
@@ -633,7 +633,7 @@ func (h *Handler) ListOrganizations(w http.ResponseWriter, r *http.Request) {
 	limit := intParam(r, "limit", 25)
 	offset := intParam(r, "offset", 0)
 
-	orgs, total, err := h.store.ListOrganizations(tenantID, orgType, limit, offset)
+	orgs, total, err := h.store.ListOrganizations(r.Context(), tenantID, orgType, limit, offset)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
@@ -666,7 +666,7 @@ func (h *Handler) CreateOrganization(w http.ResponseWriter, r *http.Request) {
 		UpdatedBy:        "system",
 	}
 
-	if err := h.store.CreateOrganization(&org); err != nil {
+	if err := h.store.CreateOrganization(r.Context(), &org); err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
@@ -676,7 +676,7 @@ func (h *Handler) CreateOrganization(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetOrganization(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	org, err := h.store.GetOrganization(id)
+	org, err := h.store.GetOrganization(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			writeError(w, http.StatusNotFound, "NOT_FOUND", "Organization not found")
@@ -693,7 +693,7 @@ func (h *Handler) GetOrganization(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetTaxonomy(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantID(r)
-	categories, err := h.store.GetTaxonomyTree(tenantID)
+	categories, err := h.store.GetTaxonomyTree(r.Context(), tenantID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
@@ -710,7 +710,7 @@ func (h *Handler) GetAuditLog(w http.ResponseWriter, r *http.Request) {
 	entityID := r.URL.Query().Get("entity_id")
 	limit := intParam(r, "limit", 50)
 
-	entries, err := h.store.GetAuditLog(tenantID, entityType, entityID, limit)
+	entries, err := h.store.GetAuditLog(r.Context(), tenantID, entityType, entityID, limit)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return

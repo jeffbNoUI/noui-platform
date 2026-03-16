@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"testing"
 
@@ -22,7 +23,7 @@ func TestListStages_Success(t *testing.T) {
 	mock.ExpectQuery("SELECT stage_idx, stage_name").
 		WillReturnRows(rows)
 
-	stages, err := s.ListStages()
+	stages, err := s.ListStages(context.Background())
 	if err != nil {
 		t.Fatalf("ListStages error: %v", err)
 	}
@@ -51,7 +52,7 @@ func TestGetStage_Valid(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"stage_idx", "stage_name", "description", "sort_order"}).
 			AddRow(3, "Marital Share Calculation", "DRO calculations", 3))
 
-	stage, err := s.GetStage(3)
+	stage, err := s.GetStage(context.Background(), 3)
 	if err != nil {
 		t.Fatalf("GetStage error: %v", err)
 	}
@@ -70,7 +71,7 @@ func TestGetStage_NotFound(t *testing.T) {
 		WithArgs(99).
 		WillReturnError(sql.ErrNoRows)
 
-	_, err := s.GetStage(99)
+	_, err := s.GetStage(context.Background(), 99)
 	if err != sql.ErrNoRows {
 		t.Errorf("GetStage(99) error = %v, want sql.ErrNoRows", err)
 	}

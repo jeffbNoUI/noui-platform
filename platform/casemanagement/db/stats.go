@@ -1,14 +1,16 @@
 package db
 
 import (
+	"context"
 	"strconv"
 	"time"
 
 	"github.com/noui/platform/casemanagement/models"
+	"github.com/noui/platform/dbcontext"
 )
 
 // GetCaseStats returns aggregated case metrics for a tenant's supervisor dashboard.
-func (s *Store) GetCaseStats(tenantID string) (*models.CaseStats, error) {
+func (s *Store) GetCaseStats(ctx context.Context, tenantID string) (*models.CaseStats, error) {
 	stats := &models.CaseStats{
 		CaseloadByStage: []models.StageCaseCount{},
 		CasesByStatus:   []models.StatusCount{},
@@ -17,7 +19,7 @@ func (s *Store) GetCaseStats(tenantID string) (*models.CaseStats, error) {
 	}
 
 	// Query 1: Caseload by stage (active cases only)
-	stageRows, err := s.DB.Query(
+	stageRows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx,
 		`SELECT current_stage, current_stage_idx, COUNT(*)
 		 FROM retirement_case
 		 WHERE tenant_id = $1 AND status = 'active'
@@ -39,7 +41,7 @@ func (s *Store) GetCaseStats(tenantID string) (*models.CaseStats, error) {
 	}
 
 	// Query 2: Cases by status
-	statusRows, err := s.DB.Query(
+	statusRows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx,
 		`SELECT status, COUNT(*)
 		 FROM retirement_case
 		 WHERE tenant_id = $1
@@ -61,7 +63,7 @@ func (s *Store) GetCaseStats(tenantID string) (*models.CaseStats, error) {
 	}
 
 	// Query 3: Cases by priority
-	prioRows, err := s.DB.Query(
+	prioRows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx,
 		`SELECT priority, COUNT(*)
 		 FROM retirement_case
 		 WHERE tenant_id = $1
@@ -83,7 +85,7 @@ func (s *Store) GetCaseStats(tenantID string) (*models.CaseStats, error) {
 	}
 
 	// Query 4: Cases by assignee (active only)
-	assigneeRows, err := s.DB.Query(
+	assigneeRows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx,
 		`SELECT COALESCE(assigned_to, 'Unassigned'), COUNT(*), COALESCE(AVG(days_open), 0)
 		 FROM retirement_case
 		 WHERE tenant_id = $1 AND status = 'active'
@@ -105,7 +107,7 @@ func (s *Store) GetCaseStats(tenantID string) (*models.CaseStats, error) {
 	}
 
 	// Query 5: Summary counts
-	err = s.DB.QueryRow(
+	err = dbcontext.DB(ctx, s.DB).QueryRowContext(ctx,
 		`SELECT
 			COUNT(*) FILTER (WHERE status = 'active'),
 			COUNT(*) FILTER (WHERE status = 'completed' AND updated_at >= DATE_TRUNC('month', NOW())),
@@ -121,12 +123,12 @@ func (s *Store) GetCaseStats(tenantID string) (*models.CaseStats, error) {
 }
 
 // GetVolumeStats returns monthly case creation counts for the last N months.
-func (s *Store) GetVolumeStats(tenantID string, months int) (*models.VolumeStats, error) {
+func (s *Store) GetVolumeStats(ctx context.Context, tenantID string, months int) (*models.VolumeStats, error) {
 	if months <= 0 {
 		months = 6
 	}
 
-	rows, err := s.DB.Query(
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx,
 		`SELECT DATE_TRUNC('month', created_at) AS m, COUNT(*)
 		 FROM retirement_case
 		 WHERE tenant_id = $1
@@ -170,7 +172,7 @@ func (s *Store) GetVolumeStats(tenantID string, months int) (*models.VolumeStats
 }
 
 // GetSLAStats returns SLA health metrics for active cases in a tenant.
-func (s *Store) GetSLAStats(tenantID string) (*models.SLAStats, error) {
+func (s *Store) GetSLAStats(ctx context.Context, tenantID string) (*models.SLAStats, error) {
 	stats := &models.SLAStats{
 		Thresholds: models.SLAThresholds{
 			Urgent:   6,
@@ -179,7 +181,7 @@ func (s *Store) GetSLAStats(tenantID string) (*models.SLAStats, error) {
 		},
 	}
 
-	err := s.DB.QueryRow(
+	err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx,
 		`SELECT
 			COUNT(*) FILTER (WHERE sla_deadline_at >= NOW() AND sla_deadline_at >= NOW() + (sla_target_days * 0.20 || ' days')::INTERVAL) AS on_track,
 			COUNT(*) FILTER (WHERE sla_deadline_at >= NOW() AND sla_deadline_at < NOW() + (sla_target_days * 0.20 || ' days')::INTERVAL) AS at_risk,

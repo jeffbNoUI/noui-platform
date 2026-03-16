@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"testing"
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
@@ -49,7 +50,7 @@ func TestGetCaseStats_WithData(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"total_active", "completed_mtd", "at_risk"}).
 			AddRow(10, 4, 2))
 
-	stats, err := s.GetCaseStats("tenant-1")
+	stats, err := s.GetCaseStats(context.Background(), "tenant-1")
 	if err != nil {
 		t.Fatalf("GetCaseStats error: %v", err)
 	}
@@ -145,7 +146,7 @@ func TestGetCaseStats_Empty(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"total_active", "completed_mtd", "at_risk"}).
 			AddRow(0, 0, 0))
 
-	stats, err := s.GetCaseStats("tenant-empty")
+	stats, err := s.GetCaseStats(context.Background(), "tenant-empty")
 	if err != nil {
 		t.Fatalf("GetCaseStats(empty) error: %v", err)
 	}
@@ -197,7 +198,7 @@ func TestGetSLAStats_MixedStatuses(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"on_track", "at_risk", "overdue", "avg_processing_days"}).
 			AddRow(2, 1, 1, 18.5))
 
-	stats, err := s.GetSLAStats("tenant-1")
+	stats, err := s.GetSLAStats(context.Background(), "tenant-1")
 	if err != nil {
 		t.Fatalf("GetSLAStats error: %v", err)
 	}
@@ -235,7 +236,7 @@ func TestGetSLAStats_NoCases(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"on_track", "at_risk", "overdue", "avg_processing_days"}).
 			AddRow(0, 0, 0, 0.0))
 
-	stats, err := s.GetSLAStats("tenant-empty")
+	stats, err := s.GetSLAStats(context.Background(), "tenant-empty")
 	if err != nil {
 		t.Fatalf("GetSLAStats(empty) error: %v", err)
 	}

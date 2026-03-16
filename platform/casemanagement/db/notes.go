@@ -1,18 +1,21 @@
 package db
 
 import (
+	"context"
+
 	"github.com/noui/platform/casemanagement/models"
+	"github.com/noui/platform/dbcontext"
 )
 
 // CreateNote inserts a case note and returns it with the generated ID.
-func (s *Store) CreateNote(caseID string, req models.CreateNoteRequest) (*models.CaseNote, error) {
+func (s *Store) CreateNote(ctx context.Context, caseID string, req models.CreateNoteRequest) (*models.CaseNote, error) {
 	category := req.Category
 	if category == "" {
 		category = "general"
 	}
 
 	var note models.CaseNote
-	err := s.DB.QueryRow(`
+	err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, `
 		INSERT INTO case_note (case_id, author, content, category)
 		VALUES ($1, $2, $3, $4)
 		RETURNING id, case_id, author, content, category, created_at
@@ -26,8 +29,8 @@ func (s *Store) CreateNote(caseID string, req models.CreateNoteRequest) (*models
 }
 
 // ListNotes returns all notes for a case, newest first.
-func (s *Store) ListNotes(caseID string) ([]models.CaseNote, error) {
-	rows, err := s.DB.Query(`
+func (s *Store) ListNotes(ctx context.Context, caseID string) ([]models.CaseNote, error) {
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, `
 		SELECT id, case_id, author, content, category, created_at
 		FROM case_note
 		WHERE case_id = $1
@@ -50,8 +53,8 @@ func (s *Store) ListNotes(caseID string) ([]models.CaseNote, error) {
 }
 
 // DeleteNote removes a note by ID, scoped to a case.
-func (s *Store) DeleteNote(caseID string, noteID int) error {
-	result, err := s.DB.Exec(`
+func (s *Store) DeleteNote(ctx context.Context, caseID string, noteID int) error {
+	result, err := dbcontext.DB(ctx, s.DB).ExecContext(ctx, `
 		DELETE FROM case_note WHERE id = $1 AND case_id = $2
 	`, noteID, caseID)
 	if err != nil {
@@ -65,8 +68,8 @@ func (s *Store) DeleteNote(caseID string, noteID int) error {
 }
 
 // NoteCount returns the number of notes for a case.
-func (s *Store) NoteCount(caseID string) (int, error) {
+func (s *Store) NoteCount(ctx context.Context, caseID string) (int, error) {
 	var count int
-	err := s.DB.QueryRow(`SELECT COUNT(*) FROM case_note WHERE case_id = $1`, caseID).Scan(&count)
+	err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, `SELECT COUNT(*) FROM case_note WHERE case_id = $1`, caseID).Scan(&count)
 	return count, err
 }

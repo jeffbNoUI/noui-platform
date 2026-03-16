@@ -1,15 +1,17 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
 	"github.com/noui/platform/crm/models"
+	"github.com/noui/platform/dbcontext"
 )
 
 // ListConversations retrieves conversations for a tenant with optional filters.
 // Returns matching conversations, total count, and any error.
-func (s *Store) ListConversations(tenantID string, status, anchorType, anchorID string, limit, offset int) ([]models.Conversation, int, error) {
+func (s *Store) ListConversations(ctx context.Context, tenantID string, status, anchorType, anchorID string, limit, offset int) ([]models.Conversation, int, error) {
 	query := `
 		SELECT
 			c.conversation_id, c.tenant_id,
@@ -57,7 +59,7 @@ func (s *Store) ListConversations(tenantID string, status, anchorType, anchorID 
 		argIdx++
 	}
 
-	rows, err := s.DB.Query(query, args...)
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("listing conversations: %w", err)
 	}
@@ -83,7 +85,7 @@ func (s *Store) ListConversations(tenantID string, status, anchorType, anchorID 
 }
 
 // GetConversation retrieves a single conversation by ID, including its interactions.
-func (s *Store) GetConversation(conversationID string) (*models.Conversation, error) {
+func (s *Store) GetConversation(ctx context.Context, conversationID string) (*models.Conversation, error) {
 	query := `
 		SELECT
 			c.conversation_id, c.tenant_id,
@@ -106,7 +108,7 @@ func (s *Store) GetConversation(conversationID string) (*models.Conversation, er
 	var slaDueAt sql.NullTime
 	var assignedTeam, assignedAgent sql.NullString
 
-	err := s.DB.QueryRow(query, conversationID).Scan(
+	err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, query, conversationID).Scan(
 		&conv.ConversationID, &conv.TenantID,
 		&conv.AnchorType, &anchorID,
 		&topicCategory, &topicSubcategory, &subject,
@@ -137,7 +139,7 @@ func (s *Store) GetConversation(conversationID string) (*models.Conversation, er
 	conv.AssignedAgent = nullStringToPtr(assignedAgent)
 
 	// Load interactions for this conversation
-	interactions, _, err := s.ListInteractions(conv.TenantID, InteractionFilter{
+	interactions, _, err := s.ListInteractions(ctx, conv.TenantID, InteractionFilter{
 		ConversationID: conversationID,
 		Limit:          100,
 	})
@@ -150,7 +152,7 @@ func (s *Store) GetConversation(conversationID string) (*models.Conversation, er
 }
 
 // CreateConversation inserts a new conversation record.
-func (s *Store) CreateConversation(c *models.Conversation) error {
+func (s *Store) CreateConversation(ctx context.Context, c *models.Conversation) error {
 	query := `
 		INSERT INTO crm_conversation (
 			conversation_id, tenant_id,
@@ -171,7 +173,7 @@ func (s *Store) CreateConversation(c *models.Conversation) error {
 		)
 		RETURNING created_at, updated_at`
 
-	return s.DB.QueryRow(
+	return dbcontext.DB(ctx, s.DB).QueryRowContext(ctx,
 		query,
 		c.ConversationID, c.TenantID,
 		c.AnchorType, c.AnchorID,
@@ -184,7 +186,7 @@ func (s *Store) CreateConversation(c *models.Conversation) error {
 }
 
 // UpdateConversation modifies mutable fields on an existing conversation.
-func (s *Store) UpdateConversation(c *models.Conversation) error {
+func (s *Store) UpdateConversation(ctx context.Context, c *models.Conversation) error {
 	query := `
 		UPDATE crm_conversation SET
 			status = $2,
@@ -199,7 +201,7 @@ func (s *Store) UpdateConversation(c *models.Conversation) error {
 		WHERE conversation_id = $1
 		RETURNING updated_at`
 
-	err := s.DB.QueryRow(
+	err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx,
 		query,
 		c.ConversationID,
 		c.Status,

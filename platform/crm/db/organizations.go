@@ -1,15 +1,17 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
 	"github.com/noui/platform/crm/models"
+	"github.com/noui/platform/dbcontext"
 )
 
 // ListOrganizations retrieves organizations for a tenant with optional type filter.
 // Returns matching organizations, total count, and any error.
-func (s *Store) ListOrganizations(tenantID string, orgType string, limit, offset int) ([]models.Organization, int, error) {
+func (s *Store) ListOrganizations(ctx context.Context, tenantID string, orgType string, limit, offset int) ([]models.Organization, int, error) {
 	query := `
 		SELECT
 			org_id, tenant_id, org_type, org_name, org_short_name,
@@ -46,7 +48,7 @@ func (s *Store) ListOrganizations(tenantID string, orgType string, limit, offset
 		argIdx++
 	}
 
-	rows, err := s.DB.Query(query, args...)
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("listing organizations: %w", err)
 	}
@@ -72,7 +74,7 @@ func (s *Store) ListOrganizations(tenantID string, orgType string, limit, offset
 }
 
 // GetOrganization retrieves a single organization by ID, including contact roles.
-func (s *Store) GetOrganization(orgID string) (*models.Organization, error) {
+func (s *Store) GetOrganization(ctx context.Context, orgID string) (*models.Organization, error) {
 	query := `
 		SELECT
 			org_id, tenant_id, org_type, org_name, org_short_name,
@@ -96,7 +98,7 @@ func (s *Store) GetOrganization(orgID string) (*models.Organization, error) {
 	var reportingFrequency sql.NullString
 	var contractReference, contractStartDate, contractEndDate sql.NullString
 
-	err := s.DB.QueryRow(query, orgID).Scan(
+	err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, query, orgID).Scan(
 		&org.OrgID, &org.TenantID, &org.OrgType, &org.OrgName, &orgShortName,
 		&legacyEmployerID, &ein,
 		&addressLine1, &addressLine2, &city, &stateCode, &zipCode,
@@ -133,7 +135,7 @@ func (s *Store) GetOrganization(orgID string) (*models.Organization, error) {
 	org.ContractEndDate = nullStringToPtr(contractEndDate)
 
 	// Load contact roles
-	contacts, err := s.getOrgContactRoles(orgID)
+	contacts, err := s.getOrgContactRoles(ctx, orgID)
 	if err != nil {
 		return nil, fmt.Errorf("getting contacts for organization %s: %w", orgID, err)
 	}
@@ -143,7 +145,7 @@ func (s *Store) GetOrganization(orgID string) (*models.Organization, error) {
 }
 
 // CreateOrganization inserts a new organization record.
-func (s *Store) CreateOrganization(o *models.Organization) error {
+func (s *Store) CreateOrganization(ctx context.Context, o *models.Organization) error {
 	query := `
 		INSERT INTO crm_organization (
 			org_id, tenant_id, org_type, org_name, org_short_name,
@@ -166,7 +168,7 @@ func (s *Store) CreateOrganization(o *models.Organization) error {
 		)
 		RETURNING created_at, updated_at`
 
-	return s.DB.QueryRow(
+	return dbcontext.DB(ctx, s.DB).QueryRowContext(ctx,
 		query,
 		o.OrgID, o.TenantID, o.OrgType, o.OrgName, o.OrgShortName,
 		o.LegacyEmployerID, o.EIN,
@@ -180,7 +182,7 @@ func (s *Store) CreateOrganization(o *models.Organization) error {
 }
 
 // getOrgContactRoles retrieves all contact roles for an organization.
-func (s *Store) getOrgContactRoles(orgID string) ([]models.OrgContactRole, error) {
+func (s *Store) getOrgContactRoles(ctx context.Context, orgID string) ([]models.OrgContactRole, error) {
 	query := `
 		SELECT
 			org_contact_id, org_id, contact_id,
@@ -191,7 +193,7 @@ func (s *Store) getOrgContactRoles(orgID string) ([]models.OrgContactRole, error
 		WHERE org_id = $1
 		ORDER BY role, is_primary_for_role DESC`
 
-	rows, err := s.DB.Query(query, orgID)
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, query, orgID)
 	if err != nil {
 		return nil, err
 	}

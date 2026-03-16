@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"testing"
@@ -72,7 +73,7 @@ func TestListCases_SingleFilter(t *testing.T) {
 		WithArgs("case-001").
 		WillReturnRows(sqlmock.NewRows([]string{"flag_code"}).AddRow("dro"))
 
-	cases, total, err := s.ListCases("tenant-1", models.CaseFilter{Status: "active"})
+	cases, total, err := s.ListCases(context.Background(), "tenant-1", models.CaseFilter{Status: "active"})
 	if err != nil {
 		t.Fatalf("ListCases error: %v", err)
 	}
@@ -109,7 +110,7 @@ func TestListCases_MultipleFilters(t *testing.T) {
 		WithArgs("case-001").
 		WillReturnRows(sqlmock.NewRows([]string{"flag_code"}))
 
-	cases, total, err := s.ListCases("tenant-1", models.CaseFilter{
+	cases, total, err := s.ListCases(context.Background(), "tenant-1", models.CaseFilter{
 		Status:   "active",
 		Priority: "high",
 		MemberID: 10001,
@@ -139,7 +140,7 @@ func TestListCases_NoFilters(t *testing.T) {
 		WithArgs("tenant-1", 25, 0).
 		WillReturnRows(sqlmock.NewRows(caseCols))
 
-	cases, total, err := s.ListCases("tenant-1", models.CaseFilter{})
+	cases, total, err := s.ListCases(context.Background(), "tenant-1", models.CaseFilter{})
 	if err != nil {
 		t.Fatalf("ListCases error: %v", err)
 	}
@@ -163,7 +164,7 @@ func TestListCases_PaginationEdge(t *testing.T) {
 		WithArgs("tenant-1", 5, 10).
 		WillReturnRows(sqlmock.NewRows(caseCols)) // empty result set
 
-	cases, total, err := s.ListCases("tenant-1", models.CaseFilter{Limit: 5, Offset: 10})
+	cases, total, err := s.ListCases(context.Background(), "tenant-1", models.CaseFilter{Limit: 5, Offset: 10})
 	if err != nil {
 		t.Fatalf("ListCases error: %v", err)
 	}
@@ -193,7 +194,7 @@ func TestListCases_WithAssignedToFilter(t *testing.T) {
 		WithArgs("case-002").
 		WillReturnRows(sqlmock.NewRows([]string{"flag_code"}))
 
-	cases, total, err := s.ListCases("tenant-1", models.CaseFilter{AssignedTo: "jsmith"})
+	cases, total, err := s.ListCases(context.Background(), "tenant-1", models.CaseFilter{AssignedTo: "jsmith"})
 	if err != nil {
 		t.Fatalf("ListCases error: %v", err)
 	}
@@ -220,7 +221,7 @@ func TestListCases_NegativeLimit(t *testing.T) {
 		WithArgs("tenant-1", 25, 0).
 		WillReturnRows(sqlmock.NewRows(caseCols))
 
-	_, total, err := s.ListCases("tenant-1", models.CaseFilter{Limit: -5})
+	_, total, err := s.ListCases(context.Background(), "tenant-1", models.CaseFilter{Limit: -5})
 	if err != nil {
 		t.Fatalf("ListCases(negative limit) error: %v", err)
 	}
@@ -255,7 +256,7 @@ func TestGetCase_NullMemberData(t *testing.T) {
 		WithArgs("case-orphan").
 		WillReturnRows(sqlmock.NewRows([]string{"flag_code"}))
 
-	c, err := s.GetCase("tenant-1", "case-orphan")
+	c, err := s.GetCase(context.Background(), "tenant-1", "case-orphan")
 	if err != nil {
 		t.Fatalf("GetCase error: %v", err)
 	}
@@ -280,7 +281,7 @@ func TestGetCase_NotFound(t *testing.T) {
 		WithArgs("nonexistent", "tenant-1").
 		WillReturnError(sql.ErrNoRows)
 
-	_, err := s.GetCase("tenant-1", "nonexistent")
+	_, err := s.GetCase(context.Background(), "tenant-1", "nonexistent")
 	if err != sql.ErrNoRows {
 		t.Errorf("GetCase(nonexistent) error = %v, want sql.ErrNoRows", err)
 	}
@@ -294,7 +295,7 @@ func TestGetCase_WrongTenant(t *testing.T) {
 		WithArgs("case-001", "tenant-2").
 		WillReturnError(sql.ErrNoRows)
 
-	_, err := s.GetCase("tenant-2", "case-001")
+	_, err := s.GetCase(context.Background(), "tenant-2", "case-001")
 	if err != sql.ErrNoRows {
 		t.Errorf("GetCase(wrong tenant) error = %v, want sql.ErrNoRows", err)
 	}
@@ -316,7 +317,7 @@ func TestAdvanceStage_FinalStage(t *testing.T) {
 		WillReturnError(sql.ErrNoRows)
 	mock.ExpectRollback()
 
-	_, err := s.AdvanceStage("tenant-1", "case-final", "jsmith", "try advancing past final")
+	_, err := s.AdvanceStage(context.Background(), "tenant-1", "case-final", "jsmith", "try advancing past final")
 	if err == nil {
 		t.Fatal("AdvanceStage at final stage should return error")
 	}
@@ -359,7 +360,7 @@ func TestAdvanceStage_Success(t *testing.T) {
 		WithArgs("case-001").
 		WillReturnRows(sqlmock.NewRows([]string{"flag_code"}))
 
-	c, err := s.AdvanceStage("tenant-1", "case-001", "jsmith", "Verified employment records")
+	c, err := s.AdvanceStage(context.Background(), "tenant-1", "case-001", "jsmith", "Verified employment records")
 	if err != nil {
 		t.Fatalf("AdvanceStage error: %v", err)
 	}
@@ -380,7 +381,7 @@ func TestAdvanceStage_CaseNotFound(t *testing.T) {
 		WillReturnError(sql.ErrNoRows)
 	mock.ExpectRollback()
 
-	_, err := s.AdvanceStage("tenant-1", "nonexistent", "jsmith", "")
+	_, err := s.AdvanceStage(context.Background(), "tenant-1", "nonexistent", "jsmith", "")
 	if err != sql.ErrNoRows {
 		t.Errorf("AdvanceStage(nonexistent) error = %v, want sql.ErrNoRows", err)
 	}
@@ -410,7 +411,7 @@ func TestAdvanceStage_HistoryInsertFails(t *testing.T) {
 		WillReturnError(fmt.Errorf("constraint violation"))
 	mock.ExpectRollback()
 
-	_, err := s.AdvanceStage("tenant-1", "case-001", "jsmith", "test rollback")
+	_, err := s.AdvanceStage(context.Background(), "tenant-1", "case-001", "jsmith", "test rollback")
 	if err == nil {
 		t.Fatal("AdvanceStage should fail when history insert fails")
 	}
@@ -437,7 +438,7 @@ func TestGetStageHistory_Ordering(t *testing.T) {
 		WithArgs("case-001", "tenant-1").
 		WillReturnRows(rows)
 
-	history, err := s.GetStageHistory("tenant-1", "case-001")
+	history, err := s.GetStageHistory(context.Background(), "tenant-1", "case-001")
 	if err != nil {
 		t.Fatalf("GetStageHistory error: %v", err)
 	}
@@ -467,7 +468,7 @@ func TestGetStageHistory_Empty(t *testing.T) {
 			"from_stage", "to_stage", "transitioned_by", "note", "transitioned_at",
 		}))
 
-	history, err := s.GetStageHistory("tenant-1", "case-new")
+	history, err := s.GetStageHistory(context.Background(), "tenant-1", "case-new")
 	if err != nil {
 		t.Fatalf("GetStageHistory(empty) error: %v", err)
 	}
@@ -485,7 +486,7 @@ func TestGetCaseFlags_Empty(t *testing.T) {
 		WithArgs("case-no-flags").
 		WillReturnRows(sqlmock.NewRows([]string{"flag_code"}))
 
-	flags, err := s.GetCaseFlags("case-no-flags")
+	flags, err := s.GetCaseFlags(context.Background(), "case-no-flags")
 	if err != nil {
 		t.Fatalf("GetCaseFlags error: %v", err)
 	}
@@ -504,7 +505,7 @@ func TestGetCaseFlags_Multiple(t *testing.T) {
 			AddRow("early-retirement").
 			AddRow("purchased-service"))
 
-	flags, err := s.GetCaseFlags("case-001")
+	flags, err := s.GetCaseFlags(context.Background(), "case-001")
 	if err != nil {
 		t.Fatalf("GetCaseFlags error: %v", err)
 	}
@@ -553,7 +554,7 @@ func TestCreateCase_WithFlags(t *testing.T) {
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
-	err := s.CreateCase(c, []string{"dro", "purchased-service"})
+	err := s.CreateCase(context.Background(), c, []string{"dro", "purchased-service"})
 	if err != nil {
 		t.Fatalf("CreateCase error: %v", err)
 	}
@@ -588,7 +589,7 @@ func TestCreateCase_NoFlags(t *testing.T) {
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
-	err := s.CreateCase(c, []string{})
+	err := s.CreateCase(context.Background(), c, []string{})
 	if err != nil {
 		t.Fatalf("CreateCase error: %v", err)
 	}
@@ -613,7 +614,7 @@ func TestListCases_WithStageFilter(t *testing.T) {
 		WithArgs("case-elig").
 		WillReturnRows(sqlmock.NewRows([]string{"flag_code"}))
 
-	cases, total, err := s.ListCases("tenant-1", models.CaseFilter{Stage: "Eligibility Verification"})
+	cases, total, err := s.ListCases(context.Background(), "tenant-1", models.CaseFilter{Stage: "Eligibility Verification"})
 	if err != nil {
 		t.Fatalf("ListCases(stage) error: %v", err)
 	}
@@ -632,7 +633,7 @@ func TestUpdateCase_NoChanges(t *testing.T) {
 	s, _ := newStore(t)
 
 	// All fields nil → UpdateCase returns nil immediately (no DB call)
-	err := s.UpdateCase("tenant-1", "case-001", models.UpdateCaseRequest{})
+	err := s.UpdateCase(context.Background(), "tenant-1", "case-001", models.UpdateCaseRequest{})
 	if err != nil {
 		t.Errorf("UpdateCase(no changes) error = %v, want nil", err)
 	}
@@ -646,7 +647,7 @@ func TestUpdateCase_MultipleFields(t *testing.T) {
 	mock.ExpectExec("UPDATE retirement_case SET").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err := s.UpdateCase("tenant-1", "case-001", models.UpdateCaseRequest{
+	err := s.UpdateCase(context.Background(), "tenant-1", "case-001", models.UpdateCaseRequest{
 		Priority: &prio,
 		Status:   &status,
 	})
