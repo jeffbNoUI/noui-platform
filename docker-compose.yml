@@ -36,10 +36,28 @@ services:
       - ./domains/pension/seed/013_expanded_members.sql:/docker-entrypoint-initdb.d/023_expanded_members.sql
       - ./domains/pension/seed/014_expanded_cases.sql:/docker-entrypoint-initdb.d/024_expanded_cases.sql
       - ./domains/pension/seed/015_expanded_crm.sql:/docker-entrypoint-initdb.d/025_expanded_crm.sql
+      - ./domains/pension/schema/013_row_level_security.sql:/docker-entrypoint-initdb.d/026_row_level_security.sql
+      - ./domains/pension/schema/014_performance_indexes.sql:/docker-entrypoint-initdb.d/027_performance_indexes.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U derp"]
       interval: 5s
       timeout: 5s
+      retries: 5
+
+  pgbouncer:
+    image: edoburu/pgbouncer:1.22.0
+    ports:
+      - "6432:6432"
+    volumes:
+      - ./infrastructure/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ./infrastructure/pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 -U derp"]
+      interval: 5s
+      timeout: 3s
       retries: 5
 
   dataaccess:
@@ -50,15 +68,17 @@ services:
       - "8081:8081"
     environment:
       PORT: "8081"
-      DB_HOST: postgres
-      DB_PORT: "5432"
+      DB_HOST: pgbouncer
+      DB_PORT: "6432"
       DB_USER: derp
       DB_PASSWORD: derp
       DB_NAME: derp
       DB_SSLMODE: disable
+      DB_MAX_OPEN_CONNS: "8"
+      DB_MAX_IDLE_CONNS: "3"
       CORS_ORIGIN: "http://localhost:3000"
     depends_on:
-      postgres:
+      pgbouncer:
         condition: service_healthy
 
   intelligence:
@@ -71,14 +91,16 @@ services:
       PORT: "8082"
       CONNECTOR_URL: "http://dataaccess:8081"
       CORS_ORIGIN: "http://localhost:3000"
-      DB_HOST: postgres
-      DB_PORT: "5432"
+      DB_HOST: pgbouncer
+      DB_PORT: "6432"
       DB_USER: derp
       DB_PASSWORD: derp
       DB_NAME: derp
       DB_SSLMODE: disable
+      DB_MAX_OPEN_CONNS: "3"
+      DB_MAX_IDLE_CONNS: "1"
     depends_on:
-      postgres:
+      pgbouncer:
         condition: service_healthy
       dataaccess:
         condition: service_started
@@ -91,15 +113,17 @@ services:
       - "8084:8083"
     environment:
       PORT: "8083"
-      DB_HOST: postgres
-      DB_PORT: "5432"
+      DB_HOST: pgbouncer
+      DB_PORT: "6432"
       DB_USER: derp
       DB_PASSWORD: derp
       DB_NAME: derp
       DB_SSLMODE: disable
+      DB_MAX_OPEN_CONNS: "8"
+      DB_MAX_IDLE_CONNS: "3"
       CORS_ORIGIN: "http://localhost:3000"
     depends_on:
-      postgres:
+      pgbouncer:
         condition: service_healthy
 
   knowledgebase:
@@ -110,15 +134,17 @@ services:
       - "8087:8087"
     environment:
       PORT: "8087"
-      DB_HOST: postgres
-      DB_PORT: "5432"
+      DB_HOST: pgbouncer
+      DB_PORT: "6432"
       DB_USER: derp
       DB_PASSWORD: derp
       DB_NAME: derp
       DB_SSLMODE: disable
+      DB_MAX_OPEN_CONNS: "5"
+      DB_MAX_IDLE_CONNS: "2"
       CORS_ORIGIN: "http://localhost:3000"
     depends_on:
-      postgres:
+      pgbouncer:
         condition: service_healthy
 
   dataquality:
@@ -129,15 +155,17 @@ services:
       - "8086:8086"
     environment:
       PORT: "8086"
-      DB_HOST: postgres
-      DB_PORT: "5432"
+      DB_HOST: pgbouncer
+      DB_PORT: "6432"
       DB_USER: derp
       DB_PASSWORD: derp
       DB_NAME: derp
       DB_SSLMODE: disable
+      DB_MAX_OPEN_CONNS: "5"
+      DB_MAX_IDLE_CONNS: "2"
       CORS_ORIGIN: "http://localhost:3000"
     depends_on:
-      postgres:
+      pgbouncer:
         condition: service_healthy
 
   correspondence:
@@ -148,15 +176,17 @@ services:
       - "8085:8085"
     environment:
       PORT: "8085"
-      DB_HOST: postgres
-      DB_PORT: "5432"
+      DB_HOST: pgbouncer
+      DB_PORT: "6432"
       DB_USER: derp
       DB_PASSWORD: derp
       DB_NAME: derp
       DB_SSLMODE: disable
+      DB_MAX_OPEN_CONNS: "5"
+      DB_MAX_IDLE_CONNS: "2"
       CORS_ORIGIN: "http://localhost:3000"
     depends_on:
-      postgres:
+      pgbouncer:
         condition: service_healthy
 
   casemanagement:
@@ -167,15 +197,17 @@ services:
       - "8088:8088"
     environment:
       PORT: "8088"
-      DB_HOST: postgres
-      DB_PORT: "5432"
+      DB_HOST: pgbouncer
+      DB_PORT: "6432"
       DB_USER: derp
       DB_PASSWORD: derp
       DB_NAME: derp
       DB_SSLMODE: disable
+      DB_MAX_OPEN_CONNS: "8"
+      DB_MAX_IDLE_CONNS: "3"
       CORS_ORIGIN: "http://localhost:3000"
     depends_on:
-      postgres:
+      pgbouncer:
         condition: service_healthy
 
   connector:

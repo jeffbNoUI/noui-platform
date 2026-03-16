@@ -171,14 +171,18 @@ func (h *Handler) GetEmploymentHistory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	limit, offset := validation.Pagination(intParam(r, "limit", 100), intParam(r, "offset", 0), 200)
+
 	query := `
-		SELECT EMPL_HIST_ID, MEMBER_ID, EVENT_TYPE, EVENT_DT,
+		SELECT COUNT(*) OVER() AS total_count,
+		       EMPL_HIST_ID, MEMBER_ID, EVENT_TYPE, EVENT_DT,
 		       DEPT_CD, POS_CD, SALARY_ANNUAL, SEPARATION_CD, SEPARATION_RSN
 		FROM EMPLOYMENT_HIST
 		WHERE MEMBER_ID = $1
-		ORDER BY EVENT_DT ASC`
+		ORDER BY EVENT_DT ASC
+		LIMIT $2 OFFSET $3`
 
-	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, memberID)
+	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, memberID, limit, offset)
 	if err != nil {
 		slog.Error("error querying employment history", "memberID", memberID, "error", err)
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
@@ -187,12 +191,13 @@ func (h *Handler) GetEmploymentHistory(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	var events []models.EmploymentEvent
+	total := 0
 	for rows.Next() {
 		var e models.EmploymentEvent
 		var deptCD, posCD, sepCD, sepRsn sql.NullString
 		var salary sql.NullFloat64
 
-		if err := rows.Scan(&e.EventID, &e.MemberID, &e.EventType, &e.EventDate,
+		if err := rows.Scan(&total, &e.EventID, &e.MemberID, &e.EventType, &e.EventDate,
 			&deptCD, &posCD, &salary, &sepCD, &sepRsn); err != nil {
 			slog.Error("error scanning employment row", "error", err)
 			continue
@@ -208,7 +213,7 @@ func (h *Handler) GetEmploymentHistory(w http.ResponseWriter, r *http.Request) {
 		events = append(events, e)
 	}
 
-	writeSuccess(w, events)
+	writePaginated(w, events, total, limit, offset)
 }
 
 // GetSalaryHistory returns salary records for a member with optional date filtering.
@@ -219,25 +224,32 @@ func (h *Handler) GetSalaryHistory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	limit, offset := validation.Pagination(intParam(r, "limit", 100), intParam(r, "offset", 0), 500)
+
 	query := `
-		SELECT SALARY_ID, MEMBER_ID, PAY_PERIOD_END, PAY_PERIOD_NUM,
+		SELECT COUNT(*) OVER() AS total_count,
+		       SALARY_ID, MEMBER_ID, PAY_PERIOD_END, PAY_PERIOD_NUM,
 		       ANNUAL_SALARY, GROSS_PAY, PENSIONABLE_PAY, OT_PAY,
 		       LEAVE_PAYOUT_AMT, FURLOUGH_DEDUCT, FY_YEAR
 		FROM SALARY_HIST
 		WHERE MEMBER_ID = $1`
 
 	args := []interface{}{memberID}
+	argIdx := 2
 
 	if from := r.URL.Query().Get("from"); from != "" {
-		query += " AND PAY_PERIOD_END >= $2"
+		query += fmt.Sprintf(" AND PAY_PERIOD_END >= $%d", argIdx)
 		args = append(args, from)
+		argIdx++
 	}
 	if to := r.URL.Query().Get("to"); to != "" {
-		query += " AND PAY_PERIOD_END <= $" + strconv.Itoa(len(args)+1)
+		query += fmt.Sprintf(" AND PAY_PERIOD_END <= $%d", argIdx)
 		args = append(args, to)
+		argIdx++
 	}
 
-	query += " ORDER BY PAY_PERIOD_END ASC"
+	query += fmt.Sprintf(" ORDER BY PAY_PERIOD_END ASC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
+	args = append(args, limit, offset)
 
 	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, args...)
 	if err != nil {
@@ -248,11 +260,12 @@ func (h *Handler) GetSalaryHistory(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	var records []models.SalaryRecord
+	total := 0
 	for rows.Next() {
 		var s models.SalaryRecord
 		var pensionablePay sql.NullFloat64
 
-		if err := rows.Scan(&s.SalaryID, &s.MemberID, &s.PayPeriodEnd, &s.PayPeriodNum,
+		if err := rows.Scan(&total, &s.SalaryID, &s.MemberID, &s.PayPeriodEnd, &s.PayPeriodNum,
 			&s.AnnualSalary, &s.GrossPay, &pensionablePay, &s.OTPay,
 			&s.LeavePayoutAmt, &s.FurloughDeduct, &s.FYYear); err != nil {
 			slog.Error("error scanning salary row", "error", err)
@@ -265,7 +278,7 @@ func (h *Handler) GetSalaryHistory(w http.ResponseWriter, r *http.Request) {
 		records = append(records, s)
 	}
 
-	writeSuccess(w, records)
+	writePaginated(w, records, total, limit, offset)
 }
 
 // GetAMS calculates the Average Monthly Salary for a member.
@@ -420,14 +433,18 @@ func (h *Handler) GetBeneficiaries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	limit, offset := validation.Pagination(intParam(r, "limit", 100), intParam(r, "offset", 0), 100)
+
 	query := `
-		SELECT BENE_ID, MEMBER_ID, BENE_TYPE, FIRST_NAME, LAST_NAME,
+		SELECT COUNT(*) OVER() AS total_count,
+		       BENE_ID, MEMBER_ID, BENE_TYPE, FIRST_NAME, LAST_NAME,
 		       RELATIONSHIP, DOB, ALLOC_PCT, EFF_DT, END_DT
 		FROM BENEFICIARY
 		WHERE MEMBER_ID = $1 AND END_DT IS NULL
-		ORDER BY BENE_TYPE, EFF_DT`
+		ORDER BY BENE_TYPE, EFF_DT
+		LIMIT $2 OFFSET $3`
 
-	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, memberID)
+	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, memberID, limit, offset)
 	if err != nil {
 		slog.Error("error querying beneficiaries", "error", err)
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
@@ -436,12 +453,13 @@ func (h *Handler) GetBeneficiaries(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	var benes []models.Beneficiary
+	total := 0
 	for rows.Next() {
 		var b models.Beneficiary
 		var rel sql.NullString
 		var dob, endDt sql.NullTime
 
-		if err := rows.Scan(&b.BeneID, &b.MemberID, &b.BeneType, &b.FirstName,
+		if err := rows.Scan(&total, &b.BeneID, &b.MemberID, &b.BeneType, &b.FirstName,
 			&b.LastName, &rel, &dob, &b.AllocPct, &b.EffDate, &endDt); err != nil {
 			slog.Error("error scanning beneficiary row", "error", err)
 			continue
@@ -457,7 +475,7 @@ func (h *Handler) GetBeneficiaries(w http.ResponseWriter, r *http.Request) {
 		benes = append(benes, b)
 	}
 
-	writeSuccess(w, benes)
+	writePaginated(w, benes, total, limit, offset)
 }
 
 // GetDRO returns domestic relations order records for a member.
@@ -468,15 +486,19 @@ func (h *Handler) GetDRO(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	limit, offset := validation.Pagination(intParam(r, "limit", 50), intParam(r, "offset", 0), 50)
+
 	query := `
-		SELECT DRO_ID, MEMBER_ID, COURT_ORDER_NUM, MARRIAGE_DT, DIVORCE_DT,
+		SELECT COUNT(*) OVER() AS total_count,
+		       DRO_ID, MEMBER_ID, COURT_ORDER_NUM, MARRIAGE_DT, DIVORCE_DT,
 		       ALT_PAYEE_FIRST, ALT_PAYEE_LAST, ALT_PAYEE_DOB,
 		       DIVISION_METHOD, DIVISION_VALUE, STATUS
 		FROM DRO_MASTER
 		WHERE MEMBER_ID = $1
-		ORDER BY RECEIVED_DT`
+		ORDER BY RECEIVED_DT
+		LIMIT $2 OFFSET $3`
 
-	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, memberID)
+	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, memberID, limit, offset)
 	if err != nil {
 		slog.Error("error querying DRO", "error", err)
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
@@ -485,12 +507,13 @@ func (h *Handler) GetDRO(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	var dros []models.DRORecord
+	total := 0
 	for rows.Next() {
 		var d models.DRORecord
 		var courtOrderNum sql.NullString
 		var marriageDt, divorceDt, altPayeeDOB sql.NullTime
 
-		if err := rows.Scan(&d.DROID, &d.MemberID, &courtOrderNum, &marriageDt,
+		if err := rows.Scan(&total, &d.DROID, &d.MemberID, &courtOrderNum, &marriageDt,
 			&divorceDt, &d.AltPayeeFirst, &d.AltPayeeLast, &altPayeeDOB,
 			&d.DivisionMethod, &d.DivisionValue, &d.Status); err != nil {
 			slog.Error("error scanning DRO row", "error", err)
@@ -510,7 +533,7 @@ func (h *Handler) GetDRO(w http.ResponseWriter, r *http.Request) {
 		dros = append(dros, d)
 	}
 
-	writeSuccess(w, dros)
+	writePaginated(w, dros, total, limit, offset)
 }
 
 // GetContributions returns contribution records and summary for a member.
@@ -562,14 +585,18 @@ func (h *Handler) GetServiceCredit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	limit, offset := validation.Pagination(intParam(r, "limit", 100), intParam(r, "offset", 0), 100)
+
 	query := `
-		SELECT SVC_CREDIT_ID, MEMBER_ID, CREDIT_TYPE, BEGIN_DT, END_DT,
+		SELECT COUNT(*) OVER() AS total_count,
+		       SVC_CREDIT_ID, MEMBER_ID, CREDIT_TYPE, BEGIN_DT, END_DT,
 		       YEARS_CREDITED, COST, PURCHASE_DT, STATUS
 		FROM SVC_CREDIT
 		WHERE MEMBER_ID = $1 AND STATUS = 'ACTIVE'
-		ORDER BY CREDIT_TYPE, BEGIN_DT`
+		ORDER BY CREDIT_TYPE, BEGIN_DT
+		LIMIT $2 OFFSET $3`
 
-	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, memberID)
+	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, memberID, limit, offset)
 	if err != nil {
 		slog.Error("error querying service credit", "error", err)
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
@@ -579,13 +606,14 @@ func (h *Handler) GetServiceCredit(w http.ResponseWriter, r *http.Request) {
 
 	var credits []models.ServiceCredit
 	summary := models.ServiceCreditSummary{MemberID: memberID}
+	total := 0
 
 	for rows.Next() {
 		var sc models.ServiceCredit
 		var beginDt, endDt, purchaseDt sql.NullTime
 		var cost sql.NullFloat64
 
-		if err := rows.Scan(&sc.SvcCreditID, &sc.MemberID, &sc.CreditType,
+		if err := rows.Scan(&total, &sc.SvcCreditID, &sc.MemberID, &sc.CreditType,
 			&beginDt, &endDt, &sc.YearsCredited, &cost, &purchaseDt, &sc.Status); err != nil {
 			slog.Error("error scanning service credit row", "error", err)
 			continue
@@ -629,9 +657,15 @@ func (h *Handler) GetServiceCredit(w http.ResponseWriter, r *http.Request) {
 	result := struct {
 		Credits []models.ServiceCredit      `json:"credits"`
 		Summary models.ServiceCreditSummary `json:"summary"`
+		Total   int                         `json:"total"`
+		Limit   int                         `json:"limit"`
+		Offset  int                         `json:"offset"`
 	}{
 		Credits: credits,
 		Summary: summary,
+		Total:   total,
+		Limit:   limit,
+		Offset:  offset,
 	}
 
 	writeSuccess(w, result)
@@ -670,6 +704,15 @@ func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 	if err := json.NewEncoder(w).Encode(v); err != nil {
 		slog.Error("error encoding JSON response", "error", err)
 	}
+}
+
+func writePaginated(w http.ResponseWriter, items interface{}, total, limit, offset int) {
+	writeSuccess(w, models.PaginatedData{
+		Items:  items,
+		Total:  total,
+		Limit:  limit,
+		Offset: offset,
+	})
 }
 
 func writeSuccess(w http.ResponseWriter, data interface{}) {

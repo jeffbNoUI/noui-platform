@@ -18,11 +18,11 @@ func TestConfigFromEnv_Defaults(t *testing.T) {
 	if cfg.Host != "localhost" {
 		t.Errorf("Host = %q, want %q", cfg.Host, "localhost")
 	}
-	if cfg.MaxOpenConns != 15 {
-		t.Errorf("MaxOpenConns = %d, want 15", cfg.MaxOpenConns)
+	if cfg.MaxOpenConns != 8 {
+		t.Errorf("MaxOpenConns = %d, want 8", cfg.MaxOpenConns)
 	}
-	if cfg.MaxIdleConns != 6 {
-		t.Errorf("MaxIdleConns = %d, want 6", cfg.MaxIdleConns)
+	if cfg.MaxIdleConns != 3 {
+		t.Errorf("MaxIdleConns = %d, want 3", cfg.MaxIdleConns)
 	}
 }
 
@@ -58,11 +58,11 @@ func TestConfigFromEnv_InvalidPoolSize(t *testing.T) {
 
 			cfg := ConfigFromEnv()
 
-			if cfg.MaxOpenConns != 15 {
-				t.Errorf("MaxOpenConns = %d, want default 15 for invalid input %q", cfg.MaxOpenConns, tt.openVal)
+			if cfg.MaxOpenConns != 8 {
+				t.Errorf("MaxOpenConns = %d, want default 8 for invalid input %q", cfg.MaxOpenConns, tt.openVal)
 			}
-			if cfg.MaxIdleConns != 6 {
-				t.Errorf("MaxIdleConns = %d, want default 6 for invalid input %q", cfg.MaxIdleConns, tt.idleVal)
+			if cfg.MaxIdleConns != 3 {
+				t.Errorf("MaxIdleConns = %d, want default 3 for invalid input %q", cfg.MaxIdleConns, tt.idleVal)
 			}
 		})
 	}

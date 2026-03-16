@@ -1,5 +1,55 @@
 # noui-platform — Build History
 
+## Database Performance Session 7: Indexes, Pagination, PgBouncer (2026-03-16)
+
+**Branch:** `claude/hungry-ellis`
+**Goal:** Database performance hardening for 250K-member scale (Tasks 22-24 from master review plan).
+
+**What was built:**
+
+### Task 22: Index Optimization
+- New migration `014_performance_indexes.sql` adding 8 composite indexes:
+  - `SALARY_HIST(MEMBER_ID, PAY_PERIOD_END DESC)` — salary history sorted queries
+  - `SALARY_HIST(MEMBER_ID, FY_YEAR)` — fiscal year filtering
+  - `EMPLOYMENT_HIST(MEMBER_ID, EVENT_DT ASC)` — employment history sorted queries
+  - `CONTRIBUTION_HIST(MEMBER_ID, PAY_PERIOD_END DESC)` — latest-balance lookup
+  - `BENEFIT_PAYMENT(MEMBER_ID, PAY_DATE DESC)` — payment history
+  - `CASE_HIST(MEMBER_ID, CASE_STATUS)` — case lookups by member + status
+  - `retirement_case(tenant_id, status, assigned_to)` — work queue queries
+  - `crm_audit_log(tenant_id, entity_type, entity_id, event_time DESC)` — entity-scoped audit
+
+### Task 23: Pagination Enforcement
+- Added LIMIT/OFFSET pagination to 5 dataaccess endpoints using `COUNT(*) OVER()` window function:
+  - `GET /members/{id}/salary` — max 500, default 100
+  - `GET /members/{id}/employment` — max 200, default 100
+  - `GET /members/{id}/beneficiaries` — max 100, default 100
+  - `GET /members/{id}/dro` — max 50, default 25
+  - `GET /members/{id}/service-credit` — max 100, default 100
+- Added `PaginatedData` response envelope (`items`, `total`, `limit`, `offset`)
+- Added LIMIT 200 safety cap to CRM `GetNotesByInteraction`
+- AMS endpoint intentionally NOT paginated (needs all salary records for sliding window)
+- Taxonomy tree intentionally NOT paginated (needs all nodes for tree assembly)
+
+### Task 24: PgBouncer Connection Pooling
+- Added PgBouncer service (edoburu/pgbouncer:1.22.0) to docker-compose.yml
+- Transaction pooling mode (compatible with `set_config(..., false)` RLS pattern)
+- All 7 platform services now connect through PgBouncer (port 6432) instead of direct PostgreSQL
+- Right-sized per-service connection pools behind PgBouncer:
+  - dataaccess: 15→8, intelligence: 5→3, crm: 12→8, correspondence: 8→5
+  - dataquality: 8→5, knowledgebase: 8→5, casemanagement: 12→8
+
+**Test results:**
+- All 7 platform services: build and test pass
+- Connector: build clean
+- Frontend: typecheck clean
+- Docker compose config: valid (deprecation warning on `version` key only)
+
+**Files changed:** 22 files (+357/-162)
+- 3 created: `014_performance_indexes.sql`, `pgbouncer.ini`, `userlist.txt`
+- 19 modified: `docker-compose.yml`, 7×`postgres.go`, 7×`postgres_test.go`, `handlers.go`, `handlers_test.go`, `response.go`, `notes.go`
+
+---
+
 ## Quality & Tech Debt Session 5: TypeScript Strictness, Timeouts, Deduplication (2026-03-16)
 
 **Branch:** `claude/happy-galileo`
