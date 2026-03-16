@@ -1,5 +1,6 @@
 import type { Interaction } from '@/types/CRM';
 import { C, BODY } from '@/lib/designSystem';
+import ConversationThreadBubble from './ConversationThreadBubble';
 
 // ── Portal theme presets ────────────────────────────────────────────────────
 
@@ -105,72 +106,86 @@ export default function ConversationThread({
   theme,
   currentContactId,
 }: ConversationThreadProps) {
-  const filtered = visibility === 'public'
-    ? interactions.filter((i) => i.visibility === 'public')
-    : interactions;
+  const filtered =
+    visibility === 'public' ? interactions.filter((i) => i.visibility === 'public') : interactions;
 
   if (filtered.length === 0) {
     return (
-      <div style={{
-        padding: '32px 16px',
-        textAlign: 'center',
-        color: theme.muted,
-        fontSize: 13,
-        fontFamily: BODY,
-      }}>
+      <div
+        style={{
+          padding: '32px 16px',
+          textAlign: 'center',
+          color: theme.muted,
+          fontSize: 13,
+          fontFamily: BODY,
+        }}
+      >
         No messages in this conversation yet.
       </div>
     );
   }
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 12,
-      padding: '16px 0',
-      fontFamily: BODY,
-    }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12,
+        padding: '16px 0',
+        fontFamily: BODY,
+      }}
+    >
       {filtered.map((interaction) => {
-        const isSystem = interaction.channel === 'system_event' ||
-          interaction.interactionType === 'process_event';
+        const isSystem =
+          interaction.channel === 'system_event' || interaction.interactionType === 'process_event';
         const isInternal = interaction.visibility === 'internal';
         const isOutbound = interaction.direction === 'outbound';
-        const isFromCurrentUser = currentContactId && interaction.contactId === currentContactId
-          && interaction.direction === 'inbound';
+        const isFromCurrentUser =
+          currentContactId &&
+          interaction.contactId === currentContactId &&
+          interaction.direction === 'inbound';
 
         // System events render as centered pills
         if (isSystem) {
           return (
-            <div key={interaction.interactionId} style={{
-              display: 'flex',
-              justifyContent: 'center',
-              padding: '4px 0',
-            }}>
-              <div style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '6px 14px',
-                borderRadius: 20,
-                background: theme.systemBg,
-                color: theme.systemText,
-                fontSize: 11,
-                fontWeight: 500,
-                maxWidth: '80%',
-                textAlign: 'center',
-              }}>
+            <div
+              key={interaction.interactionId}
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                padding: '4px 0',
+              }}
+            >
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '6px 14px',
+                  borderRadius: 20,
+                  background: theme.systemBg,
+                  color: theme.systemText,
+                  fontSize: 11,
+                  fontWeight: 500,
+                  maxWidth: '80%',
+                  textAlign: 'center',
+                }}
+              >
                 {isInternal && visibility === 'all' && (
-                  <span style={{
-                    padding: '1px 6px',
-                    borderRadius: 4,
-                    background: theme.internalBadgeBg,
-                    color: theme.internalBadgeText,
-                    fontSize: 9,
-                    fontWeight: 600,
-                    textTransform: 'uppercase' as const,
-                    letterSpacing: '0.5px',
-                  }}>Internal</span>
+                  <span
+                    style={{
+                      padding: '1px 6px',
+                      borderRadius: 4,
+                      background: theme.internalBadgeBg,
+                      color: theme.internalBadgeText,
+                      fontSize: 9,
+                      fontWeight: 600,
+                      textTransform: 'uppercase' as const,
+                      letterSpacing: '0.5px',
+                    }}
+                  >
+                    Internal
+                  </span>
                 )}
                 {interaction.summary}
               </div>
@@ -180,81 +195,19 @@ export default function ConversationThread({
 
         // Chat bubbles: outbound right-aligned, inbound left-aligned
         // For member portal: their own messages are right (inbound from CRM perspective)
-        const alignRight = currentContactId ? isFromCurrentUser : isOutbound;
+        const alignRight = currentContactId ? !!isFromCurrentUser : isOutbound;
 
         return (
-          <div key={interaction.interactionId} style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: alignRight ? 'flex-end' : 'flex-start',
-            padding: '0 4px',
-          }}>
-            {/* Sender label */}
-            <div style={{
-              fontSize: 11,
-              color: theme.muted,
-              marginBottom: 3,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-            }}>
-              {interaction.agentId && !isFromCurrentUser && (
-                <span style={{ fontWeight: 600 }}>
-                  {interaction.agentId === 'agent-sarah' ? 'Sarah' :
-                   interaction.agentId === 'agent-mike' ? 'Mike' :
-                   interaction.agentId}
-                </span>
-              )}
-              {isFromCurrentUser && <span style={{ fontWeight: 600 }}>You</span>}
-              {!interaction.agentId && !isFromCurrentUser && interaction.contactId && (
-                <span style={{ fontWeight: 600 }}>Member</span>
-              )}
-              <span>{formatMessageTime(interaction.startedAt)}</span>
-              {isInternal && visibility === 'all' && (
-                <span style={{
-                  padding: '1px 6px',
-                  borderRadius: 4,
-                  background: theme.internalBadgeBg,
-                  color: theme.internalBadgeText,
-                  fontSize: 9,
-                  fontWeight: 600,
-                  textTransform: 'uppercase' as const,
-                  letterSpacing: '0.5px',
-                }}>Internal</span>
-              )}
-              {interaction.visibility === 'public' && visibility === 'all' && (
-                <span style={{
-                  padding: '1px 6px',
-                  borderRadius: 4,
-                  background: '#DCFCE7',
-                  color: '#166534',
-                  fontSize: 9,
-                  fontWeight: 600,
-                  textTransform: 'uppercase' as const,
-                  letterSpacing: '0.5px',
-                }}>Public</span>
-              )}
-            </div>
-
-            {/* Bubble */}
-            <div style={{
-              maxWidth: '75%',
-              padding: '10px 14px',
-              borderRadius: 14,
-              borderTopLeftRadius: alignRight ? 14 : 4,
-              borderTopRightRadius: alignRight ? 4 : 14,
-              background: isInternal
-                ? 'repeating-linear-gradient(135deg, #FFF7ED, #FFF7ED 8px, #FEF3C7 8px, #FEF3C7 9px)'
-                : alignRight ? theme.outboundBg : theme.inboundBg,
-              color: isInternal ? '#92400E' : alignRight ? theme.outboundText : theme.inboundText,
-              fontSize: 13,
-              lineHeight: 1.55,
-              whiteSpace: 'pre-wrap' as const,
-              wordBreak: 'break-word' as const,
-            }}>
-              {interaction.summary}
-            </div>
-          </div>
+          <ConversationThreadBubble
+            key={interaction.interactionId}
+            interaction={interaction}
+            visibility={visibility}
+            theme={theme}
+            alignRight={alignRight}
+            isInternal={isInternal}
+            isFromCurrentUser={!!isFromCurrentUser}
+            formattedTime={formatMessageTime(interaction.startedAt)}
+          />
         );
       })}
     </div>

@@ -6,6 +6,8 @@ import CSRContextHub from '@/components/staff/CSRContextHub';
 import ServiceMap from '@/components/admin/ServiceMap';
 import DataQualityPanel from '@/components/admin/DataQualityPanel';
 import CorrespondencePanel from '@/components/workflow/CorrespondencePanel';
+import StaffPortalKPIStats from './StaffPortalKPIStats';
+import StaffPortalWorkQueue from './StaffPortalWorkQueue';
 import { useCases, useStages } from '@/hooks/useCaseManagement';
 import type { ViewMode } from '@/types/auth';
 
@@ -30,25 +32,6 @@ type StaffTab =
   | 'service-map'
   | 'dq'
   | 'correspondence';
-
-const PRIORITY_STYLES = {
-  urgent: 'bg-red-50 text-red-700 border-red-200',
-  high: 'bg-amber-50 text-amber-700 border-amber-200',
-  standard: 'bg-gray-50 text-gray-600 border-gray-200',
-  low: 'bg-blue-50 text-blue-600 border-blue-200',
-};
-
-const SLA_STYLES = {
-  'on-track': { label: 'On Track', className: 'bg-emerald-50 text-emerald-700' },
-  'at-risk': { label: 'At Risk', className: 'bg-amber-50 text-amber-700' },
-  urgent: { label: 'Urgent', className: 'bg-red-50 text-red-700' },
-};
-
-const TIER_STYLES: Record<number, string> = {
-  1: 'bg-blue-50 text-blue-700 border-blue-200',
-  2: 'bg-amber-50 text-amber-700 border-amber-200',
-  3: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-};
 
 const SIDEBAR_NAV = [
   { key: 'queue' as StaffTab, label: 'Work Queue', icon: '\ud83d\udccb', shortcut: 'G Q' },
@@ -79,16 +62,15 @@ export default function StaffPortal({ onOpenCase, onViewMember, onChangeView }: 
   const { data: stages = [] } = useStages();
   const stageCount = stages.length || 7;
 
-  // For DRO cases, append "(DRO)" to the name for display
-  const displayName = (c: { name: string; caseType: string }) =>
-    c.caseType === 'DRO' ? `${c.name} (DRO)` : c.name;
-
-  const filteredQueue = cases.filter(
-    (item) =>
-      displayName(item).toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.caseId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.dept.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const filteredQueue = cases.filter((item) => {
+    const q = searchQuery.toLowerCase();
+    const name = item.caseType === 'DRO' ? `${item.name} (DRO)` : item.name;
+    return (
+      name.toLowerCase().includes(q) ||
+      item.caseId.toLowerCase().includes(q) ||
+      item.dept.toLowerCase().includes(q)
+    );
+  });
 
   const stats = {
     total: cases.length,
@@ -96,10 +78,6 @@ export default function StaffPortal({ onOpenCase, onViewMember, onChangeView }: 
     atRisk: cases.filter((w) => w.sla === 'at-risk' || w.sla === 'urgent').length,
     avgDays:
       cases.length > 0 ? Math.round(cases.reduce((a, w) => a + w.daysOpen, 0) / cases.length) : 0,
-  };
-
-  const handleMemberSelect = (memberId: number) => {
-    onViewMember(memberId);
   };
 
   return (
@@ -212,129 +190,17 @@ export default function StaffPortal({ onOpenCase, onViewMember, onChangeView }: 
           {/* Work Queue tab */}
           {activeTab === 'queue' && (
             <>
-              {/* Stats row */}
-              <div className="grid grid-cols-4 gap-4 mb-6">
-                <div className="bg-white rounded-lg border border-gray-200 p-4">
-                  <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">
-                    Active Cases
-                  </div>
-                  <div className="text-2xl font-bold text-iw-navy mt-1">{stats.total}</div>
-                </div>
-                <div className="bg-white rounded-lg border border-gray-200 p-4">
-                  <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">
-                    Urgent
-                  </div>
-                  <div className="text-2xl font-bold text-red-600 mt-1">{stats.urgent}</div>
-                </div>
-                <div className="bg-white rounded-lg border border-gray-200 p-4">
-                  <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">
-                    SLA At Risk
-                  </div>
-                  <div className="text-2xl font-bold text-amber-600 mt-1">{stats.atRisk}</div>
-                </div>
-                <div className="bg-white rounded-lg border border-gray-200 p-4">
-                  <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">
-                    Avg Days Open
-                  </div>
-                  <div className="text-2xl font-bold text-gray-700 mt-1">{stats.avgDays}</div>
-                </div>
-              </div>
-
-              {/* Queue table */}
-              <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  <div className="col-span-1">Priority</div>
-                  <div className="col-span-2">Case ID</div>
-                  <div className="col-span-3">Member</div>
-                  <div className="col-span-2">Current Stage</div>
-                  <div className="col-span-1">SLA</div>
-                  <div className="col-span-1">Days</div>
-                  <div className="col-span-2">Flags</div>
-                </div>
-
-                {filteredQueue.map((item) => (
-                  <div
-                    key={item.caseId}
-                    onClick={() =>
-                      onOpenCase(item.caseId, item.memberId, item.retDate, item.flags, item.droId)
-                    }
-                    className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-gray-100 hover:bg-iw-sageLight/30 cursor-pointer transition-colors items-center"
-                  >
-                    <div className="col-span-1">
-                      <span
-                        className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${PRIORITY_STYLES[item.priority]}`}
-                      >
-                        {item.priority}
-                      </span>
-                    </div>
-                    <div className="col-span-2">
-                      <span className="text-sm font-mono font-semibold text-iw-navy">
-                        {item.caseId}
-                      </span>
-                    </div>
-                    <div className="col-span-3">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${TIER_STYLES[item.tier]}`}
-                        >
-                          T{item.tier}
-                        </span>
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {displayName(item)}
-                          </div>
-                          <div className="text-xs text-gray-500">{item.dept}</div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="col-span-2">
-                      <div className="text-sm text-gray-700">{item.stage}</div>
-                      <div className="flex gap-0.5 mt-1">
-                        {Array.from({ length: stageCount }, (_, idx) => (
-                          <div
-                            key={idx}
-                            className={`h-1 flex-1 rounded-full ${
-                              idx < item.stageIdx
-                                ? 'bg-iw-sage'
-                                : idx === item.stageIdx
-                                  ? 'bg-iw-sage animate-pulse'
-                                  : 'bg-gray-200'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                    <div className="col-span-1">
-                      <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${SLA_STYLES[item.sla].className}`}
-                      >
-                        {SLA_STYLES[item.sla].label}
-                      </span>
-                    </div>
-                    <div className="col-span-1">
-                      <span className="text-sm text-gray-600">{item.daysOpen}d</span>
-                    </div>
-                    <div className="col-span-2">
-                      <div className="flex flex-wrap gap-1">
-                        {(item.flags ?? []).map((flag) => (
-                          <span
-                            key={flag}
-                            className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 border border-gray-200"
-                          >
-                            {flag}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                {filteredQueue.length === 0 && (
-                  <div className="px-4 py-8 text-center text-gray-500 text-sm">
-                    No cases match your search.
-                  </div>
-                )}
-              </div>
+              <StaffPortalKPIStats
+                total={stats.total}
+                urgent={stats.urgent}
+                atRisk={stats.atRisk}
+                avgDays={stats.avgDays}
+              />
+              <StaffPortalWorkQueue
+                cases={filteredQueue}
+                stageCount={stageCount}
+                onOpenCase={onOpenCase}
+              />
             </>
           )}
 
@@ -345,7 +211,7 @@ export default function StaffPortal({ onOpenCase, onViewMember, onChangeView }: 
                 <h2 className="text-sm font-semibold text-gray-700 mb-2">
                   Search for a member or employer
                 </h2>
-                <MemberSearch onSelect={handleMemberSelect} />
+                <MemberSearch onSelect={onViewMember} />
               </div>
               <div className="text-xs text-gray-400 text-center">
                 Try: 10001, Robert Martinez, Public Works, Jennifer Kim

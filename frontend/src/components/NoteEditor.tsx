@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useCreateNote } from '@/hooks/useCRM';
 import type { CreateNoteRequest } from '@/types/CRM';
+import NoteEditorSentiment from './NoteEditorSentiment';
 
 interface NoteEditorProps {
   interactionId: string;
@@ -35,14 +36,12 @@ const OUTCOME_OPTIONS = [
   { value: 'in_progress', label: 'In Progress' },
 ];
 
-const SENTIMENT_OPTIONS = [
-  { value: 'positive', label: 'Positive', icon: '+', color: 'border-green-300 bg-green-50 text-green-700 hover:bg-green-100' },
-  { value: 'neutral', label: 'Neutral', icon: '=', color: 'border-gray-300 bg-gray-50 text-gray-700 hover:bg-gray-100' },
-  { value: 'negative', label: 'Negative', icon: '-', color: 'border-red-300 bg-red-50 text-red-700 hover:bg-red-100' },
-  { value: 'frustrated', label: 'Frustrated', icon: '!', color: 'border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100' },
+const OUTCOMES_REQUIRING_NEXT_STEP = [
+  'callback_scheduled',
+  'escalated',
+  'work_item_created',
+  'in_progress',
 ];
-
-const OUTCOMES_REQUIRING_NEXT_STEP = ['callback_scheduled', 'escalated', 'work_item_created', 'in_progress'];
 
 export default function NoteEditor({ interactionId, onSaved, onCancel }: NoteEditorProps) {
   const createNote = useCreateNote();
@@ -90,9 +89,7 @@ export default function NoteEditor({ interactionId, onSaved, onCancel }: NoteEdi
     <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
       <div className="border-b border-gray-200 px-6 py-4">
         <h2 className="text-lg font-semibold text-gray-900">Add Note</h2>
-        <p className="text-sm text-gray-500">
-          Record interaction details for this contact.
-        </p>
+        <p className="text-sm text-gray-500">Record interaction details for this contact.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
@@ -153,7 +150,10 @@ export default function NoteEditor({ interactionId, onSaved, onCancel }: NoteEdi
         {/* Next Step (conditional) */}
         {showNextStep && (
           <div>
-            <label htmlFor="note-next-step" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="note-next-step"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Next Step
             </label>
             <textarea
@@ -168,28 +168,7 @@ export default function NoteEditor({ interactionId, onSaved, onCancel }: NoteEdi
         )}
 
         {/* Sentiment */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Sentiment
-          </label>
-          <div className="flex gap-2">
-            {SENTIMENT_OPTIONS.map((s) => (
-              <button
-                key={s.value}
-                type="button"
-                onClick={() => setSentiment(sentiment === s.value ? undefined : s.value)}
-                className={`flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
-                  sentiment === s.value
-                    ? s.color + ' ring-2 ring-offset-1 ring-brand-400'
-                    : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
-                }`}
-              >
-                <span className="text-base font-bold">{s.icon}</span>
-                {s.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <NoteEditorSentiment sentiment={sentiment} onSentimentChange={setSentiment} />
 
         {/* Urgent flag */}
         <div className="flex items-center gap-3">
@@ -208,9 +187,7 @@ export default function NoteEditor({ interactionId, onSaved, onCancel }: NoteEdi
               }`}
             />
           </button>
-          <span className="text-sm font-medium text-gray-700">
-            Mark as Urgent
-          </span>
+          <span className="text-sm font-medium text-gray-700">Mark as Urgent</span>
           {urgentFlag && (
             <span className="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
               This note will be flagged for immediate attention
@@ -222,7 +199,12 @@ export default function NoteEditor({ interactionId, onSaved, onCancel }: NoteEdi
         <div className="rounded-md bg-violet-50 border border-violet-200 px-3 py-2 text-sm text-violet-700">
           <div className="flex items-center gap-2">
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 10V3L4 14h7v7l9-11h-7z"
+              />
             </svg>
             <span className="font-medium">AI Assist</span>
           </div>

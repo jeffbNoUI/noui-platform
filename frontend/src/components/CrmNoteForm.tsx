@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useCreateStructuredNote } from '@/hooks/useCRM';
+import CrmNoteFormExtras from '@/components/CrmNoteFormExtras';
 
 interface CrmNoteFormProps {
   contactId: string;
@@ -33,15 +34,12 @@ const OUTCOME_OPTIONS = [
   { value: 'in_progress', label: 'In Progress' },
 ];
 
-const SENTIMENT_OPTIONS = [
-  { value: 'positive', label: 'Positive', icon: '+', active: 'bg-green-100 text-green-800 ring-green-400' },
-  { value: 'neutral', label: 'Neutral', icon: '=', active: 'bg-gray-100 text-gray-800 ring-gray-400' },
-  { value: 'negative', label: 'Negative', icon: '-', active: 'bg-red-100 text-red-800 ring-red-400' },
-  { value: 'escalation_risk', label: 'Esc. Risk', icon: '!', active: 'bg-orange-100 text-orange-800 ring-orange-400' },
-];
-
 const OUTCOMES_REQUIRING_NEXT_STEP = new Set([
-  'escalated', 'callback_scheduled', 'work_item_created', 'in_progress', 'transferred',
+  'escalated',
+  'callback_scheduled',
+  'work_item_created',
+  'in_progress',
+  'transferred',
 ]);
 
 export default function CrmNoteForm({ contactId, conversationId }: CrmNoteFormProps) {
@@ -59,7 +57,8 @@ export default function CrmNoteForm({ contactId, conversationId }: CrmNoteFormPr
 
   const needsNextStep = OUTCOMES_REQUIRING_NEXT_STEP.has(outcome);
   const nextStepMissing = needsNextStep && !nextStep.trim();
-  const canSubmit = summary.trim().length > 0 && outcome.length > 0 && !nextStepMissing && !createNote.isPending;
+  const canSubmit =
+    summary.trim().length > 0 && outcome.length > 0 && !nextStepMissing && !createNote.isPending;
 
   const resetForm = () => {
     setCategory('general');
@@ -103,7 +102,9 @@ export default function CrmNoteForm({ contactId, conversationId }: CrmNoteFormPr
         >
           + Add Note
         </button>
-        <p className="mt-1 text-[10px] text-gray-400">Internal notes are not visible to members or employers</p>
+        <p className="mt-1 text-[10px] text-gray-400">
+          Internal notes are not visible to members or employers
+        </p>
       </div>
     );
   }
@@ -124,7 +125,10 @@ export default function CrmNoteForm({ contactId, conversationId }: CrmNoteFormPr
 
         {/* Category */}
         <div>
-          <label htmlFor="crm-note-cat" className="block text-[11px] font-medium text-gray-600 mb-0.5">
+          <label
+            htmlFor="crm-note-cat"
+            className="block text-[11px] font-medium text-gray-600 mb-0.5"
+          >
             Category <span className="text-red-500">*</span>
           </label>
           <select
@@ -134,14 +138,19 @@ export default function CrmNoteForm({ contactId, conversationId }: CrmNoteFormPr
             className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
             {NOTE_CATEGORIES.map((c) => (
-              <option key={c.value} value={c.value}>{c.label}</option>
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
             ))}
           </select>
         </div>
 
         {/* Summary */}
         <div>
-          <label htmlFor="crm-note-sum" className="block text-[11px] font-medium text-gray-600 mb-0.5">
+          <label
+            htmlFor="crm-note-sum"
+            className="block text-[11px] font-medium text-gray-600 mb-0.5"
+          >
             Summary <span className="text-red-500">*</span>
           </label>
           <textarea
@@ -157,7 +166,10 @@ export default function CrmNoteForm({ contactId, conversationId }: CrmNoteFormPr
 
         {/* Outcome */}
         <div>
-          <label htmlFor="crm-note-out" className="block text-[11px] font-medium text-gray-600 mb-0.5">
+          <label
+            htmlFor="crm-note-out"
+            className="block text-[11px] font-medium text-gray-600 mb-0.5"
+          >
             Outcome <span className="text-red-500">*</span>
           </label>
           <select
@@ -168,7 +180,9 @@ export default function CrmNoteForm({ contactId, conversationId }: CrmNoteFormPr
           >
             <option value="">Select outcome...</option>
             {OUTCOME_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
             ))}
           </select>
         </div>
@@ -176,7 +190,10 @@ export default function CrmNoteForm({ contactId, conversationId }: CrmNoteFormPr
         {/* Next Step (conditional) */}
         {needsNextStep && (
           <div>
-            <label htmlFor="crm-note-ns" className="block text-[11px] font-medium text-gray-600 mb-0.5">
+            <label
+              htmlFor="crm-note-ns"
+              className="block text-[11px] font-medium text-gray-600 mb-0.5"
+            >
               Next Step <span className="text-red-500">*</span>
             </label>
             <input
@@ -192,70 +209,23 @@ export default function CrmNoteForm({ contactId, conversationId }: CrmNoteFormPr
               }`}
             />
             {nextStepMissing && outcome && (
-              <p className="text-[10px] text-red-500 mt-0.5">Required when outcome is not resolved</p>
+              <p className="text-[10px] text-red-500 mt-0.5">
+                Required when outcome is not resolved
+              </p>
             )}
           </div>
         )}
 
-        {/* Sentiment */}
-        <div>
-          <label className="block text-[11px] font-medium text-gray-600 mb-1">Sentiment</label>
-          <div className="flex gap-1">
-            {SENTIMENT_OPTIONS.map((s) => (
-              <button
-                key={s.value}
-                type="button"
-                onClick={() => setSentiment(s.value)}
-                className={`flex-1 rounded-md border px-1 py-1 text-[11px] font-medium transition-colors ${
-                  sentiment === s.value
-                    ? `${s.active} ring-1 ring-offset-1`
-                    : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
-                }`}
-              >
-                <span className="text-xs font-bold">{s.icon}</span> {s.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Urgent */}
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={urgentFlag}
-            onChange={(e) => setUrgentFlag(e.target.checked)}
-            className="h-3.5 w-3.5 rounded border-gray-300 text-red-600 focus:ring-red-500"
-          />
-          <span className="text-xs text-gray-700">Mark as urgent</span>
-          {urgentFlag && (
-            <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-700">Urgent</span>
-          )}
-        </label>
-
-        {/* Narrative (expandable) */}
-        {!showNarrative ? (
-          <button
-            type="button"
-            onClick={() => setShowNarrative(true)}
-            className="text-xs text-blue-600 hover:text-blue-800"
-          >
-            + Add narrative details
-          </button>
-        ) : (
-          <div>
-            <label htmlFor="crm-note-narr" className="block text-[11px] font-medium text-gray-600 mb-0.5">
-              Narrative
-            </label>
-            <textarea
-              id="crm-note-narr"
-              value={narrative}
-              onChange={(e) => setNarrative(e.target.value)}
-              placeholder="Extended notes or context..."
-              rows={3}
-              className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-        )}
+        <CrmNoteFormExtras
+          sentiment={sentiment}
+          onSentimentChange={setSentiment}
+          urgentFlag={urgentFlag}
+          onUrgentFlagChange={setUrgentFlag}
+          showNarrative={showNarrative}
+          onShowNarrative={() => setShowNarrative(true)}
+          narrative={narrative}
+          onNarrativeChange={setNarrative}
+        />
 
         {/* Error */}
         {createNote.isError && (
@@ -282,7 +252,9 @@ export default function CrmNoteForm({ contactId, conversationId }: CrmNoteFormPr
           </button>
         </div>
 
-        <p className="text-[10px] text-gray-400">Internal notes are not visible to members or employers</p>
+        <p className="text-[10px] text-gray-400">
+          Internal notes are not visible to members or employers
+        </p>
       </form>
     </div>
   );

@@ -33,10 +33,3 @@ type PaginatedData struct {
 	Limit  int         `json:"limit"`
 	Offset int         `json:"offset"`
 }
-
-// HealthResponse is returned by the /healthz endpoint.
-type HealthResponse struct {
-	Status  string `json:"status"`
-	Service string `json:"service"`
-	Version string `json:"version"`
-}

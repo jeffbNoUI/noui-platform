@@ -7,6 +7,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/lib/pq v1.11.2
 	github.com/noui/platform/auth v0.0.0
+	github.com/noui/platform/cache v0.0.0
 	github.com/noui/platform/dbcontext v0.0.0
 	github.com/noui/platform/envutil v0.0.0
 	github.com/noui/platform/logging v0.0.0
@@ -18,6 +19,7 @@ require golang.org/x/time v0.9.0 // indirect
 
 replace (
 	github.com/noui/platform/auth => ../auth
+	github.com/noui/platform/cache => ../cache
 	github.com/noui/platform/dbcontext => ../dbcontext
 	github.com/noui/platform/envutil => ../envutil
 	github.com/noui/platform/logging => ../logging

@@ -44,12 +44,11 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 // HealthCheck returns service health status.
 func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
-	resp := models.HealthResponse{
-		Status:  "ok",
-		Service: "dataaccess",
-		Version: "0.1.0",
-	}
-	writeJSON(w, http.StatusOK, resp)
+	writeJSON(w, http.StatusOK, map[string]string{
+		"status":  "ok",
+		"service": "dataaccess",
+		"version": "0.1.0",
+	})
 }
 
 // SearchMembers returns members matching a name or ID query.
