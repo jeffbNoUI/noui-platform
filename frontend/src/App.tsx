@@ -12,6 +12,9 @@ import DeathBenefitPanel from '@/components/DeathBenefitPanel';
 import EmploymentTimeline from '@/components/EmploymentTimeline';
 import CommandPalette from '@/components/CommandPalette';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import type { ViewMode, UserRole } from '@/types/auth';
+import { ROLE_DEFAULT_VIEW } from '@/types/auth';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 
 // Lazy-load portal entry points — each becomes a separate chunk
 const StaffPortal = lazy(() => import('@/components/StaffPortal'));
@@ -29,16 +32,6 @@ function PortalLoading() {
     </div>
   );
 }
-
-type ViewMode =
-  | 'staff'
-  | 'portal'
-  | 'workspace'
-  | 'crm'
-  | 'employer'
-  | 'vendor'
-  | 'retirement-app'
-  | 'member-dashboard';
 
 // Demo case members with their retirement dates
 const DEMO_CASES = [
@@ -68,9 +61,11 @@ const DEMO_CASES = [
 function TopNav({
   viewMode,
   onChangeView,
+  canAccess,
 }: {
   viewMode: ViewMode;
   onChangeView: (mode: ViewMode) => void;
+  canAccess: (mode: ViewMode) => boolean;
 }) {
   const tabs: { key: ViewMode; label: string; description: string }[] = [
     { key: 'staff', label: 'Staff Portal', description: 'Work queue and case management' },
@@ -79,6 +74,8 @@ function TopNav({
     { key: 'crm', label: 'CRM', description: 'Contact management' },
     { key: 'employer', label: 'Employer Portal', description: 'Employer self-service' },
   ];
+
+  const visibleTabs = tabs.filter((t) => canAccess(t.key));
 
   return (
     <nav className="bg-white border-b border-gray-200 shadow-sm">
@@ -100,7 +97,7 @@ function TopNav({
             <div className="h-6 w-px bg-gray-200" />
 
             <div className="flex gap-1">
-              {tabs.map((tab) => (
+              {visibleTabs.map((tab) => (
                 <button
                   key={tab.key}
                   onClick={() => onChangeView(tab.key)}
@@ -124,10 +121,45 @@ function TopNav({
   );
 }
 
-// ── Main App ─────────────────────────────────────────────────────────────────
+// ── Dev Role Switcher ─────────────────────────────────────────────────────────
+
+function DevRoleSwitcher() {
+  const { user, switchRole } = useAuth();
+  const roles: UserRole[] = ['staff', 'admin', 'member', 'employer', 'vendor'];
+
+  return (
+    <div className="fixed bottom-4 right-4 bg-gray-800 text-white rounded-lg px-3 py-2 text-xs shadow-lg z-50 flex items-center gap-2">
+      <span className="text-gray-400">Dev:</span>
+      {roles.map((role) => (
+        <button
+          key={role}
+          onClick={() => switchRole(role)}
+          className={`px-2 py-0.5 rounded ${
+            user.role === role ? 'bg-blue-500' : 'hover:bg-gray-700'
+          }`}
+        >
+          {role}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── Main App (wraps in AuthProvider) ──────────────────────────────────────────
 
 export default function App() {
-  const [viewMode, setViewMode] = useState<ViewMode>('staff');
+  return (
+    <AuthProvider>
+      <AppInner />
+    </AuthProvider>
+  );
+}
+
+// ── App Inner (has access to auth context) ───────────────────────────────────
+
+function AppInner() {
+  const { user, canAccess } = useAuth();
+  const [viewMode, setViewMode] = useState<ViewMode>(ROLE_DEFAULT_VIEW[user.role]);
   const [memberID, setMemberID] = useState(10001);
   const [retirementDate, setRetirementDate] = useState('2026-04-01');
   const [memberIDInput, setMemberIDInput] = useState('10001');
@@ -149,6 +181,10 @@ export default function App() {
 
   const handleOpenCase = useCallback(
     (caseId: string, memberId: number, retDate: string, flags?: string[], droId?: number) => {
+      if (!canAccess('retirement-app')) {
+        console.warn(`Access denied: role "${user.role}" cannot access "retirement-app"`);
+        return;
+      }
       setActiveCaseId(caseId);
       setCaseMemberId(memberId);
       setCaseRetDate(retDate);
@@ -156,30 +192,49 @@ export default function App() {
       setCaseDroId(droId);
       setViewMode('retirement-app');
     },
-    [],
+    [canAccess, user.role],
   );
 
-  const handleViewMember = useCallback((memberId: number) => {
-    setDashboardMemberId(memberId);
-    setViewMode('member-dashboard');
-  }, []);
+  const handleViewMember = useCallback(
+    (memberId: number) => {
+      if (!canAccess('member-dashboard')) {
+        console.warn(`Access denied: role "${user.role}" cannot access "member-dashboard"`);
+        return;
+      }
+      setDashboardMemberId(memberId);
+      setViewMode('member-dashboard');
+    },
+    [canAccess, user.role],
+  );
 
   const handleChangeView = useCallback(
     (mode: string, context?: { memberId?: number }) => {
+      const targetMode = mode as ViewMode;
+      if (!canAccess(targetMode)) {
+        console.warn(`Access denied: role "${user.role}" cannot access "${targetMode}"`);
+        return; // Stay on current view
+      }
       const prev = viewMode;
-      setViewMode(mode as ViewMode);
+      setViewMode(targetMode);
       if (mode === 'crm') {
         setCrmInitialMemberId(context?.memberId);
-        setCrmBackView(prev as ViewMode);
+        setCrmBackView(prev);
       } else {
         setCrmInitialMemberId(undefined);
         setCrmBackView(undefined);
       }
     },
-    [viewMode],
+    [viewMode, canAccess, user.role],
   );
 
-  // Global ⌘K / Ctrl+K handler
+  // Reset viewMode when role changes (user might be on a view they no longer have access to)
+  useEffect(() => {
+    if (!canAccess(viewMode)) {
+      setViewMode(ROLE_DEFAULT_VIEW[user.role]);
+    }
+  }, [user.role, canAccess, viewMode]);
+
+  // Global Cmd+K / Ctrl+K handler
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -200,7 +255,7 @@ export default function App() {
         icon: '🔍',
         shortcut: 'G M',
         category: 'Navigation',
-        action: () => setViewMode('staff'),
+        action: () => handleChangeView('staff'),
       },
       {
         id: 'open-queue',
@@ -208,14 +263,14 @@ export default function App() {
         icon: '📋',
         shortcut: 'G Q',
         category: 'Navigation',
-        action: () => setViewMode('staff'),
+        action: () => handleChangeView('staff'),
       },
       {
         id: 'run-calc',
         label: 'Run Calculation',
         icon: '🧮',
         category: 'Actions',
-        action: () => setViewMode('workspace'),
+        action: () => handleChangeView('workspace'),
       },
       {
         id: 'open-crm',
@@ -223,28 +278,28 @@ export default function App() {
         icon: '💬',
         shortcut: 'G C',
         category: 'Navigation',
-        action: () => setViewMode('crm'),
+        action: () => handleChangeView('crm'),
       },
       {
         id: 'member-portal',
         label: 'Member Portal',
         icon: '👤',
         category: 'Navigation',
-        action: () => setViewMode('portal'),
+        action: () => handleChangeView('portal'),
       },
       {
         id: 'employer-portal',
         label: 'Employer Portal',
         icon: '🏢',
         category: 'Navigation',
-        action: () => setViewMode('employer'),
+        action: () => handleChangeView('employer'),
       },
       {
         id: 'vendor-portal',
         label: 'Vendor Portal',
         icon: '\ud83c\udfe5',
         category: 'Navigation',
-        action: () => setViewMode('vendor'),
+        action: () => handleChangeView('vendor'),
       },
       {
         id: 'case-robert',
@@ -265,7 +320,28 @@ export default function App() {
           ]),
       },
     ],
-    [handleOpenCase],
+    [handleOpenCase, handleChangeView],
+  );
+
+  // Filter commands by role access
+  const filteredCommands = useMemo(
+    () =>
+      commands.filter((cmd) => {
+        const cmdViewMap: Record<string, ViewMode> = {
+          'search-member': 'staff',
+          'open-queue': 'staff',
+          'run-calc': 'workspace',
+          'open-crm': 'crm',
+          'member-portal': 'portal',
+          'employer-portal': 'employer',
+          'vendor-portal': 'vendor',
+          'case-robert': 'retirement-app',
+          'case-jennifer': 'retirement-app',
+        };
+        const requiredView = cmdViewMap[cmd.id];
+        return !requiredView || canAccess(requiredView);
+      }),
+    [commands, canAccess],
   );
 
   // ── Staff Portal (default landing) ──────────────────────────────────────
@@ -273,7 +349,7 @@ export default function App() {
   // Command palette is global across all views
   const cmdPalette = (
     <CommandPalette
-      commands={commands}
+      commands={filteredCommands}
       isOpen={cmdPaletteOpen}
       onClose={() => setCmdPaletteOpen(false)}
     />
@@ -292,6 +368,7 @@ export default function App() {
             />
           </Suspense>
         </ErrorBoundary>
+        <DevRoleSwitcher />
       </>
     );
   }
@@ -306,12 +383,13 @@ export default function App() {
           <Suspense fallback={<PortalLoading />}>
             <MemberDashboard
               memberId={dashboardMemberId}
-              onBack={() => setViewMode('staff')}
+              onBack={() => handleChangeView('staff')}
               onOpenCase={handleOpenCase}
               onChangeView={handleChangeView}
             />
           </Suspense>
         </ErrorBoundary>
+        <DevRoleSwitcher />
       </>
     );
   }
@@ -330,11 +408,12 @@ export default function App() {
               retirementDate={caseRetDate}
               caseFlags={caseFlagsState}
               droId={caseDroId}
-              onBack={() => setViewMode('staff')}
+              onBack={() => handleChangeView('staff')}
               onChangeView={handleChangeView}
             />
           </Suspense>
         </ErrorBoundary>
+        <DevRoleSwitcher />
       </>
     );
   }
@@ -350,12 +429,13 @@ export default function App() {
             <MemberPortal
               memberID={memberID}
               retirementDate={retirementDate}
-              onSwitchToWorkspace={() => setViewMode('workspace')}
-              onSwitchToCRM={() => setViewMode('crm')}
+              onSwitchToWorkspace={() => handleChangeView('workspace')}
+              onSwitchToCRM={() => handleChangeView('crm')}
               onChangeView={handleChangeView}
             />
           </Suspense>
         </ErrorBoundary>
+        <DevRoleSwitcher />
       </>
     );
   }
@@ -366,15 +446,16 @@ export default function App() {
     return (
       <>
         {cmdPalette}
-        <TopNav viewMode={viewMode} onChangeView={handleChangeView} />
+        <TopNav viewMode={viewMode} onChangeView={handleChangeView} canAccess={canAccess} />
         <ErrorBoundary portalName="CRM">
           <Suspense fallback={<PortalLoading />}>
             <CRMWorkspace
               initialMemberId={crmInitialMemberId}
-              onBack={crmBackView ? () => setViewMode(crmBackView) : undefined}
+              onBack={crmBackView ? () => handleChangeView(crmBackView) : undefined}
             />
           </Suspense>
         </ErrorBoundary>
+        <DevRoleSwitcher />
       </>
     );
   }
@@ -390,6 +471,7 @@ export default function App() {
             <EmployerPortal onChangeView={handleChangeView} />
           </Suspense>
         </ErrorBoundary>
+        <DevRoleSwitcher />
       </>
     );
   }
@@ -405,6 +487,7 @@ export default function App() {
             <VendorPortal onChangeView={handleChangeView} />
           </Suspense>
         </ErrorBoundary>
+        <DevRoleSwitcher />
       </>
     );
   }
@@ -423,7 +506,9 @@ export default function App() {
         setMemberIDInput={setMemberIDInput}
         viewMode={viewMode}
         setViewMode={handleChangeView}
+        canAccess={canAccess}
       />
+      <DevRoleSwitcher />
     </>
   );
 }
@@ -439,6 +524,7 @@ function AgentWorkspace({
   setMemberIDInput,
   viewMode,
   setViewMode,
+  canAccess,
 }: {
   memberID: number;
   setMemberID: (id: number) => void;
@@ -448,6 +534,7 @@ function AgentWorkspace({
   setMemberIDInput: (v: string) => void;
   viewMode: ViewMode;
   setViewMode: (m: string) => void;
+  canAccess: (mode: ViewMode) => boolean;
 }) {
   const { data: member, isLoading: memberLoading, error: memberError } = useMember(memberID);
   const { data: employment } = useEmployment(memberID);
@@ -479,7 +566,11 @@ function AgentWorkspace({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <TopNav viewMode={viewMode} onChangeView={(mode) => setViewMode(mode)} />
+      <TopNav
+        viewMode={viewMode}
+        onChangeView={(mode) => setViewMode(mode)}
+        canAccess={canAccess}
+      />
 
       {/* Workspace controls */}
       <div className="border-b border-gray-100 bg-white">
