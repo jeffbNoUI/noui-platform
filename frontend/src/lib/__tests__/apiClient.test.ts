@@ -161,4 +161,24 @@ describe('apiClient', () => {
   it('toQueryString returns empty string when no valid params', () => {
     expect(toQueryString({ a: '', b: null })).toBe('');
   });
+
+  // ─── Request timeout ──────────────────────────────────────────────────────
+
+  describe('request timeout', () => {
+    it('aborts request after timeout', async () => {
+      globalThis.fetch = vi.fn(
+        (_url: string, init?: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            // Listen for abort signal to simulate real fetch behavior
+            if (init?.signal) {
+              init.signal.addEventListener('abort', () => {
+                reject(new DOMException('The operation was aborted.', 'AbortError'));
+              });
+            }
+          }),
+      );
+
+      await expect(fetchAPI('/api/v1/slow', { timeout: 50 })).rejects.toThrow('Request timed out');
+    });
+  });
 });

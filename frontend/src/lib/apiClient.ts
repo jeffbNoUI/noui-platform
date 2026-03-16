@@ -83,13 +83,18 @@ function generateRequestId(): string {
 const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 500;
 const RETRYABLE_STATUSES = new Set([503, 502, 504]);
+const DEFAULT_TIMEOUT_MS = 30_000; // 30 seconds
 
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // rawRequest performs the HTTP request with retry logic and returns the full parsed JSON body.
-async function rawRequest(url: string, init: RequestInit = {}): Promise<unknown> {
+async function rawRequest(
+  url: string,
+  init: RequestInit = {},
+  timeoutMs?: number,
+): Promise<unknown> {
   const requestId = generateRequestId();
   const headers = new Headers(init.headers);
   headers.set('X-Request-ID', requestId);
@@ -111,8 +116,12 @@ async function rawRequest(url: string, init: RequestInit = {}): Promise<unknown>
       await sleep(delay);
     }
 
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs ?? DEFAULT_TIMEOUT_MS);
+
     try {
-      const res = await fetch(url, { ...init, headers });
+      const res = await fetch(url, { ...init, headers, signal: controller.signal });
+      clearTimeout(timer);
 
       if (!res.ok) {
         // Retry on transient server errors (only for idempotent requests or first POST attempt)
@@ -134,6 +143,11 @@ async function rawRequest(url: string, init: RequestInit = {}): Promise<unknown>
 
       return normalizeEnums(await res.json());
     } catch (err) {
+      clearTimeout(timer);
+      // Abort errors (timeout) are not retryable
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        throw new APIError('Request timed out', 0, requestId, url);
+      }
       // Network errors (offline, DNS failure, etc.) — retry
       if (err instanceof TypeError && attempt < MAX_RETRIES) {
         lastError = err;
@@ -155,8 +169,8 @@ async function rawRequest(url: string, init: RequestInit = {}): Promise<unknown>
 }
 
 // request unwraps body.data — used for non-paginated endpoints.
-async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
-  const body = await rawRequest(url, init);
+async function request<T>(url: string, init: RequestInit = {}, timeoutMs?: number): Promise<T> {
+  const body = await rawRequest(url, init, timeoutMs);
   return lowercaseEnums((body as APIResponse<T>).data) as T;
 }
 
@@ -199,8 +213,8 @@ function lowercaseEnums(obj: unknown): unknown {
 
 // ─── Public helpers ─────────────────────────────────────────────────────────
 
-export function fetchAPI<T>(url: string): Promise<T> {
-  return request<T>(url);
+export function fetchAPI<T>(url: string, opts?: FetchOptions): Promise<T> {
+  return request<T>(url, {}, opts?.timeout);
 }
 
 // fetchPaginatedAPI preserves both data and pagination from the response.
@@ -211,8 +225,15 @@ export interface PaginatedResult<T> {
   pagination: { total: number; limit: number; offset: number; hasMore: boolean };
 }
 
-export async function fetchPaginatedAPI<T>(url: string): Promise<PaginatedResult<T>> {
-  const body = (await rawRequest(url)) as {
+interface FetchOptions {
+  timeout?: number;
+}
+
+export async function fetchPaginatedAPI<T>(
+  url: string,
+  opts?: FetchOptions,
+): Promise<PaginatedResult<T>> {
+  const body = (await rawRequest(url, {}, opts?.timeout)) as {
     data?: T[];
     pagination?: PaginatedResult<T>['pagination'];
   };
