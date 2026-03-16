@@ -167,7 +167,7 @@ describe('apiClient', () => {
   describe('request timeout', () => {
     it('aborts request after timeout', async () => {
       globalThis.fetch = vi.fn(
-        (_url: string, init?: RequestInit) =>
+        (_url: string | URL | Request, init?: RequestInit) =>
           new Promise<Response>((_resolve, reject) => {
             // Listen for abort signal to simulate real fetch behavior
             if (init?.signal) {
