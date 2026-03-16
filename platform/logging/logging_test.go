@@ -70,6 +70,39 @@ func TestRequestLogger_LogsRequestFields(t *testing.T) {
 	}
 }
 
+func TestStatusWriter_ImplementsFlusher(t *testing.T) {
+	// httptest.ResponseRecorder implements http.Flusher, so it's a good test double.
+	rec := httptest.NewRecorder()
+	sw := &statusWriter{ResponseWriter: rec, code: http.StatusOK}
+
+	// Verify statusWriter satisfies http.Flusher at compile time.
+	var _ http.Flusher = sw
+
+	// Write some data, then flush through the wrapper.
+	sw.Write([]byte("chunk1"))
+	sw.Flush()
+
+	if !rec.Flushed {
+		t.Error("expected underlying ResponseRecorder to be flushed")
+	}
+}
+
+func TestStatusWriter_FlushNoopWhenNotFlusher(t *testing.T) {
+	// Minimal ResponseWriter that does NOT implement http.Flusher.
+	nf := &nonFlusherWriter{}
+	sw := &statusWriter{ResponseWriter: nf, code: http.StatusOK}
+
+	// Should not panic.
+	sw.Flush()
+}
+
+// nonFlusherWriter is an http.ResponseWriter that does not implement http.Flusher.
+type nonFlusherWriter struct{}
+
+func (n *nonFlusherWriter) Header() http.Header         { return http.Header{} }
+func (n *nonFlusherWriter) Write(b []byte) (int, error) { return len(b), nil }
+func (n *nonFlusherWriter) WriteHeader(int)             {}
+
 func TestRequestLogger_CapturesStatusCode(t *testing.T) {
 	var buf bytes.Buffer
 	logger := Setup("test-service", &buf)

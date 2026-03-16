@@ -33,6 +33,15 @@ func (sw *statusWriter) WriteHeader(code int) {
 	sw.ResponseWriter.WriteHeader(code)
 }
 
+// Flush delegates to the underlying ResponseWriter if it implements http.Flusher.
+// This prevents silent failure when downstream handlers type-assert to http.Flusher
+// for SSE or chunked streaming responses.
+func (sw *statusWriter) Flush() {
+	if f, ok := sw.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
 // RequestLogger returns HTTP middleware that logs every request as a JSON line.
 // Log fields: method, path, status, duration_ms, request_id, tenant_id.
 func RequestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
