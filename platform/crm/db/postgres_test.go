@@ -73,7 +73,7 @@ func TestGetEnv_EmptyUsesFallback(t *testing.T) {
 
 func TestConfigFromEnv_Defaults(t *testing.T) {
 	// Unset all DB_* env vars to verify defaults.
-	keys := []string{"DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME", "DB_SSLMODE"}
+	keys := []string{"DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME", "DB_SSLMODE", "DB_MAX_OPEN_CONNS", "DB_MAX_IDLE_CONNS"}
 	saved := make(map[string]string)
 	for _, k := range keys {
 		saved[k] = os.Getenv(k)
@@ -112,6 +112,60 @@ func TestConfigFromEnv_Defaults(t *testing.T) {
 		if got != want {
 			t.Errorf("ConfigFromEnv().%s = %q, want %q", field, got, want)
 		}
+	}
+
+	if cfg.MaxOpenConns != 12 {
+		t.Errorf("ConfigFromEnv().MaxOpenConns = %d, want 12", cfg.MaxOpenConns)
+	}
+	if cfg.MaxIdleConns != 5 {
+		t.Errorf("ConfigFromEnv().MaxIdleConns = %d, want 5", cfg.MaxIdleConns)
+	}
+}
+
+func TestConfigFromEnv_CustomPoolSize(t *testing.T) {
+	t.Setenv("DB_MAX_OPEN_CONNS", "20")
+	t.Setenv("DB_MAX_IDLE_CONNS", "8")
+
+	cfg := ConfigFromEnv()
+
+	if cfg.MaxOpenConns != 20 {
+		t.Errorf("MaxOpenConns = %d, want 20", cfg.MaxOpenConns)
+	}
+	if cfg.MaxIdleConns != 8 {
+		t.Errorf("MaxIdleConns = %d, want 8", cfg.MaxIdleConns)
+	}
+}
+
+func TestConfigFromEnv_InvalidPoolSize(t *testing.T) {
+	tests := []struct {
+		name    string
+		openVal string
+		idleVal string
+	}{
+		{"non-numeric", "abc", "xyz"},
+		{"negative", "-5", "-2"},
+		{"zero", "0", "0"},
+		{"empty", "", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.openVal != "" {
+				t.Setenv("DB_MAX_OPEN_CONNS", tt.openVal)
+			}
+			if tt.idleVal != "" {
+				t.Setenv("DB_MAX_IDLE_CONNS", tt.idleVal)
+			}
+
+			cfg := ConfigFromEnv()
+
+			if cfg.MaxOpenConns != 12 {
+				t.Errorf("MaxOpenConns = %d, want default 12 for invalid input %q", cfg.MaxOpenConns, tt.openVal)
+			}
+			if cfg.MaxIdleConns != 5 {
+				t.Errorf("MaxIdleConns = %d, want default 5 for invalid input %q", cfg.MaxIdleConns, tt.idleVal)
+			}
+		})
 	}
 }
 

@@ -7,6 +7,7 @@ import ServiceMap from '@/components/admin/ServiceMap';
 import DataQualityPanel from '@/components/admin/DataQualityPanel';
 import CorrespondencePanel from '@/components/workflow/CorrespondencePanel';
 import { useCases, useStages } from '@/hooks/useCaseManagement';
+import type { ViewMode } from '@/types/auth';
 
 interface StaffPortalProps {
   onOpenCase: (
@@ -17,7 +18,7 @@ interface StaffPortalProps {
     droId?: number,
   ) => void;
   onViewMember: (memberId: number) => void;
-  onChangeView: (mode: string) => void;
+  onChangeView: (mode: ViewMode) => void;
 }
 
 type StaffTab =
@@ -143,13 +144,15 @@ export default function StaffPortal({ onOpenCase, onViewMember, onChangeView }: 
           <div className="h-px bg-gray-200 my-2 mx-4" />
 
           {/* Portal links */}
-          {[
-            { key: 'portal', label: 'Member Portal', icon: '\ud83d\udc64' },
-            { key: 'workspace', label: 'Agent Workspace', icon: '\ud83e\uddee' },
-            { key: 'crm', label: 'CRM', icon: '\ud83d\udcac' },
-            { key: 'employer', label: 'Employer Portal', icon: '\ud83c\udfe2' },
-            { key: 'vendor', label: 'Vendor Portal', icon: '\ud83c\udfe5' },
-          ].map((item) => (
+          {(
+            [
+              { key: 'portal', label: 'Member Portal', icon: '\ud83d\udc64' },
+              { key: 'workspace', label: 'Agent Workspace', icon: '\ud83e\uddee' },
+              { key: 'crm', label: 'CRM', icon: '\ud83d\udcac' },
+              { key: 'employer', label: 'Employer Portal', icon: '\ud83c\udfe2' },
+              { key: 'vendor', label: 'Vendor Portal', icon: '\ud83c\udfe5' },
+            ] as const
+          ).map((item) => (
             <button
               key={item.key}
               onClick={() => onChangeView(item.key)}

@@ -1,6 +1,12 @@
 // Shared API client — single source for fetch helpers, retry, request tracing.
 // All per-service API modules (api.ts, crmApi.ts, etc.) delegate to this.
 
+// Auth token for API requests — set by AuthContext
+let _authToken = '';
+export function setAuthToken(token: string) {
+  _authToken = token;
+}
+
 // ─── Enum normalization ──────────────────────────────────────────────────────
 // Go services return PostgreSQL enum values in UPPERCASE (e.g. 'OPEN', 'PUBLIC').
 // TypeScript types use lowercase (e.g. 'open', 'public'). This transform bridges
@@ -88,6 +94,9 @@ async function rawRequest(url: string, init: RequestInit = {}): Promise<any> {
   const requestId = generateRequestId();
   const headers = new Headers(init.headers);
   headers.set('X-Request-ID', requestId);
+  if (_authToken) {
+    headers.set('Authorization', `Bearer ${_authToken}`);
+  }
   if (init.body) {
     headers.set('Content-Type', 'application/json');
   }

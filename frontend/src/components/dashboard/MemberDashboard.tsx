@@ -9,6 +9,7 @@ import CorrespondenceDetail from '@/components/detail/CorrespondenceDetail';
 import BeneficiaryDetail from '@/components/detail/BeneficiaryDetail';
 import DQIssueDetail from '@/components/detail/DQIssueDetail';
 import { formatServiceYears } from '@/lib/formatters';
+import type { ViewMode } from '@/types/auth';
 
 type OverlayKind = 'interactions' | 'correspondence' | 'beneficiaries' | 'dq';
 
@@ -22,7 +23,7 @@ interface MemberDashboardProps {
     flags?: string[],
     droId?: number,
   ) => void;
-  onChangeView: (mode: string, context?: { memberId?: number }) => void;
+  onChangeView: (mode: ViewMode, context?: { memberId?: number }) => void;
 }
 
 export default function MemberDashboard({
