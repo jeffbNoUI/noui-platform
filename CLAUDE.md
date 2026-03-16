@@ -84,15 +84,31 @@ cd frontend && npm install && npm run build
 ```
 
 ### Test
+
+Tests are organized into two tiers for fast feedback:
+
+**Tier 1 — Fast (~30s, no database required):**
 ```bash
-# Connector (use -short to skip DB-dependent tests)
+# Go: -short skips DB-dependent tests (rls_test.go, dbcontext_test.go)
 cd connector && go test ./... -short
+cd platform/dataaccess && go test ./... -short
+cd platform/intelligence && go test ./... -short
+cd platform/crm && go test ./... -short
+cd platform/casemanagement && go test ./... -short
+cd platform/correspondence && go test ./... -short
+cd platform/dataquality && go test ./... -short
+cd platform/knowledgebase && go test ./... -short
 
-# Platform services
-cd platform/dataaccess && go test ./...
-
-# Frontend
+# Frontend: all unit tests (sqlmock + fetch-mock based)
 cd frontend && npm test -- --run
+```
+
+**Tier 2 — Full (requires PostgreSQL):**
+```bash
+# Go: includes real-DB integration tests
+cd platform/dataaccess && go test ./... -count=1
+# Frontend: with coverage report
+cd frontend && npm test -- --run --coverage
 ```
 
 ### Typecheck (Frontend — run before tests, it's faster)
@@ -117,11 +133,10 @@ docker compose up --build
 
 ### Verify All (before PR or session end)
 ```bash
-# Quick verification — typecheck + build + test for modified layers
-# Full verification — all layers
+# Quick verification — Tier 1 (typecheck + build + short tests)
 cd connector && go build ./... && go test ./... -short
-cd platform/dataaccess && go build ./... && go test ./...
-cd platform/intelligence && go build ./... && go test ./...
+cd platform/dataaccess && go build ./... && go test ./... -short
+cd platform/intelligence && go build ./... && go test ./... -short
 cd frontend && npx tsc --noEmit && npm run build && npm test -- --run
 ```
 

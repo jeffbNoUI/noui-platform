@@ -16,9 +16,11 @@ if [ -n "$CHANGED_GO" ]; then
   done
 fi
 
-# Run frontend tests if any TS/TSX files changed
+# Run frontend typecheck + tests if any TS/TSX files changed
 CHANGED_TS=$(git diff --cached --name-only -- 'frontend/*.ts' 'frontend/*.tsx' | head -1)
 if [ -n "$CHANGED_TS" ]; then
+  echo "Running frontend typecheck..."
+  (cd frontend && npx tsc --noEmit) || exit 1
   echo "Running frontend tests..."
   (cd frontend && npm test -- --run) || exit 1
 fi
