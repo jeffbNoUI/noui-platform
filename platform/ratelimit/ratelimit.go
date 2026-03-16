@@ -4,7 +4,7 @@
 package ratelimit
 
 import (
-	"fmt"
+	"encoding/json"
 	"log/slog"
 	"net"
 	"net/http"
@@ -161,11 +161,14 @@ func Middleware(cfg Config) func(http.Handler) http.Handler {
 }
 
 func extractIP(r *http.Request) string {
-	// Check X-Forwarded-For first (for reverse proxies).
+	// Prefer X-Real-IP (set by trusted reverse proxy).
+	if xri := r.Header.Get("X-Real-IP"); xri != "" {
+		return strings.TrimSpace(xri)
+	}
+	// X-Forwarded-For: use rightmost entry (appended by trusted proxy).
 	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		// Take the first IP (client IP).
-		parts := strings.SplitN(xff, ",", 2)
-		if ip := strings.TrimSpace(parts[0]); ip != "" {
+		parts := strings.Split(xff, ",")
+		if ip := strings.TrimSpace(parts[len(parts)-1]); ip != "" {
 			return ip
 		}
 	}
@@ -181,8 +184,12 @@ func writeTooManyRequests(w http.ResponseWriter, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Retry-After", "1")
 	w.WriteHeader(http.StatusTooManyRequests)
-	// Use same error format as auth middleware.
-	fmt.Fprintf(w, `{"error":{"code":"RATE_LIMITED","message":"%s"}}`, message)
+	json.NewEncoder(w).Encode(map[string]map[string]string{
+		"error": {
+			"code":    "RATE_LIMITED",
+			"message": message,
+		},
+	})
 }
 
 func getEnvInt(key string, fallback int) int {

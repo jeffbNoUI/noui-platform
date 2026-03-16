@@ -1,11 +1,16 @@
 package ratelimit
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/noui/platform/auth"
 )
 
 // okHandler writes 200 OK — used as the downstream handler in middleware tests.
@@ -203,14 +208,15 @@ func TestExtractIP_RemoteAddr(t *testing.T) {
 	}
 }
 
-func TestExtractIP_XForwardedFor(t *testing.T) {
+func TestExtractIP_XForwardedFor_UsesRightmost(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.RemoteAddr = "10.0.0.1:12345"
 	req.Header.Set("X-Forwarded-For", "203.0.113.50, 70.41.3.18, 10.0.0.1")
 
 	ip := extractIP(req)
-	if ip != "203.0.113.50" {
-		t.Fatalf("expected first XFF IP 203.0.113.50, got %q", ip)
+	// Rightmost IP is the one appended by the last trusted proxy.
+	if ip != "10.0.0.1" {
+		t.Fatalf("expected rightmost XFF IP 10.0.0.1, got %q", ip)
 	}
 }
 
@@ -222,6 +228,28 @@ func TestExtractIP_XForwardedFor_Single(t *testing.T) {
 	ip := extractIP(req)
 	if ip != "203.0.113.50" {
 		t.Fatalf("expected 203.0.113.50, got %q", ip)
+	}
+}
+
+func TestExtractIP_XRealIP_TakesPriority(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "10.0.0.1:12345"
+	req.Header.Set("X-Real-IP", "198.51.100.5")
+	req.Header.Set("X-Forwarded-For", "203.0.113.50, 70.41.3.18")
+
+	ip := extractIP(req)
+	if ip != "198.51.100.5" {
+		t.Fatalf("expected X-Real-IP 198.51.100.5 to take priority, got %q", ip)
+	}
+}
+
+func TestExtractIP_IPv6_RemoteAddr(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "[::1]:12345"
+
+	ip := extractIP(req)
+	if ip != "::1" {
+		t.Fatalf("expected ::1, got %q", ip)
 	}
 }
 
@@ -318,5 +346,77 @@ func TestGetEnvInt_Negative(t *testing.T) {
 	v := getEnvInt("TEST_INT_NEG", 10)
 	if v != 10 {
 		t.Fatalf("expected fallback 10 for negative value, got %d", v)
+	}
+}
+
+// signTestToken creates a valid HS256 JWT for testing.
+func signTestToken(t *testing.T, secret []byte, claims map[string]interface{}) string {
+	t.Helper()
+	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"HS256","typ":"JWT"}`))
+	claimsJSON, err := json.Marshal(claims)
+	if err != nil {
+		t.Fatalf("marshal claims: %v", err)
+	}
+	payload := base64.RawURLEncoding.EncodeToString(claimsJSON)
+	mac := hmac.New(sha256.New, secret)
+	mac.Write([]byte(header + "." + payload))
+	sig := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+	return header + "." + payload + "." + sig
+}
+
+func TestMiddleware_TenantRateLimit(t *testing.T) {
+	secret := []byte("test-secret-tenant-rl")
+
+	// Tight tenant limit: burst=1 so 2nd request is rejected.
+	// Generous IP limit so IP limiting doesn't interfere.
+	cfg := Config{
+		IPRate:          100,
+		IPBurst:         100,
+		TenantRate:      0.001,
+		TenantBurst:     1,
+		CleanupInterval: time.Hour,
+		StaleAfter:      time.Hour,
+	}
+
+	// Chain: auth middleware (sets tenant in context) -> rate limit middleware -> handler.
+	rlMiddleware := Middleware(cfg)
+	authMiddleware := auth.NewMiddleware(secret)
+	handler := authMiddleware(rlMiddleware(okHandler()))
+
+	token := signTestToken(t, secret, map[string]interface{}{
+		"sub":       "user-1",
+		"tenant_id": "tenant-xyz",
+		"role":      "staff",
+		"member_id": "m1",
+		"exp":       time.Now().Add(1 * time.Hour).Unix(),
+	})
+
+	// First request — should pass.
+	req1 := httptest.NewRequest(http.MethodGet, "/api/data", nil)
+	req1.RemoteAddr = "10.0.0.1:12345"
+	req1.Header.Set("Authorization", "Bearer "+token)
+	rec1 := httptest.NewRecorder()
+	handler.ServeHTTP(rec1, req1)
+	if rec1.Code != http.StatusOK {
+		t.Fatalf("first request: expected 200, got %d; body: %s", rec1.Code, rec1.Body.String())
+	}
+
+	// Second request from different IP but same tenant — should be tenant-limited.
+	req2 := httptest.NewRequest(http.MethodGet, "/api/data", nil)
+	req2.RemoteAddr = "10.0.0.2:12345"
+	req2.Header.Set("Authorization", "Bearer "+token)
+	rec2 := httptest.NewRecorder()
+	handler.ServeHTTP(rec2, req2)
+	if rec2.Code != http.StatusTooManyRequests {
+		t.Fatalf("second request: expected 429 (tenant limited), got %d; body: %s", rec2.Code, rec2.Body.String())
+	}
+
+	// Verify the error message indicates tenant limiting.
+	var body map[string]map[string]string
+	if err := json.NewDecoder(rec2.Body).Decode(&body); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if body["error"]["message"] != "per-tenant rate limit exceeded" {
+		t.Fatalf("expected per-tenant message, got %q", body["error"]["message"])
 	}
 }
