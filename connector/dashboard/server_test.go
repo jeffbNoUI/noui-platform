@@ -156,13 +156,18 @@ func TestCORSHeaders(t *testing.T) {
 	defer resp.Body.Close()
 
 	origin := resp.Header.Get("Access-Control-Allow-Origin")
-	if origin != "*" {
-		t.Errorf("expected CORS origin *, got %q", origin)
+	if origin != "http://localhost:3000" {
+		t.Errorf("expected CORS origin http://localhost:3000, got %q", origin)
 	}
 
 	methods := resp.Header.Get("Access-Control-Allow-Methods")
 	if methods == "" {
 		t.Error("expected Access-Control-Allow-Methods header to be set")
+	}
+
+	credentials := resp.Header.Get("Access-Control-Allow-Credentials")
+	if credentials != "true" {
+		t.Errorf("expected Access-Control-Allow-Credentials true, got %q", credentials)
 	}
 }
 
