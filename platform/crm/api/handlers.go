@@ -16,6 +16,7 @@ import (
 	"github.com/noui/platform/auth"
 	crmdb "github.com/noui/platform/crm/db"
 	"github.com/noui/platform/crm/models"
+	"github.com/noui/platform/validation"
 )
 
 // Handler holds dependencies for CRM API handlers.
@@ -90,11 +91,12 @@ func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) SearchContacts(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantID(r)
 
+	limit, offset := validation.Pagination(intParam(r, "limit", 25), intParam(r, "offset", 0), 100)
 	params := models.ContactSearchParams{
 		Query:       r.URL.Query().Get("q"),
 		ContactType: r.URL.Query().Get("type"),
-		Limit:       intParam(r, "limit", 25),
-		Offset:      intParam(r, "offset", 0),
+		Limit:       limit,
+		Offset:      offset,
 	}
 
 	contacts, total, err := h.store.ListContacts(r.Context(), tenantID, params)
@@ -110,6 +112,30 @@ func (h *Handler) CreateContact(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateContactRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+
+	var errs validation.Errors
+	errs.Required("contactType", req.ContactType)
+	errs.Enum("contactType", req.ContactType, []string{"member", "beneficiary", "alternate_payee", "external"})
+	errs.Required("firstName", req.FirstName)
+	errs.MaxLen("firstName", req.FirstName, 100)
+	errs.Required("lastName", req.LastName)
+	errs.MaxLen("lastName", req.LastName, 100)
+	if req.MiddleName != nil {
+		errs.MaxLen("middleName", *req.MiddleName, 100)
+	}
+	if req.PrimaryEmail != nil {
+		errs.MaxLen("primaryEmail", *req.PrimaryEmail, 254)
+	}
+	if req.PrimaryPhone != nil {
+		errs.MaxLen("primaryPhone", *req.PrimaryPhone, 20)
+	}
+	if req.DateOfBirth != nil {
+		errs.DateYMDOptional("dateOfBirth", *req.DateOfBirth)
+	}
+	if errs.HasErrors() {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
 		return
 	}
 
@@ -179,6 +205,30 @@ func (h *Handler) UpdateContact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var errs validation.Errors
+	if req.FirstName != nil {
+		errs.MaxLen("firstName", *req.FirstName, 100)
+	}
+	if req.LastName != nil {
+		errs.MaxLen("lastName", *req.LastName, 100)
+	}
+	if req.MiddleName != nil {
+		errs.MaxLen("middleName", *req.MiddleName, 100)
+	}
+	if req.PrimaryEmail != nil {
+		errs.MaxLen("primaryEmail", *req.PrimaryEmail, 254)
+	}
+	if req.PrimaryPhone != nil {
+		errs.MaxLen("primaryPhone", *req.PrimaryPhone, 20)
+	}
+	if req.DateOfBirth != nil {
+		errs.DateYMDOptional("dateOfBirth", *req.DateOfBirth)
+	}
+	if errs.HasErrors() {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		return
+	}
+
 	applyContactUpdates(existing, &req)
 	existing.UpdatedAt = time.Now().UTC()
 	existing.UpdatedBy = "system"
@@ -210,8 +260,7 @@ func (h *Handler) GetContactByLegacyID(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetContactTimeline(w http.ResponseWriter, r *http.Request) {
 	contactID := r.PathValue("id")
-	limit := intParam(r, "limit", 50)
-	offset := intParam(r, "offset", 0)
+	limit, offset := validation.Pagination(intParam(r, "limit", 50), intParam(r, "offset", 0), 100)
 
 	timeline, err := h.store.GetContactTimeline(r.Context(), contactID, limit, offset)
 	if err != nil {
@@ -229,8 +278,7 @@ func (h *Handler) ListConversations(w http.ResponseWriter, r *http.Request) {
 	status := r.URL.Query().Get("status")
 	anchorType := r.URL.Query().Get("anchor_type")
 	anchorID := r.URL.Query().Get("anchor_id")
-	limit := intParam(r, "limit", 25)
-	offset := intParam(r, "offset", 0)
+	limit, offset := validation.Pagination(intParam(r, "limit", 25), intParam(r, "offset", 0), 100)
 
 	conversations, total, err := h.store.ListConversations(r.Context(), tenantID, status, anchorType, anchorID, limit, offset)
 	if err != nil {
@@ -245,6 +293,23 @@ func (h *Handler) CreateConversation(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateConversationRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+
+	var errs validation.Errors
+	errs.Required("anchorType", req.AnchorType)
+	errs.MaxLen("anchorType", req.AnchorType, 50)
+	if req.Subject != nil {
+		errs.MaxLen("subject", *req.Subject, 200)
+	}
+	if req.TopicCategory != nil {
+		errs.MaxLen("topicCategory", *req.TopicCategory, 100)
+	}
+	if req.TopicSubcategory != nil {
+		errs.MaxLen("topicSubcategory", *req.TopicSubcategory, 100)
+	}
+	if errs.HasErrors() {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
 		return
 	}
 
@@ -308,6 +373,18 @@ func (h *Handler) UpdateConversation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var errs validation.Errors
+	if req.Status != nil {
+		errs.Enum("status", *req.Status, []string{"open", "pending", "resolved", "closed", "reopened"})
+	}
+	if req.ResolutionSummary != nil {
+		errs.MaxLen("resolutionSummary", *req.ResolutionSummary, 5000)
+	}
+	if errs.HasErrors() {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		return
+	}
+
 	applyConversationUpdates(existing, &req)
 	existing.UpdatedAt = time.Now().UTC()
 	existing.UpdatedBy = "system"
@@ -325,12 +402,13 @@ func (h *Handler) UpdateConversation(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListInteractions(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantID(r)
 
+	limit, offset := validation.Pagination(intParam(r, "limit", 25), intParam(r, "offset", 0), 100)
 	filter := crmdb.InteractionFilter{
 		ContactID:      r.URL.Query().Get("contact_id"),
 		ConversationID: r.URL.Query().Get("conversation_id"),
 		Channel:        r.URL.Query().Get("channel"),
-		Limit:          intParam(r, "limit", 25),
-		Offset:         intParam(r, "offset", 0),
+		Limit:          limit,
+		Offset:         offset,
 	}
 
 	interactions, total, err := h.store.ListInteractions(r.Context(), tenantID, filter)
@@ -346,6 +424,26 @@ func (h *Handler) CreateInteraction(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateInteractionRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+
+	var errs validation.Errors
+	errs.Required("channel", req.Channel)
+	errs.Enum("channel", req.Channel, []string{
+		"phone_inbound", "phone_outbound", "secure_message",
+		"email_inbound", "email_outbound", "walk_in",
+		"portal_activity", "mail_inbound", "mail_outbound",
+		"internal_handoff", "system_event", "fax",
+	})
+	errs.Required("interactionType", req.InteractionType)
+	errs.MaxLen("interactionType", req.InteractionType, 50)
+	errs.Required("direction", req.Direction)
+	errs.Enum("direction", req.Direction, []string{"inbound", "outbound", "internal"})
+	if req.Summary != nil {
+		errs.MaxLen("summary", *req.Summary, 5000)
+	}
+	if errs.HasErrors() {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
 		return
 	}
 
@@ -407,6 +505,25 @@ func (h *Handler) CreateNote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var errs validation.Errors
+	errs.Required("interactionId", req.InteractionID)
+	errs.Required("category", req.Category)
+	errs.MaxLen("category", req.Category, 100)
+	errs.Required("summary", req.Summary)
+	errs.MaxLen("summary", req.Summary, 5000)
+	errs.Required("outcome", req.Outcome)
+	errs.MaxLen("outcome", req.Outcome, 200)
+	if req.Narrative != nil {
+		errs.MaxLen("narrative", *req.Narrative, 50000)
+	}
+	if req.NextStep != nil {
+		errs.MaxLen("nextStep", *req.NextStep, 1000)
+	}
+	if errs.HasErrors() {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		return
+	}
+
 	now := time.Now().UTC()
 	note := models.Note{
 		NoteID:        uuid.New().String(),
@@ -450,8 +567,7 @@ func (h *Handler) ListCommitments(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantID(r)
 	status := r.URL.Query().Get("status")
 	ownerAgent := r.URL.Query().Get("owner_agent")
-	limit := intParam(r, "limit", 25)
-	offset := intParam(r, "offset", 0)
+	limit, offset := validation.Pagination(intParam(r, "limit", 25), intParam(r, "offset", 0), 100)
 
 	commitments, total, err := h.store.ListCommitments(r.Context(), tenantID, status, ownerAgent, limit, offset)
 	if err != nil {
@@ -466,6 +582,19 @@ func (h *Handler) CreateCommitment(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateCommitmentRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+
+	var errs validation.Errors
+	errs.Required("interactionId", req.InteractionID)
+	errs.Required("description", req.Description)
+	errs.MaxLen("description", req.Description, 1000)
+	errs.Required("targetDate", req.TargetDate)
+	errs.DateYMD("targetDate", req.TargetDate)
+	errs.Required("ownerAgent", req.OwnerAgent)
+	errs.MaxLen("ownerAgent", req.OwnerAgent, 200)
+	if errs.HasErrors() {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
 		return
 	}
 
@@ -520,6 +649,18 @@ func (h *Handler) UpdateCommitment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var errs validation.Errors
+	if req.Status != nil {
+		errs.Enum("status", *req.Status, []string{"pending", "in_progress", "fulfilled", "overdue", "cancelled"})
+	}
+	if req.FulfillmentNote != nil {
+		errs.MaxLen("fulfillmentNote", *req.FulfillmentNote, 5000)
+	}
+	if errs.HasErrors() {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		return
+	}
+
 	applyCommitmentUpdates(existing, &req)
 	existing.UpdatedAt = time.Now().UTC()
 	existing.UpdatedBy = "system"
@@ -538,8 +679,7 @@ func (h *Handler) ListOutreach(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantID(r)
 	status := r.URL.Query().Get("status")
 	assignedAgent := r.URL.Query().Get("assigned_agent")
-	limit := intParam(r, "limit", 25)
-	offset := intParam(r, "offset", 0)
+	limit, offset := validation.Pagination(intParam(r, "limit", 25), intParam(r, "offset", 0), 100)
 
 	outreach, total, err := h.store.ListOutreach(r.Context(), tenantID, status, assignedAgent, limit, offset)
 	if err != nil {
@@ -554,6 +694,25 @@ func (h *Handler) CreateOutreach(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateOutreachRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+
+	var errs validation.Errors
+	errs.Required("triggerType", req.TriggerType)
+	errs.MaxLen("triggerType", req.TriggerType, 100)
+	errs.Required("outreachType", req.OutreachType)
+	errs.MaxLen("outreachType", req.OutreachType, 100)
+	if req.Subject != nil {
+		errs.MaxLen("subject", *req.Subject, 200)
+	}
+	if req.TalkingPoints != nil {
+		errs.MaxLen("talkingPoints", *req.TalkingPoints, 5000)
+	}
+	if req.Priority != nil {
+		errs.Enum("priority", *req.Priority, []string{"LOW", "NORMAL", "HIGH", "URGENT"})
+	}
+	if errs.HasErrors() {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
 		return
 	}
 
@@ -613,6 +772,18 @@ func (h *Handler) UpdateOutreach(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var errs validation.Errors
+	if req.Status != nil {
+		errs.Enum("status", *req.Status, []string{"pending", "assigned", "attempted", "completed", "cancelled", "deferred"})
+	}
+	if req.ResultOutcome != nil {
+		errs.MaxLen("resultOutcome", *req.ResultOutcome, 200)
+	}
+	if errs.HasErrors() {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		return
+	}
+
 	applyOutreachUpdates(existing, &req)
 	existing.UpdatedAt = time.Now().UTC()
 	existing.UpdatedBy = "system"
@@ -630,8 +801,7 @@ func (h *Handler) UpdateOutreach(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListOrganizations(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantID(r)
 	orgType := r.URL.Query().Get("type")
-	limit := intParam(r, "limit", 25)
-	offset := intParam(r, "offset", 0)
+	limit, offset := validation.Pagination(intParam(r, "limit", 25), intParam(r, "offset", 0), 100)
 
 	orgs, total, err := h.store.ListOrganizations(r.Context(), tenantID, orgType, limit, offset)
 	if err != nil {
@@ -646,6 +816,28 @@ func (h *Handler) CreateOrganization(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateOrganizationRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+
+	var errs validation.Errors
+	errs.Required("orgType", req.OrgType)
+	errs.MaxLen("orgType", req.OrgType, 50)
+	errs.Required("orgName", req.OrgName)
+	errs.MaxLen("orgName", req.OrgName, 200)
+	if req.OrgShortName != nil {
+		errs.MaxLen("orgShortName", *req.OrgShortName, 50)
+	}
+	if req.MainEmail != nil {
+		errs.MaxLen("mainEmail", *req.MainEmail, 254)
+	}
+	if req.MainPhone != nil {
+		errs.MaxLen("mainPhone", *req.MainPhone, 20)
+	}
+	if req.EIN != nil {
+		errs.MaxLen("ein", *req.EIN, 20)
+	}
+	if errs.HasErrors() {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
 		return
 	}
 
@@ -708,7 +900,7 @@ func (h *Handler) GetAuditLog(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantID(r)
 	entityType := r.URL.Query().Get("entity_type")
 	entityID := r.URL.Query().Get("entity_id")
-	limit := intParam(r, "limit", 50)
+	limit, _ := validation.Pagination(intParam(r, "limit", 50), 0, 200)
 
 	entries, err := h.store.GetAuditLog(r.Context(), tenantID, entityType, entityID, limit)
 	if err != nil {
