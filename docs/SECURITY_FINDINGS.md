@@ -82,10 +82,10 @@ Prevention rules should be enforced via:
 
 **Impact:** Any malicious website could make API requests to the connector service on behalf of an authenticated user (if cookies/credentials were involved).
 
-**Fix:** Scheduled for Session 2 (S1.2). Will replace wildcard with environment-configured origin.
+**Fix:** (Session 2) Replaced wildcard `*` with `os.Getenv("CORS_ORIGIN")` defaulting to `http://localhost:3000` in both `connector/service/handlers.go` and `connector/dashboard/server.go`. Added `CORS_ORIGIN` to Helm values for dataaccess and intelligence. Added Authorization and X-Request-ID to allowed headers, credentials support, and Max-Age caching.
 
 **Prevention rules:**
-- [ ] **CLAUDE.md rule:** "CORS origin must NEVER be `*` in any service. Always use `CORS_ORIGIN` env var with explicit allowed origins."
+- [x] **CLAUDE.md rule:** "CORS origin must NEVER be `*` in any service. Always use `CORS_ORIGIN` env var with explicit allowed origins."
 - [ ] **CI check:** `grep -r 'Allow-Origin.*\*' platform/ connector/` should return zero matches.
 
 ---
@@ -154,13 +154,22 @@ Prevention rules should be enforced via:
 
 ## Findings Still Open (Future Sessions)
 
-### F-009: No Row-Level Security (CRITICAL) — Session 2
+### F-009: No Row-Level Security (CRITICAL) — ~~Session 2~~ RESOLVED
 
 **What:** No PostgreSQL RLS policies on any table. Tenant and member isolation is application-layer only.
 
 **Why:** RLS was specified in the PRISM CLAUDE.md but never implemented for the NoUI platform.
 
-**Prevention:** Session 2 creates RLS migration with integration tests.
+**Fix:** (Session 2) Three-layer implementation:
+1. **Migration 013** — `ENABLE ROW LEVEL SECURITY` + `FORCE ROW LEVEL SECURITY` on all 35 content tables. Three policy tiers: direct tenant_id tables, child tables via parent FK join, legacy tables (member_master, salary_hist, etc.) via retirement_case subquery with staff/member role branching. Supporting index on `retirement_case(tenant_id, member_id)`.
+2. **`platform/dbcontext/`** — New package: `ScopedConn()` calls `set_config('app.tenant_id', ...)` on a dedicated `*sql.Conn`. `DBMiddleware` extracts claims from auth context and injects scoped conn into request context. `Querier` interface + `DB(ctx, fallback)` routing helper.
+3. **Store migration** — All DB query call sites across 6 services migrated to route through `dbcontext.DB(ctx, s.DB)` which returns the RLS-scoped connection when available, pool otherwise.
+4. **Integration tests** — 5 tests in `platform/dataaccess/db/rls_test.go`: tenant isolation, member isolation, staff visibility, wrong-tenant empty result, cross-tenant member blocking.
+
+**Prevention rules:**
+- [x] **Architecture:** `FORCE ROW LEVEL SECURITY` on all content tables ensures RLS applies even to table owner — dev/test parity with production.
+- [x] **Architecture:** `dbcontext.DBMiddleware` is wired at `main.go` level, same as auth. Individual handlers cannot bypass it.
+- [ ] **CI check:** Any new table migration must include `ENABLE ROW LEVEL SECURITY` and a policy. Test: `SELECT tablename FROM pg_tables WHERE NOT rowsecurity AND schemaname = 'public' AND tablename NOT IN (reference_tables)` returns 0 rows.
 
 ### F-010: No Input Validation (HIGH) — Session 3
 
@@ -188,4 +197,4 @@ Prevention rules should be enforced via:
 
 ---
 
-*Updated: 2026-03-15 — Session 1 findings (F-001 through F-008 resolved, F-009 through F-013 tracked)*
+*Updated: 2026-03-15 — Session 2: F-004 and F-009 resolved. F-010 through F-013 remain open.*
