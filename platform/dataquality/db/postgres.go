@@ -78,6 +78,10 @@ func Connect(cfg Config) (*sql.DB, error) {
 			continue
 		}
 
+		if cfg.MaxIdleConns > cfg.MaxOpenConns {
+			slog.Warn("MaxIdleConns exceeds MaxOpenConns, will be capped by database/sql",
+				"max_idle_conns", cfg.MaxIdleConns, "max_open_conns", cfg.MaxOpenConns)
+		}
 		db.SetMaxOpenConns(cfg.MaxOpenConns)
 		db.SetMaxIdleConns(cfg.MaxIdleConns)
 		db.SetConnMaxLifetime(5 * time.Minute)
@@ -101,6 +105,8 @@ func getEnvInt(key string, fallback int) int {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
 			return n
 		}
+		slog.Warn("ignoring invalid integer env var, using default",
+			"key", key, "value", v, "default", fallback)
 	}
 	return fallback
 }
