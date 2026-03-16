@@ -272,6 +272,26 @@ Before ending a session, Claude MUST:
 - Implementing business rules not found in governing documents
 - Adding external dependencies not listed in this file without approval
 
+## Security Rules (from Findings Review — 2026-03-15)
+
+These rules were established from the security/quality review. See `docs/SECURITY_FINDINGS.md` for full context on each finding.
+
+1. **Every API endpoint goes through auth middleware.** No endpoint is exempt except `/healthz`, `/health`, `/ready`, `/metrics`. Auth middleware is applied at `main.go` level wrapping the entire mux — individual handlers cannot opt out.
+
+2. **Tenant/member identity comes from JWT claims, never from headers.** The `X-Tenant-ID` header is stripped by auth middleware. Handlers read identity from `auth.TenantID(r.Context())`.
+
+3. **CORS origin must never be `*`.** Always use `CORS_ORIGIN` env var with explicit allowed origins.
+
+4. **All Go services use `log/slog`.** Never import `"log"` in platform services. Use structured key-value logging.
+
+5. **Middleware order: CORS → Auth → Logging → Handler.** Auth runs before logging so log lines include authenticated identity.
+
+6. **Any code wrapping `http.ResponseWriter` must also implement `http.Flusher`** (and `http.Hijacker` if WebSocket support is needed).
+
+7. **Middleware that reads config from env must also offer a constructor with explicit parameters** for testability.
+
+8. **JWT validation must check: signature, algorithm (`alg: HS256`), expiration (`exp`), and required claims** (`tenant_id`, `role`).
+
 ## When Something Goes Wrong
 
 Every Claude mistake becomes a rule. If something breaks:

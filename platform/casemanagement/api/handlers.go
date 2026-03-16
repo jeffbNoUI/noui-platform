@@ -5,13 +5,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/noui/platform/auth"
 	cmdb "github.com/noui/platform/casemanagement/db"
 	"github.com/noui/platform/casemanagement/models"
 )
@@ -81,7 +82,7 @@ func (h *Handler) ListStages(w http.ResponseWriter, r *http.Request) {
 // --- Case Handlers ---
 
 func (h *Handler) ListCases(w http.ResponseWriter, r *http.Request) {
-	tenantID := tenantFromHeader(r)
+	tenantID := tenantID(r)
 
 	filter := models.CaseFilter{
 		Status:     r.URL.Query().Get("status"),
@@ -104,7 +105,7 @@ func (h *Handler) ListCases(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetCase(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	tenantID := tenantFromHeader(r)
+	tenantID := tenantID(r)
 	c, err := h.store.GetCase(tenantID, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -163,7 +164,7 @@ func (h *Handler) CreateCase(w http.ResponseWriter, r *http.Request) {
 
 	c := &models.RetirementCase{
 		CaseID:          req.CaseID,
-		TenantID:        tenantFromHeader(r),
+		TenantID:        tenantID(r),
 		MemberID:        req.MemberID,
 		CaseType:        req.CaseType,
 		RetirementDate:  req.RetirementDate,
@@ -198,7 +199,7 @@ func (h *Handler) CreateCase(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UpdateCase(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	tenantID := tenantFromHeader(r)
+	tenantID := tenantID(r)
 
 	// Verify case exists (tenant-scoped)
 	_, err := h.store.GetCase(tenantID, id)
@@ -233,7 +234,7 @@ func (h *Handler) UpdateCase(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) AdvanceStage(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	tenantID := tenantFromHeader(r)
+	tenantID := tenantID(r)
 
 	var req models.AdvanceStageRequest
 	if err := decodeJSON(r, &req); err != nil {
@@ -261,7 +262,7 @@ func (h *Handler) AdvanceStage(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetStageHistory(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	tenantID := tenantFromHeader(r)
+	tenantID := tenantID(r)
 
 	history, err := h.store.GetStageHistory(tenantID, id)
 	if err != nil {
@@ -406,7 +407,7 @@ func (h *Handler) DeleteDocument(w http.ResponseWriter, r *http.Request) {
 // --- Stats Handlers ---
 
 func (h *Handler) GetCaseStats(w http.ResponseWriter, r *http.Request) {
-	tenantID := tenantFromHeader(r)
+	tenantID := tenantID(r)
 
 	stats, err := h.store.GetCaseStats(tenantID)
 	if err != nil {
@@ -418,7 +419,7 @@ func (h *Handler) GetCaseStats(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetSLAStats(w http.ResponseWriter, r *http.Request) {
-	tenantID := tenantFromHeader(r)
+	tenantID := tenantID(r)
 
 	stats, err := h.store.GetSLAStats(tenantID)
 	if err != nil {
@@ -430,7 +431,7 @@ func (h *Handler) GetSLAStats(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetVolumeStats(w http.ResponseWriter, r *http.Request) {
-	tenantID := tenantFromHeader(r)
+	tenantID := tenantID(r)
 	months := intParam(r, "months", 6)
 
 	stats, err := h.store.GetVolumeStats(tenantID, months)
@@ -446,12 +447,11 @@ func (h *Handler) GetVolumeStats(w http.ResponseWriter, r *http.Request) {
 
 const defaultTenantID = "00000000-0000-0000-0000-000000000001"
 
-func tenantFromHeader(r *http.Request) string {
-	tid := r.Header.Get("X-Tenant-ID")
-	if tid == "" {
-		return defaultTenantID
+func tenantID(r *http.Request) string {
+	if tid := auth.TenantID(r.Context()); tid != "" {
+		return tid
 	}
-	return tid
+	return defaultTenantID
 }
 
 func decodeJSON(r *http.Request, v any) error {
@@ -466,7 +466,7 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(v); err != nil {
-		log.Printf("error encoding JSON response: %v", err)
+		slog.Error("error encoding JSON response", "error", err)
 	}
 }
 

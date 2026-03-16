@@ -5,12 +5,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/noui/platform/auth"
 	corrdb "github.com/noui/platform/correspondence/db"
 	"github.com/noui/platform/correspondence/models"
 )
@@ -54,7 +55,7 @@ func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 // --- Template Handlers ---
 
 func (h *Handler) ListTemplates(w http.ResponseWriter, r *http.Request) {
-	tenantID := tenantFromHeader(r)
+	tenantID := tenantID(r)
 	category := r.URL.Query().Get("category")
 	stageCategory := r.URL.Query().Get("stage_category")
 	activeOnly := r.URL.Query().Get("is_active") != "false"
@@ -121,7 +122,7 @@ func (h *Handler) Generate(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	corr := models.Correspondence{
 		CorrespondenceID: uuid.New().String(),
-		TenantID:         tenantFromHeader(r),
+		TenantID:         tenantID(r),
 		TemplateID:       req.TemplateID,
 		MemberID:         req.MemberID,
 		CaseID:           req.CaseID,
@@ -146,7 +147,7 @@ func (h *Handler) Generate(w http.ResponseWriter, r *http.Request) {
 // --- History Handlers ---
 
 func (h *Handler) ListHistory(w http.ResponseWriter, r *http.Request) {
-	tenantID := tenantFromHeader(r)
+	tenantID := tenantID(r)
 	status := r.URL.Query().Get("status")
 	limit := intParam(r, "limit", 25)
 	offset := intParam(r, "offset", 0)
@@ -237,12 +238,11 @@ func (h *Handler) UpdateCorrespondence(w http.ResponseWriter, r *http.Request) {
 
 const defaultTenantID = "00000000-0000-0000-0000-000000000001"
 
-func tenantFromHeader(r *http.Request) string {
-	tid := r.Header.Get("X-Tenant-ID")
-	if tid == "" {
-		return defaultTenantID
+func tenantID(r *http.Request) string {
+	if tid := auth.TenantID(r.Context()); tid != "" {
+		return tid
 	}
-	return tid
+	return defaultTenantID
 }
 
 func decodeJSON(r *http.Request, v interface{}) error {
@@ -257,7 +257,7 @@ func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(v); err != nil {
-		log.Printf("error encoding JSON response: %v", err)
+		slog.Error("error encoding JSON response", "error", err)
 	}
 }
 

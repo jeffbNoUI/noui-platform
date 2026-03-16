@@ -5,25 +5,29 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/noui/platform/auth"
 	"github.com/noui/platform/dataaccess/api"
 	"github.com/noui/platform/dataaccess/db"
+	"github.com/noui/platform/logging"
 )
 
 func main() {
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	log.Println("starting connector service v0.1.0")
+	logger := logging.Setup("dataaccess", nil)
+	slog.SetDefault(logger)
+	slog.Info("starting dataaccess service v0.1.0")
 
 	cfg := db.ConfigFromEnv()
 	database, err := db.Connect(cfg)
 	if err != nil {
-		log.Fatalf("failed to connect to database: %v", err)
+		slog.Error("failed to connect to database", "error", err)
+		os.Exit(1)
 	}
 	defer database.Close()
 
@@ -31,8 +35,18 @@ func main() {
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
 
-	// CORS middleware for frontend development
-	wrappedMux := corsMiddleware(mux)
+	// Auth context extractor — runs inside the logging middleware to capture
+	// tenant_id and user_role from the auth-enriched request context.
+	authExtractor := func(r *http.Request) []slog.Attr {
+		return []slog.Attr{
+			slog.String("tenant_id", auth.TenantID(r.Context())),
+			slog.String("user_role", auth.UserRole(r.Context())),
+		}
+	}
+
+	// Middleware order: CORS → Auth → Logging → Handler
+	// Auth runs first so the request context is enriched before logging reads it.
+	wrappedMux := corsMiddleware(auth.Middleware(logging.RequestLogger(logger, authExtractor)(mux)))
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -52,23 +66,25 @@ func main() {
 	signal.Notify(done, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
-		log.Printf("connector service listening on :%s", port)
+		slog.Info("dataaccess service listening", "port", port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("server error: %v", err)
+			slog.Error("server error", "error", err)
+			os.Exit(1)
 		}
 	}()
 
 	<-done
-	log.Println("shutting down connector service...")
+	slog.Info("shutting down dataaccess service...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		log.Fatalf("shutdown error: %v", err)
+		slog.Error("shutdown error", "error", err)
+		os.Exit(1)
 	}
 
-	log.Println("connector service stopped")
+	slog.Info("dataaccess service stopped")
 }
 
 func corsMiddleware(next http.Handler) http.Handler {

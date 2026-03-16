@@ -7,12 +7,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/noui/platform/auth"
 	crmdb "github.com/noui/platform/crm/db"
 	"github.com/noui/platform/crm/models"
 )
@@ -87,7 +88,7 @@ func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 // --- Contact Handlers ---
 
 func (h *Handler) SearchContacts(w http.ResponseWriter, r *http.Request) {
-	tenantID := tenantFromHeader(r)
+	tenantID := tenantID(r)
 
 	params := models.ContactSearchParams{
 		Query:       r.URL.Query().Get("q"),
@@ -115,7 +116,7 @@ func (h *Handler) CreateContact(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	contact := models.Contact{
 		ContactID:         uuid.New().String(),
-		TenantID:          tenantFromHeader(r),
+		TenantID:          tenantID(r),
 		ContactType:       models.ContactType(req.ContactType),
 		LegacyMemberID:    req.LegacyMemberID,
 		FirstName:         req.FirstName,
@@ -192,7 +193,7 @@ func (h *Handler) UpdateContact(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetContactByLegacyID(w http.ResponseWriter, r *http.Request) {
 	legacyID := r.PathValue("legacyId")
-	tenantID := tenantFromHeader(r)
+	tenantID := tenantID(r)
 
 	contact, err := h.store.GetContactByLegacyID(tenantID, legacyID)
 	if err != nil {
@@ -224,7 +225,7 @@ func (h *Handler) GetContactTimeline(w http.ResponseWriter, r *http.Request) {
 // --- Conversation Handlers ---
 
 func (h *Handler) ListConversations(w http.ResponseWriter, r *http.Request) {
-	tenantID := tenantFromHeader(r)
+	tenantID := tenantID(r)
 	status := r.URL.Query().Get("status")
 	anchorType := r.URL.Query().Get("anchor_type")
 	anchorID := r.URL.Query().Get("anchor_id")
@@ -250,7 +251,7 @@ func (h *Handler) CreateConversation(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	conv := models.Conversation{
 		ConversationID:   uuid.New().String(),
-		TenantID:         tenantFromHeader(r),
+		TenantID:         tenantID(r),
 		AnchorType:       req.AnchorType,
 		AnchorID:         req.AnchorID,
 		TopicCategory:    req.TopicCategory,
@@ -322,7 +323,7 @@ func (h *Handler) UpdateConversation(w http.ResponseWriter, r *http.Request) {
 // --- Interaction Handlers ---
 
 func (h *Handler) ListInteractions(w http.ResponseWriter, r *http.Request) {
-	tenantID := tenantFromHeader(r)
+	tenantID := tenantID(r)
 
 	filter := crmdb.InteractionFilter{
 		ContactID:      r.URL.Query().Get("contact_id"),
@@ -356,7 +357,7 @@ func (h *Handler) CreateInteraction(w http.ResponseWriter, r *http.Request) {
 
 	interaction := models.Interaction{
 		InteractionID:   uuid.New().String(),
-		TenantID:        tenantFromHeader(r),
+		TenantID:        tenantID(r),
 		ConversationID:  req.ConversationID,
 		ContactID:       req.ContactID,
 		OrgID:           req.OrgID,
@@ -446,7 +447,7 @@ func (h *Handler) CreateNote(w http.ResponseWriter, r *http.Request) {
 // --- Commitment Handlers ---
 
 func (h *Handler) ListCommitments(w http.ResponseWriter, r *http.Request) {
-	tenantID := tenantFromHeader(r)
+	tenantID := tenantID(r)
 	status := r.URL.Query().Get("status")
 	ownerAgent := r.URL.Query().Get("owner_agent")
 	limit := intParam(r, "limit", 25)
@@ -476,7 +477,7 @@ func (h *Handler) CreateCommitment(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	commitment := models.Commitment{
 		CommitmentID:    uuid.New().String(),
-		TenantID:        tenantFromHeader(r),
+		TenantID:        tenantID(r),
 		InteractionID:   req.InteractionID,
 		ContactID:       req.ContactID,
 		ConversationID:  req.ConversationID,
@@ -534,7 +535,7 @@ func (h *Handler) UpdateCommitment(w http.ResponseWriter, r *http.Request) {
 // --- Outreach Handlers ---
 
 func (h *Handler) ListOutreach(w http.ResponseWriter, r *http.Request) {
-	tenantID := tenantFromHeader(r)
+	tenantID := tenantID(r)
 	status := r.URL.Query().Get("status")
 	assignedAgent := r.URL.Query().Get("assigned_agent")
 	limit := intParam(r, "limit", 25)
@@ -564,7 +565,7 @@ func (h *Handler) CreateOutreach(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	outreach := models.Outreach{
 		OutreachID:    uuid.New().String(),
-		TenantID:      tenantFromHeader(r),
+		TenantID:      tenantID(r),
 		ContactID:     req.ContactID,
 		OrgID:         req.OrgID,
 		TriggerType:   req.TriggerType,
@@ -627,7 +628,7 @@ func (h *Handler) UpdateOutreach(w http.ResponseWriter, r *http.Request) {
 // --- Organization Handlers ---
 
 func (h *Handler) ListOrganizations(w http.ResponseWriter, r *http.Request) {
-	tenantID := tenantFromHeader(r)
+	tenantID := tenantID(r)
 	orgType := r.URL.Query().Get("type")
 	limit := intParam(r, "limit", 25)
 	offset := intParam(r, "offset", 0)
@@ -651,7 +652,7 @@ func (h *Handler) CreateOrganization(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	org := models.Organization{
 		OrgID:            uuid.New().String(),
-		TenantID:         tenantFromHeader(r),
+		TenantID:         tenantID(r),
 		OrgType:          req.OrgType,
 		OrgName:          req.OrgName,
 		OrgShortName:     req.OrgShortName,
@@ -691,7 +692,7 @@ func (h *Handler) GetOrganization(w http.ResponseWriter, r *http.Request) {
 // --- Taxonomy Handler ---
 
 func (h *Handler) GetTaxonomy(w http.ResponseWriter, r *http.Request) {
-	tenantID := tenantFromHeader(r)
+	tenantID := tenantID(r)
 	categories, err := h.store.GetTaxonomyTree(tenantID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
@@ -704,7 +705,7 @@ func (h *Handler) GetTaxonomy(w http.ResponseWriter, r *http.Request) {
 // --- Audit Handler ---
 
 func (h *Handler) GetAuditLog(w http.ResponseWriter, r *http.Request) {
-	tenantID := tenantFromHeader(r)
+	tenantID := tenantID(r)
 	entityType := r.URL.Query().Get("entity_type")
 	entityID := r.URL.Query().Get("entity_id")
 	limit := intParam(r, "limit", 50)
@@ -722,12 +723,11 @@ func (h *Handler) GetAuditLog(w http.ResponseWriter, r *http.Request) {
 
 const defaultTenantID = "00000000-0000-0000-0000-000000000001"
 
-func tenantFromHeader(r *http.Request) string {
-	tid := r.Header.Get("X-Tenant-ID")
-	if tid == "" {
-		return defaultTenantID
+func tenantID(r *http.Request) string {
+	if tid := auth.TenantID(r.Context()); tid != "" {
+		return tid
 	}
-	return tid
+	return defaultTenantID
 }
 
 func decodeJSON(r *http.Request, v interface{}) error {
@@ -742,7 +742,7 @@ func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(v); err != nil {
-		log.Printf("error encoding JSON response: %v", err)
+		slog.Error("error encoding JSON response", "error", err)
 	}
 }
 

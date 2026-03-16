@@ -4,7 +4,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"time"
 
@@ -58,14 +58,14 @@ func Connect(cfg Config) (*sql.DB, error) {
 	for attempt := 1; attempt <= 3; attempt++ {
 		db, err = sql.Open("postgres", connStr)
 		if err != nil {
-			log.Printf("attempt %d: failed to open db: %v", attempt, err)
+			slog.Warn("database connection failed, retrying", "attempt", attempt, "error", err)
 			time.Sleep(2 * time.Second)
 			continue
 		}
 
 		err = db.Ping()
 		if err != nil {
-			log.Printf("attempt %d: failed to ping db: %v", attempt, err)
+			slog.Warn("database connection failed, retrying", "attempt", attempt, "error", err)
 			db.Close()
 			time.Sleep(2 * time.Second)
 			continue
@@ -75,7 +75,7 @@ func Connect(cfg Config) (*sql.DB, error) {
 		db.SetMaxIdleConns(5)
 		db.SetConnMaxLifetime(5 * time.Minute)
 
-		log.Printf("connected to database %s on %s:%s", cfg.DBName, cfg.Host, cfg.Port)
+		slog.Info("database connected", "host", cfg.Host, "dbname", cfg.DBName)
 		return db, nil
 	}
 

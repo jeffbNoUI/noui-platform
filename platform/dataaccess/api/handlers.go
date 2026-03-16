@@ -5,7 +5,7 @@ package api
 import (
 	"database/sql"
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -82,7 +82,7 @@ func (h *Handler) SearchMembers(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := h.DB.Query(query, likePattern, q, limit)
 	if err != nil {
-		log.Printf("error searching members: %v", err)
+		slog.Error("error searching members", "error", err)
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Search query failed")
 		return
 	}
@@ -92,7 +92,7 @@ func (h *Handler) SearchMembers(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var m models.MemberSearchResult
 		if err := rows.Scan(&m.MemberID, &m.FirstName, &m.LastName, &m.Tier, &m.Dept, &m.Status); err != nil {
-			log.Printf("error scanning search result: %v", err)
+			slog.Error("error scanning search result", "error", err)
 			continue
 		}
 		results = append(results, m)
@@ -137,7 +137,7 @@ func (h *Handler) GetMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		log.Printf("error querying member %d: %v", memberID, err)
+		slog.Error("error querying member", "memberID", memberID, "error", err)
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
 		return
 	}
@@ -178,7 +178,7 @@ func (h *Handler) GetEmploymentHistory(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := h.DB.Query(query, memberID)
 	if err != nil {
-		log.Printf("error querying employment history for member %d: %v", memberID, err)
+		slog.Error("error querying employment history", "memberID", memberID, "error", err)
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
 		return
 	}
@@ -192,7 +192,7 @@ func (h *Handler) GetEmploymentHistory(w http.ResponseWriter, r *http.Request) {
 
 		if err := rows.Scan(&e.EventID, &e.MemberID, &e.EventType, &e.EventDate,
 			&deptCD, &posCD, &salary, &sepCD, &sepRsn); err != nil {
-			log.Printf("error scanning employment row: %v", err)
+			slog.Error("error scanning employment row", "error", err)
 			continue
 		}
 
@@ -239,7 +239,7 @@ func (h *Handler) GetSalaryHistory(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := h.DB.Query(query, args...)
 	if err != nil {
-		log.Printf("error querying salary for member %d: %v", memberID, err)
+		slog.Error("error querying salary", "memberID", memberID, "error", err)
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
 		return
 	}
@@ -253,7 +253,7 @@ func (h *Handler) GetSalaryHistory(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(&s.SalaryID, &s.MemberID, &s.PayPeriodEnd, &s.PayPeriodNum,
 			&s.AnnualSalary, &s.GrossPay, &pensionablePay, &s.OTPay,
 			&s.LeavePayoutAmt, &s.FurloughDeduct, &s.FYYear); err != nil {
-			log.Printf("error scanning salary row: %v", err)
+			slog.Error("error scanning salary row", "error", err)
 			continue
 		}
 
@@ -287,7 +287,7 @@ func (h *Handler) GetAMS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		log.Printf("error querying member tier: %v", err)
+		slog.Error("error querying member tier", "error", err)
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
 		return
 	}
@@ -310,7 +310,7 @@ func (h *Handler) GetAMS(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := h.DB.Query(query, memberID)
 	if err != nil {
-		log.Printf("error querying salary for AMS: %v", err)
+		slog.Error("error querying salary for AMS", "error", err)
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
 		return
 	}
@@ -320,7 +320,7 @@ func (h *Handler) GetAMS(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var mt models.MonthlyTotal
 		if err := rows.Scan(&mt.YearMonth, &mt.PensionablePay, &mt.LeavePayoutAmt); err != nil {
-			log.Printf("error scanning monthly total: %v", err)
+			slog.Error("error scanning monthly total", "error", err)
 			continue
 		}
 
@@ -427,7 +427,7 @@ func (h *Handler) GetBeneficiaries(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := h.DB.Query(query, memberID)
 	if err != nil {
-		log.Printf("error querying beneficiaries: %v", err)
+		slog.Error("error querying beneficiaries", "error", err)
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
 		return
 	}
@@ -441,7 +441,7 @@ func (h *Handler) GetBeneficiaries(w http.ResponseWriter, r *http.Request) {
 
 		if err := rows.Scan(&b.BeneID, &b.MemberID, &b.BeneType, &b.FirstName,
 			&b.LastName, &rel, &dob, &b.AllocPct, &b.EffDate, &endDt); err != nil {
-			log.Printf("error scanning beneficiary row: %v", err)
+			slog.Error("error scanning beneficiary row", "error", err)
 			continue
 		}
 
@@ -476,7 +476,7 @@ func (h *Handler) GetDRO(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := h.DB.Query(query, memberID)
 	if err != nil {
-		log.Printf("error querying DRO: %v", err)
+		slog.Error("error querying DRO", "error", err)
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
 		return
 	}
@@ -491,7 +491,7 @@ func (h *Handler) GetDRO(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(&d.DROID, &d.MemberID, &courtOrderNum, &marriageDt,
 			&divorceDt, &d.AltPayeeFirst, &d.AltPayeeLast, &altPayeeDOB,
 			&d.DivisionMethod, &d.DivisionValue, &d.Status); err != nil {
-			log.Printf("error scanning DRO row: %v", err)
+			slog.Error("error scanning DRO row", "error", err)
 			continue
 		}
 
@@ -534,7 +534,7 @@ func (h *Handler) GetContributions(w http.ResponseWriter, r *http.Request) {
 		&summary.TotalEE, &summary.TotalER, &summary.TotalInterest, &summary.PeriodCount,
 	)
 	if err != nil {
-		log.Printf("error querying contributions: %v", err)
+		slog.Error("error querying contributions", "error", err)
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
 		return
 	}
@@ -569,7 +569,7 @@ func (h *Handler) GetServiceCredit(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := h.DB.Query(query, memberID)
 	if err != nil {
-		log.Printf("error querying service credit: %v", err)
+		slog.Error("error querying service credit", "error", err)
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
 		return
 	}
@@ -585,7 +585,7 @@ func (h *Handler) GetServiceCredit(w http.ResponseWriter, r *http.Request) {
 
 		if err := rows.Scan(&sc.SvcCreditID, &sc.MemberID, &sc.CreditType,
 			&beginDt, &endDt, &sc.YearsCredited, &cost, &purchaseDt, &sc.Status); err != nil {
-			log.Printf("error scanning service credit row: %v", err)
+			slog.Error("error scanning service credit row", "error", err)
 			continue
 		}
 
@@ -657,7 +657,7 @@ func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(v); err != nil {
-		log.Printf("error encoding JSON response: %v", err)
+		slog.Error("error encoding JSON response", "error", err)
 	}
 }
 

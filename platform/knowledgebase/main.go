@@ -5,25 +5,29 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/noui/platform/auth"
 	"github.com/noui/platform/knowledgebase/api"
 	"github.com/noui/platform/knowledgebase/db"
+	"github.com/noui/platform/logging"
 )
 
 func main() {
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	log.Println("starting Knowledge Base service v0.1.0")
+	logger := logging.Setup("knowledgebase", nil)
+	slog.SetDefault(logger)
+	slog.Info("starting Knowledge Base service v0.1.0")
 
 	cfg := db.ConfigFromEnv()
 	database, err := db.Connect(cfg)
 	if err != nil {
-		log.Fatalf("failed to connect to database: %v", err)
+		slog.Error("failed to connect to database", "error", err)
+		os.Exit(1)
 	}
 	defer database.Close()
 
@@ -31,7 +35,13 @@ func main() {
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
 
-	wrappedMux := corsMiddleware(mux)
+	authExtractor := func(r *http.Request) []slog.Attr {
+		return []slog.Attr{
+			slog.String("tenant_id", auth.TenantID(r.Context())),
+			slog.String("user_role", auth.UserRole(r.Context())),
+		}
+	}
+	wrappedMux := corsMiddleware(auth.Middleware(logging.RequestLogger(logger, authExtractor)(mux)))
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -50,23 +60,25 @@ func main() {
 	signal.Notify(done, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
-		log.Printf("Knowledge Base service listening on :%s", port)
+		slog.Info("Knowledge Base service listening", "port", port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("server error: %v", err)
+			slog.Error("server error", "error", err)
+			os.Exit(1)
 		}
 	}()
 
 	<-done
-	log.Println("shutting down Knowledge Base service...")
+	slog.Info("shutting down Knowledge Base service...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		log.Fatalf("shutdown error: %v", err)
+		slog.Error("shutdown error", "error", err)
+		os.Exit(1)
 	}
 
-	log.Println("Knowledge Base service stopped")
+	slog.Info("Knowledge Base service stopped")
 }
 
 func corsMiddleware(next http.Handler) http.Handler {
