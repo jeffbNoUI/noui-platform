@@ -463,46 +463,13 @@ func TestGetEmploymentHistory_Empty(t *testing.T) {
 	h, mock := newMockHandler(t)
 
 	rows := sqlmock.NewRows([]string{
+		"total_count",
 		"EMPL_HIST_ID", "MEMBER_ID", "EVENT_TYPE", "EVENT_DT",
 		"DEPT_CD", "POS_CD", "SALARY_ANNUAL", "SEPARATION_CD", "SEPARATION_RSN",
 	})
 
-	mock.ExpectQuery("SELECT EMPL_HIST_ID").
-		WithArgs(10001).
-		WillReturnRows(rows)
-
-	w := serveWithPathValue(h, "GET", "/api/v1/members/10001/employment")
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
-	}
-
-	// Empty result still returns 200 with null data (no events)
-	var body map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &body)
-	if body["data"] == nil {
-		// null data is acceptable for empty result
-	}
-}
-
-func TestGetEmploymentHistory_WithRecords(t *testing.T) {
-	h, mock := newMockHandler(t)
-
-	eventDate := time.Date(1998, 3, 2, 0, 0, 0, 0, time.UTC)
-	rows := sqlmock.NewRows([]string{
-		"EMPL_HIST_ID", "MEMBER_ID", "EVENT_TYPE", "EVENT_DT",
-		"DEPT_CD", "POS_CD", "SALARY_ANNUAL", "SEPARATION_CD", "SEPARATION_RSN",
-	}).AddRow(
-		1, 10001, "HIRE", eventDate,
-		sql.NullString{String: "FIN", Valid: true},
-		sql.NullString{String: "ACCT", Valid: true},
-		sql.NullFloat64{Float64: 45000.0, Valid: true},
-		sql.NullString{Valid: false},
-		sql.NullString{Valid: false},
-	)
-
-	mock.ExpectQuery("SELECT EMPL_HIST_ID").
-		WithArgs(10001).
+	mock.ExpectQuery("SELECT COUNT").
+		WithArgs(10001, 100, 0).
 		WillReturnRows(rows)
 
 	w := serveWithPathValue(h, "GET", "/api/v1/members/10001/employment")
@@ -512,16 +479,59 @@ func TestGetEmploymentHistory_WithRecords(t *testing.T) {
 	}
 
 	var body struct {
-		Data []models.EmploymentEvent `json:"data"`
+		Data models.PaginatedData `json:"data"`
+	}
+	json.Unmarshal(w.Body.Bytes(), &body)
+	if body.Data.Total != 0 {
+		t.Errorf("total = %d, want 0", body.Data.Total)
+	}
+}
+
+func TestGetEmploymentHistory_WithRecords(t *testing.T) {
+	h, mock := newMockHandler(t)
+
+	eventDate := time.Date(1998, 3, 2, 0, 0, 0, 0, time.UTC)
+	rows := sqlmock.NewRows([]string{
+		"total_count",
+		"EMPL_HIST_ID", "MEMBER_ID", "EVENT_TYPE", "EVENT_DT",
+		"DEPT_CD", "POS_CD", "SALARY_ANNUAL", "SEPARATION_CD", "SEPARATION_RSN",
+	}).AddRow(
+		1,
+		1, 10001, "HIRE", eventDate,
+		sql.NullString{String: "FIN", Valid: true},
+		sql.NullString{String: "ACCT", Valid: true},
+		sql.NullFloat64{Float64: 45000.0, Valid: true},
+		sql.NullString{Valid: false},
+		sql.NullString{Valid: false},
+	)
+
+	mock.ExpectQuery("SELECT COUNT").
+		WithArgs(10001, 100, 0).
+		WillReturnRows(rows)
+
+	w := serveWithPathValue(h, "GET", "/api/v1/members/10001/employment")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+
+	var body struct {
+		Data struct {
+			Items []models.EmploymentEvent `json:"items"`
+			Total int                      `json:"total"`
+		} `json:"data"`
 	}
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
 		t.Fatalf("body parse error: %v", err)
 	}
-	if len(body.Data) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(body.Data))
+	if len(body.Data.Items) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(body.Data.Items))
 	}
-	if body.Data[0].EventType != "HIRE" {
-		t.Errorf("EventType = %q, want HIRE", body.Data[0].EventType)
+	if body.Data.Items[0].EventType != "HIRE" {
+		t.Errorf("EventType = %q, want HIRE", body.Data.Items[0].EventType)
+	}
+	if body.Data.Total != 1 {
+		t.Errorf("total = %d, want 1", body.Data.Total)
 	}
 }
 
@@ -541,17 +551,19 @@ func TestGetSalaryHistory_WithRecords(t *testing.T) {
 
 	ppEnd := time.Date(2025, 1, 31, 0, 0, 0, 0, time.UTC)
 	rows := sqlmock.NewRows([]string{
+		"total_count",
 		"SALARY_ID", "MEMBER_ID", "PAY_PERIOD_END", "PAY_PERIOD_NUM",
 		"ANNUAL_SALARY", "GROSS_PAY", "PENSIONABLE_PAY", "OT_PAY",
 		"LEAVE_PAYOUT_AMT", "FURLOUGH_DEDUCT", "FY_YEAR",
 	}).AddRow(
+		1,
 		1, 10001, ppEnd, 1,
 		85000.0, 3541.67, sql.NullFloat64{Float64: 3541.67, Valid: true},
 		0.0, 0.0, 0.0, 2025,
 	)
 
-	mock.ExpectQuery("SELECT SALARY_ID").
-		WithArgs(10001).
+	mock.ExpectQuery("SELECT COUNT").
+		WithArgs(10001, 100, 0).
 		WillReturnRows(rows)
 
 	w := serveWithPathValue(h, "GET", "/api/v1/members/10001/salary")
@@ -561,16 +573,19 @@ func TestGetSalaryHistory_WithRecords(t *testing.T) {
 	}
 
 	var body struct {
-		Data []models.SalaryRecord `json:"data"`
+		Data struct {
+			Items []models.SalaryRecord `json:"items"`
+			Total int                   `json:"total"`
+		} `json:"data"`
 	}
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
 		t.Fatalf("body parse error: %v", err)
 	}
-	if len(body.Data) != 1 {
-		t.Fatalf("expected 1 salary record, got %d", len(body.Data))
+	if len(body.Data.Items) != 1 {
+		t.Fatalf("expected 1 salary record, got %d", len(body.Data.Items))
 	}
-	if body.Data[0].AnnualSalary != 85000.0 {
-		t.Errorf("AnnualSalary = %f, want 85000.0", body.Data[0].AnnualSalary)
+	if body.Data.Items[0].AnnualSalary != 85000.0 {
+		t.Errorf("AnnualSalary = %f, want 85000.0", body.Data.Items[0].AnnualSalary)
 	}
 }
 
@@ -832,9 +847,11 @@ func TestGetBeneficiaries_WithRecords(t *testing.T) {
 
 	effDate := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
 	rows := sqlmock.NewRows([]string{
+		"total_count",
 		"BENE_ID", "MEMBER_ID", "BENE_TYPE", "FIRST_NAME", "LAST_NAME",
 		"RELATIONSHIP", "DOB", "ALLOC_PCT", "EFF_DT", "END_DT",
 	}).AddRow(
+		1,
 		1, 10001, "PRIMARY", "Maria", "Martinez",
 		sql.NullString{String: "SPOUSE", Valid: true},
 		sql.NullTime{Time: time.Date(1970, 5, 10, 0, 0, 0, 0, time.UTC), Valid: true},
@@ -842,8 +859,8 @@ func TestGetBeneficiaries_WithRecords(t *testing.T) {
 		sql.NullTime{Valid: false},
 	)
 
-	mock.ExpectQuery("SELECT BENE_ID").
-		WithArgs(10001).
+	mock.ExpectQuery("SELECT COUNT").
+		WithArgs(10001, 100, 0).
 		WillReturnRows(rows)
 
 	w := serveWithPathValue(h, "GET", "/api/v1/members/10001/beneficiaries")
@@ -853,19 +870,22 @@ func TestGetBeneficiaries_WithRecords(t *testing.T) {
 	}
 
 	var body struct {
-		Data []models.Beneficiary `json:"data"`
+		Data struct {
+			Items []models.Beneficiary `json:"items"`
+			Total int                  `json:"total"`
+		} `json:"data"`
 	}
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
 		t.Fatalf("body parse error: %v", err)
 	}
-	if len(body.Data) != 1 {
-		t.Fatalf("expected 1 beneficiary, got %d", len(body.Data))
+	if len(body.Data.Items) != 1 {
+		t.Fatalf("expected 1 beneficiary, got %d", len(body.Data.Items))
 	}
-	if body.Data[0].BeneType != "PRIMARY" {
-		t.Errorf("BeneType = %q, want PRIMARY", body.Data[0].BeneType)
+	if body.Data.Items[0].BeneType != "PRIMARY" {
+		t.Errorf("BeneType = %q, want PRIMARY", body.Data.Items[0].BeneType)
 	}
-	if body.Data[0].AllocPct != 100.0 {
-		t.Errorf("AllocPct = %f, want 100.0", body.Data[0].AllocPct)
+	if body.Data.Items[0].AllocPct != 100.0 {
+		t.Errorf("AllocPct = %f, want 100.0", body.Data.Items[0].AllocPct)
 	}
 }
 
@@ -884,10 +904,12 @@ func TestGetDRO_WithRecords(t *testing.T) {
 	h, mock := newMockHandler(t)
 
 	rows := sqlmock.NewRows([]string{
+		"total_count",
 		"DRO_ID", "MEMBER_ID", "COURT_ORDER_NUM", "MARRIAGE_DT", "DIVORCE_DT",
 		"ALT_PAYEE_FIRST", "ALT_PAYEE_LAST", "ALT_PAYEE_DOB",
 		"DIVISION_METHOD", "DIVISION_VALUE", "STATUS",
 	}).AddRow(
+		1,
 		1, 10001,
 		sql.NullString{String: "DRO-2020-001", Valid: true},
 		sql.NullTime{Time: time.Date(1995, 6, 15, 0, 0, 0, 0, time.UTC), Valid: true},
@@ -897,8 +919,8 @@ func TestGetDRO_WithRecords(t *testing.T) {
 		"TIME_RULE", 0.45, "APPROVED",
 	)
 
-	mock.ExpectQuery("SELECT DRO_ID").
-		WithArgs(10001).
+	mock.ExpectQuery("SELECT COUNT").
+		WithArgs(10001, 50, 0).
 		WillReturnRows(rows)
 
 	w := serveWithPathValue(h, "GET", "/api/v1/members/10001/dro")
@@ -908,19 +930,22 @@ func TestGetDRO_WithRecords(t *testing.T) {
 	}
 
 	var body struct {
-		Data []models.DRORecord `json:"data"`
+		Data struct {
+			Items []models.DRORecord `json:"items"`
+			Total int                `json:"total"`
+		} `json:"data"`
 	}
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
 		t.Fatalf("body parse error: %v", err)
 	}
-	if len(body.Data) != 1 {
-		t.Fatalf("expected 1 DRO, got %d", len(body.Data))
+	if len(body.Data.Items) != 1 {
+		t.Fatalf("expected 1 DRO, got %d", len(body.Data.Items))
 	}
-	if body.Data[0].Status != "APPROVED" {
-		t.Errorf("Status = %q, want APPROVED", body.Data[0].Status)
+	if body.Data.Items[0].Status != "APPROVED" {
+		t.Errorf("Status = %q, want APPROVED", body.Data.Items[0].Status)
 	}
-	if body.Data[0].DivisionMethod != "TIME_RULE" {
-		t.Errorf("DivisionMethod = %q, want TIME_RULE", body.Data[0].DivisionMethod)
+	if body.Data.Items[0].DivisionMethod != "TIME_RULE" {
+		t.Errorf("DivisionMethod = %q, want TIME_RULE", body.Data.Items[0].DivisionMethod)
 	}
 }
 
@@ -993,17 +1018,19 @@ func TestGetServiceCredit_EarnedOnly(t *testing.T) {
 	end := time.Date(2025, 12, 31, 0, 0, 0, 0, time.UTC)
 
 	rows := sqlmock.NewRows([]string{
+		"total_count",
 		"SVC_CREDIT_ID", "MEMBER_ID", "CREDIT_TYPE", "BEGIN_DT", "END_DT",
 		"YEARS_CREDITED", "COST", "PURCHASE_DT", "STATUS",
 	}).AddRow(
+		1,
 		1, 10001, "EARNED",
 		sql.NullTime{Time: begin, Valid: true},
 		sql.NullTime{Time: end, Valid: true},
 		27.0, sql.NullFloat64{Valid: false}, sql.NullTime{Valid: false}, "ACTIVE",
 	)
 
-	mock.ExpectQuery("SELECT SVC_CREDIT_ID").
-		WithArgs(10001).
+	mock.ExpectQuery("SELECT COUNT").
+		WithArgs(10001, 100, 0).
 		WillReturnRows(rows)
 
 	w := serveWithPathValue(h, "GET", "/api/v1/members/10001/service-credit")
@@ -1047,16 +1074,19 @@ func TestGetServiceCredit_EarnedPlusPurchased(t *testing.T) {
 	purchDate := time.Date(2010, 3, 15, 0, 0, 0, 0, time.UTC)
 
 	rows := sqlmock.NewRows([]string{
+		"total_count",
 		"SVC_CREDIT_ID", "MEMBER_ID", "CREDIT_TYPE", "BEGIN_DT", "END_DT",
 		"YEARS_CREDITED", "COST", "PURCHASE_DT", "STATUS",
 	}).AddRow(
 		// Earned credit
+		2,
 		1, 10002, "EARNED",
 		sql.NullTime{Time: earnBegin, Valid: true},
 		sql.NullTime{Time: earnEnd, Valid: true},
 		21.0, sql.NullFloat64{Valid: false}, sql.NullTime{Valid: false}, "ACTIVE",
 	).AddRow(
 		// Purchased credit
+		2,
 		2, 10002, "PURCHASED",
 		sql.NullTime{Time: purchBegin, Valid: true},
 		sql.NullTime{Time: purchEnd, Valid: true},
@@ -1064,8 +1094,8 @@ func TestGetServiceCredit_EarnedPlusPurchased(t *testing.T) {
 		sql.NullTime{Time: purchDate, Valid: true}, "ACTIVE",
 	)
 
-	mock.ExpectQuery("SELECT SVC_CREDIT_ID").
-		WithArgs(10002).
+	mock.ExpectQuery("SELECT COUNT").
+		WithArgs(10002, 100, 0).
 		WillReturnRows(rows)
 
 	w := serveWithPathValue(h, "GET", "/api/v1/members/10002/service-credit")
@@ -1132,29 +1162,34 @@ func TestGetServiceCredit_AllCreditTypes(t *testing.T) {
 	end := time.Date(2025, 12, 31, 0, 0, 0, 0, time.UTC)
 
 	rows := sqlmock.NewRows([]string{
+		"total_count",
 		"SVC_CREDIT_ID", "MEMBER_ID", "CREDIT_TYPE", "BEGIN_DT", "END_DT",
 		"YEARS_CREDITED", "COST", "PURCHASE_DT", "STATUS",
 	}).AddRow(
+		4,
 		1, 10001, "EARNED",
 		sql.NullTime{Time: begin, Valid: true}, sql.NullTime{Time: end, Valid: true},
 		20.0, sql.NullFloat64{Valid: false}, sql.NullTime{Valid: false}, "ACTIVE",
 	).AddRow(
+		4,
 		2, 10001, "PURCHASED",
 		sql.NullTime{Time: begin, Valid: true}, sql.NullTime{Time: end, Valid: true},
 		3.0, sql.NullFloat64{Float64: 12000.0, Valid: true},
 		sql.NullTime{Time: begin, Valid: true}, "ACTIVE",
 	).AddRow(
+		4,
 		3, 10001, "MILITARY",
 		sql.NullTime{Time: begin, Valid: true}, sql.NullTime{Time: end, Valid: true},
 		2.0, sql.NullFloat64{Valid: false}, sql.NullTime{Valid: false}, "ACTIVE",
 	).AddRow(
+		4,
 		4, 10001, "LEAVE",
 		sql.NullTime{Time: begin, Valid: true}, sql.NullTime{Time: end, Valid: true},
 		0.5, sql.NullFloat64{Valid: false}, sql.NullTime{Valid: false}, "ACTIVE",
 	)
 
-	mock.ExpectQuery("SELECT SVC_CREDIT_ID").
-		WithArgs(10001).
+	mock.ExpectQuery("SELECT COUNT").
+		WithArgs(10001, 100, 0).
 		WillReturnRows(rows)
 
 	w := serveWithPathValue(h, "GET", "/api/v1/members/10001/service-credit")

@@ -26,6 +26,14 @@ type APIMeta struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
+// PaginatedData wraps list results with pagination metadata.
+type PaginatedData struct {
+	Items  interface{} `json:"items"`
+	Total  int         `json:"total"`
+	Limit  int         `json:"limit"`
+	Offset int         `json:"offset"`
+}
+
 // HealthResponse is returned by the /healthz endpoint.
 type HealthResponse struct {
 	Status  string `json:"status"`

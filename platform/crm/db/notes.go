@@ -43,7 +43,7 @@ func (s *Store) CreateNote(ctx context.Context, n *models.Note) error {
 	).Scan(&n.CreatedAt, &n.UpdatedAt)
 }
 
-// GetNotesByInteraction retrieves all notes for an interaction.
+// GetNotesByInteraction retrieves notes for an interaction.
 func (s *Store) GetNotesByInteraction(ctx context.Context, interactionID string) ([]models.Note, error) {
 	query := `
 		SELECT
@@ -56,7 +56,8 @@ func (s *Store) GetNotesByInteraction(ctx context.Context, interactionID string)
 			created_at, created_by, updated_at, updated_by
 		FROM crm_note
 		WHERE interaction_id = $1
-		ORDER BY created_at`
+		ORDER BY created_at
+		LIMIT 200`
 
 	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, query, interactionID)
 	if err != nil {

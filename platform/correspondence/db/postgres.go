@@ -48,8 +48,8 @@ func ConfigFromEnv() Config {
 		Password:     envutil.GetEnv("DB_PASSWORD", "derp"),
 		DBName:       envutil.GetEnv("DB_NAME", "derp"),
 		SSLMode:      envutil.GetEnv("DB_SSLMODE", "disable"),
-		MaxOpenConns: envutil.GetEnvInt("DB_MAX_OPEN_CONNS", 8),
-		MaxIdleConns: envutil.GetEnvInt("DB_MAX_IDLE_CONNS", 3),
+		MaxOpenConns: envutil.GetEnvInt("DB_MAX_OPEN_CONNS", 5),
+		MaxIdleConns: envutil.GetEnvInt("DB_MAX_IDLE_CONNS", 2),
 	}
 }
 
