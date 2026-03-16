@@ -6,11 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
-	"strconv"
 	"time"
 
 	_ "github.com/lib/pq"
+
+	"github.com/noui/platform/envutil"
 )
 
 // ErrNotFound is returned when a requested record does not exist.
@@ -41,14 +41,14 @@ type Config struct {
 // ConfigFromEnv creates a Config from environment variables with sensible defaults.
 func ConfigFromEnv() Config {
 	return Config{
-		Host:         getEnv("DB_HOST", "localhost"),
-		Port:         getEnv("DB_PORT", "5432"),
-		User:         getEnv("DB_USER", "derp"),
-		Password:     getEnv("DB_PASSWORD", "derp"),
-		DBName:       getEnv("DB_NAME", "derp"),
-		SSLMode:      getEnv("DB_SSLMODE", "disable"),
-		MaxOpenConns: getEnvInt("DB_MAX_OPEN_CONNS", 12),
-		MaxIdleConns: getEnvInt("DB_MAX_IDLE_CONNS", 5),
+		Host:         envutil.GetEnv("DB_HOST", "localhost"),
+		Port:         envutil.GetEnv("DB_PORT", "5432"),
+		User:         envutil.GetEnv("DB_USER", "derp"),
+		Password:     envutil.GetEnv("DB_PASSWORD", "derp"),
+		DBName:       envutil.GetEnv("DB_NAME", "derp"),
+		SSLMode:      envutil.GetEnv("DB_SSLMODE", "disable"),
+		MaxOpenConns: envutil.GetEnvInt("DB_MAX_OPEN_CONNS", 12),
+		MaxIdleConns: envutil.GetEnvInt("DB_MAX_IDLE_CONNS", 5),
 	}
 }
 
@@ -91,22 +91,4 @@ func Connect(cfg Config) (*sql.DB, error) {
 	}
 
 	return nil, fmt.Errorf("failed to connect after 3 attempts: %w", err)
-}
-
-func getEnv(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return fallback
-}
-
-func getEnvInt(key string, fallback int) int {
-	if v := os.Getenv(key); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			return n
-		}
-		slog.Warn("ignoring invalid integer env var, using default",
-			"key", key, "value", v, "default", fallback)
-	}
-	return fallback
 }

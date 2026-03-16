@@ -8,8 +8,6 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
-	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -17,6 +15,7 @@ import (
 	"golang.org/x/time/rate"
 
 	"github.com/noui/platform/auth"
+	"github.com/noui/platform/envutil"
 )
 
 // Config holds rate limiter configuration.
@@ -33,10 +32,10 @@ type Config struct {
 // Defaults: 60 req/min per IP (1/sec, burst 20), 120 req/min per tenant (2/sec, burst 40).
 func DefaultConfig() Config {
 	return Config{
-		IPRate:          getEnvFloat("RATE_LIMIT_IP_RATE", 1.0),
-		IPBurst:         getEnvInt("RATE_LIMIT_IP_BURST", 20),
-		TenantRate:      getEnvFloat("RATE_LIMIT_TENANT_RATE", 2.0),
-		TenantBurst:     getEnvInt("RATE_LIMIT_TENANT_BURST", 40),
+		IPRate:          envutil.GetEnvFloat("RATE_LIMIT_IP_RATE", 1.0),
+		IPBurst:         envutil.GetEnvInt("RATE_LIMIT_IP_BURST", 20),
+		TenantRate:      envutil.GetEnvFloat("RATE_LIMIT_TENANT_RATE", 2.0),
+		TenantBurst:     envutil.GetEnvInt("RATE_LIMIT_TENANT_BURST", 40),
 		CleanupInterval: 5 * time.Minute,
 		StaleAfter:      10 * time.Minute,
 	}
@@ -190,26 +189,4 @@ func writeTooManyRequests(w http.ResponseWriter, message string) {
 			"message": message,
 		},
 	})
-}
-
-func getEnvInt(key string, fallback int) int {
-	if v := os.Getenv(key); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			return n
-		}
-		slog.Warn("ignoring invalid integer env var, using default",
-			"key", key, "value", v, "default", fallback)
-	}
-	return fallback
-}
-
-func getEnvFloat(key string, fallback float64) float64 {
-	if v := os.Getenv(key); v != "" {
-		if f, err := strconv.ParseFloat(v, 64); err == nil && f > 0 {
-			return f
-		}
-		slog.Warn("ignoring invalid float env var, using default",
-			"key", key, "value", v, "default", fallback)
-	}
-	return fallback
 }

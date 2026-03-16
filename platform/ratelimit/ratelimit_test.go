@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/noui/platform/auth"
+	"github.com/noui/platform/envutil"
 )
 
 // okHandler writes 200 OK — used as the downstream handler in middleware tests.
@@ -303,7 +304,7 @@ func TestDefaultConfig_EnvOverride(t *testing.T) {
 
 func TestGetEnvFloat_Valid(t *testing.T) {
 	t.Setenv("TEST_FLOAT", "3.14")
-	v := getEnvFloat("TEST_FLOAT", 1.0)
+	v := envutil.GetEnvFloat("TEST_FLOAT", 1.0)
 	if v != 3.14 {
 		t.Fatalf("expected 3.14, got %f", v)
 	}
@@ -311,7 +312,7 @@ func TestGetEnvFloat_Valid(t *testing.T) {
 
 func TestGetEnvFloat_Invalid(t *testing.T) {
 	t.Setenv("TEST_FLOAT_BAD", "not-a-number")
-	v := getEnvFloat("TEST_FLOAT_BAD", 1.0)
+	v := envutil.GetEnvFloat("TEST_FLOAT_BAD", 1.0)
 	if v != 1.0 {
 		t.Fatalf("expected fallback 1.0, got %f", v)
 	}
@@ -319,7 +320,7 @@ func TestGetEnvFloat_Invalid(t *testing.T) {
 
 func TestGetEnvFloat_Negative(t *testing.T) {
 	t.Setenv("TEST_FLOAT_NEG", "-5.0")
-	v := getEnvFloat("TEST_FLOAT_NEG", 1.0)
+	v := envutil.GetEnvFloat("TEST_FLOAT_NEG", 1.0)
 	if v != 1.0 {
 		t.Fatalf("expected fallback 1.0 for negative value, got %f", v)
 	}
@@ -327,7 +328,7 @@ func TestGetEnvFloat_Negative(t *testing.T) {
 
 func TestGetEnvInt_Valid(t *testing.T) {
 	t.Setenv("TEST_INT", "42")
-	v := getEnvInt("TEST_INT", 10)
+	v := envutil.GetEnvInt("TEST_INT", 10)
 	if v != 42 {
 		t.Fatalf("expected 42, got %d", v)
 	}
@@ -335,7 +336,7 @@ func TestGetEnvInt_Valid(t *testing.T) {
 
 func TestGetEnvInt_Invalid(t *testing.T) {
 	t.Setenv("TEST_INT_BAD", "abc")
-	v := getEnvInt("TEST_INT_BAD", 10)
+	v := envutil.GetEnvInt("TEST_INT_BAD", 10)
 	if v != 10 {
 		t.Fatalf("expected fallback 10, got %d", v)
 	}
@@ -343,7 +344,7 @@ func TestGetEnvInt_Invalid(t *testing.T) {
 
 func TestGetEnvInt_Negative(t *testing.T) {
 	t.Setenv("TEST_INT_NEG", "-3")
-	v := getEnvInt("TEST_INT_NEG", 10)
+	v := envutil.GetEnvInt("TEST_INT_NEG", 10)
 	if v != 10 {
 		t.Fatalf("expected fallback 10 for negative value, got %d", v)
 	}
