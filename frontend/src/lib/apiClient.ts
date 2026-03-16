@@ -212,7 +212,10 @@ export interface PaginatedResult<T> {
 }
 
 export async function fetchPaginatedAPI<T>(url: string): Promise<PaginatedResult<T>> {
-  const body = await rawRequest(url) as { data?: T[]; pagination?: PaginatedResult<T>['pagination'] };
+  const body = (await rawRequest(url)) as {
+    data?: T[];
+    pagination?: PaginatedResult<T>['pagination'];
+  };
   return {
     items: lowercaseEnums(body.data ?? []) as T[],
     pagination: body.pagination ?? { total: 0, limit: 25, offset: 0, hasMore: false },
