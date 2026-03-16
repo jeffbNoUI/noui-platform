@@ -25,7 +25,13 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function CustomTooltip({ active, payload }: any) {
+function CustomTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: Array<{ payload: { name: string; score: number } }>;
+}) {
   if (!active || !payload?.length) return null;
   const { name, score } = payload[0].payload;
   return (

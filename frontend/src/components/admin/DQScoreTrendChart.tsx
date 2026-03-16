@@ -21,7 +21,15 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function CustomTooltip({ active, payload, label }: any) {
+function CustomTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{ value: number }>;
+  label?: string;
+}) {
   if (!active || !payload?.length) return null;
   return (
     <div
@@ -35,7 +43,7 @@ function CustomTooltip({ active, payload, label }: any) {
         boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
       }}
     >
-      <div style={{ color: C.textTertiary, marginBottom: 2 }}>{formatDate(label)}</div>
+      <div style={{ color: C.textTertiary, marginBottom: 2 }}>{formatDate(label ?? '')}</div>
       <div style={{ color: C.sage, fontWeight: 600 }}>{payload[0].value.toFixed(1)}%</div>
     </div>
   );

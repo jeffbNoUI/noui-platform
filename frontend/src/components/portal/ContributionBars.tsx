@@ -13,7 +13,15 @@ interface Props {
   height?: number;
 }
 
-function CustomTooltip({ active, payload, label }: any) {
+function CustomTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{ dataKey: string; name: string; value: number; color: string }>;
+  label?: string;
+}) {
   if (!active || !payload?.length) return null;
   return (
     <div
@@ -28,7 +36,7 @@ function CustomTooltip({ active, payload, label }: any) {
       }}
     >
       <div style={{ color: C.textTertiary, marginBottom: 4 }}>{label}</div>
-      {payload.map((entry: any) => (
+      {payload.map((entry) => (
         <div key={entry.dataKey} style={{ color: entry.color, fontWeight: 500, fontFamily: MONO }}>
           {entry.name}: ${entry.value.toLocaleString()}
         </div>
