@@ -27,18 +27,27 @@ export interface CaseFlags {
   maritalStatus?: string;
 }
 
+/** Minimal shape of calculation data used by workflow composition */
+interface WorkflowCalculationData {
+  eligibility?: { best_eligible_type?: string };
+  ams?: { leave_payout_included?: boolean };
+  formula?: unknown;
+  reduction?: { applies?: boolean };
+  dro?: { has_dro?: boolean };
+}
+
+/** Minimal shape of data passed to stage composition */
+export interface WorkflowData {
+  member?: { tier_code?: number; marital_status?: string };
+  calculation?: WorkflowCalculationData;
+  employment?: unknown[];
+  serviceCredit?: { summary?: { purchased_years?: number } };
+}
+
 /**
  * Evaluates confidence signal for a stage based on available data.
  */
-function assessConfidence(
-  stageId: string,
-  data: {
-    member?: any;
-    calculation?: any;
-    employment?: any;
-    serviceCredit?: any;
-  },
-): ConfidenceSignal {
+function assessConfidence(stageId: string, data: WorkflowData): ConfidenceSignal {
   const { calculation, employment } = data;
 
   switch (stageId) {
@@ -82,15 +91,7 @@ function assessConfidence(
 /**
  * Core composition function. Builds an ordered stage list based on case flags.
  */
-export function composeStages(
-  flags: CaseFlags,
-  data?: {
-    member?: any;
-    calculation?: any;
-    employment?: any;
-    serviceCredit?: any;
-  },
-): StageDescriptor[] {
+export function composeStages(flags: CaseFlags, data?: WorkflowData): StageDescriptor[] {
   const d = data || {};
   const stages: StageDescriptor[] = [];
 
@@ -195,9 +196,9 @@ export function composeStages(
  * Derive case flags from API data.
  */
 export function deriveCaseFlags(
-  member?: any,
-  calculation?: any,
-  serviceCredit?: any,
+  member?: WorkflowData['member'],
+  calculation?: WorkflowData['calculation'],
+  serviceCredit?: WorkflowData['serviceCredit'],
   caseFlags?: string[],
 ): CaseFlags {
   // When caseFlags are provided (case context), they are authoritative for
