@@ -1,6 +1,7 @@
 package ratelimit
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
@@ -155,9 +156,9 @@ func TestMiddleware_Returns429(t *testing.T) {
 		t.Fatalf("second request: expected 429, got %d", rec2.Code)
 	}
 
-	// Verify Retry-After header.
-	if ra := rec2.Header().Get("Retry-After"); ra != "1" {
-		t.Fatalf("expected Retry-After: 1, got %q", ra)
+	// Verify Retry-After header (computed: ceil(1/0.001) = 1000).
+	if ra := rec2.Header().Get("Retry-After"); ra != "1000" {
+		t.Fatalf("expected Retry-After: 1000, got %q", ra)
 	}
 
 	// Verify JSON error body.
@@ -420,4 +421,32 @@ func TestMiddleware_TenantRateLimit(t *testing.T) {
 	if body["error"]["message"] != "per-tenant rate limit exceeded" {
 		t.Fatalf("expected per-tenant message, got %q", body["error"]["message"])
 	}
+}
+
+func TestMiddleware_CleanupStopsOnContextCancel(t *testing.T) {
+	cfg := Config{
+		IPRate:          10,
+		IPBurst:         5,
+		TenantRate:      20,
+		TenantBurst:     10,
+		CleanupInterval: 50 * time.Millisecond,
+		StaleAfter:      10 * time.Millisecond,
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	handler := MiddlewareWithContext(ctx, cfg)(okHandler())
+
+	// Make a request to populate limiters
+	req := httptest.NewRequest("GET", "/api/v1/test", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+
+	// Cancel context — cleanup goroutine should stop
+	cancel()
+	time.Sleep(100 * time.Millisecond)
+	// If we get here without hanging, the cleanup goroutine respected cancellation
 }

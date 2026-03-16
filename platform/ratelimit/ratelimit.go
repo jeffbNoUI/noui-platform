@@ -4,10 +4,13 @@
 package ratelimit
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
+	"math"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -106,20 +109,24 @@ var bypassPaths = map[string]bool{
 	"/metrics": true,
 }
 
-// Middleware returns HTTP middleware that enforces per-IP and per-tenant rate limits.
-// It reads tenant_id from the request context (set by auth middleware).
-// Returns 429 Too Many Requests with Retry-After header when limit is exceeded.
-func Middleware(cfg Config) func(http.Handler) http.Handler {
+// MiddlewareWithContext is like Middleware but accepts a context for graceful shutdown.
+// When the context is cancelled, the background cleanup goroutine stops.
+func MiddlewareWithContext(ctx context.Context, cfg Config) func(http.Handler) http.Handler {
 	ipLimiter := NewLimiter(cfg.IPRate, cfg.IPBurst)
 	tenantLimiter := NewLimiter(cfg.TenantRate, cfg.TenantBurst)
 
-	// Start background cleanup goroutine.
+	// Background cleanup with context cancellation.
 	go func() {
 		ticker := time.NewTicker(cfg.CleanupInterval)
 		defer ticker.Stop()
-		for range ticker.C {
-			ipLimiter.Cleanup(cfg.StaleAfter)
-			tenantLimiter.Cleanup(cfg.StaleAfter)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				ipLimiter.Cleanup(cfg.StaleAfter)
+				tenantLimiter.Cleanup(cfg.StaleAfter)
+			}
 		}
 	}()
 
@@ -132,31 +139,34 @@ func Middleware(cfg Config) func(http.Handler) http.Handler {
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Bypass rate limiting for health endpoints.
 			if bypassPaths[r.URL.Path] {
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			// Per-IP check.
 			ip := extractIP(r)
 			if !ipLimiter.Allow(ip) {
 				slog.Warn("rate limit exceeded (IP)", "ip", ip, "path", r.URL.Path)
-				writeTooManyRequests(w, "per-IP rate limit exceeded")
+				writeTooManyRequests(w, cfg, "per-IP rate limit exceeded")
 				return
 			}
 
-			// Per-tenant check (tenant_id is in context from auth middleware).
 			tenantID := auth.TenantID(r.Context())
 			if tenantID != "" && !tenantLimiter.Allow(tenantID) {
 				slog.Warn("rate limit exceeded (tenant)", "tenant_id", tenantID, "path", r.URL.Path)
-				writeTooManyRequests(w, "per-tenant rate limit exceeded")
+				writeTooManyRequests(w, cfg, "per-tenant rate limit exceeded")
 				return
 			}
 
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// Middleware returns HTTP middleware with no shutdown control (background cleanup runs forever).
+// Prefer MiddlewareWithContext for production services with graceful shutdown.
+func Middleware(cfg Config) func(http.Handler) http.Handler {
+	return MiddlewareWithContext(context.Background(), cfg)
 }
 
 func extractIP(r *http.Request) string {
@@ -179,9 +189,13 @@ func extractIP(r *http.Request) string {
 	return host
 }
 
-func writeTooManyRequests(w http.ResponseWriter, message string) {
+func writeTooManyRequests(w http.ResponseWriter, cfg Config, message string) {
+	retryAfter := 1
+	if cfg.IPRate > 0 {
+		retryAfter = int(math.Ceil(1.0 / cfg.IPRate))
+	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Retry-After", "1")
+	w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
 	w.WriteHeader(http.StatusTooManyRequests)
 	json.NewEncoder(w).Encode(map[string]map[string]string{
 		"error": {
