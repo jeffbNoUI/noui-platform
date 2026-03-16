@@ -89,8 +89,7 @@ async function sleep(ms: number): Promise<void> {
 }
 
 // rawRequest performs the HTTP request with retry logic and returns the full parsed JSON body.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function rawRequest(url: string, init: RequestInit = {}): Promise<any> {
+async function rawRequest(url: string, init: RequestInit = {}): Promise<unknown> {
   const requestId = generateRequestId();
   const headers = new Headers(init.headers);
   headers.set('X-Request-ID', requestId);
@@ -158,20 +157,18 @@ async function rawRequest(url: string, init: RequestInit = {}): Promise<any> {
 // request unwraps body.data — used for non-paginated endpoints.
 async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
   const body = await rawRequest(url, init);
-  return lowercaseEnums((body as APIResponse<T>).data);
+  return lowercaseEnums((body as APIResponse<T>).data) as T;
 }
 
 // ─── Enum case helpers (outgoing requests) ──────────────────────────────────
 // Reuses the ENUM_FIELDS set declared at the top of this file.
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function uppercaseEnums(obj: any): any {
+function uppercaseEnums(obj: unknown): unknown {
   if (obj === null || obj === undefined) return obj;
   if (Array.isArray(obj)) return obj.map(uppercaseEnums);
   if (typeof obj !== 'object') return obj;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const out: any = {};
-  for (const [key, value] of Object.entries(obj)) {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
     if (ENUM_FIELDS.has(key) && typeof value === 'string') {
       out[key] = value.toUpperCase();
     } else if (typeof value === 'object' && value !== null) {
@@ -183,14 +180,12 @@ function uppercaseEnums(obj: any): any {
   return out;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function lowercaseEnums(obj: any): any {
+function lowercaseEnums(obj: unknown): unknown {
   if (obj === null || obj === undefined) return obj;
   if (Array.isArray(obj)) return obj.map(lowercaseEnums);
   if (typeof obj !== 'object') return obj;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const out: any = {};
-  for (const [key, value] of Object.entries(obj)) {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
     if (ENUM_FIELDS.has(key) && typeof value === 'string') {
       out[key] = value.toLowerCase();
     } else if (typeof value === 'object' && value !== null) {
@@ -217,9 +212,9 @@ export interface PaginatedResult<T> {
 }
 
 export async function fetchPaginatedAPI<T>(url: string): Promise<PaginatedResult<T>> {
-  const body = await rawRequest(url);
+  const body = await rawRequest(url) as { data?: T[]; pagination?: PaginatedResult<T>['pagination'] };
   return {
-    items: lowercaseEnums(body.data ?? []),
+    items: lowercaseEnums(body.data ?? []) as T[],
     pagination: body.pagination ?? { total: 0, limit: 25, offset: 0, hasMore: false },
   };
 }

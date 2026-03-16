@@ -125,6 +125,7 @@ function TopNav({
 
 function DevRoleSwitcher() {
   const { user, switchRole } = useAuth();
+  if (!import.meta.env.DEV) return null;
   const roles: UserRole[] = ['staff', 'admin', 'member', 'employer', 'vendor'];
 
   return (
