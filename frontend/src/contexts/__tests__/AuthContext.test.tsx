@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import type { ViewMode } from '@/types/auth';
@@ -39,35 +39,40 @@ describe('AuthContext', () => {
     spy.mockRestore();
   });
 
-  it('defaults to staff role', () => {
+  it('defaults to staff role', async () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current).not.toBeNull());
     expect(result.current.user.role).toBe('staff');
   });
 
-  it('canAccess returns true for staff-allowed views', () => {
+  it('canAccess returns true for staff-allowed views', async () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current).not.toBeNull());
     expect(result.current.canAccess('staff')).toBe(true);
     expect(result.current.canAccess('workspace')).toBe(true);
     expect(result.current.canAccess('crm')).toBe(true);
     expect(result.current.canAccess('retirement-app')).toBe(true);
   });
 
-  it('canAccess returns false for portal when role is staff', () => {
+  it('canAccess returns false for portal when role is staff', async () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current).not.toBeNull());
     expect(result.current.canAccess('portal')).toBe(false);
   });
 
-  it('canAccess returns false for member-only views when role is employer', () => {
+  it('canAccess returns false for member-only views when role is employer', async () => {
     localStorage.setItem('noui_dev_role', 'employer');
     const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current).not.toBeNull());
     expect(result.current.user.role).toBe('employer');
     expect(result.current.canAccess('portal')).toBe(false);
     expect(result.current.canAccess('staff')).toBe(false);
     expect(result.current.canAccess('employer')).toBe(true);
   });
 
-  it('switchRole changes the user and updates localStorage', () => {
+  it('switchRole changes the user and updates localStorage', async () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current).not.toBeNull());
     expect(result.current.user.role).toBe('staff');
 
     act(() => {
@@ -79,8 +84,9 @@ describe('AuthContext', () => {
     expect(localStorage.getItem('noui_dev_role')).toBe('member');
   });
 
-  it('switchRole to admin grants access to all views', () => {
+  it('switchRole to admin grants access to all views', async () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current).not.toBeNull());
 
     act(() => {
       result.current.switchRole('admin');
@@ -101,9 +107,10 @@ describe('AuthContext', () => {
     }
   });
 
-  it('restores saved role from localStorage', () => {
+  it('restores saved role from localStorage', async () => {
     localStorage.setItem('noui_dev_role', 'vendor');
     const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current).not.toBeNull());
     expect(result.current.user.role).toBe('vendor');
   });
 });

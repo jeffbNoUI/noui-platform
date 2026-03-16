@@ -208,14 +208,13 @@ function AppInner() {
   );
 
   const handleChangeView = useCallback(
-    (mode: string, context?: { memberId?: number }) => {
-      const targetMode = mode as ViewMode;
-      if (!canAccess(targetMode)) {
-        console.warn(`Access denied: role "${user.role}" cannot access "${targetMode}"`);
+    (mode: ViewMode, context?: { memberId?: number }) => {
+      if (!canAccess(mode)) {
+        console.warn(`Access denied: role "${user.role}" cannot access "${mode}"`);
         return; // Stay on current view
       }
       const prev = viewMode;
-      setViewMode(targetMode);
+      setViewMode(mode);
       if (mode === 'crm') {
         setCrmInitialMemberId(context?.memberId);
         setCrmBackView(prev);
@@ -533,7 +532,7 @@ function AgentWorkspace({
   memberIDInput: string;
   setMemberIDInput: (v: string) => void;
   viewMode: ViewMode;
-  setViewMode: (m: string) => void;
+  setViewMode: (m: ViewMode) => void;
   canAccess: (mode: ViewMode) => boolean;
 }) {
   const { data: member, isLoading: memberLoading, error: memberError } = useMember(memberID);

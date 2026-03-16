@@ -1,5 +1,7 @@
+import type { ViewMode } from '@/types/auth';
+
 interface VendorPortalProps {
-  onChangeView?: (mode: string) => void;
+  onChangeView?: (mode: ViewMode) => void;
 }
 
 /**

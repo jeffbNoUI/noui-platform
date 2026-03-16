@@ -19,6 +19,7 @@ import { useProficiency } from '@/hooks/useProficiency';
 import StageCorrespondencePrompt from '@/components/workflow/StageCorrespondencePrompt';
 import CorrespondencePanel from '@/components/workflow/CorrespondencePanel';
 import { getTemplateCategoryForStage } from '@/lib/stageCorrespondenceMapping';
+import type { ViewMode } from '@/types/auth';
 
 // Stage content components
 import IntakeStage from '@/components/workflow/stages/IntakeStage';
@@ -37,7 +38,7 @@ interface RetirementApplicationProps {
   caseFlags?: string[];
   droId?: number;
   onBack: () => void;
-  onChangeView: (mode: string) => void;
+  onChangeView: (mode: ViewMode) => void;
 }
 
 export default function RetirementApplication({
