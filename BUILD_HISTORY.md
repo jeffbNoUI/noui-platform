@@ -1,5 +1,37 @@
 # noui-platform — Build History
 
+## Security Hardening Session 3: Input Validation (2026-03-15)
+
+**Branch:** `claude/bold-albattani`
+**Goal:** Create shared input validation package and wire into all 7 platform services, resolving F-010 (HIGH) from the security review.
+
+**What was built:**
+
+### Shared Validation Package (F-010 — HIGH → RESOLVED)
+
+- **`platform/validation/`** — New Go module (stdlib only, no external deps)
+  - `Errors` collector type with 11 validator methods: Required, MaxLen, MinLen, Enum, EnumOptional, UUID, UUIDOptional, DateYMD, DateYMDOptional, PositiveInt, IntRange
+  - `Pagination()` helper: clamps limit (default 25, configurable max), clamps offset ≥ 0
+  - 14 test functions, 34 subtests — all passing
+
+### Service Wiring (all 7 platform services)
+
+- **casemanagement** — 5 handlers validated: CreateCase (7 checks), UpdateCase (4 enum/length checks), AdvanceStage (3 checks), CreateNote (5 checks), CreateDocument (6 checks). Pagination on ListCases (max 100).
+- **crm** — 10+ handlers validated: CreateContact, UpdateContact, CreateConversation, UpdateConversation, CreateInteraction, CreateNote, CreateCommitment, UpdateCommitment, CreateOutreach, UpdateOutreach, CreateOrganization. Pagination on 7 list endpoints (max 100, audit max 200).
+- **correspondence** — Generate (Required templateId), UpdateCorrespondence (Enum status). Pagination on 2 list endpoints.
+- **dataquality** — UpdateIssue (Enum status, MaxLen). IntRange(days, 1-365) on trend endpoint. Pagination on 3 list endpoints.
+- **knowledgebase** — MaxLen(q, 200) on search. Pagination on 3 list endpoints.
+- **intelligence** — PositiveInt(member_id) on all 5 POST handlers. DateYMD/DateYMDOptional replacing inline date parsing.
+- **dataaccess** — MaxLen(q, 200) on search. Pagination(limit, 0, 50). PositiveInt on member ID.
+
+**New files:** `platform/validation/` (go.mod, validation.go, validation_test.go), `docs/plans/2026-03-15-input-validation.md`
+
+**Modified files:** 14 files across 7 services (go.mod + handlers.go per service)
+
+**Tests:** All 7 platform services build and test clean. Validation package: 34 subtests passing.
+
+---
+
 ## Security Hardening Session 2: Row-Level Security + CORS Lockdown (2026-03-15)
 
 **Branch:** `claude/bold-albattani`

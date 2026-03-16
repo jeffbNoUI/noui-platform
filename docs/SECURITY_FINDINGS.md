@@ -171,11 +171,22 @@ Prevention rules should be enforced via:
 - [x] **Architecture:** `dbcontext.DBMiddleware` is wired at `main.go` level, same as auth. Individual handlers cannot bypass it.
 - [ ] **CI check:** Any new table migration must include `ENABLE ROW LEVEL SECURITY` and a policy. Test: `SELECT tablename FROM pg_tables WHERE NOT rowsecurity AND schemaname = 'public' AND tablename NOT IN (reference_tables)` returns 0 rows.
 
-### F-010: No Input Validation (HIGH) — Session 3
+### F-010: No Input Validation (HIGH) — ~~Session 3~~ RESOLVED
 
-**What:** Minimal input validation. No string length limits, no enum validation, no date range validation.
+**What:** All 7 platform services accepted user input with minimal validation. No string length limits, no enum value checking, no UUID format validation, no pagination bounds. Only basic required-field checks existed (inconsistently) via inline code duplicated across every service.
 
-**Prevention:** Session 3 creates shared validation package.
+**Why:** Each service was built independently during rapid feature development. Validation was done ad-hoc — `intParam()` helpers and `if x == ""` checks were copy-pasted between services with no shared library.
+
+**Impact:** Without length limits, attackers could submit arbitrarily large strings to exhaust memory or storage. Without enum validation, invalid values could corrupt data or cause downstream errors. Without pagination bounds, a single request could dump entire tables. Without UUID format validation, malformed IDs would only fail at the database layer with unhelpful errors.
+
+**Fix:** (Session 3) Created shared `platform/validation/` package with composable validators:
+1. **`platform/validation/`** — New Go module with `Errors` collector type and 11 validator methods: `Required`, `MaxLen`, `MinLen`, `Enum`, `EnumOptional`, `UUID`, `UUIDOptional`, `DateYMD`, `DateYMDOptional`, `PositiveInt`, `IntRange`. Plus `Pagination()` helper that clamps limit/offset to safe bounds. Stdlib only, no external deps. 14 tests (34 subtests).
+2. **All 7 services wired** — Every create/update handler validates input after JSON decode. Every list endpoint clamps pagination (default 25, max 100; dataaccess max 50). Enum fields checked against allowed values. String fields have length caps. Date fields validated as YYYY-MM-DD. Member IDs checked as positive integers.
+
+**Prevention rules:**
+- [x] **Architecture:** `platform/validation/` is a shared package — all services import it. No more ad-hoc inline validation.
+- [x] **CLAUDE.md rule:** "Every POST/PUT handler must validate input using `platform/validation/` before processing. Every list endpoint must use `validation.Pagination()`."
+- [ ] **Code review checklist:** "New API endpoints must have validation for: required fields, string length limits, enum values, date formats, pagination bounds."
 
 ### F-011: No Rate Limiting (MEDIUM) — Session 4
 
@@ -197,4 +208,4 @@ Prevention rules should be enforced via:
 
 ---
 
-*Updated: 2026-03-15 — Session 2: F-004 and F-009 resolved. F-010 through F-013 remain open.*
+*Updated: 2026-03-15 — Session 3: F-010 resolved. F-011 through F-013 remain open.*
