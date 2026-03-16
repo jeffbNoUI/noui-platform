@@ -1,5 +1,65 @@
 # noui-platform — Build History
 
+## Security Hardening Session 4: Pool Sizing, Rate Limiting, Route Guards (2026-03-16)
+
+**Branch:** `claude/hopeful-goldstine`
+**Goal:** Resolve remaining security findings F-012 (HIGH), F-011 (MEDIUM), F-013 (MEDIUM).
+
+**What was built:**
+
+### F-012 (HIGH → RESOLVED): Connection Pool Exceeds PostgreSQL Limits
+- All 7 platform services now have configurable `DB_MAX_OPEN_CONNS` / `DB_MAX_IDLE_CONNS` env vars
+- Right-sized defaults: total 68 max open (was 160), within PostgreSQL's 100-connection limit
+- Per-service defaults: dataaccess=15, crm=12, casemanagement=12, correspondence=8, dataquality=8, knowledgebase=8, intelligence=5
+- Warning logs for invalid env values and MaxIdle > MaxOpen misconfiguration
+- Tests: 7 services × 5 pool config tests = 35 new tests
+
+### F-011 (MEDIUM → RESOLVED): No Rate Limiting
+- New `platform/ratelimit/` shared package using `golang.org/x/time/rate` (new dependency)
+- Per-IP rate limiting (1 req/sec, burst 20) + per-tenant (2 req/sec, burst 40)
+- Configurable via `RATE_LIMIT_IP_RATE`, `RATE_LIMIT_IP_BURST`, `RATE_LIMIT_TENANT_RATE`, `RATE_LIMIT_TENANT_BURST`
+- Wired into all 7 services: CORS → Auth → RateLimit → DBContext → Logging → Handler
+- XFF anti-spoofing: prefers X-Real-IP, uses rightmost XFF entry
+- Background cleanup goroutine evicts stale entries after 10 minutes
+- Tests: 20 tests covering limiter, middleware, IP extraction, config, tenant limiting
+- Returns 429 with `Retry-After` header and JSON error body
+
+### F-013 (MEDIUM → RESOLVED): No Frontend Route Guards
+- New `src/types/auth.ts`: UserRole, ViewMode types, ROLE_ACCESS mapping
+- New `src/contexts/AuthContext.tsx`: AuthProvider, useAuth hook with canAccess/switchRole
+- New `src/lib/devAuth.ts`: Dev-mode HS256 JWT generation matching backend dev secret
+- All navigation paths guarded: handleChangeView, handleOpenCase, handleViewMember
+- TopNav filters tabs by role; command palette filters commands by role
+- API client now sends `Authorization: Bearer` header on all requests
+- DevRoleSwitcher widget for development testing
+- Token race condition fixed (children gated on token readiness)
+- ViewMode type safety improved (string → ViewMode at all boundaries)
+- Tests: 23 new frontend tests (auth types, devAuth, AuthContext)
+
+**Dependencies added:**
+- `golang.org/x/time v0.9.0` — Token bucket rate limiter (quasi-stdlib, Go team maintained)
+
+**Test results:**
+- 8 Go modules: all pass (ratelimit, dataaccess, crm, casemanagement, intelligence, correspondence, dataquality, knowledgebase)
+- Frontend: 113 test files, 817 tests passing, typecheck clean
+- Zero regressions
+
+**Commits (6):**
+```
+aa4d216 [frontend] Fix token race condition and type safety in route guards (F-013)
+b1a6711 [frontend] Add auth context and role-based route guards (F-013)
+f456a1e [platform/ratelimit] Fix XFF spoofing, use json encoder, add tenant test (F-011)
+d237f51 [platform/ratelimit] Add per-IP and per-tenant rate limiting middleware (F-011)
+be721c0 [platform/*] Add warning logs for invalid pool config (F-012)
+2f2c83c [platform/*] Add configurable connection pool sizing (F-012)
+```
+
+**Known tech debt (noted, not blocking):**
+- `getEnvInt` helper duplicated across 7 services (follows existing `getEnv` pattern — consolidate when shared dbutil package is created)
+- Rate limiter cleanup goroutine has no shutdown mechanism (acceptable for single-process, add context.Context for horizontal scaling)
+- `Retry-After` header hardcoded to "1" (could compute from actual rate)
+- DevRoleSwitcher not gated behind `import.meta.env.DEV` (add when Clerk integration lands)
+
 ## Security Hardening Session 3: Input Validation (2026-03-15)
 
 **Branch:** `claude/bold-albattani`
