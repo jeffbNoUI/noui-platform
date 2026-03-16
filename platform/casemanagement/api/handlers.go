@@ -8,13 +8,13 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/noui/platform/auth"
 	cmdb "github.com/noui/platform/casemanagement/db"
 	"github.com/noui/platform/casemanagement/models"
+	"github.com/noui/platform/validation"
 )
 
 // Handler holds dependencies for Case Management API handlers.
@@ -84,14 +84,16 @@ func (h *Handler) ListStages(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListCases(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantID(r)
 
+	limit, offset := validation.Pagination(intParam(r, "limit", 25), intParam(r, "offset", 0), 100)
+
 	filter := models.CaseFilter{
 		Status:     r.URL.Query().Get("status"),
 		Priority:   r.URL.Query().Get("priority"),
 		AssignedTo: r.URL.Query().Get("assigned_to"),
 		Stage:      r.URL.Query().Get("stage"),
 		MemberID:   intParam(r, "member_id", 0),
-		Limit:      intParam(r, "limit", 25),
-		Offset:     intParam(r, "offset", 0),
+		Limit:      limit,
+		Offset:     offset,
 	}
 
 	cases, total, err := h.store.ListCases(r.Context(), tenantID, filter)
@@ -136,8 +138,16 @@ func (h *Handler) CreateCase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.CaseID == "" {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "caseId is required")
+	var errs validation.Errors
+	errs.Required("caseId", req.CaseID)
+	errs.MaxLen("caseId", req.CaseID, 100)
+	errs.PositiveInt("memberId", req.MemberID)
+	errs.MaxLen("caseType", req.CaseType, 50)
+	errs.MaxLen("assignedTo", req.AssignedTo, 200)
+	errs.EnumOptional("priority", req.Priority, []string{"standard", "high", "urgent"})
+	errs.DateYMDOptional("retirementDate", req.RetirementDate)
+	if errs.HasErrors() {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
 		return
 	}
 
@@ -218,6 +228,24 @@ func (h *Handler) UpdateCase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var errs validation.Errors
+	if req.Priority != nil {
+		errs.Enum("priority", *req.Priority, []string{"standard", "high", "urgent"})
+	}
+	if req.SLAStatus != nil {
+		errs.Enum("slaStatus", *req.SLAStatus, []string{"on-track", "at-risk", "overdue"})
+	}
+	if req.Status != nil {
+		errs.Enum("status", *req.Status, []string{"active", "completed", "withdrawn"})
+	}
+	if req.AssignedTo != nil {
+		errs.MaxLen("assignedTo", *req.AssignedTo, 200)
+	}
+	if errs.HasErrors() {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		return
+	}
+
 	if err := h.store.UpdateCase(r.Context(), tenantID, id, req); err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
@@ -242,8 +270,12 @@ func (h *Handler) AdvanceStage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if strings.TrimSpace(req.TransitionedBy) == "" {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "transitionedBy is required")
+	var errs validation.Errors
+	errs.Required("transitionedBy", req.TransitionedBy)
+	errs.MaxLen("transitionedBy", req.TransitionedBy, 200)
+	errs.MaxLen("note", req.Note, 2000)
+	if errs.HasErrors() {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
 		return
 	}
 
@@ -302,12 +334,14 @@ func (h *Handler) CreateNote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if strings.TrimSpace(req.Author) == "" {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "author is required")
-		return
-	}
-	if strings.TrimSpace(req.Content) == "" {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "content is required")
+	var errs validation.Errors
+	errs.Required("author", req.Author)
+	errs.Required("content", req.Content)
+	errs.MaxLen("author", req.Author, 200)
+	errs.MaxLen("content", req.Content, 10000)
+	errs.MaxLen("category", req.Category, 50)
+	if errs.HasErrors() {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
 		return
 	}
 
@@ -366,12 +400,15 @@ func (h *Handler) CreateDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if strings.TrimSpace(req.Filename) == "" {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "filename is required")
-		return
-	}
-	if strings.TrimSpace(req.UploadedBy) == "" {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "uploadedBy is required")
+	var errs validation.Errors
+	errs.Required("filename", req.Filename)
+	errs.Required("uploadedBy", req.UploadedBy)
+	errs.MaxLen("filename", req.Filename, 255)
+	errs.MaxLen("uploadedBy", req.UploadedBy, 200)
+	errs.MaxLen("documentType", req.DocumentType, 50)
+	errs.MaxLen("mimeType", req.MimeType, 100)
+	if errs.HasErrors() {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
 		return
 	}
 
