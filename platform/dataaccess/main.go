@@ -17,6 +17,7 @@ import (
 	"github.com/noui/platform/dataaccess/db"
 	"github.com/noui/platform/dbcontext"
 	"github.com/noui/platform/logging"
+	"github.com/noui/platform/ratelimit"
 )
 
 func main() {
@@ -54,9 +55,10 @@ func main() {
 		}
 	}
 
-	// Middleware order: CORS → Auth → DBContext → Logging → Handler
-	// Auth runs first so claims are available; DBContext sets RLS session vars.
-	wrappedMux := corsMiddleware(auth.Middleware(dbcontext.DBMiddleware(database, claimsExtractor)(logging.RequestLogger(logger, authExtractor)(mux))))
+	// Middleware order: CORS → Auth → RateLimit → DBContext → Logging → Handler
+	// Auth runs first so claims are available; RateLimit uses tenant_id from auth; DBContext sets RLS session vars.
+	rl := ratelimit.Middleware(ratelimit.DefaultConfig())
+	wrappedMux := corsMiddleware(auth.Middleware(rl(dbcontext.DBMiddleware(database, claimsExtractor)(logging.RequestLogger(logger, authExtractor)(mux)))))
 
 	port := os.Getenv("PORT")
 	if port == "" {

@@ -16,6 +16,7 @@ import (
 	"github.com/noui/platform/casemanagement/db"
 	"github.com/noui/platform/dbcontext"
 	"github.com/noui/platform/logging"
+	"github.com/noui/platform/ratelimit"
 )
 
 func main() {
@@ -49,8 +50,9 @@ func main() {
 			slog.String("user_role", auth.UserRole(r.Context())),
 		}
 	}
-	// Middleware order: CORS → Auth → DBContext → Logging → Handler
-	wrappedMux := corsMiddleware(auth.Middleware(dbcontext.DBMiddleware(database, claimsExtractor)(logging.RequestLogger(logger, authExtractor)(mux))))
+	// Middleware order: CORS → Auth → RateLimit → DBContext → Logging → Handler
+	rl := ratelimit.Middleware(ratelimit.DefaultConfig())
+	wrappedMux := corsMiddleware(auth.Middleware(rl(dbcontext.DBMiddleware(database, claimsExtractor)(logging.RequestLogger(logger, authExtractor)(mux)))))
 
 	port := os.Getenv("PORT")
 	if port == "" {
