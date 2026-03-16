@@ -63,7 +63,7 @@ func (h *Handler) ListArticles(w http.ResponseWriter, r *http.Request) {
 	limit := intParam(r, "limit", 25)
 	offset := intParam(r, "offset", 0)
 
-	articles, total, err := h.store.ListArticles(tenantID, stageID, topic, query, limit, offset)
+	articles, total, err := h.store.ListArticles(r.Context(), tenantID, stageID, topic, query, limit, offset)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
@@ -74,7 +74,7 @@ func (h *Handler) ListArticles(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetArticle(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	article, err := h.store.GetArticle(id)
+	article, err := h.store.GetArticle(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			writeError(w, http.StatusNotFound, "NOT_FOUND", "Article not found")
@@ -91,7 +91,7 @@ func (h *Handler) GetStageHelp(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantID(r)
 	stageID := r.PathValue("stageId")
 
-	article, err := h.store.GetStageHelp(tenantID, stageID)
+	article, err := h.store.GetStageHelp(r.Context(), tenantID, stageID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			writeError(w, http.StatusNotFound, "NOT_FOUND", "No help found for stage: "+stageID)
@@ -114,7 +114,7 @@ func (h *Handler) SearchArticles(w http.ResponseWriter, r *http.Request) {
 	limit := intParam(r, "limit", 25)
 	offset := intParam(r, "offset", 0)
 
-	articles, total, err := h.store.SearchArticles(tenantID, query, limit, offset)
+	articles, total, err := h.store.SearchArticles(r.Context(), tenantID, query, limit, offset)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
@@ -130,7 +130,7 @@ func (h *Handler) ListRules(w http.ResponseWriter, r *http.Request) {
 	limit := intParam(r, "limit", 50)
 	offset := intParam(r, "offset", 0)
 
-	rules, total, err := h.store.ListRules(domain, limit, offset)
+	rules, total, err := h.store.ListRules(r.Context(), domain, limit, offset)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
@@ -142,7 +142,7 @@ func (h *Handler) ListRules(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetRule(w http.ResponseWriter, r *http.Request) {
 	ruleID := r.PathValue("ruleId")
 
-	rule, articles, err := h.store.GetRule(ruleID)
+	rule, articles, err := h.store.GetRule(r.Context(), ruleID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			writeError(w, http.StatusNotFound, "NOT_FOUND", "Rule not found: "+ruleID)

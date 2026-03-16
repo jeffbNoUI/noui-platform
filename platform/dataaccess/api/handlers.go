@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/noui/platform/dataaccess/models"
+	"github.com/noui/platform/dbcontext"
 )
 
 // Handler holds dependencies for API handlers.
@@ -80,7 +81,7 @@ func (h *Handler) SearchMembers(w http.ResponseWriter, r *http.Request) {
 		ORDER BY m.last_name, m.first_name
 		LIMIT $3`
 
-	rows, err := h.DB.Query(query, likePattern, q, limit)
+	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, likePattern, q, limit)
 	if err != nil {
 		slog.Error("error searching members", "error", err)
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Search query failed")
@@ -125,7 +126,7 @@ func (h *Handler) GetMember(w http.ResponseWriter, r *http.Request) {
 	var medicareFlag, email, deptName, posTitle sql.NullString
 	var termDate, rehireDate sql.NullTime
 
-	err = h.DB.QueryRow(query, memberID).Scan(
+	err = dbcontext.DB(r.Context(), h.DB).QueryRowContext(r.Context(), query, memberID).Scan(
 		&member.MemberID, &member.FirstName, &member.LastName, &middleName,
 		&member.DOB, &gender, &maritalStat, &member.HireDate, &termDate,
 		&rehireDate, &member.StatusCode, &member.TierCode, &deptCode, &posCode,
@@ -176,7 +177,7 @@ func (h *Handler) GetEmploymentHistory(w http.ResponseWriter, r *http.Request) {
 		WHERE MEMBER_ID = $1
 		ORDER BY EVENT_DT ASC`
 
-	rows, err := h.DB.Query(query, memberID)
+	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, memberID)
 	if err != nil {
 		slog.Error("error querying employment history", "memberID", memberID, "error", err)
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
@@ -237,7 +238,7 @@ func (h *Handler) GetSalaryHistory(w http.ResponseWriter, r *http.Request) {
 
 	query += " ORDER BY PAY_PERIOD_END ASC"
 
-	rows, err := h.DB.Query(query, args...)
+	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, args...)
 	if err != nil {
 		slog.Error("error querying salary", "memberID", memberID, "error", err)
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
@@ -278,7 +279,7 @@ func (h *Handler) GetAMS(w http.ResponseWriter, r *http.Request) {
 	// Get member tier to determine window size
 	var tierCode int
 	var hireDate time.Time
-	err = h.DB.QueryRow(
+	err = dbcontext.DB(r.Context(), h.DB).QueryRowContext(r.Context(),
 		"SELECT TIER_CD, HIRE_DT FROM MEMBER_MASTER WHERE MEMBER_ID = $1", memberID,
 	).Scan(&tierCode, &hireDate)
 	if err == sql.ErrNoRows {
@@ -308,7 +309,7 @@ func (h *Handler) GetAMS(w http.ResponseWriter, r *http.Request) {
 		GROUP BY TO_CHAR(PAY_PERIOD_END, 'YYYY-MM')
 		ORDER BY year_month ASC`
 
-	rows, err := h.DB.Query(query, memberID)
+	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, memberID)
 	if err != nil {
 		slog.Error("error querying salary for AMS", "error", err)
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
@@ -425,7 +426,7 @@ func (h *Handler) GetBeneficiaries(w http.ResponseWriter, r *http.Request) {
 		WHERE MEMBER_ID = $1 AND END_DT IS NULL
 		ORDER BY BENE_TYPE, EFF_DT`
 
-	rows, err := h.DB.Query(query, memberID)
+	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, memberID)
 	if err != nil {
 		slog.Error("error querying beneficiaries", "error", err)
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
@@ -474,7 +475,7 @@ func (h *Handler) GetDRO(w http.ResponseWriter, r *http.Request) {
 		WHERE MEMBER_ID = $1
 		ORDER BY RECEIVED_DT`
 
-	rows, err := h.DB.Query(query, memberID)
+	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, memberID)
 	if err != nil {
 		slog.Error("error querying DRO", "error", err)
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
@@ -530,7 +531,7 @@ func (h *Handler) GetContributions(w http.ResponseWriter, r *http.Request) {
 	var summary models.ContributionSummary
 	summary.MemberID = memberID
 
-	err = h.DB.QueryRow(query, memberID).Scan(
+	err = dbcontext.DB(r.Context(), h.DB).QueryRowContext(r.Context(), query, memberID).Scan(
 		&summary.TotalEE, &summary.TotalER, &summary.TotalInterest, &summary.PeriodCount,
 	)
 	if err != nil {
@@ -547,7 +548,7 @@ func (h *Handler) GetContributions(w http.ResponseWriter, r *http.Request) {
 		ORDER BY PAY_PERIOD_END DESC
 		LIMIT 1`
 
-	h.DB.QueryRow(balQuery, memberID).Scan(&summary.CurrentEEBal, &summary.CurrentERBal)
+	dbcontext.DB(r.Context(), h.DB).QueryRowContext(r.Context(), balQuery, memberID).Scan(&summary.CurrentEEBal, &summary.CurrentERBal)
 
 	writeSuccess(w, summary)
 }
@@ -567,7 +568,7 @@ func (h *Handler) GetServiceCredit(w http.ResponseWriter, r *http.Request) {
 		WHERE MEMBER_ID = $1 AND STATUS = 'ACTIVE'
 		ORDER BY CREDIT_TYPE, BEGIN_DT`
 
-	rows, err := h.DB.Query(query, memberID)
+	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, memberID)
 	if err != nil {
 		slog.Error("error querying service credit", "error", err)
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")

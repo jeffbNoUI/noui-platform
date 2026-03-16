@@ -313,7 +313,7 @@ func (h *Handler) LogSummary(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.store != nil {
-		if err := h.store.InsertSummaryLog(req.MemberID, req.InputHash, req.Input, req.Output); err != nil {
+		if err := h.store.InsertSummaryLog(r.Context(), req.MemberID, req.InputHash, req.Input, req.Output); err != nil {
 			slog.Error("summary-log insert failed", "memberID", req.MemberID, "error", err)
 		}
 	} else {
