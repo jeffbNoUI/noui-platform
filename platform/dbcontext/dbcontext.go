@@ -39,6 +39,29 @@ type Params struct {
 	UserRole string // Optional — defaults to empty string in set_config.
 }
 
+// Querier is the common interface satisfied by *sql.DB, *sql.Conn, and *sql.Tx.
+// Store types should use this instead of *sql.DB so they can transparently
+// route queries through the RLS-scoped connection from DBMiddleware.
+type Querier interface {
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+}
+
+// DB returns the scoped Querier from ctx if available, otherwise falls back to
+// the provided pool. This is the single routing point for all Store queries:
+//
+//	func (s *Store) GetFoo(ctx context.Context, id string) (*Foo, error) {
+//	    row := dbcontext.DB(ctx, s.pool).QueryRowContext(ctx, "SELECT ...", id)
+//	    ...
+//	}
+func DB(ctx context.Context, fallback *sql.DB) Querier {
+	if c := Conn(ctx); c != nil {
+		return c
+	}
+	return fallback
+}
+
 // ClaimsExtractor extracts RLS parameters from an HTTP request. Services wire
 // this to read from JWT context values, keeping dbcontext decoupled from auth.
 type ClaimsExtractor func(r *http.Request) Params
