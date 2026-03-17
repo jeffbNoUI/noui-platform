@@ -16,8 +16,9 @@ import (
 
 // ServiceEntry defines a known service in the registry.
 type ServiceEntry struct {
-	Name string `json:"name"`
-	URL  string `json:"url"`
+	Name       string `json:"name"`
+	URL        string `json:"url"`
+	HealthPath string `json:"health_path,omitempty"`
 }
 
 // AggregateHealth is the combined health response.
@@ -61,7 +62,11 @@ func (a *Aggregator) Check(ctx context.Context) AggregateHealth {
 		go func(entry ServiceEntry) {
 			defer wg.Done()
 
-			url := strings.TrimRight(entry.URL, "/") + "/health/detail"
+			path := "/health/detail"
+			if entry.HealthPath != "" {
+				path = entry.HealthPath
+			}
+			url := strings.TrimRight(entry.URL, "/") + path
 			req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 			if err != nil {
 				mu.Lock()
@@ -80,11 +85,28 @@ func (a *Aggregator) Check(ctx context.Context) AggregateHealth {
 			defer resp.Body.Close()
 
 			var health healthutil.ServiceHealth
-			if err := json.NewDecoder(resp.Body).Decode(&health); err != nil {
-				mu.Lock()
-				result.Unreachable = append(result.Unreachable, entry.Name)
-				mu.Unlock()
-				return
+			if entry.HealthPath != "" {
+				// Connector-style response: simple map[string]string
+				var simple map[string]string
+				if err := json.NewDecoder(resp.Body).Decode(&simple); err != nil {
+					mu.Lock()
+					result.Unreachable = append(result.Unreachable, entry.Name)
+					mu.Unlock()
+					return
+				}
+				health = healthutil.ServiceHealth{
+					Status:  simple["status"],
+					Service: simple["service"],
+					Version: simple["version"],
+					Uptime:  simple["uptime"],
+				}
+			} else {
+				if err := json.NewDecoder(resp.Body).Decode(&health); err != nil {
+					mu.Lock()
+					result.Unreachable = append(result.Unreachable, entry.Name)
+					mu.Unlock()
+					return
+				}
 			}
 
 			mu.Lock()
@@ -132,11 +154,28 @@ func ParseServices(env string) []ServiceEntry {
 			continue
 		}
 		name := strings.TrimSpace(part[:idx])
-		url := strings.TrimSpace(part[idx+1:])
-		if name == "" || url == "" {
+		remainder := strings.TrimSpace(part[idx+1:])
+		if name == "" || remainder == "" {
 			continue
 		}
-		entries = append(entries, ServiceEntry{Name: name, URL: url})
+
+		// Detect optional custom health path after the URL.
+		// Format: "http://host:port:/path" — look for last ":/" that
+		// is NOT part of "://".
+		url := remainder
+		healthPath := ""
+		schemeEnd := strings.Index(remainder, "://")
+		if schemeEnd >= 0 {
+			afterScheme := remainder[schemeEnd+3:]
+			lastColonSlash := strings.LastIndex(afterScheme, ":/")
+			if lastColonSlash >= 0 {
+				splitAt := schemeEnd + 3 + lastColonSlash
+				url = remainder[:splitAt]
+				healthPath = remainder[splitAt+1:] // include the leading "/"
+			}
+		}
+
+		entries = append(entries, ServiceEntry{Name: name, URL: url, HealthPath: healthPath})
 	}
 	return entries
 }

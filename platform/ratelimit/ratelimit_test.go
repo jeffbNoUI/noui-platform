@@ -125,6 +125,47 @@ func TestMiddleware_BypassHealthEndpoints(t *testing.T) {
 	}
 }
 
+func TestMiddleware_BypassHealthDetail(t *testing.T) {
+	// Very low rate so we can exhaust the burst quickly.
+	cfg := Config{
+		IPRate:          0.001,
+		IPBurst:         1,
+		TenantRate:      100,
+		TenantBurst:     100,
+		CleanupInterval: time.Hour,
+		StaleAfter:      time.Hour,
+	}
+	mw := Middleware(cfg)
+	handler := mw(okHandler())
+
+	// First request from this IP — passes (uses the single burst token).
+	req1 := httptest.NewRequest(http.MethodGet, "/api/data", nil)
+	req1.RemoteAddr = "10.0.0.1:12345"
+	rec1 := httptest.NewRecorder()
+	handler.ServeHTTP(rec1, req1)
+	if rec1.Code != http.StatusOK {
+		t.Fatalf("first request: expected 200, got %d", rec1.Code)
+	}
+
+	// Second regular request — should be rate-limited (burst exhausted).
+	req2 := httptest.NewRequest(http.MethodGet, "/api/data", nil)
+	req2.RemoteAddr = "10.0.0.1:12345"
+	rec2 := httptest.NewRecorder()
+	handler.ServeHTTP(rec2, req2)
+	if rec2.Code != http.StatusTooManyRequests {
+		t.Fatalf("second request: expected 429, got %d", rec2.Code)
+	}
+
+	// Request to /health/detail from the SAME IP — should bypass rate limiting.
+	req3 := httptest.NewRequest(http.MethodGet, "/health/detail", nil)
+	req3.RemoteAddr = "10.0.0.1:12345"
+	rec3 := httptest.NewRecorder()
+	handler.ServeHTTP(rec3, req3)
+	if rec3.Code != http.StatusOK {
+		t.Fatalf("/health/detail request: expected 200 (bypass), got %d", rec3.Code)
+	}
+}
+
 func TestMiddleware_Returns429(t *testing.T) {
 	cfg := Config{
 		IPRate:          0.001, // very slow

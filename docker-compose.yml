@@ -44,7 +44,7 @@ services:
       retries: 5
 
   pgbouncer:
-    image: edoburu/pgbouncer:1.22.0
+    image: edoburu/pgbouncer:latest
     ports:
       - "6432:6432"
     volumes:
@@ -61,8 +61,8 @@ services:
 
   dataaccess:
     build:
-      context: ./platform/dataaccess
-      dockerfile: Dockerfile
+      context: ./platform
+      dockerfile: dataaccess/Dockerfile
     ports:
       - "8081:8081"
     environment:
@@ -82,8 +82,8 @@ services:
 
   intelligence:
     build:
-      context: ./platform/intelligence
-      dockerfile: Dockerfile
+      context: ./platform
+      dockerfile: intelligence/Dockerfile
     ports:
       - "8082:8082"
     environment:
@@ -106,8 +106,8 @@ services:
 
   crm:
     build:
-      context: ./platform/crm
-      dockerfile: Dockerfile
+      context: ./platform
+      dockerfile: crm/Dockerfile
     ports:
       - "8084:8083"
     environment:
@@ -127,8 +127,8 @@ services:
 
   knowledgebase:
     build:
-      context: ./platform/knowledgebase
-      dockerfile: Dockerfile
+      context: ./platform
+      dockerfile: knowledgebase/Dockerfile
     ports:
       - "8087:8087"
     environment:
@@ -148,8 +148,8 @@ services:
 
   dataquality:
     build:
-      context: ./platform/dataquality
-      dockerfile: Dockerfile
+      context: ./platform
+      dockerfile: dataquality/Dockerfile
     ports:
       - "8086:8086"
     environment:
@@ -169,8 +169,8 @@ services:
 
   correspondence:
     build:
-      context: ./platform/correspondence
-      dockerfile: Dockerfile
+      context: ./platform
+      dockerfile: correspondence/Dockerfile
     ports:
       - "8085:8085"
     environment:
@@ -190,8 +190,8 @@ services:
 
   casemanagement:
     build:
-      context: ./platform/casemanagement
-      dockerfile: Dockerfile
+      context: ./platform
+      dockerfile: casemanagement/Dockerfile
     ports:
       - "8088:8088"
     environment:
@@ -211,8 +211,8 @@ services:
 
   preferences:
     build:
-      context: ./platform/preferences
-      dockerfile: Dockerfile
+      context: ./platform
+      dockerfile: preferences/Dockerfile
     ports:
       - "8089:8089"
     environment:
@@ -242,13 +242,13 @@ services:
 
   healthagg:
     build:
-      context: ./platform/healthagg
-      dockerfile: Dockerfile
+      context: ./platform
+      dockerfile: healthagg/Dockerfile
     ports:
       - "8091:8091"
     environment:
       PORT: "8091"
-      HEALTH_SERVICES: "dataaccess:http://dataaccess:8081,intelligence:http://intelligence:8082,crm:http://crm:8083,correspondence:http://correspondence:8085,dataquality:http://dataquality:8086,knowledgebase:http://knowledgebase:8087,casemanagement:http://casemanagement:8088,preferences:http://preferences:8089,connector:http://connector:8090"
+      HEALTH_SERVICES: "dataaccess:http://dataaccess:8081,intelligence:http://intelligence:8082,crm:http://crm:8083,correspondence:http://correspondence:8085,dataquality:http://dataquality:8086,knowledgebase:http://knowledgebase:8087,casemanagement:http://casemanagement:8088,preferences:http://preferences:8089,connector:http://connector:8090:/healthz"
       CORS_ORIGIN: "http://localhost:3000"
     depends_on:
       - dataaccess

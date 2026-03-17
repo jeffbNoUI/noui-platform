@@ -103,10 +103,11 @@ func (l *Limiter) Len() int {
 
 // bypassPaths are health/readiness endpoints that skip rate limiting.
 var bypassPaths = map[string]bool{
-	"/healthz": true,
-	"/health":  true,
-	"/ready":   true,
-	"/metrics": true,
+	"/healthz":       true,
+	"/health":        true,
+	"/health/detail": true,
+	"/ready":         true,
+	"/metrics":       true,
 }
 
 // MiddlewareWithContext is like Middleware but accepts a context for graceful shutdown.
