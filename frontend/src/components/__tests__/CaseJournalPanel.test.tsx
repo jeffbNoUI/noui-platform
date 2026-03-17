@@ -130,7 +130,7 @@ function setupFetch(opts?: {
         json: () =>
           Promise.resolve({
             data: contact,
-            meta: { request_id: 'test', timestamp: new Date().toISOString() },
+            meta: { requestId: 'test', timestamp: new Date().toISOString() },
           }),
       });
     }
@@ -141,7 +141,7 @@ function setupFetch(opts?: {
         json: () =>
           Promise.resolve({
             data: contact,
-            meta: { request_id: 'test', timestamp: new Date().toISOString() },
+            meta: { requestId: 'test', timestamp: new Date().toISOString() },
           }),
       });
     }
@@ -152,7 +152,7 @@ function setupFetch(opts?: {
         json: () =>
           Promise.resolve({
             data: timeline,
-            meta: { request_id: 'test', timestamp: new Date().toISOString() },
+            meta: { requestId: 'test', timestamp: new Date().toISOString() },
           }),
       });
     }
@@ -164,7 +164,7 @@ function setupFetch(opts?: {
           Promise.resolve({
             data: conversations,
             pagination: { total: conversations.length, limit: 25, offset: 0, hasMore: false },
-            meta: { request_id: 'test', timestamp: new Date().toISOString() },
+            meta: { requestId: 'test', timestamp: new Date().toISOString() },
           }),
       });
     }
@@ -176,7 +176,7 @@ function setupFetch(opts?: {
           Promise.resolve({
             data: commitments,
             pagination: { total: commitments.length, limit: 25, offset: 0, hasMore: false },
-            meta: { request_id: 'test', timestamp: new Date().toISOString() },
+            meta: { requestId: 'test', timestamp: new Date().toISOString() },
           }),
       });
     }
@@ -187,7 +187,7 @@ function setupFetch(opts?: {
         json: () =>
           Promise.resolve({
             data: correspondence,
-            meta: { request_id: 'test', timestamp: new Date().toISOString() },
+            meta: { requestId: 'test', timestamp: new Date().toISOString() },
           }),
       });
     }
@@ -199,7 +199,7 @@ function setupFetch(opts?: {
           Promise.resolve({
             data: [],
             pagination: { total: 0, limit: 25, offset: 0, hasMore: false },
-            meta: { request_id: 'test', timestamp: new Date().toISOString() },
+            meta: { requestId: 'test', timestamp: new Date().toISOString() },
           }),
       });
     }
@@ -209,7 +209,7 @@ function setupFetch(opts?: {
       json: () =>
         Promise.resolve({
           data: null,
-          meta: { request_id: 'test', timestamp: new Date().toISOString() },
+          meta: { requestId: 'test', timestamp: new Date().toISOString() },
         }),
     });
   });
