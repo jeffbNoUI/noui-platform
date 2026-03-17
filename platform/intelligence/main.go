@@ -53,7 +53,7 @@ func main() {
 			slog.String("user_role", auth.UserRole(r.Context())),
 		}
 	}
-	// Middleware order: CORS → Auth → RateLimit → Logging → Handler
+	// Middleware order: CORS → Auth → RateLimit → Counter → Logging → Handler
 	rl := ratelimit.Middleware(ratelimit.DefaultConfig())
 	wrappedMux := corsMiddleware(auth.Middleware(rl(healthutil.CounterMiddleware(counters)(logging.RequestLogger(logger, authExtractor)(mux)))))
 
