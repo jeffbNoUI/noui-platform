@@ -3,8 +3,7 @@ import SupervisorDashboard from '@/components/staff/SupervisorDashboard';
 import MemberSearch from '@/components/staff/MemberSearch';
 import ExecutiveDashboard from '@/components/staff/ExecutiveDashboard';
 import CSRContextHub from '@/components/staff/CSRContextHub';
-import ServiceHealthDashboard from '@/components/admin/ServiceHealthDashboard';
-import DataQualityPanel from '@/components/admin/DataQualityPanel';
+import ServicesHub from '@/components/admin/ServicesHub';
 import CorrespondencePanel from '@/components/workflow/CorrespondencePanel';
 import StaffPortalKPIStats from './StaffPortalKPIStats';
 import StaffPortalWorkQueue from './StaffPortalWorkQueue';
@@ -30,7 +29,6 @@ type StaffTab =
   | 'executive'
   | 'csr'
   | 'service-map'
-  | 'dq'
   | 'correspondence';
 
 const SIDEBAR_NAV = [
@@ -41,11 +39,10 @@ const SIDEBAR_NAV = [
   { key: 'csr' as StaffTab, label: 'CSR Hub', icon: '\ud83d\udcde', shortcut: 'G C' },
   {
     key: 'service-map' as StaffTab,
-    label: 'Platform Health',
+    label: 'Services Hub',
     icon: '\ud83d\uddfa\ufe0f',
     shortcut: 'G P',
   },
-  { key: 'dq' as StaffTab, label: 'Data Quality', icon: '\ud83d\udee1\ufe0f', shortcut: 'G D' },
   {
     key: 'correspondence' as StaffTab,
     label: 'Correspondence',
@@ -168,8 +165,7 @@ export default function StaffPortal({ onOpenCase, onViewMember, onChangeView }: 
                 supervisor: 'Supervisor Dashboard',
                 executive: 'Executive Dashboard',
                 csr: 'CSR Context Hub',
-                'service-map': 'Platform Health',
-                dq: 'Data Quality',
+                'service-map': 'Services Hub',
                 correspondence: 'Correspondence',
               }[activeTab]
             }
@@ -228,11 +224,8 @@ export default function StaffPortal({ onOpenCase, onViewMember, onChangeView }: 
           {/* CSR Context Hub tab */}
           {activeTab === 'csr' && <CSRContextHub />}
 
-          {/* Service Map tab */}
-          {activeTab === 'service-map' && <ServiceHealthDashboard />}
-
-          {/* Data Quality tab */}
-          {activeTab === 'dq' && <DataQualityPanel />}
+          {/* Services Hub tab */}
+          {activeTab === 'service-map' && <ServicesHub />}
 
           {/* Correspondence tab */}
           {activeTab === 'correspondence' && <CorrespondencePanel />}

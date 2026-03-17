@@ -1,5 +1,72 @@
 # noui-platform — Build History
 
+## Services Hub — 7-Tab Admin Center (2026-03-17)
+
+**Branch:** `claude/strange-cray`
+**Goal:** Transform the single "Platform Health" tab into a comprehensive Services Hub with 7 functional sections covering system monitoring, data quality, audit, operations, security, issue management, and configuration.
+
+**What was built:**
+
+### ServicesHub Shell
+- New `ServicesHub.tsx` component with horizontal tab bar replacing `ServiceHealthDashboard` in StaffPortal
+- 7 tabs: Health, Data Quality, Audit Trail, Metrics, Security, Issues, Config
+- ARIA-compliant: `role="tablist"`, `role="tab"`, `role="tabpanel"` with `aria-labelledby`
+- Sidebar renamed from "Platform Health" to "Services Hub", Data Quality merged as sub-tab
+
+### Audit Trail Panel (CRM audit API — frontend only)
+- Entity type filter (6 entity types), date range presets (24h/7d/30d/90d), agent ID filter
+- Free-text search across summary field
+- Expandable entries showing field-level diffs (old→new), agent IP/device, hash chain
+- CSV export of filtered results, offset-based Load More pagination
+- Types: `Audit.ts`, API client: `auditApi.ts`, Hook: `useAuditLog.ts`
+
+### Operational Metrics Panel (existing APIs — frontend only)
+- KPI cards: Active Cases, SLA On-Track %, Avg Processing, DQ Score
+- Case Pipeline: horizontal bars per stage from `caseloadByStage`
+- SLA Health: stacked bar (on-track/at-risk/overdue) with percentages
+- Case Volume Trend: Recharts 6-month bar chart
+- Commitments Due: overdue/this week/upcoming from CRM commitments API
+- New hook: `useCommitmentStats.ts`
+
+### Security & Access Panel (Phase A — frontend only)
+- Summary stats: Roles Defined (5), Portals (8), Phase B badges for Active Users/Sessions
+- Role Definitions table: role name, portal count, portal list, key permissions
+- Access Matrix: role × portal grid with checkmarks/crosses from `ROLE_ACCESS`
+- Security Events section: Phase B planned capabilities notice
+
+### Issue Management Panel (Phase A — demo data)
+- 6 demo issues (ISS-037 to ISS-042) spanning critical/high/medium/low severities
+- Summary cards: Open Issues, Critical, Avg Resolution, Resolved (30d)
+- 4 filter dropdowns: Status, Severity, Category, Assigned To
+- Expandable issue detail with description, affected service, activity log
+- Accessible expand: `role="button"`, keyboard support (Enter/Space)
+- Demo data banner indicating Phase B will provide live backend
+
+### Configuration & Rules Panel (KB API + static — frontend only)
+- Plan Provisions: expandable tree grouped by domain from `useKBRules()` hook
+- System Parameters table: SLA targets, DQ target, contribution rates, vesting, retirement age
+- Service Catalog: `FeatureBurndown` component relocated from Health tab
+
+### Cleanup
+- Removed dead `ServiceMap.tsx` (265 lines) and its test file
+- FeatureBurndown moved from Health tab to Config tab
+
+### Test Results
+- Frontend: 131 test files, 947 tests — all passing (+37 new, -4 dead code)
+- TypeScript typecheck: clean
+- Production build: clean
+
+### Phase B Deferred (tracked in memory)
+- Security events backend (Clerk webhooks, session tracking, failed login monitoring)
+- Issue Management service (`platform/issues/`, port 8092, PostgreSQL tables)
+
+**Design doc:** `docs/plans/2026-03-17-services-hub-design.md`
+**Implementation plan:** `docs/plans/2026-03-17-services-hub-plan.md`
+
+**Next session should start with:** `docs/plans/2026-03-17-services-hub-next-session.md`
+
+---
+
 ## Live Platform Health Dashboard (2026-03-17)
 
 **Branch:** `claude/loving-gagarin`
