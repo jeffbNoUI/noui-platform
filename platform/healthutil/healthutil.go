@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"math"
 	"net/http"
 	"runtime"
@@ -70,8 +71,8 @@ type RequestCounters struct {
 	latencies    [latencyRingSize]int64
 	latencyPos   int
 	latencyLen   int
-	latencySum   int64
-	latencyCount int64
+	latencySum   int64 // all-time sum (not rolling) — intentionally differs from P95's rolling window
+	latencyCount int64 // all-time count
 }
 
 // NewRequestCounters creates a new RequestCounters instance.
@@ -170,7 +171,9 @@ func NewDetailHandler(serviceName, version string, startedAt time.Time, db *sql.
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(health)
+		if err := json.NewEncoder(w).Encode(health); err != nil {
+			slog.Error("failed to encode health detail response", "error", err)
+		}
 	}
 }
 
@@ -190,18 +193,22 @@ func NewReadyHandler(serviceName string, db *sql.DB) http.HandlerFunc {
 			defer cancel()
 			if err := db.PingContext(ctx); err != nil {
 				w.WriteHeader(http.StatusServiceUnavailable)
-				json.NewEncoder(w).Encode(readyResponse{
+				if encErr := json.NewEncoder(w).Encode(readyResponse{
 					Status:  "unavailable",
 					Service: serviceName,
-				})
+				}); encErr != nil {
+					slog.Error("failed to encode ready response", "error", encErr)
+				}
 				return
 			}
 		}
 
-		json.NewEncoder(w).Encode(readyResponse{
+		if err := json.NewEncoder(w).Encode(readyResponse{
 			Status:  "ok",
 			Service: serviceName,
-		})
+		}); err != nil {
+			slog.Error("failed to encode ready response", "error", err)
+		}
 	}
 }
 
