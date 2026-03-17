@@ -146,6 +146,90 @@ func TestCheck_OneUnreachable(t *testing.T) {
 	}
 }
 
+func TestCheck_ConnectorAdapter(t *testing.T) {
+	// Platform service: standard /health/detail response
+	platformPathOK := false
+	srvPlatform := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/health/detail" {
+			platformPathOK = true
+		}
+		json.NewEncoder(w).Encode(healthutil.ServiceHealth{
+			Status:  "ok",
+			Service: "dataaccess",
+			Version: "2.1.0",
+			Uptime:  "1h30m",
+		})
+	}))
+	defer srvPlatform.Close()
+
+	// Connector service: simple map[string]string at /healthz
+	connectorPathOK := false
+	srvConnector := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/healthz" {
+			connectorPathOK = true
+		}
+		json.NewEncoder(w).Encode(map[string]string{
+			"status":  "ok",
+			"service": "noui-connector",
+			"version": "1.0.0",
+			"uptime":  "2h15m",
+		})
+	}))
+	defer srvConnector.Close()
+
+	agg := NewAggregator([]ServiceEntry{
+		{Name: "dataaccess", URL: srvPlatform.URL},
+		{Name: "connector", URL: srvConnector.URL, HealthPath: "/healthz"},
+	})
+
+	result := agg.Check(context.Background())
+
+	// Overall healthy, 2 services, 0 unreachable
+	if result.Overall != "healthy" {
+		t.Errorf("expected overall=healthy, got %q", result.Overall)
+	}
+	if len(result.Services) != 2 {
+		t.Errorf("expected 2 services, got %d", len(result.Services))
+	}
+	if len(result.Unreachable) != 0 {
+		t.Errorf("expected 0 unreachable, got %v", result.Unreachable)
+	}
+
+	// Verify connector entry was adapted correctly
+	conn := result.Services["connector"]
+	if conn.Status != "ok" {
+		t.Errorf("connector status: expected %q, got %q", "ok", conn.Status)
+	}
+	if conn.Service != "noui-connector" {
+		t.Errorf("connector service: expected %q, got %q", "noui-connector", conn.Service)
+	}
+	if conn.Version != "1.0.0" {
+		t.Errorf("connector version: expected %q, got %q", "1.0.0", conn.Version)
+	}
+	if conn.Uptime != "2h15m" {
+		t.Errorf("connector uptime: expected %q, got %q", "2h15m", conn.Uptime)
+	}
+
+	// Verify DB, Requests, Runtime are zero values
+	if conn.DB != nil {
+		t.Errorf("connector DB: expected nil, got %+v", conn.DB)
+	}
+	if conn.Requests != (healthutil.RequestStats{}) {
+		t.Errorf("connector Requests: expected zero, got %+v", conn.Requests)
+	}
+	if conn.Runtime != (healthutil.RuntimeStats{}) {
+		t.Errorf("connector Runtime: expected zero, got %+v", conn.Runtime)
+	}
+
+	// Verify each server received requests on the expected path
+	if !platformPathOK {
+		t.Error("platform server did not receive request on /health/detail")
+	}
+	if !connectorPathOK {
+		t.Error("connector server did not receive request on /healthz")
+	}
+}
+
 func TestCheck_Timeout(t *testing.T) {
 	srvSlow := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(3 * time.Second)

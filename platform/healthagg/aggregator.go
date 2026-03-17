@@ -62,7 +62,11 @@ func (a *Aggregator) Check(ctx context.Context) AggregateHealth {
 		go func(entry ServiceEntry) {
 			defer wg.Done()
 
-			url := strings.TrimRight(entry.URL, "/") + "/health/detail"
+			path := "/health/detail"
+			if entry.HealthPath != "" {
+				path = entry.HealthPath
+			}
+			url := strings.TrimRight(entry.URL, "/") + path
 			req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 			if err != nil {
 				mu.Lock()
@@ -81,11 +85,28 @@ func (a *Aggregator) Check(ctx context.Context) AggregateHealth {
 			defer resp.Body.Close()
 
 			var health healthutil.ServiceHealth
-			if err := json.NewDecoder(resp.Body).Decode(&health); err != nil {
-				mu.Lock()
-				result.Unreachable = append(result.Unreachable, entry.Name)
-				mu.Unlock()
-				return
+			if entry.HealthPath != "" {
+				// Connector-style response: simple map[string]string
+				var simple map[string]string
+				if err := json.NewDecoder(resp.Body).Decode(&simple); err != nil {
+					mu.Lock()
+					result.Unreachable = append(result.Unreachable, entry.Name)
+					mu.Unlock()
+					return
+				}
+				health = healthutil.ServiceHealth{
+					Status:  simple["status"],
+					Service: simple["service"],
+					Version: simple["version"],
+					Uptime:  simple["uptime"],
+				}
+			} else {
+				if err := json.NewDecoder(resp.Body).Decode(&health); err != nil {
+					mu.Lock()
+					result.Unreachable = append(result.Unreachable, entry.Name)
+					mu.Unlock()
+					return
+				}
 			}
 
 			mu.Lock()
