@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useServiceHealth } from '@/hooks/useServiceHealth';
 import { PLATFORM_SERVICES, getOverallCompletion } from '@/data/platformServices';
 import ServiceHealthCard from './ServiceHealthCard';
-import FeatureBurndown from './FeatureBurndown';
 import HealthTrendsPanel from './HealthTrendsPanel';
 import ServiceMapLayers from './ServiceMapLayers';
 
@@ -142,14 +141,6 @@ export default function ServiceHealthDashboard() {
           )}
         </div>
       )}
-
-      {/* Feature burndown */}
-      <div>
-        <div className="mb-3">
-          <h3 className="text-sm font-bold text-gray-700">Feature Burndown</h3>
-        </div>
-        <FeatureBurndown />
-      </div>
     </div>
   );
 }

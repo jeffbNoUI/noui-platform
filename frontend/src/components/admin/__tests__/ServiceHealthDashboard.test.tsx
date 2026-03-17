@@ -55,9 +55,7 @@ describe('ServiceHealthDashboard', () => {
     expect(screen.getByText('Healthy')).toBeInTheDocument();
     expect(screen.getByText('Degraded')).toBeInTheDocument();
     expect(screen.getByText('Down')).toBeInTheDocument();
-    // "Platform Completion" appears in both summary stats and FeatureBurndown
-    const completionLabels = screen.getAllByText('Platform Completion');
-    expect(completionLabels.length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Platform Completion')).toBeInTheDocument();
   });
 
   it('shows loading skeletons when health data is loading', () => {
@@ -83,13 +81,10 @@ describe('ServiceHealthDashboard', () => {
     expect(screen.getByText('Four-Layer Architecture')).toBeInTheDocument();
   });
 
-  it('renders FeatureBurndown section', () => {
+  it('does not render FeatureBurndown (moved to Config tab)', () => {
     mockUseServiceHealth.mockReturnValue({ data: HEALTHY_DATA, isLoading: false, isError: false });
     renderWithProviders(<ServiceHealthDashboard />);
 
-    expect(screen.getByText('Feature Burndown')).toBeInTheDocument();
-    // "Platform Completion" appears in both summary stats and FeatureBurndown
-    const completionLabels = screen.getAllByText('Platform Completion');
-    expect(completionLabels.length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText('Feature Burndown')).not.toBeInTheDocument();
   });
 });
