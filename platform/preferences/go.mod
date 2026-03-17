@@ -8,9 +8,12 @@ require (
 	github.com/noui/platform/auth v0.0.0
 	github.com/noui/platform/dbcontext v0.0.0
 	github.com/noui/platform/envutil v0.0.0
-	github.com/noui/platform/logging v0.0.0
-	github.com/noui/platform/ratelimit v0.0.0
-	github.com/noui/platform/validation v0.0.0
+)
+
+require (
+	github.com/noui/platform/logging v0.0.0-00010101000000-000000000000 // indirect
+	github.com/noui/platform/ratelimit v0.0.0-00010101000000-000000000000 // indirect
+	golang.org/x/time v0.9.0 // indirect
 )
 
 replace (
