@@ -78,20 +78,12 @@ describe('StaffPortal', () => {
     expect(screen.getByText('CSR Context Hub')).toBeInTheDocument();
   });
 
-  it('renders Platform Health tab', () => {
+  it('renders Services Hub tab', () => {
     renderWithProviders(<StaffPortal onOpenCase={noop} onViewMember={noop} onChangeView={noop} />);
-    fireEvent.click(screen.getByText('Platform Health'));
-    // Header and sidebar both show "Platform Health"
-    const headers = screen.getAllByText('Platform Health');
+    fireEvent.click(screen.getByText('Services Hub'));
+    // Header and sidebar both show "Services Hub"
+    const headers = screen.getAllByText('Services Hub');
     expect(headers.length).toBeGreaterThanOrEqual(2);
-  });
-
-  it('renders Data Quality tab', () => {
-    renderWithProviders(<StaffPortal onOpenCase={noop} onViewMember={noop} onChangeView={noop} />);
-    fireEvent.click(screen.getByText('Data Quality'));
-    // The tab header changes to "Data Quality"
-    const headers = screen.getAllByText('Data Quality');
-    expect(headers.length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders Correspondence tab', async () => {
@@ -103,7 +95,7 @@ describe('StaffPortal', () => {
     });
   });
 
-  it('shows all 8 sidebar nav items', () => {
+  it('shows all 7 sidebar nav items', () => {
     renderWithProviders(<StaffPortal onOpenCase={noop} onViewMember={noop} onChangeView={noop} />);
     const labels = [
       'Work Queue',
@@ -111,8 +103,7 @@ describe('StaffPortal', () => {
       'Supervisor',
       'Executive',
       'CSR Hub',
-      'Platform Health',
-      'Data Quality',
+      'Services Hub',
       'Correspondence',
     ];
     for (const label of labels) {
