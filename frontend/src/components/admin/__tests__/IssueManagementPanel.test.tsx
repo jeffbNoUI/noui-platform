@@ -26,12 +26,34 @@ describe('IssueManagementPanel', () => {
     renderWithProviders(<IssueManagementPanel />);
     expect(screen.getByLabelText(/status/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/severity/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/category/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/assigned/i)).toBeInTheDocument();
   });
 
-  it('expands issue to show detail', () => {
+  it('filters by category', () => {
     renderWithProviders(<IssueManagementPanel />);
-    const firstIssue = screen.getAllByText(/ISS-/)[0];
-    fireEvent.click(firstIssue);
+    fireEvent.change(screen.getByLabelText(/category/i), { target: { value: 'enhancement' } });
+    // Only ISS-039 is an enhancement
+    expect(screen.getByText('ISS-039')).toBeInTheDocument();
+    expect(screen.queryByText('ISS-042')).not.toBeInTheDocument();
+  });
+
+  it('filters by assigned', () => {
+    renderWithProviders(<IssueManagementPanel />);
+    fireEvent.change(screen.getByLabelText(/assigned/i), { target: { value: 'jsmith' } });
+    // ISS-042 and ISS-038 are assigned to jsmith
+    expect(screen.getByText('ISS-042')).toBeInTheDocument();
+    expect(screen.getByText('ISS-038')).toBeInTheDocument();
+    expect(screen.queryByText('ISS-039')).not.toBeInTheDocument();
+  });
+
+  it('expands issue to show detail via button role', () => {
+    renderWithProviders(<IssueManagementPanel />);
+    const issueButtons = screen.getAllByRole('button');
+    // Find the first issue row button (contains ISS- text)
+    const firstIssueBtn = issueButtons.find((btn) => btn.textContent?.includes('ISS-'));
+    expect(firstIssueBtn).toBeDefined();
+    fireEvent.click(firstIssueBtn!);
     expect(screen.getByText('Description')).toBeInTheDocument();
   });
 

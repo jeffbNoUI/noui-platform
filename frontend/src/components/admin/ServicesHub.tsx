@@ -29,6 +29,7 @@ export default function ServicesHub() {
           {TABS.map((tab) => (
             <button
               key={tab.key}
+              id={`hub-tab-${tab.key}`}
               role="tab"
               aria-selected={activeTab === tab.key}
               onClick={() => setActiveTab(tab.key)}
@@ -44,13 +45,15 @@ export default function ServicesHub() {
         </div>
       </div>
 
-      {activeTab === 'health' && <ServiceHealthDashboard />}
-      {activeTab === 'dq' && <DataQualityPanel />}
-      {activeTab === 'audit' && <AuditTrailPanel />}
-      {activeTab === 'metrics' && <OperationalMetricsPanel />}
-      {activeTab === 'security' && <SecurityAccessPanel />}
-      {activeTab === 'issues' && <IssueManagementPanel />}
-      {activeTab === 'config' && <ConfigRulesPanel />}
+      <div role="tabpanel" aria-labelledby={`hub-tab-${activeTab}`}>
+        {activeTab === 'health' && <ServiceHealthDashboard />}
+        {activeTab === 'dq' && <DataQualityPanel />}
+        {activeTab === 'audit' && <AuditTrailPanel />}
+        {activeTab === 'metrics' && <OperationalMetricsPanel />}
+        {activeTab === 'security' && <SecurityAccessPanel />}
+        {activeTab === 'issues' && <IssueManagementPanel />}
+        {activeTab === 'config' && <ConfigRulesPanel />}
+      </div>
     </div>
   );
 }

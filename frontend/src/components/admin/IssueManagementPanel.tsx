@@ -137,13 +137,25 @@ function daysBetween(a: string, b: string): number {
 export default function IssueManagementPanel() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [severityFilter, setSeverityFilter] = useState<string>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [assignedFilter, setAssignedFilter] = useState<string>('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const filtered = DEMO_ISSUES.filter((issue) => {
     if (statusFilter !== 'all' && issue.status !== statusFilter) return false;
     if (severityFilter !== 'all' && issue.severity !== severityFilter) return false;
+    if (categoryFilter !== 'all' && issue.category !== categoryFilter) return false;
+    if (assignedFilter !== 'all') {
+      if (assignedFilter === 'unassigned') {
+        if (issue.assignedTo !== null) return false;
+      } else if (issue.assignedTo !== assignedFilter) return false;
+    }
     return true;
   });
+
+  const uniqueAssignees = Array.from(
+    new Set(DEMO_ISSUES.map((i) => i.assignedTo).filter((a): a is string => a !== null)),
+  ).sort();
 
   // Stats
   const openCount = DEMO_ISSUES.filter(
@@ -214,6 +226,41 @@ export default function IssueManagementPanel() {
             <option value="low">Low</option>
           </select>
         </div>
+        <div>
+          <label htmlFor="category-filter" className="mb-1 block text-sm font-medium text-gray-700">
+            Category
+          </label>
+          <select
+            id="category-filter"
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm"
+          >
+            <option value="all">All</option>
+            <option value="defect">Defect</option>
+            <option value="incident">Incident</option>
+            <option value="enhancement">Enhancement</option>
+            <option value="question">Question</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="assigned-filter" className="mb-1 block text-sm font-medium text-gray-700">
+            Assigned
+          </label>
+          <select
+            id="assigned-filter"
+            value={assignedFilter}
+            onChange={(e) => setAssignedFilter(e.target.value)}
+            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm"
+          >
+            <option value="all">All</option>
+            {uniqueAssignees.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Issue list */}
@@ -223,7 +270,15 @@ export default function IssueManagementPanel() {
             {/* Issue row header */}
             <div
               className="flex cursor-pointer items-center gap-3 px-4 py-3"
+              role="button"
+              tabIndex={0}
               onClick={() => setExpandedId(expandedId === issue.issueId ? null : issue.issueId)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setExpandedId(expandedId === issue.issueId ? null : issue.issueId);
+                }
+              }}
             >
               <span className="font-mono text-sm font-semibold text-gray-500">{issue.issueId}</span>
               <span

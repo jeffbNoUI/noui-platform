@@ -40,4 +40,17 @@ describe('ServicesHub', () => {
     const healthTab = screen.getByRole('tab', { name: /health/i });
     expect(healthTab).toHaveAttribute('aria-selected', 'true');
   });
+
+  it('renders tabpanel with aria-labelledby', () => {
+    renderWithProviders(<ServicesHub />);
+    const panel = screen.getByRole('tabpanel');
+    expect(panel).toHaveAttribute('aria-labelledby', 'hub-tab-health');
+  });
+
+  it('updates tabpanel aria-labelledby on tab switch', () => {
+    renderWithProviders(<ServicesHub />);
+    fireEvent.click(screen.getByRole('tab', { name: /issues/i }));
+    const panel = screen.getByRole('tabpanel');
+    expect(panel).toHaveAttribute('aria-labelledby', 'hub-tab-issues');
+  });
 });
