@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/noui/platform/auth"
+	"github.com/noui/platform/healthutil"
 	"github.com/noui/platform/intelligence/api"
 	"github.com/noui/platform/intelligence/db"
 	"github.com/noui/platform/logging"
@@ -22,6 +23,7 @@ import (
 )
 
 func main() {
+	startedAt := time.Now()
 	logger := logging.Setup("intelligence", nil)
 	slog.SetDefault(logger)
 	slog.Info("starting intelligence service v0.1.0")
@@ -38,9 +40,12 @@ func main() {
 		}
 	}
 
+	counters := healthutil.NewRequestCounters()
 	handler := api.NewHandler(database)
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
+	mux.HandleFunc("GET /health/detail", healthutil.NewDetailHandler("intelligence", "0.1.0", startedAt, database, counters))
+	mux.HandleFunc("GET /ready", healthutil.NewReadyHandler("intelligence", database))
 
 	authExtractor := func(r *http.Request) []slog.Attr {
 		return []slog.Attr{
@@ -50,7 +55,7 @@ func main() {
 	}
 	// Middleware order: CORS → Auth → RateLimit → Logging → Handler
 	rl := ratelimit.Middleware(ratelimit.DefaultConfig())
-	wrappedMux := corsMiddleware(auth.Middleware(rl(logging.RequestLogger(logger, authExtractor)(mux))))
+	wrappedMux := corsMiddleware(auth.Middleware(rl(healthutil.CounterMiddleware(counters)(logging.RequestLogger(logger, authExtractor)(mux)))))
 
 	port := os.Getenv("PORT")
 	if port == "" {
