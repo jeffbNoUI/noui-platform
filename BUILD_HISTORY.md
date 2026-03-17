@@ -1,5 +1,55 @@
 # noui-platform — Build History
 
+## Quality Session 9: Dead Code Cleanup + API Consistency + Final Regression (2026-03-16)
+
+**Branch:** `claude/inspiring-sammet`
+**Goal:** Complete the master quality review plan (Tasks 30-32). Dead code cleanup, API response consistency across all 7 services, and final regression suite.
+
+**What was built:**
+
+### Task 30: Dead Code + Dependency Cleanup
+- Deleted `frontend/src/lib/demoCases.ts` (383 lines) — never imported anywhere
+- Removed unused `getAllHelp()` from `helpContent.ts`
+- Un-exported 6 icon components in `InteractionTimelineIcons.tsx` (only used internally via `channelConfig`)
+- Un-exported `formatTimeDistance()` in `ConversationPanelHelpers.ts` (only used internally by `computeSLAState`)
+- Removed dead `auth.validateToken()` function (superseded by `validateTokenWithSecret`)
+- `go mod tidy` across all 15 Go modules — already clean
+- `npm audit` — 5 moderate dev-dependency vulnerabilities (esbuild/vite in vitest); fix requires vitest 4.x breaking upgrade, documented but deferred
+- `docker-compose.yml` `version` key already removed in prior session
+
+### Task 31: API Consistency Audit
+- **Fixed `requestId` → `request_id` across 5 services** (crm, correspondence, dataquality, knowledgebase, casemanagement) to match frontend `APIResponse<T>` contract
+- **Added `service` and `version` to meta** in dataaccess and intelligence (matching the 5 other services)
+- **Standardized dataaccess pagination** from `{ data: { items, total } }` to `{ data: [...], pagination: { total, limit, offset, hasMore } }` matching all other services
+- Updated all affected handler tests (dataaccess: 4 paginated tests, plus handler tests across 5 services)
+- Updated model JSON tags in crm, correspondence, dataquality, knowledgebase model types
+- Updated `platform/CLAUDE.md` to document `request_id` (snake_case) convention
+
+### Task 32: Final Regression Suite
+- All 15 Go modules: build clean, tests pass
+- Connector: 4 test packages pass
+- 7 platform services: 14 test packages pass
+- 7 shared packages (auth, cache, dbcontext, envutil, logging, ratelimit, validation): all pass
+- Frontend: typecheck clean, **119 test files, 869 tests, all passing**
+- Zero regressions from Session 8 baseline
+
+**Master Quality Review Plan: ALL 32 TASKS COMPLETE**
+
+| Session | Tasks | Summary |
+|---------|-------|---------|
+| 1 | 1-4 | Auth middleware, structured logging, CORS |
+| 2-3 | 5-8 | Input validation package + wiring |
+| 4 | 9-11 | Rate limiting, route guards, connection pools |
+| 5 | 26, 28 | Request timeouts, TypeScript strictness |
+| 6 | 19-21 | API client tests, coverage config, test tiering |
+| 7 | 22-24 | Performance indexes, pagination, PgBouncer |
+| 8 | 25, 29 | Server-side caching, component decomposition |
+| 9 | 30-32 | Dead code cleanup, API consistency, final regression |
+
+**Files changed:** 22 modified, 1 deleted (+127/-500 net)
+
+---
+
 ## Quality Session 8: Server-Side Caching + Component Decomposition (2026-03-16)
 
 **Branch:** `claude/priceless-hermann`

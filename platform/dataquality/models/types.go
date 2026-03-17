@@ -75,13 +75,13 @@ type DQIssue struct {
 
 // DQScore represents the aggregate data quality score.
 type DQScore struct {
-	OverallScore    float64           `json:"overallScore"`
-	TotalChecks     int               `json:"totalChecks"`
-	PassingChecks   int               `json:"passingChecks"`
-	OpenIssues      int               `json:"openIssues"`
-	CriticalIssues  int               `json:"criticalIssues"`
-	CategoryScores  map[string]float64 `json:"categoryScores"`
-	LastRunAt       *time.Time        `json:"lastRunAt,omitempty"`
+	OverallScore   float64            `json:"overallScore"`
+	TotalChecks    int                `json:"totalChecks"`
+	PassingChecks  int                `json:"passingChecks"`
+	OpenIssues     int                `json:"openIssues"`
+	CriticalIssues int                `json:"criticalIssues"`
+	CategoryScores map[string]float64 `json:"categoryScores"`
+	LastRunAt      *time.Time         `json:"lastRunAt,omitempty"`
 }
 
 // DQScoreTrend represents a point in the score trend over time.
@@ -106,7 +106,7 @@ type UpdateIssueRequest struct {
 
 // APIMeta contains per-request metadata returned with every API response.
 type APIMeta struct {
-	RequestID string    `json:"requestId"`
+	RequestID string    `json:"request_id"`
 	Timestamp time.Time `json:"timestamp"`
 	Service   string    `json:"service"`
 	Version   string    `json:"version"`

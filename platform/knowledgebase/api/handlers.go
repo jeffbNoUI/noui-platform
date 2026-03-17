@@ -237,10 +237,10 @@ func writeSuccess(w http.ResponseWriter, status int, data interface{}) {
 	resp := map[string]interface{}{
 		"data": data,
 		"meta": map[string]interface{}{
-			"requestId": uuid.New().String(),
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
-			"service":   "knowledgebase",
-			"version":   "v1",
+			"request_id": uuid.New().String(),
+			"timestamp":  time.Now().UTC().Format(time.RFC3339),
+			"service":    "knowledgebase",
+			"version":    "v1",
 		},
 	}
 	writeJSON(w, status, resp)
@@ -256,10 +256,10 @@ func paginatedResponse(data interface{}, total, limit, offset int) map[string]in
 			"hasMore": offset+limit < total,
 		},
 		"meta": map[string]interface{}{
-			"requestId": uuid.New().String(),
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
-			"service":   "knowledgebase",
-			"version":   "v1",
+			"request_id": uuid.New().String(),
+			"timestamp":  time.Now().UTC().Format(time.RFC3339),
+			"service":    "knowledgebase",
+			"version":    "v1",
 		},
 	}
 }
@@ -272,10 +272,10 @@ func successResponse(data interface{}) map[string]interface{} {
 	return map[string]interface{}{
 		"data": data,
 		"meta": map[string]interface{}{
-			"requestId": uuid.New().String(),
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
-			"service":   "knowledgebase",
-			"version":   "v1",
+			"request_id": uuid.New().String(),
+			"timestamp":  time.Now().UTC().Format(time.RFC3339),
+			"service":    "knowledgebase",
+			"version":    "v1",
 		},
 	}
 }
@@ -283,9 +283,9 @@ func successResponse(data interface{}) map[string]interface{} {
 func writeError(w http.ResponseWriter, status int, code, message string) {
 	resp := map[string]interface{}{
 		"error": map[string]interface{}{
-			"code":      code,
-			"message":   message,
-			"requestId": uuid.New().String(),
+			"code":       code,
+			"message":    message,
+			"request_id": uuid.New().String(),
 		},
 	}
 	writeJSON(w, status, resp)

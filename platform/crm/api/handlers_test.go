@@ -173,8 +173,8 @@ func TestWriteSuccess(t *testing.T) {
 	if meta["service"] != "crm" {
 		t.Errorf("meta.service = %q, want %q", meta["service"], "crm")
 	}
-	if meta["requestId"] == nil || meta["requestId"] == "" {
-		t.Error("meta.requestId should not be empty")
+	if meta["request_id"] == nil || meta["request_id"] == "" {
+		t.Error("meta.request_id should not be empty")
 	}
 	if meta["version"] != "v1" {
 		t.Errorf("meta.version = %q, want %q", meta["version"], "v1")
@@ -212,8 +212,8 @@ func TestWriteError(t *testing.T) {
 	if errObj["message"] != "bad input" {
 		t.Errorf("error.message = %q, want %q", errObj["message"], "bad input")
 	}
-	if errObj["requestId"] == nil || errObj["requestId"] == "" {
-		t.Error("error.requestId should not be empty")
+	if errObj["request_id"] == nil || errObj["request_id"] == "" {
+		t.Error("error.request_id should not be empty")
 	}
 }
 

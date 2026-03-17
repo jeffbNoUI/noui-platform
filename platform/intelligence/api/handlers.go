@@ -499,6 +499,8 @@ func writeSuccess(w http.ResponseWriter, data interface{}) {
 		"meta": map[string]interface{}{
 			"request_id": uuid.New().String(),
 			"timestamp":  time.Now().UTC().Format(time.RFC3339),
+			"service":    "intelligence",
+			"version":    "v1",
 		},
 	}
 	writeJSON(w, http.StatusOK, resp)

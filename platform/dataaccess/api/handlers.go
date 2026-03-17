@@ -706,31 +706,43 @@ func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 }
 
 func writePaginated(w http.ResponseWriter, items interface{}, total, limit, offset int) {
-	writeSuccess(w, models.PaginatedData{
-		Items:  items,
-		Total:  total,
-		Limit:  limit,
-		Offset: offset,
-	})
+	resp := map[string]interface{}{
+		"data": items,
+		"pagination": map[string]interface{}{
+			"total":   total,
+			"limit":   limit,
+			"offset":  offset,
+			"hasMore": offset+limit < total,
+		},
+		"meta": map[string]interface{}{
+			"request_id": uuid.New().String(),
+			"timestamp":  time.Now().UTC().Format(time.RFC3339),
+			"service":    "dataaccess",
+			"version":    "v1",
+		},
+	}
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func writeSuccess(w http.ResponseWriter, data interface{}) {
-	resp := models.APIResponse{
-		Data: data,
-		Meta: models.APIMeta{
-			RequestID: uuid.New().String(),
-			Timestamp: time.Now().UTC(),
+	resp := map[string]interface{}{
+		"data": data,
+		"meta": map[string]interface{}{
+			"request_id": uuid.New().String(),
+			"timestamp":  time.Now().UTC().Format(time.RFC3339),
+			"service":    "dataaccess",
+			"version":    "v1",
 		},
 	}
 	writeJSON(w, http.StatusOK, resp)
 }
 
 func writeError(w http.ResponseWriter, status int, code, message string) {
-	resp := models.APIError{
-		Error: models.ErrorDetail{
-			Code:      code,
-			Message:   message,
-			RequestID: uuid.New().String(),
+	resp := map[string]interface{}{
+		"error": map[string]interface{}{
+			"code":       code,
+			"message":    message,
+			"request_id": uuid.New().String(),
 		},
 	}
 	writeJSON(w, status, resp)

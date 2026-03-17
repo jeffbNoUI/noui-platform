@@ -23,7 +23,7 @@ Shared platform services that power the NoUI workspace. Each service is an indep
 - CORS configured via `CORS_ORIGIN` env var
 - Health check at `/healthz`
 - API prefix: `/api/v1/`
-- Request IDs via `X-Request-ID` header (camelCase in response JSON)
+- Request IDs via `X-Request-ID` header (`request_id` in response JSON)
 
 ## Key Rule
 

@@ -176,8 +176,8 @@ func TestWriteSuccess(t *testing.T) {
 	if !ok {
 		t.Fatal("writeSuccess missing 'meta' field")
 	}
-	if meta["requestId"] == nil || meta["requestId"] == "" {
-		t.Error("meta.requestId should not be empty")
+	if meta["request_id"] == nil || meta["request_id"] == "" {
+		t.Error("meta.request_id should not be empty")
 	}
 	if meta["timestamp"] == nil || meta["timestamp"] == "" {
 		t.Error("meta.timestamp should not be empty")
@@ -209,8 +209,8 @@ func TestWriteError(t *testing.T) {
 	if errObj["message"] != "bad input" {
 		t.Errorf("error.message = %q, want %q", errObj["message"], "bad input")
 	}
-	if errObj["requestId"] == nil || errObj["requestId"] == "" {
-		t.Error("error.requestId should not be empty")
+	if errObj["request_id"] == nil || errObj["request_id"] == "" {
+		t.Error("error.request_id should not be empty")
 	}
 }
 
@@ -448,8 +448,8 @@ func TestGetCase_Valid(t *testing.T) {
 	if len(body.Data.Flags) != 2 {
 		t.Errorf("Flags len = %d, want 2", len(body.Data.Flags))
 	}
-	if body.Meta["requestId"] == nil || body.Meta["requestId"] == "" {
-		t.Error("meta.requestId should not be empty")
+	if body.Meta["request_id"] == nil || body.Meta["request_id"] == "" {
+		t.Error("meta.request_id should not be empty")
 	}
 }
 
@@ -1238,8 +1238,8 @@ func TestGetCaseStats_HTTP(t *testing.T) {
 	if body.Data.CaseloadByStage[0].Stage != "Application Intake" {
 		t.Errorf("stage[0] = %q, want Application Intake", body.Data.CaseloadByStage[0].Stage)
 	}
-	if body.Meta["requestId"] == nil || body.Meta["requestId"] == "" {
-		t.Error("meta.requestId should not be empty")
+	if body.Meta["request_id"] == nil || body.Meta["request_id"] == "" {
+		t.Error("meta.request_id should not be empty")
 	}
 }
 

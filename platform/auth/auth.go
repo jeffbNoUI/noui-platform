@@ -135,11 +135,6 @@ type tokenClaims struct {
 	Exp      int64  `json:"exp"`
 }
 
-// validateToken verifies the HS256 signature and decodes the payload using the default secret.
-func validateToken(token string) (*tokenClaims, error) {
-	return validateTokenWithSecret(token, getSecret())
-}
-
 // validateTokenWithSecret verifies the HS256 signature and decodes the payload using the given secret.
 func validateTokenWithSecret(token string, secret []byte) (*tokenClaims, error) {
 	parts := strings.Split(token, ".")
