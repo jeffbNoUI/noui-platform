@@ -1,11 +1,23 @@
 # Multi-stage build for dataquality service
+# Context: ./platform (parent directory, so replace directives resolve correctly)
 FROM golang:1.22-alpine AS builder
 
 WORKDIR /app
-COPY go.mod go.sum ./
-RUN go mod download
 
-COPY . .
+# Copy shared packages (required by replace directives in go.mod)
+COPY auth/ auth/
+COPY dbcontext/ dbcontext/
+COPY envutil/ envutil/
+COPY healthutil/ healthutil/
+COPY logging/ logging/
+COPY ratelimit/ ratelimit/
+COPY validation/ validation/
+
+# Copy service
+COPY dataquality/ dataquality/
+
+WORKDIR /app/dataquality
+RUN go mod download
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /dataquality .
 
 # Distroless production image

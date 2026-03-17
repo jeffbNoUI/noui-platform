@@ -1,17 +1,18 @@
 # Multi-stage build for healthagg service
+# Context: ./platform (parent directory, so replace directives resolve correctly)
 FROM golang:1.22-alpine AS builder
 
 WORKDIR /app
 
-# Copy local dependencies first
-COPY healthutil/ /app/healthutil/
-COPY logging/ /app/logging/
+# Copy shared packages (required by replace directives in go.mod)
+COPY healthutil/ healthutil/
+COPY logging/ logging/
 
-# Copy service code
-COPY healthagg/go.mod healthagg/go.sum ./
+# Copy service
+COPY healthagg/ healthagg/
+
+WORKDIR /app/healthagg
 RUN go mod download
-
-COPY healthagg/ .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /healthagg .
 
 # Distroless production image

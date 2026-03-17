@@ -21,9 +21,9 @@ CREATE INDEX IF NOT EXISTS idx_empl_member_event_dt
 CREATE INDEX IF NOT EXISTS idx_contrib_member_period_desc
     ON CONTRIBUTION_HIST(MEMBER_ID, PAY_PERIOD_END DESC);
 
--- BENEFIT_PAYMENT: covers payment history sorted by date
+-- BENEFIT_PAYMENT: covers payment history sorted by effective date
 CREATE INDEX IF NOT EXISTS idx_payment_member_date_desc
-    ON BENEFIT_PAYMENT(MEMBER_ID, PAY_DATE DESC);
+    ON BENEFIT_PAYMENT(MEMBER_ID, EFF_DT DESC);
 
 -- CASE_HIST: covers case lookups by member + status
 CREATE INDEX IF NOT EXISTS idx_case_hist_member_status
