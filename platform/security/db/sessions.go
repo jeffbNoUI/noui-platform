@@ -29,7 +29,7 @@ func scanSession(scanner interface{ Scan(dest ...any) error }) (*models.ActiveSe
 
 // UpsertSession registers or updates an active session (upsert by session_id).
 func (s *Store) UpsertSession(ctx context.Context, tenantID string, req models.CreateSessionRequest) (*models.ActiveSession, error) {
-	query := fmt.Sprintf(`
+	query := `
 		INSERT INTO active_sessions (tenant_id, user_id, session_id, email, role, ip_address, user_agent)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT (session_id) DO UPDATE SET
@@ -38,8 +38,8 @@ func (s *Store) UpsertSession(ctx context.Context, tenantID string, req models.C
 			role = EXCLUDED.role,
 			ip_address = EXCLUDED.ip_address,
 			user_agent = EXCLUDED.user_agent
-		RETURNING %s
-	`, sessionColumns)
+		RETURNING id, tenant_id, user_id, session_id, email, role, ip_address, user_agent, started_at, last_seen_at
+	`
 
 	row := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, query,
 		tenantID, req.UserID, req.SessionID, req.Email,

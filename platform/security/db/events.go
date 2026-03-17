@@ -35,11 +35,11 @@ func (s *Store) CreateEvent(ctx context.Context, tenantID string, req models.Cre
 		metadata = "{}"
 	}
 
-	query := fmt.Sprintf(`
+	query := `
 		INSERT INTO security_events (tenant_id, event_type, actor_id, actor_email, ip_address, user_agent, metadata)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING %s
-	`, eventColumns)
+		RETURNING id, tenant_id, event_type, actor_id, actor_email, ip_address, user_agent, metadata, created_at
+	`
 
 	row := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, query,
 		tenantID, req.EventType, req.ActorID, req.ActorEmail,
