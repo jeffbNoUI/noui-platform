@@ -9,6 +9,7 @@ require (
 	github.com/noui/platform/cache v0.0.0
 	github.com/noui/platform/dbcontext v0.0.0
 	github.com/noui/platform/envutil v0.0.0
+	github.com/noui/platform/healthutil v0.0.0
 	github.com/noui/platform/logging v0.0.0
 	github.com/noui/platform/ratelimit v0.0.0
 	github.com/noui/platform/validation v0.0.0
@@ -21,6 +22,7 @@ replace (
 	github.com/noui/platform/cache => ../cache
 	github.com/noui/platform/dbcontext => ../dbcontext
 	github.com/noui/platform/envutil => ../envutil
+	github.com/noui/platform/healthutil => ../healthutil
 	github.com/noui/platform/logging => ../logging
 	github.com/noui/platform/ratelimit => ../ratelimit
 	github.com/noui/platform/validation => ../validation

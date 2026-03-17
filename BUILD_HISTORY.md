@@ -1,5 +1,99 @@
 # noui-platform — Build History
 
+## Live Platform Health Dashboard (2026-03-17)
+
+**Branch:** `claude/loving-gagarin`
+**Goal:** Transform the static Service Map into a live health dashboard with real-time service monitoring, feature development burndown, and predictive resource alerts.
+
+**What was built:**
+
+### Backend: `platform/healthutil/` (shared package)
+- Reusable health infrastructure: `ServiceHealth`, `DBPoolStats`, `RequestStats`, `RuntimeStats` types
+- `NewDetailHandler()` — rich health endpoint with DB pool stats, request counters, runtime metrics
+- `NewReadyHandler()` — DB connectivity probe with 2s timeout (Kubernetes readiness pattern)
+- `RequestCounters` — atomic counters + 1000-entry ring buffer for P95 latency
+- `CounterMiddleware` — HTTP middleware capturing status codes and request duration
+- `statusCapture` ResponseWriter implements `http.Flusher` per security rules
+- 12 unit tests, all passing
+
+### Backend: `platform/healthagg/` (Port 8091)
+- New aggregation service: concurrent fan-out to all 9 services' `/health/detail` endpoints
+- `GET /api/v1/health/aggregate` — single frontend polling endpoint
+- Service registry via `HEALTH_SERVICES` env var
+- Overall status: all ok → "healthy"; any degraded → "degraded"; any unreachable → "unhealthy"
+- 6 unit tests, all passing
+
+### Backend: All 8 platform services wired
+- `/health/detail` and `/ready` endpoints added to all services
+- `CounterMiddleware` added to middleware chain (CORS → Auth → RateLimit → DBContext → Counter → Logging → Handler)
+- Auth and DBContext bypass paths updated for new health endpoints
+- Intelligence service: nil-safe DB handling (optional database)
+
+### Frontend: ServiceHealthDashboard
+- Summary stats row: healthy/degraded/down counts, platform completion %
+- Four-Layer Architecture diagram (preserved from original ServiceMap)
+- Live health grid: 3-column ServiceHealthCards with color-coded status (green/yellow/red)
+- Graceful degradation: falls back to static catalog when healthagg unavailable
+- HealthTrendsPanel: rolling 10-min Recharts charts for latency + DB pool utilization
+- Predictive alert banners for high pool utilization and error rates
+- FeatureBurndown: 30-service catalog with category progress bars, expandable detail tables
+- Enriched `platformServices.ts` data with buildStatus, completionPct, targetSprint, backendService mapping
+
+### Infrastructure
+- Docker Compose: healthagg service entry (port 8091, depends on all backends)
+- Vite proxy: `/api/v1/health` → healthagg, `/api/v1/preferences` → preferences (fix)
+
+### Test Results
+- Go: 18 new tests (12 healthutil + 6 healthagg) — all passing
+- Frontend: 126 test files, 907 tests — all passing (+20 new tests, zero regressions)
+- TypeScript typecheck: clean
+- Production build: clean
+
+**Design doc:** `docs/plans/2026-03-17-live-health-dashboard-design.md` (in plan file)
+**Implementation plan:** Plan mode document (proud-scribbling-pudding.md)
+
+---
+
+## Workspace Preference Learning — V1 Implementation (2026-03-16)
+
+**Branch:** `claude/loving-gagarin`
+**Goal:** Per-user workspace layout preferences with role-based aggregate suggestions. Process Efficiency Learning (Dimension 2) — enabling the AI composition engine to learn from explicit user feedback.
+
+**What was built:**
+
+### Backend: `platform/preferences/` (Port 8089)
+- New Go service with 5 API endpoints: GET/PUT/DELETE preferences, GET suggestions, POST respond
+- 4 PostgreSQL tables with RLS: `preference_events` (append-only event log), `user_preferences` (materialized read model), `role_suggestions` (batch-computed), `suggestion_responses`
+- Context key computation: deterministic hash from coarsened CaseFlags (hasDRO, isEarlyRetirement, tier) → 12 context buckets
+- Suggestion convergence computation: 70% threshold, 5-user minimum sample size
+- Docker Compose entry, database migration, Dockerfile
+- Auth middleware, CORS, rate limiting, RLS — matching all existing platform services
+
+### Frontend: Preference Override Pipeline
+- Pure `applyPreferences()` function: overlay user preferences onto `composeStages()` output
+- Mandatory stage protection (intake, benefit-calc, election, submit cannot be hidden)
+- `useComposedWorkspace()` hook wired into `RetirementApplication.tsx` — one-line integration
+- `PanelCustomizeControls` component: visibility toggle (visible/pinned/hidden), expansion toggle
+- `SuggestionToast` component: peer-count-based suggestions with accept/dismiss/snooze
+- Preferences API client + 6 React Query hooks with cache invalidation
+- `deleteAPI` helper added to shared API client
+
+### Architecture: Progressive Hybrid
+- V1: Structured rules engine with event sourcing (events are write model, preferences are read model)
+- V2 (future): AI aggregation layer consumes the same event data — no schema migration needed
+- Multi-agency ready: context keys are tenant-independent, event schema supports anonymized pattern sharing
+
+### Test Results
+- Go: 7 tests (3 context key + 4 convergence) — all passing
+- Frontend: 122 test files, 887 tests — all passing (+10 new tests, zero regressions)
+- TypeScript typecheck: clean
+- Production build: clean
+
+**Design doc:** `docs/plans/2026-03-16-workspace-preference-learning-design.md`
+**Implementation plan:** `docs/plans/2026-03-16-workspace-preference-learning-plan.md`
+
+---
+
 ## Quality Session 9: Dead Code Cleanup + API Consistency + Final Regression (2026-03-16)
 
 **Branch:** `claude/inspiring-sammet`
@@ -8,411 +102,6 @@
 **What was built:**
 
 ### Task 30: Dead Code + Dependency Cleanup
-- Deleted `frontend/src/lib/demoCases.ts` (383 lines) — never imported anywhere
-- Removed unused `getAllHelp()` from `helpContent.ts`
-- Un-exported 6 icon components in `InteractionTimelineIcons.tsx` (only used internally via `channelConfig`)
-- Un-exported `formatTimeDistance()` in `ConversationPanelHelpers.ts` (only used internally by `computeSLAState`)
-- Removed dead `auth.validateToken()` function (superseded by `validateTokenWithSecret`)
-- `go mod tidy` across all 15 Go modules — already clean
-- `npm audit` — 5 moderate dev-dependency vulnerabilities (esbuild/vite in vitest); fix requires vitest 4.x breaking upgrade, documented but deferred
-- `docker-compose.yml` `version` key already removed in prior session
-
-### Task 31: API Consistency Audit
-- **Fixed `requestId` → `request_id` across 5 services** (crm, correspondence, dataquality, knowledgebase, casemanagement) to match frontend `APIResponse<T>` contract
-- **Added `service` and `version` to meta** in dataaccess and intelligence (matching the 5 other services)
-- **Standardized dataaccess pagination** from `{ data: { items, total } }` to `{ data: [...], pagination: { total, limit, offset, hasMore } }` matching all other services
-- Updated all affected handler tests (dataaccess: 4 paginated tests, plus handler tests across 5 services)
-- Updated model JSON tags in crm, correspondence, dataquality, knowledgebase model types
-- Updated `platform/CLAUDE.md` to document `request_id` (snake_case) convention
-
-### Task 32: Final Regression Suite
-- All 15 Go modules: build clean, tests pass
-- Connector: 4 test packages pass
-- 7 platform services: 14 test packages pass
-- 7 shared packages (auth, cache, dbcontext, envutil, logging, ratelimit, validation): all pass
-- Frontend: typecheck clean, **119 test files, 869 tests, all passing**
-- Zero regressions from Session 8 baseline
-
-**Master Quality Review Plan: ALL 32 TASKS COMPLETE**
-
-| Session | Tasks | Summary |
-|---------|-------|---------|
-| 1 | 1-4 | Auth middleware, structured logging, CORS |
-| 2-3 | 5-8 | Input validation package + wiring |
-| 4 | 9-11 | Rate limiting, route guards, connection pools |
-| 5 | 26, 28 | Request timeouts, TypeScript strictness |
-| 6 | 19-21 | API client tests, coverage config, test tiering |
-| 7 | 22-24 | Performance indexes, pagination, PgBouncer |
-| 8 | 25, 29 | Server-side caching, component decomposition |
-| 9 | 30-32 | Dead code cleanup, API consistency, final regression |
-
-**Files changed:** 22 modified, 1 deleted (+127/-500 net)
-
----
-
-## Quality Session 8: Server-Side Caching + Component Decomposition (2026-03-16)
-
-**Branch:** `claude/priceless-hermann`
-**Goal:** Server-side caching (Task 25) and frontend component decomposition (Task 29) from the master quality review plan.
-
-**What was built:**
-
-### Task 25: Server-Side Caching (`platform/cache/`)
-- New `platform/cache` Go package: generic in-memory TTL cache with `sync.RWMutex` concurrency safety
-  - `New(ttl)`, `Get(key)`, `Set(key, value)`, `Delete(key)`, `Clear()`, `Len()` API
-  - Background cleanup goroutine evicts expired entries every TTL interval
-  - 6 unit tests covering TTL expiry, overwrite, delete, clear, and concurrent access
-- **Knowledgebase service**: cached `ListArticles` and `GetStageHelp` with 5-minute TTL
-  - Cache keys include tenant, stage, topic, query, pagination params for isolation
-  - `Cache-Control: public, max-age=300` + `X-Cache: HIT/MISS` headers
-- **Case management service**: cached `ListStages` with 5-minute TTL
-- **Dataaccess service**: cached stage definition taxonomy with 10-minute TTL
-  - Taxonomy is read-only reference data, rarely changes — longer TTL appropriate
-
-### Task 29: Component Decomposition (20 oversized components)
-- Decomposed 20 frontend components that exceeded the 250-line guideline
-- Extracted 45+ focused sub-components and helper modules
-- **Net reduction: ~4,500 lines removed** from parent components
-- Key decompositions:
-  - `MemberPortal.tsx` (1,372 → ~400): 12 sub-components (Hero, Dashboard, Milestones, Projections, Messages, etc.)
-  - `EmployerPortal.tsx` (750 → ~250): 6 sub-components (Nav, OrgBanner, Enrollment, Reporting, Communications, Constants)
-  - `RetirementApplication.tsx` (489 → ~200): 5 sub-components (Header, StatusBar, Content, StageRenderer, CorrespondencePanel)
-  - `InteractionTimeline.tsx` (311 → ~100): 2 sub-components (EntryRow, Icons)
-  - `CRMWorkspace.tsx`, `ConversationPanel.tsx`, `CommitmentTracker.tsx`, `StaffPortal.tsx`, etc.
-- All existing tests continue to pass — decomposition preserved all behavior
-
-**Test results:**
-- `platform/cache`: 6 tests passing
-- `platform/knowledgebase`: build and tests pass
-- `platform/casemanagement`: build and tests pass
-- `platform/dataaccess`: build and tests pass
-- Frontend: typecheck clean, 869 tests passing
-
-**Files changed:** 26 modified, 48 new files (+~2,500 / -~4,900 net)
-
----
-
-## Database Performance Session 7: Indexes, Pagination, PgBouncer (2026-03-16)
-
-**Branch:** `claude/hungry-ellis`
-**Goal:** Database performance hardening for 250K-member scale (Tasks 22-24 from master review plan).
-
-**What was built:**
-
-### Task 22: Index Optimization
-- New migration `014_performance_indexes.sql` adding 8 composite indexes:
-  - `SALARY_HIST(MEMBER_ID, PAY_PERIOD_END DESC)` — salary history sorted queries
-  - `SALARY_HIST(MEMBER_ID, FY_YEAR)` — fiscal year filtering
-  - `EMPLOYMENT_HIST(MEMBER_ID, EVENT_DT ASC)` — employment history sorted queries
-  - `CONTRIBUTION_HIST(MEMBER_ID, PAY_PERIOD_END DESC)` — latest-balance lookup
-  - `BENEFIT_PAYMENT(MEMBER_ID, PAY_DATE DESC)` — payment history
-  - `CASE_HIST(MEMBER_ID, CASE_STATUS)` — case lookups by member + status
-  - `retirement_case(tenant_id, status, assigned_to)` — work queue queries
-  - `crm_audit_log(tenant_id, entity_type, entity_id, event_time DESC)` — entity-scoped audit
-
-### Task 23: Pagination Enforcement
-- Added LIMIT/OFFSET pagination to 5 dataaccess endpoints using `COUNT(*) OVER()` window function:
-  - `GET /members/{id}/salary` — max 500, default 100
-  - `GET /members/{id}/employment` — max 200, default 100
-  - `GET /members/{id}/beneficiaries` — max 100, default 100
-  - `GET /members/{id}/dro` — max 50, default 25
-  - `GET /members/{id}/service-credit` — max 100, default 100
-- Added `PaginatedData` response envelope (`items`, `total`, `limit`, `offset`)
-- Added LIMIT 200 safety cap to CRM `GetNotesByInteraction`
-- AMS endpoint intentionally NOT paginated (needs all salary records for sliding window)
-- Taxonomy tree intentionally NOT paginated (needs all nodes for tree assembly)
-
-### Task 24: PgBouncer Connection Pooling
-- Added PgBouncer service (edoburu/pgbouncer:1.22.0) to docker-compose.yml
-- Transaction pooling mode (compatible with `set_config(..., false)` RLS pattern)
-- All 7 platform services now connect through PgBouncer (port 6432) instead of direct PostgreSQL
-- Right-sized per-service connection pools behind PgBouncer:
-  - dataaccess: 15→8, intelligence: 5→3, crm: 12→8, correspondence: 8→5
-  - dataquality: 8→5, knowledgebase: 8→5, casemanagement: 12→8
-
-**Test results:**
-- All 7 platform services: build and test pass
-- Connector: build clean
-- Frontend: typecheck clean
-- Docker compose config: valid (deprecation warning on `version` key only)
-
-**Files changed:** 22 files (+357/-162)
-- 3 created: `014_performance_indexes.sql`, `pgbouncer.ini`, `userlist.txt`
-- 19 modified: `docker-compose.yml`, 7×`postgres.go`, 7×`postgres_test.go`, `handlers.go`, `handlers_test.go`, `response.go`, `notes.go`
-
----
-
-## Quality & Tech Debt Session 5: TypeScript Strictness, Timeouts, Deduplication (2026-03-16)
-
-**Branch:** `claude/happy-galileo`
-**Goal:** Address quality review items (Q4.2 TypeScript `any` elimination, P2.4 request timeouts) and tech debt from Session 4.
-
-**What was built:**
-
-### Q4.2: TypeScript `any` Elimination
-- Replaced all `any` types in production code with proper types:
-  - `apiClient.ts`: `rawRequest` returns `unknown`, enum transforms use `Record<string, unknown>`
-  - `workflowComposition.ts`: new `WorkflowData` and `WorkflowCalculationData` structural interfaces
-  - 4 Recharts chart components: inline tooltip prop types replace `any`
-- Replaced all `any` types in 14 test files with `as unknown as T` double-assertion pattern
-- Zero `any` remains in entire frontend codebase
-
-### P2.4: Request Timeouts
-- `apiClient.ts`: 30s AbortController timeout on all API requests (configurable via `FetchOptions`)
-- `nginx.conf`: proxy timeouts aligned with Go WriteTimeout (connect 5s, send 10s, read 35s)
-- AbortError explicitly not retried (thrown as `APIError('Request timed out', 0, ...)`)
-
-### Tech Debt from Session 4
-- **Shared `platform/envutil/` package**: `GetEnv`, `GetEnvInt`, `GetEnvFloat` — 9 tests
-- **8 services wired**: eliminated 119 lines of duplicated `getEnv`/`getEnvInt`/`getEnvFloat`
-- **Rate limiter `MiddlewareWithContext`**: accepts `context.Context` for graceful goroutine shutdown
-- **Computed `Retry-After`**: `math.Ceil(1.0 / cfg.IPRate)` instead of hardcoded "1"
-- **DevRoleSwitcher**: gated behind `import.meta.env.DEV`
-
-**Test results:**
-- 8 Go modules: all build and pass
-- Frontend: 113 test files, 818 tests passing (+1), typecheck clean
-- Zero `any` in production or test code
-
-**Commits (9):**
-```
-78260bc [frontend] Replace any with proper types in test files
-ccd6ca7 [platform/ratelimit] Add context-based shutdown and computed Retry-After
-05dee65 [platform/*] Replace duplicated env helpers with shared envutil package
-b033ded [frontend] Add 30s AbortController request timeout to apiClient
-6703ad8 [frontend] Replace any with proper types in Recharts CustomTooltip components
-ef63321 [infrastructure] Add proxy timeout configuration to nginx
-b9695ca [frontend] Replace any with structural types in workflowComposition
-968b8d0 [frontend] Replace any with unknown in apiClient enum transforms
-1668e82 [frontend] Gate DevRoleSwitcher behind import.meta.env.DEV
-```
-
-**Session 4 tech debt — all resolved:**
-- ~~`getEnvInt` helper duplicated across 7 services~~ → shared `envutil` package
-- ~~Rate limiter cleanup goroutine has no shutdown mechanism~~ → `MiddlewareWithContext` with context cancellation
-- ~~`Retry-After` header hardcoded to "1"~~ → computed from config
-- ~~DevRoleSwitcher not gated behind `import.meta.env.DEV`~~ → gated
-
----
-
-## Security Hardening Session 4: Pool Sizing, Rate Limiting, Route Guards (2026-03-16)
-
-**Branch:** `claude/hopeful-goldstine`
-**Goal:** Resolve remaining security findings F-012 (HIGH), F-011 (MEDIUM), F-013 (MEDIUM).
-
-**What was built:**
-
-### F-012 (HIGH → RESOLVED): Connection Pool Exceeds PostgreSQL Limits
-- All 7 platform services now have configurable `DB_MAX_OPEN_CONNS` / `DB_MAX_IDLE_CONNS` env vars
-- Right-sized defaults: total 68 max open (was 160), within PostgreSQL's 100-connection limit
-- Per-service defaults: dataaccess=15, crm=12, casemanagement=12, correspondence=8, dataquality=8, knowledgebase=8, intelligence=5
-- Warning logs for invalid env values and MaxIdle > MaxOpen misconfiguration
-- Tests: 7 services × 5 pool config tests = 35 new tests
-
-### F-011 (MEDIUM → RESOLVED): No Rate Limiting
-- New `platform/ratelimit/` shared package using `golang.org/x/time/rate` (new dependency)
-- Per-IP rate limiting (1 req/sec, burst 20) + per-tenant (2 req/sec, burst 40)
-- Configurable via `RATE_LIMIT_IP_RATE`, `RATE_LIMIT_IP_BURST`, `RATE_LIMIT_TENANT_RATE`, `RATE_LIMIT_TENANT_BURST`
-- Wired into all 7 services: CORS → Auth → RateLimit → DBContext → Logging → Handler
-- XFF anti-spoofing: prefers X-Real-IP, uses rightmost XFF entry
-- Background cleanup goroutine evicts stale entries after 10 minutes
-- Tests: 20 tests covering limiter, middleware, IP extraction, config, tenant limiting
-- Returns 429 with `Retry-After` header and JSON error body
-
-### F-013 (MEDIUM → RESOLVED): No Frontend Route Guards
-- New `src/types/auth.ts`: UserRole, ViewMode types, ROLE_ACCESS mapping
-- New `src/contexts/AuthContext.tsx`: AuthProvider, useAuth hook with canAccess/switchRole
-- New `src/lib/devAuth.ts`: Dev-mode HS256 JWT generation matching backend dev secret
-- All navigation paths guarded: handleChangeView, handleOpenCase, handleViewMember
-- TopNav filters tabs by role; command palette filters commands by role
-- API client now sends `Authorization: Bearer` header on all requests
-- DevRoleSwitcher widget for development testing
-- Token race condition fixed (children gated on token readiness)
-- ViewMode type safety improved (string → ViewMode at all boundaries)
-- Tests: 23 new frontend tests (auth types, devAuth, AuthContext)
-
-**Dependencies added:**
-- `golang.org/x/time v0.9.0` — Token bucket rate limiter (quasi-stdlib, Go team maintained)
-
-**Test results:**
-- 8 Go modules: all pass (ratelimit, dataaccess, crm, casemanagement, intelligence, correspondence, dataquality, knowledgebase)
-- Frontend: 113 test files, 817 tests passing, typecheck clean
-- Zero regressions
-
-**Commits (6):**
-```
-aa4d216 [frontend] Fix token race condition and type safety in route guards (F-013)
-b1a6711 [frontend] Add auth context and role-based route guards (F-013)
-f456a1e [platform/ratelimit] Fix XFF spoofing, use json encoder, add tenant test (F-011)
-d237f51 [platform/ratelimit] Add per-IP and per-tenant rate limiting middleware (F-011)
-be721c0 [platform/*] Add warning logs for invalid pool config (F-012)
-2f2c83c [platform/*] Add configurable connection pool sizing (F-012)
-```
-
-**Known tech debt (noted, not blocking):**
-- `getEnvInt` helper duplicated across 7 services (follows existing `getEnv` pattern — consolidate when shared dbutil package is created)
-- Rate limiter cleanup goroutine has no shutdown mechanism (acceptable for single-process, add context.Context for horizontal scaling)
-- `Retry-After` header hardcoded to "1" (could compute from actual rate)
-- DevRoleSwitcher not gated behind `import.meta.env.DEV` (add when Clerk integration lands)
-
-## Security Hardening Session 3: Input Validation (2026-03-15)
-
-**Branch:** `claude/bold-albattani`
-**Goal:** Create shared input validation package and wire into all 7 platform services, resolving F-010 (HIGH) from the security review.
-
-**What was built:**
-
-### Shared Validation Package (F-010 — HIGH → RESOLVED)
-
-- **`platform/validation/`** — New Go module (stdlib only, no external deps)
-  - `Errors` collector type with 11 validator methods: Required, MaxLen, MinLen, Enum, EnumOptional, UUID, UUIDOptional, DateYMD, DateYMDOptional, PositiveInt, IntRange
-  - `Pagination()` helper: clamps limit (default 25, configurable max), clamps offset ≥ 0
-  - 14 test functions, 34 subtests — all passing
-
-### Service Wiring (all 7 platform services)
-
-- **casemanagement** — 5 handlers validated: CreateCase (7 checks), UpdateCase (4 enum/length checks), AdvanceStage (3 checks), CreateNote (5 checks), CreateDocument (6 checks). Pagination on ListCases (max 100).
-- **crm** — 10+ handlers validated: CreateContact, UpdateContact, CreateConversation, UpdateConversation, CreateInteraction, CreateNote, CreateCommitment, UpdateCommitment, CreateOutreach, UpdateOutreach, CreateOrganization. Pagination on 7 list endpoints (max 100, audit max 200).
-- **correspondence** — Generate (Required templateId), UpdateCorrespondence (Enum status). Pagination on 2 list endpoints.
-- **dataquality** — UpdateIssue (Enum status, MaxLen). IntRange(days, 1-365) on trend endpoint. Pagination on 3 list endpoints.
-- **knowledgebase** — MaxLen(q, 200) on search. Pagination on 3 list endpoints.
-- **intelligence** — PositiveInt(member_id) on all 5 POST handlers. DateYMD/DateYMDOptional replacing inline date parsing.
-- **dataaccess** — MaxLen(q, 200) on search. Pagination(limit, 0, 50). PositiveInt on member ID.
-
-**New files:** `platform/validation/` (go.mod, validation.go, validation_test.go), `docs/plans/2026-03-15-input-validation.md`
-
-**Modified files:** 14 files across 7 services (go.mod + handlers.go per service)
-
-**Tests:** All 7 platform services build and test clean. Validation package: 34 subtests passing.
-
----
-
-## Security Hardening Session 2: Row-Level Security + CORS Lockdown (2026-03-15)
-
-**Branch:** `claude/bold-albattani`
-**Goal:** Implement PostgreSQL Row-Level Security (RLS) and lock down wildcard CORS, resolving F-009 (CRITICAL) and F-004 (MEDIUM) from the security review.
-
-**What was built:**
-
-### RLS Infrastructure (F-009 — CRITICAL → RESOLVED)
-
-- **`domains/pension/schema/013_row_level_security.sql`** — 407-line migration enabling RLS on 35 content tables with FORCE ROW LEVEL SECURITY. Three policy tiers:
-  - Direct: 17 tables with tenant_id column (retirement_case, crm_contact, etc.)
-  - Child: 7 tables joined via parent FK (case_flag → retirement_case, etc.)
-  - Legacy: 11 tables without tenant_id (member_master, salary_hist, etc.) — join through retirement_case with staff/member role branching
-  - Supporting index: `idx_case_tenant_member` on `retirement_case(tenant_id, member_id)`
-  - 3 reference tables excluded (department_ref, position_ref, case_stage_definition)
-
-- **`platform/dbcontext/`** — New package for RLS connection scoping (122 lines, 7 tests)
-  - `ScopedConn()` — acquires `*sql.Conn` from pool, calls `set_config('app.tenant_id', ...)` etc.
-  - `DBMiddleware` — extracts auth claims → injects scoped conn into request context
-  - `Querier` interface — satisfied by `*sql.DB`, `*sql.Conn`, `*sql.Tx` for transparent routing
-  - `DB(ctx, fallback)` — single routing point: returns scoped conn if available, pool otherwise
-
-- **Store migration** — All 6 DB services migrated to route queries through `dbcontext.DB(ctx, s.DB)`:
-  - casemanagement: 25+ methods + handlers + all tests updated
-  - crm: 10+ store files + handlers updated
-  - correspondence, dataquality, knowledgebase: db/postgres.go + handlers updated
-  - dataaccess: already used `dbcontext.DB()` directly in handlers
-
-- **Middleware wiring** — `DBMiddleware` added to all 6 DB service `main.go` files. Middleware chain: CORS → Auth → DBContext → Logging → Handler
-
-- **RLS integration tests** — 5 tests in `platform/dataaccess/db/rls_test.go` (skip with `-short`):
-  - Tenant isolation (cases), member isolation (salary), staff visibility, wrong-tenant empty result, cross-tenant member blocking
-
-### CORS Lockdown (F-004 — MEDIUM → RESOLVED)
-
-- `connector/service/handlers.go` + `connector/dashboard/server.go` — replaced wildcard `*` CORS with `os.Getenv("CORS_ORIGIN")` defaulting to `http://localhost:3000`
-- Added Authorization, X-Request-ID headers, credentials support, Max-Age caching
-- Helm values updated for dataaccess and intelligence services
-
-**New files:** `platform/dbcontext/` (go.mod, dbcontext.go, dbcontext_test.go), `domains/pension/schema/013_row_level_security.sql`, `platform/dataaccess/db/rls_test.go`, `docs/plans/2026-03-15-rls-cors-lockdown.md`
-
-**Modified files:** 27+ files across 6 services (main.go, handlers, stores, tests)
-
-**Tests:** All 7 platform services build and test clean. Frontend unaffected (794 tests, 0 regressions).
-
----
-
-## Security Hardening Session 1: Auth Middleware + Structured Logging (2026-03-15)
-
-**Branch:** `claude/silly-antonelli`
-**Goal:** Add JWT authentication and structured logging to all 7 platform services as part of the comprehensive quality/security/performance review initiative.
-
-**What was built:**
-- `platform/auth/` — JWT HS256 middleware package (199 lines, 14 tests)
-  - Validates Bearer token signatures, algorithm (HS256 only), and expiration
-  - Extracts tenant_id, member_id, role, user_id from claims into request context
-  - Strips spoofed `X-Tenant-ID` headers — tenant comes from token only
-  - Health/readiness endpoints bypass auth
-  - `NewMiddleware(secret)` constructor for testability
-- `platform/logging/` — Structured JSON logging package (80 lines, 6 tests)
-  - `Setup(serviceName)` creates JSON logger with service attribute
-  - `RequestLogger` middleware logs method, path, status, duration_ms, request_id
-  - `ContextExtractor` pattern for auth claims without coupling to auth package
-  - `statusWriter` implements `http.Flusher` for SSE/streaming compatibility
-- All 7 services wired: dataaccess, intelligence, crm, correspondence, dataquality, knowledgebase, casemanagement
-  - Middleware chain: CORS → Auth → Logging → Handler
-  - All `log.Printf` replaced with `slog.Info`/`slog.Error`/`slog.Warn`
-  - `tenantFromHeader` replaced with context-aware `tenantID` helper (fallback for tests)
-
-**New files (6):**
-- `platform/auth/go.mod`, `platform/auth/auth.go`, `platform/auth/auth_test.go`
-- `platform/logging/go.mod`, `platform/logging/logging.go`, `platform/logging/logging_test.go`
-
-**Modified files (33):** All 7 services' main.go, api/handlers.go, db/postgres.go, go.mod
-
-**Security findings documented:** 13 findings (F-001 through F-013) in `docs/SECURITY_FINDINGS.md`. 8 resolved in this session, 5 tracked for future sessions. Prevention rules added to CLAUDE.md.
-
-**Design documents:**
-- `docs/plans/2026-03-15-quality-security-performance-review-design.md`
-- `docs/plans/2026-03-15-quality-security-performance-review-plan.md`
-
-**Tests:** 794 frontend (0 regressions), 14 auth, 6 logging, all Go service tests pass
-**TypeScript:** 0 errors
-
----
-
-## Root Component Tests Batch 1 — Session 16 (2026-03-15)
-
-**Branch:** `claude/infallible-knuth`
-**PR:** #67 (merged)
-**Goal:** Add test coverage for root-level components batch 1 — case/workflow orchestration, CRM contact panels, and benefit calculation display components.
-
-**Key decision: Network-layer fetch mocking (not hook mocking)**
-User directed that all tests should mock at the `fetch` boundary, not at the hook level. This means real hooks, React Query caching, and `apiClient.ts` enum normalization all run in tests. Props-based components need no mocking at all. This is the testing strategy going forward.
-
-**What was built:**
-- 45 new tests across 6 test files for root-level components
-- CaseJournalPanel (8 tests) — cascading contact resolution via fetch mocks for 7+ API endpoints, tab switching between timeline/conversations/commitments/correspondence
-- CommitmentTracker (7 tests) — paginated list rendering, search filtering, status badges, action buttons
-- OutreachQueue (9 tests) — queue rendering, priority/status badges, max attempts warning, talking points
-- InteractionTimeline (7 tests) — timeline entries, channel badges, direction indicators, duration formatting
-- BenefitCalculationPanel (8 tests) — benefit display with CollapsibleSections, AMS, formula, reduction, leave payout
-- IPRCalculator (6 tests) — IPR amounts, medicare/non-medicare highlighting, fractional service years
-
-**New files (7):**
-- `frontend/src/components/__tests__/CaseJournalPanel.test.tsx` — 8 tests
-- `frontend/src/components/__tests__/CommitmentTracker.test.tsx` — 7 tests
-- `frontend/src/components/__tests__/OutreachQueue.test.tsx` — 9 tests
-- `frontend/src/components/__tests__/InteractionTimeline.test.tsx` — 7 tests
-- `frontend/src/components/__tests__/BenefitCalculationPanel.test.tsx` — 8 tests
-- `frontend/src/components/__tests__/IPRCalculator.test.tsx` — 6 tests
-- `docs/session-starters/session17-root-components-batch2.md` — next session starter
-
-**Testing patterns established:**
-- `setupFetch()` helper for URL-pattern-based fetch mocking (reusable across test files)
-- `renderWithProviders()` for components using React Query hooks
-- `getAllByText()` for CollapsibleSection badge duplication (CSS grid `0fr` keeps content in DOM)
-- Regex matchers for text split across elements
-
-**Tests:** 508 → 592 (+45 new from Session 16, +39 from Session 15's PR merge, 0 regressions)
-**TypeScript:** 0 errors
-
----
-
-## Workflow Non-Stage Component Tests — Session 15 (2026-03-15)
-
 **Branch:** `claude/naughty-germain`
 **Goal:** Add test coverage for all 14 workflow non-stage components (view modes, navigation controls, support panels, correspondence). Coverage 0% → 100%.
 

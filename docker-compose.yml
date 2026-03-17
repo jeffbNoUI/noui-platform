@@ -36,6 +36,7 @@ services:
       - ./domains/pension/seed/015_expanded_crm.sql:/docker-entrypoint-initdb.d/025_expanded_crm.sql
       - ./domains/pension/schema/013_row_level_security.sql:/docker-entrypoint-initdb.d/026_row_level_security.sql
       - ./domains/pension/schema/014_performance_indexes.sql:/docker-entrypoint-initdb.d/027_performance_indexes.sql
+      - ./domains/pension/schema/015_preferences_schema.sql:/docker-entrypoint-initdb.d/028_preferences_schema.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U derp"]
       interval: 5s
@@ -208,6 +209,27 @@ services:
       pgbouncer:
         condition: service_healthy
 
+  preferences:
+    build:
+      context: ./platform/preferences
+      dockerfile: Dockerfile
+    ports:
+      - "8089:8089"
+    environment:
+      PORT: "8089"
+      DB_HOST: pgbouncer
+      DB_PORT: "6432"
+      DB_USER: derp
+      DB_PASSWORD: derp
+      DB_NAME: derp
+      DB_SSLMODE: disable
+      DB_MAX_OPEN_CONNS: "5"
+      DB_MAX_IDLE_CONNS: "2"
+      CORS_ORIGIN: "http://localhost:3000"
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+
   connector:
     build:
       context: ./connector
@@ -217,6 +239,27 @@ services:
     environment:
       PORT: "8090"
       CORS_ORIGIN: "http://localhost:3000"
+
+  healthagg:
+    build:
+      context: ./platform/healthagg
+      dockerfile: Dockerfile
+    ports:
+      - "8091:8091"
+    environment:
+      PORT: "8091"
+      HEALTH_SERVICES: "dataaccess:http://dataaccess:8081,intelligence:http://intelligence:8082,crm:http://crm:8083,correspondence:http://correspondence:8085,dataquality:http://dataquality:8086,knowledgebase:http://knowledgebase:8087,casemanagement:http://casemanagement:8088,preferences:http://preferences:8089,connector:http://connector:8090"
+      CORS_ORIGIN: "http://localhost:3000"
+    depends_on:
+      - dataaccess
+      - intelligence
+      - crm
+      - correspondence
+      - dataquality
+      - knowledgebase
+      - casemanagement
+      - preferences
+      - connector
 
   frontend:
     build:

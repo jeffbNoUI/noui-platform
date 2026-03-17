@@ -78,10 +78,12 @@ describe('StaffPortal', () => {
     expect(screen.getByText('CSR Context Hub')).toBeInTheDocument();
   });
 
-  it('renders Service Map tab', () => {
+  it('renders Platform Health tab', () => {
     renderWithProviders(<StaffPortal onOpenCase={noop} onViewMember={noop} onChangeView={noop} />);
-    fireEvent.click(screen.getByText('Service Map'));
-    expect(screen.getByText('Platform Service Map')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Platform Health'));
+    // Header and sidebar both show "Platform Health"
+    const headers = screen.getAllByText('Platform Health');
+    expect(headers.length).toBeGreaterThanOrEqual(2);
   });
 
   it('renders Data Quality tab', () => {
@@ -109,7 +111,7 @@ describe('StaffPortal', () => {
       'Supervisor',
       'Executive',
       'CSR Hub',
-      'Service Map',
+      'Platform Health',
       'Data Quality',
       'Correspondence',
     ];

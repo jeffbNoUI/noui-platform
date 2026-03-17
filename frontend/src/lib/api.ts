@@ -1,4 +1,4 @@
-import { fetchAPI, postAPI } from './apiClient';
+import { fetchAPI, postAPI, putAPI, deleteAPI } from './apiClient';
 
 const CONNECTOR_URL = import.meta.env.VITE_CONNECTOR_URL || '/api';
 const INTELLIGENCE_URL = import.meta.env.VITE_INTELLIGENCE_URL || '/api';
@@ -50,5 +50,52 @@ export const intelligenceAPI = {
     postAPI(`${INTELLIGENCE_URL}/v1/dro/calculate`, {
       member_id: memberID,
       retirement_date: retirementDate,
+    }),
+};
+
+// ─── Preference types ─────────────────────────────────────────────────────────
+
+export interface UpsertPreferenceRequest {
+  contextKey: string;
+  panelId: string;
+  visibility: 'visible' | 'hidden' | 'pinned';
+  position: number | null;
+  defaultState: 'expanded' | 'collapsed';
+}
+
+export interface SuggestionResponse {
+  id: string;
+  contextKey: string;
+  panelId: string;
+  suggestedVisibility: 'visible' | 'hidden' | 'pinned';
+  reason: string;
+  createdAt: string;
+}
+
+// Preferences service endpoints
+const PREFERENCES_URL = import.meta.env.VITE_PREFERENCES_URL || '/api';
+
+export const preferencesAPI = {
+  getPreferences: (contextKey: string) =>
+    fetchAPI<import('./preferenceOverrides').PanelPreference[]>(
+      `${PREFERENCES_URL}/v1/preferences?context_key=${encodeURIComponent(contextKey)}`,
+    ),
+
+  upsertPreference: (req: UpsertPreferenceRequest) =>
+    putAPI<{ status: string }>(`${PREFERENCES_URL}/v1/preferences`, req),
+
+  resetPreferences: (contextKey: string) =>
+    deleteAPI<{ status: string }>(
+      `${PREFERENCES_URL}/v1/preferences?context_key=${encodeURIComponent(contextKey)}`,
+    ),
+
+  getSuggestions: (contextKey: string) =>
+    fetchAPI<SuggestionResponse[]>(
+      `${PREFERENCES_URL}/v1/suggestions?context_key=${encodeURIComponent(contextKey)}`,
+    ),
+
+  respondToSuggestion: (suggestionId: string, response: string) =>
+    postAPI<{ status: string }>(`${PREFERENCES_URL}/v1/suggestions/${suggestionId}/respond`, {
+      response,
     }),
 };

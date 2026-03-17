@@ -255,6 +255,10 @@ export function patchAPI<T>(url: string, payload: unknown): Promise<T> {
   return request<T>(url, { method: 'PATCH', body: JSON.stringify(uppercaseEnums(payload)) });
 }
 
+export function deleteAPI<T>(url: string): Promise<T> {
+  return request<T>(url, { method: 'DELETE' });
+}
+
 export function toQueryString(params: object): string {
   const parts: string[] = [];
   for (const [key, value] of Object.entries(params)) {

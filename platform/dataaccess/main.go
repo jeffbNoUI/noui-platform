@@ -16,11 +16,13 @@ import (
 	"github.com/noui/platform/dataaccess/api"
 	"github.com/noui/platform/dataaccess/db"
 	"github.com/noui/platform/dbcontext"
+	"github.com/noui/platform/healthutil"
 	"github.com/noui/platform/logging"
 	"github.com/noui/platform/ratelimit"
 )
 
 func main() {
+	startedAt := time.Now()
 	logger := logging.Setup("dataaccess", nil)
 	slog.SetDefault(logger)
 	slog.Info("starting dataaccess service v0.1.0")
@@ -33,9 +35,12 @@ func main() {
 	}
 	defer database.Close()
 
+	counters := healthutil.NewRequestCounters()
 	handler := api.NewHandler(database)
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
+	mux.HandleFunc("GET /health/detail", healthutil.NewDetailHandler("dataaccess", "0.1.0", startedAt, database, counters))
+	mux.HandleFunc("GET /ready", healthutil.NewReadyHandler("dataaccess", database))
 
 	// Claims extractor — reads JWT context values for RLS session variables.
 	claimsExtractor := func(r *http.Request) dbcontext.Params {
@@ -55,10 +60,10 @@ func main() {
 		}
 	}
 
-	// Middleware order: CORS → Auth → RateLimit → DBContext → Logging → Handler
+	// Middleware order: CORS → Auth → RateLimit → DBContext → Counter → Logging → Handler
 	// Auth runs first so claims are available; RateLimit uses tenant_id from auth; DBContext sets RLS session vars.
 	rl := ratelimit.Middleware(ratelimit.DefaultConfig())
-	wrappedMux := corsMiddleware(auth.Middleware(rl(dbcontext.DBMiddleware(database, claimsExtractor)(logging.RequestLogger(logger, authExtractor)(mux)))))
+	wrappedMux := corsMiddleware(auth.Middleware(rl(dbcontext.DBMiddleware(database, claimsExtractor)(healthutil.CounterMiddleware(counters)(logging.RequestLogger(logger, authExtractor)(mux))))))
 
 	port := os.Getenv("PORT")
 	if port == "" {

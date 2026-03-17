@@ -15,11 +15,13 @@ import (
 	"github.com/noui/platform/dataquality/api"
 	"github.com/noui/platform/dataquality/db"
 	"github.com/noui/platform/dbcontext"
+	"github.com/noui/platform/healthutil"
 	"github.com/noui/platform/logging"
 	"github.com/noui/platform/ratelimit"
 )
 
 func main() {
+	startedAt := time.Now()
 	logger := logging.Setup("dataquality", nil)
 	slog.SetDefault(logger)
 	slog.Info("starting Data Quality service v0.1.0")
@@ -32,9 +34,12 @@ func main() {
 	}
 	defer database.Close()
 
+	counters := healthutil.NewRequestCounters()
 	handler := api.NewHandler(database)
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
+	mux.HandleFunc("GET /health/detail", healthutil.NewDetailHandler("dataquality", "0.1.0", startedAt, database, counters))
+	mux.HandleFunc("GET /ready", healthutil.NewReadyHandler("dataquality", database))
 
 	claimsExtractor := func(r *http.Request) dbcontext.Params {
 		return dbcontext.Params{
@@ -50,9 +55,9 @@ func main() {
 			slog.String("user_role", auth.UserRole(r.Context())),
 		}
 	}
-	// Middleware order: CORS → Auth → RateLimit → DBContext → Logging → Handler
+	// Middleware order: CORS → Auth → RateLimit → DBContext → Counter → Logging → Handler
 	rl := ratelimit.Middleware(ratelimit.DefaultConfig())
-	wrappedMux := corsMiddleware(auth.Middleware(rl(dbcontext.DBMiddleware(database, claimsExtractor)(logging.RequestLogger(logger, authExtractor)(mux)))))
+	wrappedMux := corsMiddleware(auth.Middleware(rl(dbcontext.DBMiddleware(database, claimsExtractor)(healthutil.CounterMiddleware(counters)(logging.RequestLogger(logger, authExtractor)(mux))))))
 
 	port := os.Getenv("PORT")
 	if port == "" {

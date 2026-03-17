@@ -3,7 +3,7 @@ import SupervisorDashboard from '@/components/staff/SupervisorDashboard';
 import MemberSearch from '@/components/staff/MemberSearch';
 import ExecutiveDashboard from '@/components/staff/ExecutiveDashboard';
 import CSRContextHub from '@/components/staff/CSRContextHub';
-import ServiceMap from '@/components/admin/ServiceMap';
+import ServiceHealthDashboard from '@/components/admin/ServiceHealthDashboard';
 import DataQualityPanel from '@/components/admin/DataQualityPanel';
 import CorrespondencePanel from '@/components/workflow/CorrespondencePanel';
 import StaffPortalKPIStats from './StaffPortalKPIStats';
@@ -41,7 +41,7 @@ const SIDEBAR_NAV = [
   { key: 'csr' as StaffTab, label: 'CSR Hub', icon: '\ud83d\udcde', shortcut: 'G C' },
   {
     key: 'service-map' as StaffTab,
-    label: 'Service Map',
+    label: 'Platform Health',
     icon: '\ud83d\uddfa\ufe0f',
     shortcut: 'G P',
   },
@@ -168,7 +168,7 @@ export default function StaffPortal({ onOpenCase, onViewMember, onChangeView }: 
                 supervisor: 'Supervisor Dashboard',
                 executive: 'Executive Dashboard',
                 csr: 'CSR Context Hub',
-                'service-map': 'Platform Service Map',
+                'service-map': 'Platform Health',
                 dq: 'Data Quality',
                 correspondence: 'Correspondence',
               }[activeTab]
@@ -229,7 +229,7 @@ export default function StaffPortal({ onOpenCase, onViewMember, onChangeView }: 
           {activeTab === 'csr' && <CSRContextHub />}
 
           {/* Service Map tab */}
-          {activeTab === 'service-map' && <ServiceMap />}
+          {activeTab === 'service-map' && <ServiceHealthDashboard />}
 
           {/* Data Quality tab */}
           {activeTab === 'dq' && <DataQualityPanel />}
