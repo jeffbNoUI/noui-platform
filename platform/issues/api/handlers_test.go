@@ -685,6 +685,11 @@ func TestUpdateIssue_EmptyBody(t *testing.T) {
 func TestListComments_Empty(t *testing.T) {
 	h, mock := newTestHandler(t)
 
+	// Tenant guard: GetIssueByID lookup
+	mock.ExpectQuery("SELECT").
+		WithArgs(1, defaultTenantID).
+		WillReturnRows(newIssueRows(1, "ISS-001"))
+
 	mock.ExpectQuery("SELECT").
 		WithArgs(1).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "issue_id", "author", "content", "created_at"}))
@@ -710,6 +715,11 @@ func TestListComments_Empty(t *testing.T) {
 
 func TestListComments_WithResults(t *testing.T) {
 	h, mock := newTestHandler(t)
+
+	// Tenant guard: GetIssueByID lookup
+	mock.ExpectQuery("SELECT").
+		WithArgs(1, defaultTenantID).
+		WillReturnRows(newIssueRows(1, "ISS-001"))
 
 	now := time.Now().UTC()
 	rows := sqlmock.NewRows([]string{"id", "issue_id", "author", "content", "created_at"}).
@@ -744,7 +754,12 @@ func TestListComments_WithResults(t *testing.T) {
 // --- CreateComment ---
 
 func TestCreateComment_MissingFields(t *testing.T) {
-	h, _ := newTestHandler(t)
+	h, mock := newTestHandler(t)
+
+	// Tenant guard: GetIssueByID lookup
+	mock.ExpectQuery("SELECT").
+		WithArgs(1, defaultTenantID).
+		WillReturnRows(newIssueRows(1, "ISS-001"))
 
 	reqBody, _ := json.Marshal(models.CreateCommentRequest{})
 
@@ -757,6 +772,11 @@ func TestCreateComment_MissingFields(t *testing.T) {
 
 func TestCreateComment_Valid(t *testing.T) {
 	h, mock := newTestHandler(t)
+
+	// Tenant guard: GetIssueByID lookup
+	mock.ExpectQuery("SELECT").
+		WithArgs(1, defaultTenantID).
+		WillReturnRows(newIssueRows(1, "ISS-001"))
 
 	now := time.Now().UTC()
 	mock.ExpectQuery("INSERT INTO issue_comments").

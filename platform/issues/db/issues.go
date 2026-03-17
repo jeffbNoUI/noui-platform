@@ -209,7 +209,7 @@ func (s *Store) UpdateIssue(ctx context.Context, tenantID string, id int, req mo
 		idx++
 		// If transitioning to resolved/closed, set resolved_at
 		if *req.Status == "resolved" || *req.Status == "closed" {
-			sets = append(sets, fmt.Sprintf("resolved_at = COALESCE(resolved_at, NOW())"))
+			sets = append(sets, "resolved_at = COALESCE(resolved_at, NOW())")
 		}
 	}
 	if req.AffectedService != nil {

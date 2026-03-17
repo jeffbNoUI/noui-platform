@@ -214,6 +214,17 @@ func (h *Handler) ListComments(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Tenant-scoped guard: verify issue belongs to this tenant
+	tenantID := tenantID(r)
+	if _, err := h.store.GetIssueByID(r.Context(), tenantID, issueID); err != nil {
+		if err == sql.ErrNoRows {
+			writeError(w, http.StatusNotFound, "NOT_FOUND", "Issue not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		return
+	}
+
 	comments, err := h.store.ListComments(r.Context(), issueID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
@@ -230,6 +241,17 @@ func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	issueID, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid issue id")
+		return
+	}
+
+	// Tenant-scoped guard: verify issue belongs to this tenant
+	tenantID := tenantID(r)
+	if _, err := h.store.GetIssueByID(r.Context(), tenantID, issueID); err != nil {
+		if err == sql.ErrNoRows {
+			writeError(w, http.StatusNotFound, "NOT_FOUND", "Issue not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
