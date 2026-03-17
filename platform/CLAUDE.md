@@ -16,6 +16,8 @@ Shared platform services that power the NoUI workspace. Each service is an indep
 | knowledgebase | `github.com/noui/platform/knowledgebase` | 8087 | PostgreSQL | Articles, stage help, rule references, search |
 | casemanagement | `github.com/noui/platform/casemanagement` | 8088 | PostgreSQL | Retirement case tracking, stage workflow, work queue |
 | preferences | `github.com/noui/platform/preferences` | 8089 | PostgreSQL | User layout preferences, role-based aggregate suggestions |
+| issues | `github.com/noui/platform/issues` | 8092 | PostgreSQL | Issue/defect tracking, status workflow, comments |
+| security | `github.com/noui/platform/security` | 8093 | PostgreSQL | Security events, session tracking, Clerk webhook integration |
 
 ## Common Patterns
 

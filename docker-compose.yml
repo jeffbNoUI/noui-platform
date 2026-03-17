@@ -230,6 +230,48 @@ services:
       pgbouncer:
         condition: service_healthy
 
+  issues:
+    build:
+      context: ./platform
+      dockerfile: issues/Dockerfile
+    ports:
+      - "8092:8092"
+    environment:
+      PORT: "8092"
+      DB_HOST: pgbouncer
+      DB_PORT: "6432"
+      DB_USER: derp
+      DB_PASSWORD: derp
+      DB_NAME: derp
+      DB_SSLMODE: disable
+      DB_MAX_OPEN_CONNS: "5"
+      DB_MAX_IDLE_CONNS: "2"
+      CORS_ORIGIN: "http://localhost:3000"
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+
+  security:
+    build:
+      context: ./platform
+      dockerfile: security/Dockerfile
+    ports:
+      - "8093:8093"
+    environment:
+      PORT: "8093"
+      DB_HOST: pgbouncer
+      DB_PORT: "6432"
+      DB_USER: derp
+      DB_PASSWORD: derp
+      DB_NAME: derp
+      DB_SSLMODE: disable
+      DB_MAX_OPEN_CONNS: "5"
+      DB_MAX_IDLE_CONNS: "2"
+      CORS_ORIGIN: "http://localhost:3000"
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+
   connector:
     build:
       context: ./connector
@@ -248,7 +290,7 @@ services:
       - "8091:8091"
     environment:
       PORT: "8091"
-      HEALTH_SERVICES: "dataaccess:http://dataaccess:8081,intelligence:http://intelligence:8082,crm:http://crm:8083,correspondence:http://correspondence:8085,dataquality:http://dataquality:8086,knowledgebase:http://knowledgebase:8087,casemanagement:http://casemanagement:8088,preferences:http://preferences:8089,connector:http://connector:8090:/healthz"
+      HEALTH_SERVICES: "dataaccess:http://dataaccess:8081,intelligence:http://intelligence:8082,crm:http://crm:8083,correspondence:http://correspondence:8085,dataquality:http://dataquality:8086,knowledgebase:http://knowledgebase:8087,casemanagement:http://casemanagement:8088,preferences:http://preferences:8089,connector:http://connector:8090:/healthz,issues:http://issues:8092,security:http://security:8093"
       CORS_ORIGIN: "http://localhost:3000"
     depends_on:
       - dataaccess
@@ -260,6 +302,8 @@ services:
       - casemanagement
       - preferences
       - connector
+      - issues
+      - security
 
   frontend:
     build:
@@ -275,6 +319,8 @@ services:
       - knowledgebase
       - dataquality
       - correspondence
+      - issues
+      - security
 
 volumes:
   pgdata:
