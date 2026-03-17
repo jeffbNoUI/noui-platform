@@ -6,6 +6,7 @@ import { composeStages, deriveCaseFlags } from '@/lib/workflowComposition';
 import { computeAdvanceSequence, computeInitialState } from '@/lib/stageMapping';
 import type { NavigationModel } from '@/components/workflow/NavigationModelPicker';
 import { useProficiency } from '@/hooks/useProficiency';
+import { useComposedWorkspace } from '@/hooks/usePreferences';
 import StageCorrespondencePrompt from '@/components/workflow/StageCorrespondencePrompt';
 import { getTemplateCategoryForStage } from '@/lib/stageCorrespondenceMapping';
 import type { ViewMode } from '@/types/auth';
@@ -61,7 +62,7 @@ export default function RetirementApplication({
     [member, calculation, svcCreditData, caseFlags],
   );
 
-  const stages = useMemo(
+  const baseStages = useMemo(
     () =>
       composeStages(flags, {
         member,
@@ -71,6 +72,7 @@ export default function RetirementApplication({
       }),
     [flags, member, calculation, employment, svcCreditData],
   );
+  const stages = useComposedWorkspace(baseStages, flags);
 
   // Initialize from backend case state on first load.
   // Re-syncs when stage count changes (e.g., DRO flag resolves after calculation loads).
