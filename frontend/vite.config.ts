@@ -62,6 +62,14 @@ export default defineConfig({
         target: 'http://localhost:8085',
         changeOrigin: true,
       },
+      '/api/v1/health': {
+        target: 'http://localhost:8091',
+        changeOrigin: true,
+      },
+      '/api/v1/preferences': {
+        target: 'http://localhost:8089',
+        changeOrigin: true,
+      },
     },
   },
 });
