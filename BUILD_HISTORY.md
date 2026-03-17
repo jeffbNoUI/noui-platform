@@ -1,5 +1,45 @@
 # noui-platform — Build History
 
+## Workspace Preference Learning — V1 Implementation (2026-03-16)
+
+**Branch:** `claude/loving-gagarin`
+**Goal:** Per-user workspace layout preferences with role-based aggregate suggestions. Process Efficiency Learning (Dimension 2) — enabling the AI composition engine to learn from explicit user feedback.
+
+**What was built:**
+
+### Backend: `platform/preferences/` (Port 8089)
+- New Go service with 5 API endpoints: GET/PUT/DELETE preferences, GET suggestions, POST respond
+- 4 PostgreSQL tables with RLS: `preference_events` (append-only event log), `user_preferences` (materialized read model), `role_suggestions` (batch-computed), `suggestion_responses`
+- Context key computation: deterministic hash from coarsened CaseFlags (hasDRO, isEarlyRetirement, tier) → 12 context buckets
+- Suggestion convergence computation: 70% threshold, 5-user minimum sample size
+- Docker Compose entry, database migration, Dockerfile
+- Auth middleware, CORS, rate limiting, RLS — matching all existing platform services
+
+### Frontend: Preference Override Pipeline
+- Pure `applyPreferences()` function: overlay user preferences onto `composeStages()` output
+- Mandatory stage protection (intake, benefit-calc, election, submit cannot be hidden)
+- `useComposedWorkspace()` hook wired into `RetirementApplication.tsx` — one-line integration
+- `PanelCustomizeControls` component: visibility toggle (visible/pinned/hidden), expansion toggle
+- `SuggestionToast` component: peer-count-based suggestions with accept/dismiss/snooze
+- Preferences API client + 6 React Query hooks with cache invalidation
+- `deleteAPI` helper added to shared API client
+
+### Architecture: Progressive Hybrid
+- V1: Structured rules engine with event sourcing (events are write model, preferences are read model)
+- V2 (future): AI aggregation layer consumes the same event data — no schema migration needed
+- Multi-agency ready: context keys are tenant-independent, event schema supports anonymized pattern sharing
+
+### Test Results
+- Go: 7 tests (3 context key + 4 convergence) — all passing
+- Frontend: 122 test files, 887 tests — all passing (+10 new tests, zero regressions)
+- TypeScript typecheck: clean
+- Production build: clean
+
+**Design doc:** `docs/plans/2026-03-16-workspace-preference-learning-design.md`
+**Implementation plan:** `docs/plans/2026-03-16-workspace-preference-learning-plan.md`
+
+---
+
 ## Quality Session 9: Dead Code Cleanup + API Consistency + Final Regression (2026-03-16)
 
 **Branch:** `claude/inspiring-sammet`
