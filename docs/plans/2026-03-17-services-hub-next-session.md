@@ -2,79 +2,88 @@
 
 ## Context
 
-The Services Hub is complete for Phase A. It replaced the "Platform Health" sidebar entry with a 7-tab admin center. All tabs are functional — three consume live backend APIs (Health, Audit Trail, Metrics), two use existing frontend data (Data Quality, Security), one uses demo data (Issues), and one mixes live API + static data (Config).
+The Services Hub Phase B backend is complete. Both the Issues service (port 8092) and Security Events service (port 8093) are live Go services with PostgreSQL storage, tenant-scoped queries, JWT auth, and full CRUD/query APIs. The frontend panels are wired to live APIs via React Query hooks. Seed data is loaded and verified end-to-end through Docker (nginx → Go → Postgres).
 
-**947 tests passing, typecheck clean, production build clean.**
+**All tests passing, typecheck clean, production build clean.**
 
-## What's Done
+## What's Done (Phase A + B)
 
-- ServicesHub shell with ARIA-compliant tab bar
-- Health tab (existing ServiceHealthDashboard, FeatureBurndown removed)
-- Data Quality tab (existing DataQualityPanel, unchanged)
-- Audit Trail tab (CRM audit API, filters, CSV export, pagination)
-- Operational Metrics tab (case stats, SLA, volume, commitments)
-- Security & Access tab (role definitions, access matrix from auth types)
-- Issue Management tab (demo data, 4 filters, expandable detail)
-- Configuration & Rules tab (KB rules API, system params, FeatureBurndown)
+### Phase A — Frontend Shell
+- ServicesHub with ARIA-compliant 7-tab bar
+- Health, Data Quality, Audit Trail, Operational Metrics, Configuration & Rules tabs
+- All consuming live backend APIs
 
-## Phase B — Backend Work Needed
+### Phase B — Backend Services
+- `platform/issues/` — Go service (port 8092): CRUD, stats, comments, status workflow
+- `platform/security/` — Go service (port 8093): event logging, session tracking, stats
+- Docker Compose entries for both services
+- Nginx proxy routes: `/api/v1/issues` → issues:8092, `/api/v1/security` → security:8093
+- Frontend `IssueManagementPanel` wired to live issues API (filters, stats, expandable rows)
+- Frontend `SecurityAccessPanel` wired to live security API (event log, active sessions, stats)
+- Seed data: `016_issues_seed.sql` (10 issues), `017_security_seed.sql` (4 sessions + 17 events)
+- Seed uses `dev-tenant-001` to match frontend dev JWT
 
-### 1. Security Events Service (Priority: High)
+## Remaining Work
 
-**Why:** Pension systems require NIST SP 800-53 AC-2 (Account Management) and AU-6 (Audit Review) compliance. Currently no visibility into login events, role changes, or session management.
+### Visual Polish (Priority: Medium)
+- Tab bar clips "Issues" and "Config" labels on narrow viewports — responsive/icon-only mode
+- Metrics tab shows "-" for all KPIs when backend isn't running — add "unavailable" banner
 
-**What:**
-- Clerk webhook integration for authentication events (login success/failure, role changes)
-- New tables or extend CRM audit for security-specific events
-- Active session tracking
-- Wire into SecurityAccessPanel to replace Phase B placeholder cards
+### Audit Trail Server-Side Filtering (Priority: Medium)
+- Add date range query params to `GET /api/v1/crm/audit`
+- Add `agent_id` query param for server-side filtering
+- Cross-service audit: consume logs from case management, correspondence, etc.
 
-**Scope:** Medium — Clerk webhook setup + new API endpoint + frontend wiring
+### Security Events Enhancements (Priority: Low)
+- Clerk webhook integration for real-time auth event capture (currently seed-only)
+- Failed login alerting / brute-force detection thresholds
+- Session timeout / forced logout capabilities
 
-### 2. Issue Management Service (Priority: Medium)
+### Issue Management Enhancements (Priority: Low)
+- Email/webhook notifications on status changes
+- SLA tracking (time-to-triage, time-to-resolve)
+- Issue assignment workflow with notifications
 
-**Why:** Currently demo data only. Need structured defect/incident tracking for production.
-
-**What:**
-- New `platform/issues/` service (port 8092)
-- PostgreSQL tables: `issues` + `issue_comments` with tenant isolation
-- CRUD API + stats endpoint
-- Status workflow: open → triaged → in-work → resolved → closed
-- Replace demo data in `IssueManagementPanel` with live API calls
-
-**Scope:** Large — new Go service, DB migration, API client, hooks, panel rewiring
-
-**Design spec:** See `memory/project_services_hub_phase_b.md` for full details.
-
-## Other High-Value Next Steps
-
-### Visual Polish
-- The tab bar clips "Issues" and "Config" labels on narrow viewports — consider responsive behavior or icon-only mode at small widths
-- The Metrics tab shows "-" for all KPIs when backend isn't running — could add a graceful "Backend services unavailable" banner like the Health tab does
-
-### Audit Trail Enhancements
-- Backend: Add date range query params to `GET /api/v1/crm/audit` so filtering happens server-side instead of client-side
-- Backend: Add `agent_id` query param for server-side agent filtering
-- Cross-service audit: Extend audit viewer to consume logs from case management, correspondence, etc.
-
-### Integration Testing
+### Integration Testing (Priority: High)
 - With Docker stack running, verify all 7 tabs show live data end-to-end
 - Verify CSV export produces valid output with real audit entries
+- Verify issue creation/update flows work through the full stack
 
 ## Quick Start
 
 ```bash
-# Verify build state
+# Docker — all services including issues + security
+docker compose up --build
+
+# Seed data (if tables are empty)
+docker compose exec -T postgres psql -U derp -d derp < domains/pension/seed/016_issues_seed.sql
+docker compose exec -T postgres psql -U derp -d derp < domains/pension/seed/017_security_seed.sql
+
+# Frontend dev
 cd frontend && npx tsc --noEmit && npm run build && npx vitest run
 
-# Visual verification
-cd frontend && npx vite  # then navigate to Services Hub tab
+# Key files — Services
+platform/issues/main.go                                  # Issues service entry
+platform/issues/api/handler.go                           # Issues API routes
+platform/issues/db/issues.go                             # Issues DB queries
+platform/security/main.go                                # Security service entry
+platform/security/api/handler.go                         # Security API routes
+platform/security/db/events.go                           # Security DB queries
 
-# Key files
-frontend/src/components/admin/ServicesHub.tsx          # Shell
-frontend/src/components/admin/AuditTrailPanel.tsx      # Audit
-frontend/src/components/admin/OperationalMetricsPanel.tsx  # Metrics
-frontend/src/components/admin/SecurityAccessPanel.tsx   # Security
-frontend/src/components/admin/IssueManagementPanel.tsx  # Issues
-frontend/src/components/admin/ConfigRulesPanel.tsx      # Config
+# Key files — Frontend
+frontend/src/components/admin/ServicesHub.tsx             # Shell
+frontend/src/components/admin/IssueManagementPanel.tsx    # Issues panel
+frontend/src/components/admin/SecurityAccessPanel.tsx     # Security panel
+frontend/src/lib/issuesApi.ts                            # Issues API client
+frontend/src/lib/securityApi.ts                          # Security API client
+frontend/src/hooks/useIssues.ts                          # Issues React Query hooks
+frontend/src/hooks/useSecurityEvents.ts                  # Security React Query hooks
+
+# Key files — Seed
+domains/pension/seed/016_issues_seed.sql                 # 10 issues
+domains/pension/seed/017_security_seed.sql               # Sessions + events
 ```
+
+## Tenant ID Note
+
+All seed data uses `dev-tenant-001` — this matches the dev JWT generated by `frontend/src/lib/devAuth.ts`. The existing seed files (002–015) use UUID format `00000000-0000-0000-0000-000000000001` which does NOT match the dev JWT. Those older seeds would need updating if their services should also show data in the dev environment.
