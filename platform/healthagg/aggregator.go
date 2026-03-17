@@ -16,8 +16,9 @@ import (
 
 // ServiceEntry defines a known service in the registry.
 type ServiceEntry struct {
-	Name string `json:"name"`
-	URL  string `json:"url"`
+	Name       string `json:"name"`
+	URL        string `json:"url"`
+	HealthPath string `json:"health_path,omitempty"`
 }
 
 // AggregateHealth is the combined health response.
@@ -132,11 +133,28 @@ func ParseServices(env string) []ServiceEntry {
 			continue
 		}
 		name := strings.TrimSpace(part[:idx])
-		url := strings.TrimSpace(part[idx+1:])
-		if name == "" || url == "" {
+		remainder := strings.TrimSpace(part[idx+1:])
+		if name == "" || remainder == "" {
 			continue
 		}
-		entries = append(entries, ServiceEntry{Name: name, URL: url})
+
+		// Detect optional custom health path after the URL.
+		// Format: "http://host:port:/path" — look for last ":/" that
+		// is NOT part of "://".
+		url := remainder
+		healthPath := ""
+		schemeEnd := strings.Index(remainder, "://")
+		if schemeEnd >= 0 {
+			afterScheme := remainder[schemeEnd+3:]
+			lastColonSlash := strings.LastIndex(afterScheme, ":/")
+			if lastColonSlash >= 0 {
+				splitAt := schemeEnd + 3 + lastColonSlash
+				url = remainder[:splitAt]
+				healthPath = remainder[splitAt+1:] // include the leading "/"
+			}
+		}
+
+		entries = append(entries, ServiceEntry{Name: name, URL: url, HealthPath: healthPath})
 	}
 	return entries
 }

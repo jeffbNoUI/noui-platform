@@ -24,6 +24,19 @@ func TestParseServices(t *testing.T) {
 	}
 }
 
+func TestParseServices_WithCustomPath(t *testing.T) {
+	entries := ParseServices("dataaccess:http://dataaccess:8081,connector:http://connector:8090:/healthz")
+	if len(entries) != 2 {
+		t.Fatalf("expected 2 entries, got %d", len(entries))
+	}
+	if entries[0].Name != "dataaccess" || entries[0].URL != "http://dataaccess:8081" || entries[0].HealthPath != "" {
+		t.Errorf("entry 0: got name=%q url=%q healthPath=%q", entries[0].Name, entries[0].URL, entries[0].HealthPath)
+	}
+	if entries[1].Name != "connector" || entries[1].URL != "http://connector:8090" || entries[1].HealthPath != "/healthz" {
+		t.Errorf("entry 1: got name=%q url=%q healthPath=%q", entries[1].Name, entries[1].URL, entries[1].HealthPath)
+	}
+}
+
 func TestParseServices_Empty(t *testing.T) {
 	entries := ParseServices("")
 	if len(entries) != 0 {
