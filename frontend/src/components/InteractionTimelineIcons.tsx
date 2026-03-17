@@ -2,7 +2,7 @@ import type { InteractionChannel, Direction } from '@/types/CRM';
 
 // ── SVG Icon Components ──────────────────────────────────────────────────────
 
-export function PhoneIcon() {
+function PhoneIcon() {
   return (
     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
@@ -15,7 +15,7 @@ export function PhoneIcon() {
   );
 }
 
-export function EmailIcon() {
+function EmailIcon() {
   return (
     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
@@ -28,7 +28,7 @@ export function EmailIcon() {
   );
 }
 
-export function MessageIcon() {
+function MessageIcon() {
   return (
     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
@@ -41,7 +41,7 @@ export function MessageIcon() {
   );
 }
 
-export function WalkInIcon() {
+function WalkInIcon() {
   return (
     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
@@ -67,7 +67,7 @@ export function SystemIcon() {
   );
 }
 
-export function MailIcon() {
+function MailIcon() {
   return (
     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
@@ -80,7 +80,7 @@ export function MailIcon() {
   );
 }
 
-export function FaxIcon() {
+function FaxIcon() {
   return (
     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path

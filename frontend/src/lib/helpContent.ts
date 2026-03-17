@@ -177,8 +177,3 @@ const HELP: HelpItem[] = [
 export function getHelpForStage(stageId: string): HelpItem | undefined {
   return HELP.find((h) => h.stageId === stageId);
 }
-
-/** Get all help items (for expert-mode reference). */
-export function getAllHelp(): HelpItem[] {
-  return HELP;
-}

@@ -91,7 +91,7 @@ type UpdateCorrespondenceRequest struct {
 
 // APIMeta contains per-request metadata returned with every API response.
 type APIMeta struct {
-	RequestID string    `json:"requestId"`
+	RequestID string    `json:"request_id"`
 	Timestamp time.Time `json:"timestamp"`
 	Service   string    `json:"service"`
 	Version   string    `json:"version"`

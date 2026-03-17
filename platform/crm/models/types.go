@@ -147,7 +147,7 @@ type Contact struct {
 	LastName          string      `json:"lastName"`
 	MiddleName        *string     `json:"middleName,omitempty"`
 	Suffix            *string     `json:"suffix,omitempty"`
-	DateOfBirth       *string     `json:"dateOfBirth,omitempty"`       // ISO 8601 date
+	DateOfBirth       *string     `json:"dateOfBirth,omitempty"` // ISO 8601 date
 	Gender            *string     `json:"gender,omitempty"`
 	PrimaryEmail      *string     `json:"primaryEmail,omitempty"`
 	PrimaryPhone      *string     `json:"primaryPhone,omitempty"`
@@ -292,28 +292,28 @@ type Conversation struct {
 
 // Interaction is a single touchpoint across any channel.
 type Interaction struct {
-	InteractionID  string              `json:"interactionId"`
-	TenantID       string              `json:"tenantId"`
-	ConversationID *string             `json:"conversationId,omitempty"`
-	ContactID      *string             `json:"contactId,omitempty"`
-	OrgID          *string             `json:"orgId,omitempty"`
-	AgentID        *string             `json:"agentId,omitempty"`
-	Channel        InteractionChannel  `json:"channel"`
-	InteractionType InteractionType `json:"interactionType"`
-	Category        *string         `json:"category,omitempty"`
-	Subcategory     *string         `json:"subcategory,omitempty"`
-	Outcome         *string         `json:"outcome,omitempty"`
-	Direction       Direction       `json:"direction"`
-	StartedAt       time.Time       `json:"startedAt"`
-	EndedAt         *time.Time      `json:"endedAt,omitempty"`
-	DurationSeconds *int            `json:"durationSeconds,omitempty"`
+	InteractionID   string             `json:"interactionId"`
+	TenantID        string             `json:"tenantId"`
+	ConversationID  *string            `json:"conversationId,omitempty"`
+	ContactID       *string            `json:"contactId,omitempty"`
+	OrgID           *string            `json:"orgId,omitempty"`
+	AgentID         *string            `json:"agentId,omitempty"`
+	Channel         InteractionChannel `json:"channel"`
+	InteractionType InteractionType    `json:"interactionType"`
+	Category        *string            `json:"category,omitempty"`
+	Subcategory     *string            `json:"subcategory,omitempty"`
+	Outcome         *string            `json:"outcome,omitempty"`
+	Direction       Direction          `json:"direction"`
+	StartedAt       time.Time          `json:"startedAt"`
+	EndedAt         *time.Time         `json:"endedAt,omitempty"`
+	DurationSeconds *int               `json:"durationSeconds,omitempty"`
 
 	// Telephony fields
 	ExternalCallID  *string `json:"externalCallId,omitempty"`
 	QueueName       *string `json:"queueName,omitempty"`
 	WaitTimeSeconds *int    `json:"waitTimeSeconds,omitempty"`
-	RecordingURL   *string `json:"recordingUrl,omitempty"`
-	TranscriptURL  *string `json:"transcriptUrl,omitempty"`
+	RecordingURL    *string `json:"recordingUrl,omitempty"`
+	TranscriptURL   *string `json:"transcriptUrl,omitempty"`
 
 	// Email/Message fields
 	MessageSubject  *string `json:"messageSubject,omitempty"`
@@ -322,8 +322,8 @@ type Interaction struct {
 	Summary          *string `json:"summary,omitempty"`
 	LinkedCaseID     *string `json:"linkedCaseId,omitempty"`
 	LinkedWorkflowID *string `json:"linkedWorkflowId,omitempty"`
-	WrapUpCode    *string `json:"wrapUpCode,omitempty"`
-	WrapUpSeconds *int    `json:"wrapUpSeconds,omitempty"`
+	WrapUpCode       *string `json:"wrapUpCode,omitempty"`
+	WrapUpSeconds    *int    `json:"wrapUpSeconds,omitempty"`
 
 	Visibility Visibility `json:"visibility"`
 
@@ -345,19 +345,19 @@ type InteractionLink struct {
 
 // Note is a structured note attached to an interaction.
 type Note struct {
-	NoteID        string  `json:"noteId"`
-	InteractionID string  `json:"interactionId"`
-	TemplateID    *string `json:"templateId,omitempty"`
-	Category      string  `json:"category"`
-	Subcategory   *string `json:"subcategory,omitempty"`
-	Summary       string  `json:"summary"`
-	Outcome       string  `json:"outcome"`
-	NextStep      *string `json:"nextStep,omitempty"`
-	Narrative     *string `json:"narrative,omitempty"`
-	Sentiment     *string `json:"sentiment,omitempty"`
-	UrgentFlag    bool    `json:"urgentFlag"`
-	AISuggested  bool     `json:"aiSuggested"`
-	AIConfidence *float64 `json:"aiConfidence,omitempty"`
+	NoteID        string   `json:"noteId"`
+	InteractionID string   `json:"interactionId"`
+	TemplateID    *string  `json:"templateId,omitempty"`
+	Category      string   `json:"category"`
+	Subcategory   *string  `json:"subcategory,omitempty"`
+	Summary       string   `json:"summary"`
+	Outcome       string   `json:"outcome"`
+	NextStep      *string  `json:"nextStep,omitempty"`
+	Narrative     *string  `json:"narrative,omitempty"`
+	Sentiment     *string  `json:"sentiment,omitempty"`
+	UrgentFlag    bool     `json:"urgentFlag"`
+	AISuggested   bool     `json:"aiSuggested"`
+	AIConfidence  *float64 `json:"aiConfidence,omitempty"`
 
 	CreatedAt time.Time `json:"createdAt"`
 	CreatedBy string    `json:"createdBy"`
@@ -478,18 +478,18 @@ type TimelineEntry struct {
 	InteractionID   string          `json:"interactionId"`
 	Channel         string          `json:"channel"`
 	InteractionType InteractionType `json:"interactionType"`
-	Category        *string            `json:"category,omitempty"`
-	Direction       Direction          `json:"direction"`
-	StartedAt       time.Time          `json:"startedAt"`
-	EndedAt         *time.Time         `json:"endedAt,omitempty"`
-	DurationSeconds *int               `json:"durationSeconds,omitempty"`
-	AgentID         *string            `json:"agentId,omitempty"`
-	Outcome         *string            `json:"outcome,omitempty"`
-	Summary         *string            `json:"summary,omitempty"`
-	ConversationID  *string            `json:"conversationId,omitempty"`
-	HasNotes        bool               `json:"hasNotes"`
-	HasCommitments  bool               `json:"hasCommitments"`
-	Visibility      Visibility         `json:"visibility"`
+	Category        *string         `json:"category,omitempty"`
+	Direction       Direction       `json:"direction"`
+	StartedAt       time.Time       `json:"startedAt"`
+	EndedAt         *time.Time      `json:"endedAt,omitempty"`
+	DurationSeconds *int            `json:"durationSeconds,omitempty"`
+	AgentID         *string         `json:"agentId,omitempty"`
+	Outcome         *string         `json:"outcome,omitempty"`
+	Summary         *string         `json:"summary,omitempty"`
+	ConversationID  *string         `json:"conversationId,omitempty"`
+	HasNotes        bool            `json:"hasNotes"`
+	HasCommitments  bool            `json:"hasCommitments"`
+	Visibility      Visibility      `json:"visibility"`
 }
 
 // ContactTimeline is the full timeline response for a contact.
@@ -509,7 +509,7 @@ type ScreenPopRequest struct {
 	Trigger    string `json:"trigger"` // INBOUND_CALL, TRANSFER, CALLBACK
 	CallID     string `json:"callId"`
 	Identifier struct {
-		Type  string `json:"type"`  // SSN_LAST_4, EMPLOYEE_ID, PHONE
+		Type  string `json:"type"` // SSN_LAST_4, EMPLOYEE_ID, PHONE
 		Value string `json:"value"`
 	} `json:"identifier"`
 	QueueName     string    `json:"queueName"`
@@ -539,7 +539,7 @@ type Pagination struct {
 
 // APIMeta contains per-request metadata returned with every API response.
 type APIMeta struct {
-	RequestID string    `json:"requestId"`
+	RequestID string    `json:"request_id"`
 	Timestamp time.Time `json:"timestamp"`
 	Service   string    `json:"service"`
 	Version   string    `json:"version"`
@@ -549,7 +549,7 @@ type APIMeta struct {
 type APIError struct {
 	Code      string `json:"code"`
 	Message   string `json:"message"`
-	RequestID string `json:"requestId"`
+	RequestID string `json:"request_id"`
 }
 
 // SuccessResponse wraps a single-object success payload.

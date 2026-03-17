@@ -516,22 +516,23 @@ func TestGetEmploymentHistory_WithRecords(t *testing.T) {
 	}
 
 	var body struct {
-		Data struct {
-			Items []models.EmploymentEvent `json:"items"`
-			Total int                      `json:"total"`
-		} `json:"data"`
+		Data       []models.EmploymentEvent `json:"data"`
+		Pagination struct {
+			Total   int  `json:"total"`
+			HasMore bool `json:"hasMore"`
+		} `json:"pagination"`
 	}
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
 		t.Fatalf("body parse error: %v", err)
 	}
-	if len(body.Data.Items) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(body.Data.Items))
+	if len(body.Data) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(body.Data))
 	}
-	if body.Data.Items[0].EventType != "HIRE" {
-		t.Errorf("EventType = %q, want HIRE", body.Data.Items[0].EventType)
+	if body.Data[0].EventType != "HIRE" {
+		t.Errorf("EventType = %q, want HIRE", body.Data[0].EventType)
 	}
-	if body.Data.Total != 1 {
-		t.Errorf("total = %d, want 1", body.Data.Total)
+	if body.Pagination.Total != 1 {
+		t.Errorf("total = %d, want 1", body.Pagination.Total)
 	}
 }
 
@@ -573,19 +574,20 @@ func TestGetSalaryHistory_WithRecords(t *testing.T) {
 	}
 
 	var body struct {
-		Data struct {
-			Items []models.SalaryRecord `json:"items"`
-			Total int                   `json:"total"`
-		} `json:"data"`
+		Data       []models.SalaryRecord `json:"data"`
+		Pagination struct {
+			Total   int  `json:"total"`
+			HasMore bool `json:"hasMore"`
+		} `json:"pagination"`
 	}
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
 		t.Fatalf("body parse error: %v", err)
 	}
-	if len(body.Data.Items) != 1 {
-		t.Fatalf("expected 1 salary record, got %d", len(body.Data.Items))
+	if len(body.Data) != 1 {
+		t.Fatalf("expected 1 salary record, got %d", len(body.Data))
 	}
-	if body.Data.Items[0].AnnualSalary != 85000.0 {
-		t.Errorf("AnnualSalary = %f, want 85000.0", body.Data.Items[0].AnnualSalary)
+	if body.Data[0].AnnualSalary != 85000.0 {
+		t.Errorf("AnnualSalary = %f, want 85000.0", body.Data[0].AnnualSalary)
 	}
 }
 
@@ -870,22 +872,23 @@ func TestGetBeneficiaries_WithRecords(t *testing.T) {
 	}
 
 	var body struct {
-		Data struct {
-			Items []models.Beneficiary `json:"items"`
-			Total int                  `json:"total"`
-		} `json:"data"`
+		Data       []models.Beneficiary `json:"data"`
+		Pagination struct {
+			Total   int  `json:"total"`
+			HasMore bool `json:"hasMore"`
+		} `json:"pagination"`
 	}
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
 		t.Fatalf("body parse error: %v", err)
 	}
-	if len(body.Data.Items) != 1 {
-		t.Fatalf("expected 1 beneficiary, got %d", len(body.Data.Items))
+	if len(body.Data) != 1 {
+		t.Fatalf("expected 1 beneficiary, got %d", len(body.Data))
 	}
-	if body.Data.Items[0].BeneType != "PRIMARY" {
-		t.Errorf("BeneType = %q, want PRIMARY", body.Data.Items[0].BeneType)
+	if body.Data[0].BeneType != "PRIMARY" {
+		t.Errorf("BeneType = %q, want PRIMARY", body.Data[0].BeneType)
 	}
-	if body.Data.Items[0].AllocPct != 100.0 {
-		t.Errorf("AllocPct = %f, want 100.0", body.Data.Items[0].AllocPct)
+	if body.Data[0].AllocPct != 100.0 {
+		t.Errorf("AllocPct = %f, want 100.0", body.Data[0].AllocPct)
 	}
 }
 
@@ -930,22 +933,23 @@ func TestGetDRO_WithRecords(t *testing.T) {
 	}
 
 	var body struct {
-		Data struct {
-			Items []models.DRORecord `json:"items"`
-			Total int                `json:"total"`
-		} `json:"data"`
+		Data       []models.DRORecord `json:"data"`
+		Pagination struct {
+			Total   int  `json:"total"`
+			HasMore bool `json:"hasMore"`
+		} `json:"pagination"`
 	}
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
 		t.Fatalf("body parse error: %v", err)
 	}
-	if len(body.Data.Items) != 1 {
-		t.Fatalf("expected 1 DRO, got %d", len(body.Data.Items))
+	if len(body.Data) != 1 {
+		t.Fatalf("expected 1 DRO, got %d", len(body.Data))
 	}
-	if body.Data.Items[0].Status != "APPROVED" {
-		t.Errorf("Status = %q, want APPROVED", body.Data.Items[0].Status)
+	if body.Data[0].Status != "APPROVED" {
+		t.Errorf("Status = %q, want APPROVED", body.Data[0].Status)
 	}
-	if body.Data.Items[0].DivisionMethod != "TIME_RULE" {
-		t.Errorf("DivisionMethod = %q, want TIME_RULE", body.Data.Items[0].DivisionMethod)
+	if body.Data[0].DivisionMethod != "TIME_RULE" {
+		t.Errorf("DivisionMethod = %q, want TIME_RULE", body.Data[0].DivisionMethod)
 	}
 }
 

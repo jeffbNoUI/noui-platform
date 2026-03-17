@@ -129,8 +129,8 @@ func TestWriteSuccess(t *testing.T) {
 	if meta["service"] != "correspondence" {
 		t.Errorf("meta.service = %q, want %q", meta["service"], "correspondence")
 	}
-	if meta["requestId"] == nil || meta["requestId"] == "" {
-		t.Error("meta.requestId should not be empty")
+	if meta["request_id"] == nil || meta["request_id"] == "" {
+		t.Error("meta.request_id should not be empty")
 	}
 }
 

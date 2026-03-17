@@ -59,7 +59,7 @@ export function computeSLAState(
   };
 }
 
-export function formatTimeDistance(ms: number): string {
+function formatTimeDistance(ms: number): string {
   const totalMinutes = Math.floor(ms / 60000);
   if (totalMinutes < 60) return `${totalMinutes}m`;
   const hours = Math.floor(totalMinutes / 60);

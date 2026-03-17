@@ -530,10 +530,10 @@ func writeSuccess(w http.ResponseWriter, status int, data any) {
 	resp := map[string]any{
 		"data": data,
 		"meta": map[string]any{
-			"requestId": uuid.New().String(),
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
-			"service":   "casemanagement",
-			"version":   "v1",
+			"request_id": uuid.New().String(),
+			"timestamp":  time.Now().UTC().Format(time.RFC3339),
+			"service":    "casemanagement",
+			"version":    "v1",
 		},
 	}
 	writeJSON(w, status, resp)
@@ -549,10 +549,10 @@ func writePaginated(w http.ResponseWriter, data any, total, limit, offset int) {
 			"hasMore": offset+limit < total,
 		},
 		"meta": map[string]any{
-			"requestId": uuid.New().String(),
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
-			"service":   "casemanagement",
-			"version":   "v1",
+			"request_id": uuid.New().String(),
+			"timestamp":  time.Now().UTC().Format(time.RFC3339),
+			"service":    "casemanagement",
+			"version":    "v1",
 		},
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -561,9 +561,9 @@ func writePaginated(w http.ResponseWriter, data any, total, limit, offset int) {
 func writeError(w http.ResponseWriter, status int, code, message string) {
 	resp := map[string]any{
 		"error": map[string]any{
-			"code":      code,
-			"message":   message,
-			"requestId": uuid.New().String(),
+			"code":       code,
+			"message":    message,
+			"request_id": uuid.New().String(),
 		},
 	}
 	writeJSON(w, status, resp)
