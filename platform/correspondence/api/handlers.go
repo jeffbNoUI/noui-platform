@@ -5,12 +5,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/noui/platform/apiresponse"
 	"github.com/noui/platform/auth"
 	corrdb "github.com/noui/platform/correspondence/db"
 	"github.com/noui/platform/correspondence/models"
@@ -46,7 +46,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 // HealthCheck returns service health status.
 func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{
+	apiresponse.WriteJSON(w, http.StatusOK, map[string]string{
 		"status":  "ok",
 		"service": "correspondence",
 		"version": "0.1.0",
@@ -64,11 +64,11 @@ func (h *Handler) ListTemplates(w http.ResponseWriter, r *http.Request) {
 
 	templates, total, err := h.store.ListTemplates(r.Context(), tenantID, category, stageCategory, activeOnly, limit, offset)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
-	writePaginated(w, templates, total, limit, offset)
+	apiresponse.WritePaginated(w, "correspondence", templates, total, limit, offset)
 }
 
 func (h *Handler) GetTemplate(w http.ResponseWriter, r *http.Request) {
@@ -76,14 +76,14 @@ func (h *Handler) GetTemplate(w http.ResponseWriter, r *http.Request) {
 	tmpl, err := h.store.GetTemplate(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "Template not found")
+			apiresponse.WriteError(w, http.StatusNotFound, "NOT_FOUND", "Template not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, tmpl)
+	apiresponse.WriteSuccess(w, http.StatusOK, "correspondence", tmpl)
 }
 
 // --- Generate Handler ---
@@ -91,14 +91,14 @@ func (h *Handler) GetTemplate(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Generate(w http.ResponseWriter, r *http.Request) {
 	var req models.GenerateRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
 	}
 
 	var errs validation.Errors
 	errs.Required("templateId", req.TemplateID)
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
 		return
 	}
 
@@ -106,17 +106,17 @@ func (h *Handler) Generate(w http.ResponseWriter, r *http.Request) {
 	tmpl, err := h.store.GetTemplate(r.Context(), req.TemplateID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "Template not found")
+			apiresponse.WriteError(w, http.StatusNotFound, "NOT_FOUND", "Template not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
 	// Render the template
 	rendered, err := corrdb.RenderTemplate(tmpl, req.MergeData)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "MERGE_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "MERGE_ERROR", err.Error())
 		return
 	}
 
@@ -144,11 +144,11 @@ func (h *Handler) Generate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.store.CreateCorrespondence(r.Context(), &corr); err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusCreated, corr)
+	apiresponse.WriteSuccess(w, http.StatusCreated, "correspondence", corr)
 }
 
 // --- History Handlers ---
@@ -177,11 +177,11 @@ func (h *Handler) ListHistory(w http.ResponseWriter, r *http.Request) {
 
 	history, total, err := h.store.ListHistory(r.Context(), tenantID, memberID, contactID, caseID, status, limit, offset)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
-	writePaginated(w, history, total, limit, offset)
+	apiresponse.WritePaginated(w, "correspondence", history, total, limit, offset)
 }
 
 func (h *Handler) GetCorrespondence(w http.ResponseWriter, r *http.Request) {
@@ -189,14 +189,14 @@ func (h *Handler) GetCorrespondence(w http.ResponseWriter, r *http.Request) {
 	corr, err := h.store.GetCorrespondence(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "Correspondence not found")
+			apiresponse.WriteError(w, http.StatusNotFound, "NOT_FOUND", "Correspondence not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, corr)
+	apiresponse.WriteSuccess(w, http.StatusOK, "correspondence", corr)
 }
 
 func (h *Handler) UpdateCorrespondence(w http.ResponseWriter, r *http.Request) {
@@ -205,16 +205,16 @@ func (h *Handler) UpdateCorrespondence(w http.ResponseWriter, r *http.Request) {
 	existing, err := h.store.GetCorrespondence(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "Correspondence not found")
+			apiresponse.WriteError(w, http.StatusNotFound, "NOT_FOUND", "Correspondence not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
 	var req models.UpdateCorrespondenceRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -229,7 +229,7 @@ func (h *Handler) UpdateCorrespondence(w http.ResponseWriter, r *http.Request) {
 		errs.MaxLen("sentVia", *req.SentVia, 100)
 	}
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
 		return
 	}
 
@@ -248,11 +248,11 @@ func (h *Handler) UpdateCorrespondence(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.store.UpdateCorrespondence(r.Context(), existing); err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, existing)
+	apiresponse.WriteSuccess(w, http.StatusOK, "correspondence", existing)
 }
 
 // --- Helper Functions ---
@@ -272,57 +272,6 @@ func decodeJSON(r *http.Request, v interface{}) error {
 	}
 	defer r.Body.Close()
 	return json.NewDecoder(r.Body).Decode(v)
-}
-
-func writeJSON(w http.ResponseWriter, status int, v interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(v); err != nil {
-		slog.Error("error encoding JSON response", "error", err)
-	}
-}
-
-func writeSuccess(w http.ResponseWriter, status int, data interface{}) {
-	resp := map[string]interface{}{
-		"data": data,
-		"meta": map[string]interface{}{
-			"requestId": uuid.New().String(),
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
-			"service":   "correspondence",
-			"version":   "v1",
-		},
-	}
-	writeJSON(w, status, resp)
-}
-
-func writePaginated(w http.ResponseWriter, data interface{}, total, limit, offset int) {
-	resp := map[string]interface{}{
-		"data": data,
-		"pagination": map[string]interface{}{
-			"total":   total,
-			"limit":   limit,
-			"offset":  offset,
-			"hasMore": offset+limit < total,
-		},
-		"meta": map[string]interface{}{
-			"requestId": uuid.New().String(),
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
-			"service":   "correspondence",
-			"version":   "v1",
-		},
-	}
-	writeJSON(w, http.StatusOK, resp)
-}
-
-func writeError(w http.ResponseWriter, status int, code, message string) {
-	resp := map[string]interface{}{
-		"error": map[string]interface{}{
-			"code":      code,
-			"message":   message,
-			"requestId": uuid.New().String(),
-		},
-	}
-	writeJSON(w, status, resp)
 }
 
 func intParam(r *http.Request, name string, defaultVal int) int {

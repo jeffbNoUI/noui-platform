@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/noui/platform/apiresponse"
 )
 
 // --- HealthCheck ---
@@ -87,10 +89,10 @@ func TestIntParam_Missing(t *testing.T) {
 
 func TestWriteJSON(t *testing.T) {
 	w := httptest.NewRecorder()
-	writeJSON(w, http.StatusOK, map[string]string{"key": "value"})
+	apiresponse.WriteJSON(w, http.StatusOK, map[string]string{"key": "value"})
 
 	if w.Code != http.StatusOK {
-		t.Errorf("writeJSON status = %d, want %d", w.Code, http.StatusOK)
+		t.Errorf("WriteJSON status = %d, want %d", w.Code, http.StatusOK)
 	}
 	if ct := w.Header().Get("Content-Type"); ct != "application/json" {
 		t.Errorf("Content-Type = %q, want application/json", ct)
@@ -99,18 +101,18 @@ func TestWriteJSON(t *testing.T) {
 
 func TestWriteSuccess(t *testing.T) {
 	w := httptest.NewRecorder()
-	writeSuccess(w, http.StatusOK, map[string]string{"title": "Test Article"})
+	apiresponse.WriteSuccess(w, http.StatusOK, "knowledgebase", map[string]string{"title": "Test Article"})
 
 	var body map[string]interface{}
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
-		t.Fatalf("writeSuccess body parse error: %v", err)
+		t.Fatalf("WriteSuccess body parse error: %v", err)
 	}
 	if body["data"] == nil {
-		t.Error("writeSuccess response missing 'data' field")
+		t.Error("WriteSuccess response missing 'data' field")
 	}
 	meta, ok := body["meta"].(map[string]interface{})
 	if !ok {
-		t.Fatal("writeSuccess response missing 'meta' field")
+		t.Fatal("WriteSuccess response missing 'meta' field")
 	}
 	if meta["service"] != "knowledgebase" {
 		t.Errorf("meta.service = %q, want %q", meta["service"], "knowledgebase")
@@ -125,19 +127,19 @@ func TestWriteSuccess(t *testing.T) {
 
 func TestWriteError(t *testing.T) {
 	w := httptest.NewRecorder()
-	writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "query required")
+	apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", "query required")
 
 	if w.Code != http.StatusBadRequest {
-		t.Errorf("writeError status = %d, want %d", w.Code, http.StatusBadRequest)
+		t.Errorf("WriteError status = %d, want %d", w.Code, http.StatusBadRequest)
 	}
 
 	var body map[string]interface{}
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
-		t.Fatalf("writeError body parse error: %v", err)
+		t.Fatalf("WriteError body parse error: %v", err)
 	}
 	errObj, ok := body["error"].(map[string]interface{})
 	if !ok {
-		t.Fatal("writeError response missing 'error' field")
+		t.Fatal("WriteError response missing 'error' field")
 	}
 	if errObj["code"] != "INVALID_REQUEST" {
 		t.Errorf("error.code = %q, want %q", errObj["code"], "INVALID_REQUEST")
@@ -149,15 +151,15 @@ func TestWriteError(t *testing.T) {
 
 func TestWritePaginated(t *testing.T) {
 	w := httptest.NewRecorder()
-	writePaginated(w, []string{"article1", "article2"}, 50, 25, 0)
+	apiresponse.WritePaginated(w, "knowledgebase", []string{"article1", "article2"}, 50, 25, 0)
 
 	var body map[string]interface{}
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
-		t.Fatalf("writePaginated body parse error: %v", err)
+		t.Fatalf("WritePaginated body parse error: %v", err)
 	}
 	pag, ok := body["pagination"].(map[string]interface{})
 	if !ok {
-		t.Fatal("writePaginated missing 'pagination' field")
+		t.Fatal("WritePaginated missing 'pagination' field")
 	}
 	if pag["total"] != float64(50) {
 		t.Errorf("pagination.total = %v, want 50", pag["total"])

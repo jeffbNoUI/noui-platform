@@ -5,12 +5,11 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/google/uuid"
+	"github.com/noui/platform/apiresponse"
 	"github.com/noui/platform/auth"
 	"github.com/noui/platform/cache"
 	cmdb "github.com/noui/platform/casemanagement/db"
@@ -67,7 +66,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 // HealthCheck returns service health status.
 func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{
+	apiresponse.WriteJSON(w, http.StatusOK, map[string]string{
 		"status":  "ok",
 		"service": "casemanagement",
 		"version": "0.1.0",
@@ -81,13 +80,13 @@ func (h *Handler) ListStages(w http.ResponseWriter, r *http.Request) {
 	if cached, ok := h.cache.Get(cacheKey); ok {
 		w.Header().Set("Cache-Control", "public, max-age=600")
 		w.Header().Set("X-Cache", "HIT")
-		writeJSON(w, http.StatusOK, cached)
+		apiresponse.WriteJSON(w, http.StatusOK, cached)
 		return
 	}
 
 	stages, err := h.store.ListStages(r.Context())
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
@@ -95,7 +94,7 @@ func (h *Handler) ListStages(w http.ResponseWriter, r *http.Request) {
 	h.cache.Set(cacheKey, resp)
 	w.Header().Set("Cache-Control", "public, max-age=600")
 	w.Header().Set("X-Cache", "MISS")
-	writeJSON(w, http.StatusOK, resp)
+	apiresponse.WriteJSON(w, http.StatusOK, resp)
 }
 
 // --- Case Handlers ---
@@ -117,11 +116,11 @@ func (h *Handler) ListCases(w http.ResponseWriter, r *http.Request) {
 
 	cases, total, err := h.store.ListCases(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
-	writePaginated(w, cases, total, filter.Limit, filter.Offset)
+	apiresponse.WritePaginated(w, "casemanagement", cases, total, filter.Limit, filter.Offset)
 }
 
 func (h *Handler) GetCase(w http.ResponseWriter, r *http.Request) {
@@ -130,10 +129,10 @@ func (h *Handler) GetCase(w http.ResponseWriter, r *http.Request) {
 	c, err := h.store.GetCase(r.Context(), tenantID, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "Case not found")
+			apiresponse.WriteError(w, http.StatusNotFound, "NOT_FOUND", "Case not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
@@ -147,13 +146,13 @@ func (h *Handler) GetCase(w http.ResponseWriter, r *http.Request) {
 		DocumentCount:  docCount,
 	}
 
-	writeSuccess(w, http.StatusOK, detail)
+	apiresponse.WriteSuccess(w, http.StatusOK, "casemanagement", detail)
 }
 
 func (h *Handler) CreateCase(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateCaseRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -166,14 +165,14 @@ func (h *Handler) CreateCase(w http.ResponseWriter, r *http.Request) {
 	errs.EnumOptional("priority", req.Priority, []string{"standard", "high", "urgent"})
 	errs.DateYMDOptional("retirementDate", req.RetirementDate)
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
 		return
 	}
 
 	// Look up stage 0 for initial stage
 	stage, err := h.store.GetStage(r.Context(), 0)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", "failed to load initial stage")
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", "failed to load initial stage")
 		return
 	}
 
@@ -211,7 +210,7 @@ func (h *Handler) CreateCase(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.store.CreateCase(r.Context(), c, req.Flags); err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
@@ -219,11 +218,11 @@ func (h *Handler) CreateCase(w http.ResponseWriter, r *http.Request) {
 	full, err := h.store.GetCaseByID(r.Context(), c.CaseID)
 	if err != nil {
 		// Case was created but re-fetch failed; return the bare case
-		writeSuccess(w, http.StatusCreated, c)
+		apiresponse.WriteSuccess(w, http.StatusCreated, "casemanagement", c)
 		return
 	}
 
-	writeSuccess(w, http.StatusCreated, full)
+	apiresponse.WriteSuccess(w, http.StatusCreated, "casemanagement", full)
 }
 
 func (h *Handler) UpdateCase(w http.ResponseWriter, r *http.Request) {
@@ -234,16 +233,16 @@ func (h *Handler) UpdateCase(w http.ResponseWriter, r *http.Request) {
 	_, err := h.store.GetCase(r.Context(), tenantID, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "Case not found")
+			apiresponse.WriteError(w, http.StatusNotFound, "NOT_FOUND", "Case not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
 	var req models.UpdateCaseRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -261,22 +260,22 @@ func (h *Handler) UpdateCase(w http.ResponseWriter, r *http.Request) {
 		errs.MaxLen("assignedTo", *req.AssignedTo, 200)
 	}
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
 		return
 	}
 
 	if err := h.store.UpdateCase(r.Context(), tenantID, id, req); err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
 	updated, err := h.store.GetCase(r.Context(), tenantID, id)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, updated)
+	apiresponse.WriteSuccess(w, http.StatusOK, "casemanagement", updated)
 }
 
 func (h *Handler) AdvanceStage(w http.ResponseWriter, r *http.Request) {
@@ -285,7 +284,7 @@ func (h *Handler) AdvanceStage(w http.ResponseWriter, r *http.Request) {
 
 	var req models.AdvanceStageRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -294,21 +293,21 @@ func (h *Handler) AdvanceStage(w http.ResponseWriter, r *http.Request) {
 	errs.MaxLen("transitionedBy", req.TransitionedBy, 200)
 	errs.MaxLen("note", req.Note, 2000)
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
 		return
 	}
 
 	updated, err := h.store.AdvanceStage(r.Context(), tenantID, id, req.TransitionedBy, req.Note)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "Case not found")
+			apiresponse.WriteError(w, http.StatusNotFound, "NOT_FOUND", "Case not found")
 			return
 		}
-		writeError(w, http.StatusBadRequest, "ADVANCE_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "ADVANCE_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, updated)
+	apiresponse.WriteSuccess(w, http.StatusOK, "casemanagement", updated)
 }
 
 func (h *Handler) GetStageHistory(w http.ResponseWriter, r *http.Request) {
@@ -317,14 +316,14 @@ func (h *Handler) GetStageHistory(w http.ResponseWriter, r *http.Request) {
 
 	history, err := h.store.GetStageHistory(r.Context(), tenantID, id)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 	if history == nil {
 		history = []models.StageTransition{}
 	}
 
-	writeJSON(w, http.StatusOK, map[string]any{"data": history})
+	apiresponse.WriteJSON(w, http.StatusOK, map[string]any{"data": history})
 }
 
 // --- Note Handlers ---
@@ -334,14 +333,14 @@ func (h *Handler) ListNotes(w http.ResponseWriter, r *http.Request) {
 
 	notes, err := h.store.ListNotes(r.Context(), caseID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 	if notes == nil {
 		notes = []models.CaseNote{}
 	}
 
-	writeJSON(w, http.StatusOK, map[string]any{"data": notes})
+	apiresponse.WriteJSON(w, http.StatusOK, map[string]any{"data": notes})
 }
 
 func (h *Handler) CreateNote(w http.ResponseWriter, r *http.Request) {
@@ -349,7 +348,7 @@ func (h *Handler) CreateNote(w http.ResponseWriter, r *http.Request) {
 
 	var req models.CreateNoteRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -360,37 +359,37 @@ func (h *Handler) CreateNote(w http.ResponseWriter, r *http.Request) {
 	errs.MaxLen("content", req.Content, 10000)
 	errs.MaxLen("category", req.Category, 50)
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
 		return
 	}
 
 	note, err := h.store.CreateNote(r.Context(), caseID, req)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusCreated, note)
+	apiresponse.WriteSuccess(w, http.StatusCreated, "casemanagement", note)
 }
 
 func (h *Handler) DeleteNote(w http.ResponseWriter, r *http.Request) {
 	caseID := r.PathValue("id")
 	noteID, err := strconv.Atoi(r.PathValue("noteId"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid noteId")
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid noteId")
 		return
 	}
 
 	if err := h.store.DeleteNote(r.Context(), caseID, noteID); err != nil {
 		if err == cmdb.ErrNotFound {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "Note not found")
+			apiresponse.WriteError(w, http.StatusNotFound, "NOT_FOUND", "Note not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+	apiresponse.WriteJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
 // --- Document Handlers ---
@@ -400,14 +399,14 @@ func (h *Handler) ListDocuments(w http.ResponseWriter, r *http.Request) {
 
 	docs, err := h.store.ListDocuments(r.Context(), caseID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 	if docs == nil {
 		docs = []models.CaseDocument{}
 	}
 
-	writeJSON(w, http.StatusOK, map[string]any{"data": docs})
+	apiresponse.WriteJSON(w, http.StatusOK, map[string]any{"data": docs})
 }
 
 func (h *Handler) CreateDocument(w http.ResponseWriter, r *http.Request) {
@@ -415,7 +414,7 @@ func (h *Handler) CreateDocument(w http.ResponseWriter, r *http.Request) {
 
 	var req models.CreateDocumentRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -427,37 +426,37 @@ func (h *Handler) CreateDocument(w http.ResponseWriter, r *http.Request) {
 	errs.MaxLen("documentType", req.DocumentType, 50)
 	errs.MaxLen("mimeType", req.MimeType, 100)
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
 		return
 	}
 
 	doc, err := h.store.CreateDocument(r.Context(), caseID, req)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusCreated, doc)
+	apiresponse.WriteSuccess(w, http.StatusCreated, "casemanagement", doc)
 }
 
 func (h *Handler) DeleteDocument(w http.ResponseWriter, r *http.Request) {
 	caseID := r.PathValue("id")
 	docID, err := strconv.Atoi(r.PathValue("docId"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid docId")
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid docId")
 		return
 	}
 
 	if err := h.store.DeleteDocument(r.Context(), caseID, docID); err != nil {
 		if err == cmdb.ErrNotFound {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "Document not found")
+			apiresponse.WriteError(w, http.StatusNotFound, "NOT_FOUND", "Document not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+	apiresponse.WriteJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
 // --- Stats Handlers ---
@@ -467,11 +466,11 @@ func (h *Handler) GetCaseStats(w http.ResponseWriter, r *http.Request) {
 
 	stats, err := h.store.GetCaseStats(r.Context(), tenantID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, stats)
+	apiresponse.WriteSuccess(w, http.StatusOK, "casemanagement", stats)
 }
 
 func (h *Handler) GetSLAStats(w http.ResponseWriter, r *http.Request) {
@@ -479,11 +478,11 @@ func (h *Handler) GetSLAStats(w http.ResponseWriter, r *http.Request) {
 
 	stats, err := h.store.GetSLAStats(r.Context(), tenantID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, stats)
+	apiresponse.WriteSuccess(w, http.StatusOK, "casemanagement", stats)
 }
 
 func (h *Handler) GetVolumeStats(w http.ResponseWriter, r *http.Request) {
@@ -492,11 +491,11 @@ func (h *Handler) GetVolumeStats(w http.ResponseWriter, r *http.Request) {
 
 	stats, err := h.store.GetVolumeStats(r.Context(), tenantID, months)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, stats)
+	apiresponse.WriteSuccess(w, http.StatusOK, "casemanagement", stats)
 }
 
 // --- Helper Functions ---
@@ -516,57 +515,6 @@ func decodeJSON(r *http.Request, v any) error {
 	}
 	defer r.Body.Close()
 	return json.NewDecoder(r.Body).Decode(v)
-}
-
-func writeJSON(w http.ResponseWriter, status int, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(v); err != nil {
-		slog.Error("error encoding JSON response", "error", err)
-	}
-}
-
-func writeSuccess(w http.ResponseWriter, status int, data any) {
-	resp := map[string]any{
-		"data": data,
-		"meta": map[string]any{
-			"requestId": uuid.New().String(),
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
-			"service":   "casemanagement",
-			"version":   "v1",
-		},
-	}
-	writeJSON(w, status, resp)
-}
-
-func writePaginated(w http.ResponseWriter, data any, total, limit, offset int) {
-	resp := map[string]any{
-		"data": data,
-		"pagination": map[string]any{
-			"total":   total,
-			"limit":   limit,
-			"offset":  offset,
-			"hasMore": offset+limit < total,
-		},
-		"meta": map[string]any{
-			"requestId": uuid.New().String(),
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
-			"service":   "casemanagement",
-			"version":   "v1",
-		},
-	}
-	writeJSON(w, http.StatusOK, resp)
-}
-
-func writeError(w http.ResponseWriter, status int, code, message string) {
-	resp := map[string]any{
-		"error": map[string]any{
-			"code":      code,
-			"message":   message,
-			"requestId": uuid.New().String(),
-		},
-	}
-	writeJSON(w, status, resp)
 }
 
 func intParam(r *http.Request, name string, defaultVal int) int {

@@ -5,12 +5,11 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/google/uuid"
+	"github.com/noui/platform/apiresponse"
 	"github.com/noui/platform/auth"
 	dqdb "github.com/noui/platform/dataquality/db"
 	"github.com/noui/platform/dataquality/models"
@@ -49,7 +48,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 // HealthCheck returns service health status.
 func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{
+	apiresponse.WriteJSON(w, http.StatusOK, map[string]string{
 		"status":  "ok",
 		"service": "dataquality",
 		"version": "0.1.0",
@@ -66,11 +65,11 @@ func (h *Handler) ListChecks(w http.ResponseWriter, r *http.Request) {
 
 	checks, total, err := h.store.ListChecks(r.Context(), tenantID, category, activeOnly, limit, offset)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
-	writePaginated(w, checks, total, limit, offset)
+	apiresponse.WritePaginated(w, "dataquality", checks, total, limit, offset)
 }
 
 func (h *Handler) GetCheck(w http.ResponseWriter, r *http.Request) {
@@ -78,14 +77,14 @@ func (h *Handler) GetCheck(w http.ResponseWriter, r *http.Request) {
 	check, err := h.store.GetCheck(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "Check not found")
+			apiresponse.WriteError(w, http.StatusNotFound, "NOT_FOUND", "Check not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, check)
+	apiresponse.WriteSuccess(w, http.StatusOK, "dataquality", check)
 }
 
 // --- Result Handlers ---
@@ -97,11 +96,11 @@ func (h *Handler) ListResults(w http.ResponseWriter, r *http.Request) {
 
 	results, err := h.store.ListResults(r.Context(), tenantID, checkID, limit)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, results)
+	apiresponse.WriteSuccess(w, http.StatusOK, "dataquality", results)
 }
 
 // --- Score Handlers ---
@@ -111,11 +110,11 @@ func (h *Handler) GetScore(w http.ResponseWriter, r *http.Request) {
 
 	score, err := h.store.GetScore(r.Context(), tenantID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, score)
+	apiresponse.WriteSuccess(w, http.StatusOK, "dataquality", score)
 }
 
 func (h *Handler) GetScoreTrend(w http.ResponseWriter, r *http.Request) {
@@ -125,17 +124,17 @@ func (h *Handler) GetScoreTrend(w http.ResponseWriter, r *http.Request) {
 	var errs validation.Errors
 	errs.IntRange("days", days, 1, 365)
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
 		return
 	}
 
 	trend, err := h.store.GetScoreTrend(r.Context(), tenantID, days)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, trend)
+	apiresponse.WriteSuccess(w, http.StatusOK, "dataquality", trend)
 }
 
 // --- Issue Handlers ---
@@ -148,11 +147,11 @@ func (h *Handler) ListIssues(w http.ResponseWriter, r *http.Request) {
 
 	issues, total, err := h.store.ListIssues(r.Context(), tenantID, severity, status, limit, offset)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
-	writePaginated(w, issues, total, limit, offset)
+	apiresponse.WritePaginated(w, "dataquality", issues, total, limit, offset)
 }
 
 func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
@@ -161,16 +160,16 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 	existing, err := h.store.GetIssue(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "Issue not found")
+			apiresponse.WriteError(w, http.StatusNotFound, "NOT_FOUND", "Issue not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
 	var req models.UpdateIssueRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -182,7 +181,7 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 		errs.MaxLen("resolutionNote", *req.ResolutionNote, 5000)
 	}
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
 		return
 	}
 
@@ -200,11 +199,11 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.store.UpdateIssue(r.Context(), existing); err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, existing)
+	apiresponse.WriteSuccess(w, http.StatusOK, "dataquality", existing)
 }
 
 // --- Helper Functions ---
@@ -224,57 +223,6 @@ func decodeJSON(r *http.Request, v interface{}) error {
 	}
 	defer r.Body.Close()
 	return json.NewDecoder(r.Body).Decode(v)
-}
-
-func writeJSON(w http.ResponseWriter, status int, v interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(v); err != nil {
-		slog.Error("error encoding JSON response", "error", err)
-	}
-}
-
-func writeSuccess(w http.ResponseWriter, status int, data interface{}) {
-	resp := map[string]interface{}{
-		"data": data,
-		"meta": map[string]interface{}{
-			"requestId": uuid.New().String(),
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
-			"service":   "dataquality",
-			"version":   "v1",
-		},
-	}
-	writeJSON(w, status, resp)
-}
-
-func writePaginated(w http.ResponseWriter, data interface{}, total, limit, offset int) {
-	resp := map[string]interface{}{
-		"data": data,
-		"pagination": map[string]interface{}{
-			"total":   total,
-			"limit":   limit,
-			"offset":  offset,
-			"hasMore": offset+limit < total,
-		},
-		"meta": map[string]interface{}{
-			"requestId": uuid.New().String(),
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
-			"service":   "dataquality",
-			"version":   "v1",
-		},
-	}
-	writeJSON(w, http.StatusOK, resp)
-}
-
-func writeError(w http.ResponseWriter, status int, code, message string) {
-	resp := map[string]interface{}{
-		"error": map[string]interface{}{
-			"code":      code,
-			"message":   message,
-			"requestId": uuid.New().String(),
-		},
-	}
-	writeJSON(w, status, resp)
 }
 
 func intParam(r *http.Request, name string, defaultVal int) int {

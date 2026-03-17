@@ -13,7 +13,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/google/uuid"
+	"github.com/noui/platform/apiresponse"
 	intelligencedb "github.com/noui/platform/intelligence/db"
 	"github.com/noui/platform/intelligence/models"
 	"github.com/noui/platform/intelligence/rules"
@@ -53,7 +53,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 // HealthCheck returns service health status.
 func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{
+	apiresponse.WriteJSON(w, http.StatusOK, map[string]string{
 		"status":  "ok",
 		"service": "intelligence",
 		"version": "0.1.0",
@@ -64,7 +64,7 @@ func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) EvaluateEligibility(w http.ResponseWriter, r *http.Request) {
 	var req models.EligibilityRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -74,19 +74,19 @@ func (h *Handler) EvaluateEligibility(w http.ResponseWriter, r *http.Request) {
 		errs.DateYMD("retirement_date", req.RetirementDate)
 	}
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
 		return
 	}
 
 	member, err := h.fetchMember(req.MemberID)
 	if err != nil {
-		writeError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
 		return
 	}
 
 	svcCredit, err := h.fetchServiceCredit(req.MemberID)
 	if err != nil {
-		writeError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
 		return
 	}
 
@@ -96,14 +96,14 @@ func (h *Handler) EvaluateEligibility(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := rules.EvaluateEligibility(*member, *svcCredit, retDate)
-	writeSuccess(w, result)
+	apiresponse.WriteSuccess(w, http.StatusOK, "intelligence", result)
 }
 
 // CalculateBenefit performs the complete benefit calculation.
 func (h *Handler) CalculateBenefit(w http.ResponseWriter, r *http.Request) {
 	var req models.BenefitCalcRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -112,7 +112,7 @@ func (h *Handler) CalculateBenefit(w http.ResponseWriter, r *http.Request) {
 	errs.Required("retirement_date", req.RetirementDate)
 	errs.DateYMD("retirement_date", req.RetirementDate)
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
 		return
 	}
 
@@ -120,19 +120,19 @@ func (h *Handler) CalculateBenefit(w http.ResponseWriter, r *http.Request) {
 
 	member, err := h.fetchMember(req.MemberID)
 	if err != nil {
-		writeError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
 		return
 	}
 
 	svcCredit, err := h.fetchServiceCredit(req.MemberID)
 	if err != nil {
-		writeError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
 		return
 	}
 
 	ams, err := h.fetchAMS(req.MemberID)
 	if err != nil {
-		writeError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
 		return
 	}
 
@@ -146,14 +146,14 @@ func (h *Handler) CalculateBenefit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := rules.CalculateBenefit(*member, *svcCredit, *ams, dro, retDate)
-	writeSuccess(w, result)
+	apiresponse.WriteSuccess(w, http.StatusOK, "intelligence", result)
 }
 
 // CalculatePaymentOptions calculates all four payment options.
 func (h *Handler) CalculatePaymentOptions(w http.ResponseWriter, r *http.Request) {
 	var req models.PaymentOptionsRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -165,7 +165,7 @@ func (h *Handler) CalculatePaymentOptions(w http.ResponseWriter, r *http.Request
 		errs.DateYMD("beneficiary_dob", req.BeneficiaryDOB)
 	}
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
 		return
 	}
 
@@ -173,19 +173,19 @@ func (h *Handler) CalculatePaymentOptions(w http.ResponseWriter, r *http.Request
 
 	member, err := h.fetchMember(req.MemberID)
 	if err != nil {
-		writeError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
 		return
 	}
 
 	svcCredit, err := h.fetchServiceCredit(req.MemberID)
 	if err != nil {
-		writeError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
 		return
 	}
 
 	ams, err := h.fetchAMS(req.MemberID)
 	if err != nil {
-		writeError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
 		return
 	}
 
@@ -199,14 +199,14 @@ func (h *Handler) CalculatePaymentOptions(w http.ResponseWriter, r *http.Request
 	}
 
 	result := rules.CalculateBenefit(*member, *svcCredit, *ams, dro, retDate)
-	writeSuccess(w, result.PaymentOptions)
+	apiresponse.WriteSuccess(w, http.StatusOK, "intelligence", result.PaymentOptions)
 }
 
 // CalculateScenario compares benefits across multiple retirement dates.
 func (h *Handler) CalculateScenario(w http.ResponseWriter, r *http.Request) {
 	var req models.ScenarioRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -216,25 +216,25 @@ func (h *Handler) CalculateScenario(w http.ResponseWriter, r *http.Request) {
 		errs.DateYMD(fmt.Sprintf("retirement_dates[%d]", i), ds)
 	}
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
 		return
 	}
 
 	member, err := h.fetchMember(req.MemberID)
 	if err != nil {
-		writeError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
 		return
 	}
 
 	svcCredit, err := h.fetchServiceCredit(req.MemberID)
 	if err != nil {
-		writeError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
 		return
 	}
 
 	ams, err := h.fetchAMS(req.MemberID)
 	if err != nil {
-		writeError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
 		return
 	}
 
@@ -254,14 +254,14 @@ func (h *Handler) CalculateScenario(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := rules.CalculateScenarios(*member, *svcCredit, *ams, dro, dates)
-	writeSuccess(w, result)
+	apiresponse.WriteSuccess(w, http.StatusOK, "intelligence", result)
 }
 
 // CalculateDRO calculates DRO impact for a member.
 func (h *Handler) CalculateDRO(w http.ResponseWriter, r *http.Request) {
 	var req models.DROCalcRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -270,7 +270,7 @@ func (h *Handler) CalculateDRO(w http.ResponseWriter, r *http.Request) {
 	errs.Required("retirement_date", req.RetirementDate)
 	errs.DateYMD("retirement_date", req.RetirementDate)
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
 		return
 	}
 
@@ -278,25 +278,25 @@ func (h *Handler) CalculateDRO(w http.ResponseWriter, r *http.Request) {
 
 	droData, err := h.fetchDRO(req.MemberID)
 	if err != nil || droData == nil || !droData.HasDRO {
-		writeError(w, http.StatusNotFound, "NO_DRO", "No DRO records found for this member")
+		apiresponse.WriteError(w, http.StatusNotFound, "NO_DRO", "No DRO records found for this member")
 		return
 	}
 
 	member, err := h.fetchMember(req.MemberID)
 	if err != nil {
-		writeError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
 		return
 	}
 
 	svcCredit, err := h.fetchServiceCredit(req.MemberID)
 	if err != nil {
-		writeError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
 		return
 	}
 
 	ams, err := h.fetchAMS(req.MemberID)
 	if err != nil {
-		writeError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusBadGateway, "CONNECTOR_ERROR", err.Error())
 		return
 	}
 
@@ -309,7 +309,7 @@ func (h *Handler) CalculateDRO(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := rules.CalculateDRO(*droData, member.HireDate, retDate, *svcCredit, grossBenefit)
-	writeSuccess(w, result)
+	apiresponse.WriteSuccess(w, http.StatusOK, "intelligence", result)
 }
 
 // LogSummary stores a deterministic summary for future LLM training.
@@ -324,16 +324,16 @@ func (h *Handler) LogSummary(w http.ResponseWriter, r *http.Request) {
 
 	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20)) // 1MB limit
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid body"})
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid body")
 		return
 	}
 	if err := json.Unmarshal(body, &req); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON"})
+		apiresponse.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid JSON")
 		return
 	}
 
 	if req.MemberID == 0 || req.InputHash == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "memberId and inputHash required"})
+		apiresponse.WriteError(w, http.StatusBadRequest, "MISSING_FIELDS", "memberId and inputHash required")
 		return
 	}
 
@@ -349,7 +349,7 @@ func (h *Handler) LogSummary(w http.ResponseWriter, r *http.Request) {
 		slog.Info("summary-log", "memberID", req.MemberID, "hash", hashPreview, "note", "no DB, stdout only")
 	}
 
-	writeJSON(w, http.StatusAccepted, map[string]string{"status": "logged"})
+	apiresponse.WriteJSON(w, http.StatusAccepted, map[string]string{"status": "logged"})
 }
 
 // --- Connector service client methods ---
@@ -483,34 +483,4 @@ func decodeJSON(r *http.Request, v interface{}) error {
 	}
 	defer r.Body.Close()
 	return json.NewDecoder(r.Body).Decode(v)
-}
-
-func writeJSON(w http.ResponseWriter, status int, v interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(v); err != nil {
-		slog.Error("error encoding JSON response", "error", err)
-	}
-}
-
-func writeSuccess(w http.ResponseWriter, data interface{}) {
-	resp := map[string]interface{}{
-		"data": data,
-		"meta": map[string]interface{}{
-			"request_id": uuid.New().String(),
-			"timestamp":  time.Now().UTC().Format(time.RFC3339),
-		},
-	}
-	writeJSON(w, http.StatusOK, resp)
-}
-
-func writeError(w http.ResponseWriter, status int, code, message string) {
-	resp := map[string]interface{}{
-		"error": map[string]interface{}{
-			"code":       code,
-			"message":    message,
-			"request_id": uuid.New().String(),
-		},
-	}
-	writeJSON(w, status, resp)
 }

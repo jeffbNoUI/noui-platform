@@ -88,81 +88,6 @@ func TestNullStr_Null(t *testing.T) {
 	}
 }
 
-// --- Response Helpers ---
-
-func TestWriteJSON(t *testing.T) {
-	w := httptest.NewRecorder()
-	writeJSON(w, http.StatusOK, map[string]string{"key": "value"})
-
-	if w.Code != http.StatusOK {
-		t.Errorf("writeJSON status = %d, want %d", w.Code, http.StatusOK)
-	}
-	if ct := w.Header().Get("Content-Type"); ct != "application/json" {
-		t.Errorf("Content-Type = %q, want application/json", ct)
-	}
-	var body map[string]string
-	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
-		t.Fatalf("writeJSON body parse error: %v", err)
-	}
-	if body["key"] != "value" {
-		t.Errorf("body[key] = %q, want %q", body["key"], "value")
-	}
-}
-
-func TestWriteSuccess(t *testing.T) {
-	w := httptest.NewRecorder()
-	writeSuccess(w, map[string]string{"hello": "world"})
-
-	if w.Code != http.StatusOK {
-		t.Errorf("writeSuccess status = %d, want %d", w.Code, http.StatusOK)
-	}
-
-	var body map[string]interface{}
-	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
-		t.Fatalf("writeSuccess body parse error: %v", err)
-	}
-	if body["data"] == nil {
-		t.Error("writeSuccess response missing 'data' field")
-	}
-	meta, ok := body["meta"].(map[string]interface{})
-	if !ok {
-		t.Fatal("writeSuccess response missing 'meta' field")
-	}
-	if meta["request_id"] == nil || meta["request_id"] == "" {
-		t.Error("meta.request_id should not be empty")
-	}
-	if meta["timestamp"] == nil || meta["timestamp"] == "" {
-		t.Error("meta.timestamp should not be empty")
-	}
-}
-
-func TestWriteError(t *testing.T) {
-	w := httptest.NewRecorder()
-	writeError(w, http.StatusBadRequest, "INVALID", "bad input")
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("writeError status = %d, want %d", w.Code, http.StatusBadRequest)
-	}
-
-	var body map[string]interface{}
-	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
-		t.Fatalf("writeError body parse error: %v", err)
-	}
-	errObj, ok := body["error"].(map[string]interface{})
-	if !ok {
-		t.Fatal("writeError response missing 'error' field")
-	}
-	if errObj["code"] != "INVALID" {
-		t.Errorf("error.code = %q, want %q", errObj["code"], "INVALID")
-	}
-	if errObj["message"] != "bad input" {
-		t.Errorf("error.message = %q, want %q", errObj["message"], "bad input")
-	}
-	if errObj["request_id"] == nil || errObj["request_id"] == "" {
-		t.Error("error.request_id should not be empty")
-	}
-}
-
 // --- Model Serialization ---
 
 func TestMemberJSON(t *testing.T) {
@@ -425,8 +350,8 @@ func TestGetMember_Valid(t *testing.T) {
 	}
 
 	var body struct {
-		Data models.Member  `json:"data"`
-		Meta models.APIMeta `json:"meta"`
+		Data models.Member          `json:"data"`
+		Meta map[string]interface{} `json:"meta"`
 	}
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
 		t.Fatalf("body parse error: %v", err)
@@ -443,8 +368,11 @@ func TestGetMember_Valid(t *testing.T) {
 	if body.Data.StatusCode != "ACTIVE" {
 		t.Errorf("StatusCode = %q, want ACTIVE", body.Data.StatusCode)
 	}
-	if body.Meta.RequestID == "" {
-		t.Error("meta.request_id should not be empty")
+	if body.Meta["requestId"] == nil || body.Meta["requestId"] == "" {
+		t.Error("meta.requestId should not be empty")
+	}
+	if body.Meta["service"] != "dataaccess" {
+		t.Errorf("meta.service = %q, want dataaccess", body.Meta["service"])
 	}
 }
 
@@ -479,11 +407,13 @@ func TestGetEmploymentHistory_Empty(t *testing.T) {
 	}
 
 	var body struct {
-		Data models.PaginatedData `json:"data"`
+		Pagination struct {
+			Total int `json:"total"`
+		} `json:"pagination"`
 	}
 	json.Unmarshal(w.Body.Bytes(), &body)
-	if body.Data.Total != 0 {
-		t.Errorf("total = %d, want 0", body.Data.Total)
+	if body.Pagination.Total != 0 {
+		t.Errorf("total = %d, want 0", body.Pagination.Total)
 	}
 }
 
@@ -516,22 +446,22 @@ func TestGetEmploymentHistory_WithRecords(t *testing.T) {
 	}
 
 	var body struct {
-		Data struct {
-			Items []models.EmploymentEvent `json:"items"`
-			Total int                      `json:"total"`
-		} `json:"data"`
+		Data       []models.EmploymentEvent `json:"data"`
+		Pagination struct {
+			Total int `json:"total"`
+		} `json:"pagination"`
 	}
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
 		t.Fatalf("body parse error: %v", err)
 	}
-	if len(body.Data.Items) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(body.Data.Items))
+	if len(body.Data) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(body.Data))
 	}
-	if body.Data.Items[0].EventType != "HIRE" {
-		t.Errorf("EventType = %q, want HIRE", body.Data.Items[0].EventType)
+	if body.Data[0].EventType != "HIRE" {
+		t.Errorf("EventType = %q, want HIRE", body.Data[0].EventType)
 	}
-	if body.Data.Total != 1 {
-		t.Errorf("total = %d, want 1", body.Data.Total)
+	if body.Pagination.Total != 1 {
+		t.Errorf("total = %d, want 1", body.Pagination.Total)
 	}
 }
 
@@ -573,19 +503,19 @@ func TestGetSalaryHistory_WithRecords(t *testing.T) {
 	}
 
 	var body struct {
-		Data struct {
-			Items []models.SalaryRecord `json:"items"`
-			Total int                   `json:"total"`
-		} `json:"data"`
+		Data       []models.SalaryRecord `json:"data"`
+		Pagination struct {
+			Total int `json:"total"`
+		} `json:"pagination"`
 	}
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
 		t.Fatalf("body parse error: %v", err)
 	}
-	if len(body.Data.Items) != 1 {
-		t.Fatalf("expected 1 salary record, got %d", len(body.Data.Items))
+	if len(body.Data) != 1 {
+		t.Fatalf("expected 1 salary record, got %d", len(body.Data))
 	}
-	if body.Data.Items[0].AnnualSalary != 85000.0 {
-		t.Errorf("AnnualSalary = %f, want 85000.0", body.Data.Items[0].AnnualSalary)
+	if body.Data[0].AnnualSalary != 85000.0 {
+		t.Errorf("AnnualSalary = %f, want 85000.0", body.Data[0].AnnualSalary)
 	}
 }
 
@@ -870,22 +800,22 @@ func TestGetBeneficiaries_WithRecords(t *testing.T) {
 	}
 
 	var body struct {
-		Data struct {
-			Items []models.Beneficiary `json:"items"`
-			Total int                  `json:"total"`
-		} `json:"data"`
+		Data       []models.Beneficiary `json:"data"`
+		Pagination struct {
+			Total int `json:"total"`
+		} `json:"pagination"`
 	}
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
 		t.Fatalf("body parse error: %v", err)
 	}
-	if len(body.Data.Items) != 1 {
-		t.Fatalf("expected 1 beneficiary, got %d", len(body.Data.Items))
+	if len(body.Data) != 1 {
+		t.Fatalf("expected 1 beneficiary, got %d", len(body.Data))
 	}
-	if body.Data.Items[0].BeneType != "PRIMARY" {
-		t.Errorf("BeneType = %q, want PRIMARY", body.Data.Items[0].BeneType)
+	if body.Data[0].BeneType != "PRIMARY" {
+		t.Errorf("BeneType = %q, want PRIMARY", body.Data[0].BeneType)
 	}
-	if body.Data.Items[0].AllocPct != 100.0 {
-		t.Errorf("AllocPct = %f, want 100.0", body.Data.Items[0].AllocPct)
+	if body.Data[0].AllocPct != 100.0 {
+		t.Errorf("AllocPct = %f, want 100.0", body.Data[0].AllocPct)
 	}
 }
 
@@ -930,22 +860,22 @@ func TestGetDRO_WithRecords(t *testing.T) {
 	}
 
 	var body struct {
-		Data struct {
-			Items []models.DRORecord `json:"items"`
-			Total int                `json:"total"`
-		} `json:"data"`
+		Data       []models.DRORecord `json:"data"`
+		Pagination struct {
+			Total int `json:"total"`
+		} `json:"pagination"`
 	}
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
 		t.Fatalf("body parse error: %v", err)
 	}
-	if len(body.Data.Items) != 1 {
-		t.Fatalf("expected 1 DRO, got %d", len(body.Data.Items))
+	if len(body.Data) != 1 {
+		t.Fatalf("expected 1 DRO, got %d", len(body.Data))
 	}
-	if body.Data.Items[0].Status != "APPROVED" {
-		t.Errorf("Status = %q, want APPROVED", body.Data.Items[0].Status)
+	if body.Data[0].Status != "APPROVED" {
+		t.Errorf("Status = %q, want APPROVED", body.Data[0].Status)
 	}
-	if body.Data.Items[0].DivisionMethod != "TIME_RULE" {
-		t.Errorf("DivisionMethod = %q, want TIME_RULE", body.Data.Items[0].DivisionMethod)
+	if body.Data[0].DivisionMethod != "TIME_RULE" {
+		t.Errorf("DivisionMethod = %q, want TIME_RULE", body.Data[0].DivisionMethod)
 	}
 }
 
@@ -1044,6 +974,9 @@ func TestGetServiceCredit_EarnedOnly(t *testing.T) {
 			Credits []models.ServiceCredit      `json:"credits"`
 			Summary models.ServiceCreditSummary `json:"summary"`
 		} `json:"data"`
+		Pagination struct {
+			Total int `json:"total"`
+		} `json:"pagination"`
 	}
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
 		t.Fatalf("body parse error: %v", err)
@@ -1109,6 +1042,9 @@ func TestGetServiceCredit_EarnedPlusPurchased(t *testing.T) {
 			Credits []models.ServiceCredit      `json:"credits"`
 			Summary models.ServiceCreditSummary `json:"summary"`
 		} `json:"data"`
+		Pagination struct {
+			Total int `json:"total"`
+		} `json:"pagination"`
 	}
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
 		t.Fatalf("body parse error: %v", err)
@@ -1203,6 +1139,9 @@ func TestGetServiceCredit_AllCreditTypes(t *testing.T) {
 			Credits []models.ServiceCredit      `json:"credits"`
 			Summary models.ServiceCreditSummary `json:"summary"`
 		} `json:"data"`
+		Pagination struct {
+			Total int `json:"total"`
+		} `json:"pagination"`
 	}
 	json.Unmarshal(w.Body.Bytes(), &body)
 
