@@ -25,7 +25,7 @@ const NAV_ITEMS: SidebarNavItem[] = [
     icon: '◉',
     personas: ['active', 'inactive', 'retiree', 'beneficiary'],
   },
-  { key: 'projections', label: 'Projections', icon: '◈', personas: ['active'] },
+  { key: 'calculator', label: 'Plan My Retirement', icon: '◈', personas: ['active', 'inactive'] },
   { key: 'benefit', label: 'My Benefit', icon: '◈', personas: ['retiree', 'beneficiary'] },
   {
     key: 'documents',

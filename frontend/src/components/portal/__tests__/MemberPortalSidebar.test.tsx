@@ -19,7 +19,7 @@ describe('MemberPortalSidebar', () => {
     renderWithProviders(<MemberPortalSidebar {...defaultProps} />);
     expect(screen.getByTestId('nav-dashboard')).toBeInTheDocument();
     expect(screen.getByTestId('nav-profile')).toBeInTheDocument();
-    expect(screen.getByTestId('nav-projections')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-calculator')).toBeInTheDocument();
     expect(screen.getByTestId('nav-documents')).toBeInTheDocument();
     expect(screen.getByTestId('nav-messages')).toBeInTheDocument();
     expect(screen.getByTestId('nav-retirement-app')).toBeInTheDocument();
@@ -35,7 +35,7 @@ describe('MemberPortalSidebar', () => {
     expect(screen.getByTestId('nav-benefit')).toBeInTheDocument();
     expect(screen.getByTestId('nav-tax-documents')).toBeInTheDocument();
     // Active-only items should not appear
-    expect(screen.queryByTestId('nav-projections')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('nav-calculator')).not.toBeInTheDocument();
     expect(screen.queryByTestId('nav-retirement-app')).not.toBeInTheDocument();
     expect(screen.queryByTestId('nav-refund')).not.toBeInTheDocument();
   });
@@ -43,7 +43,7 @@ describe('MemberPortalSidebar', () => {
   it('shows correct items for inactive persona', () => {
     renderWithProviders(<MemberPortalSidebar {...defaultProps} personas={['inactive']} />);
     expect(screen.getByTestId('nav-refund')).toBeInTheDocument();
-    expect(screen.queryByTestId('nav-projections')).not.toBeInTheDocument();
+    expect(screen.getByTestId('nav-calculator')).toBeInTheDocument();
     expect(screen.queryByTestId('nav-benefit')).not.toBeInTheDocument();
   });
 
@@ -51,7 +51,7 @@ describe('MemberPortalSidebar', () => {
     renderWithProviders(<MemberPortalSidebar {...defaultProps} personas={['beneficiary']} />);
     expect(screen.getByTestId('nav-dashboard')).toBeInTheDocument();
     expect(screen.getByTestId('nav-benefit')).toBeInTheDocument();
-    expect(screen.queryByTestId('nav-projections')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('nav-calculator')).not.toBeInTheDocument();
     expect(screen.queryByTestId('nav-refund')).not.toBeInTheDocument();
   });
 
@@ -93,7 +93,7 @@ describe('MemberPortalSidebar', () => {
       <MemberPortalSidebar {...defaultProps} personas={['active', 'beneficiary']} />,
     );
     // Active items
-    expect(screen.getByTestId('nav-projections')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-calculator')).toBeInTheDocument();
     expect(screen.getByTestId('nav-retirement-app')).toBeInTheDocument();
     // Beneficiary items
     expect(screen.getByTestId('nav-benefit')).toBeInTheDocument();
