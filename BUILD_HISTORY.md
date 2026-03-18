@@ -1,5 +1,26 @@
 # noui-platform — Build History
 
+## Services Hub Integration Tests (2026-03-17)
+
+**Branch:** `claude/gifted-zhukovsky`
+**Goal:** Verify all 7 Services Hub tabs receive valid data from live Docker Compose stack.
+
+**What was built:**
+- `tests/e2e/services_hub_e2e.sh` — bash/curl/jq E2E test script, ~35 assertions across 7 sections
+- Health: aggregate status, per-service health for 8 platform services
+- Data Quality: score, checks list, issues list, status update round-trip with restore
+- Audit Trail: log retrieval, entity_type filtering
+- Metrics: case stats, SLA stats, volume trends
+- Security: event stats, POST event → GET verification
+- Issues: full CRUD lifecycle (create → read → update → filter by status)
+- Config: rules list, field presence checks
+
+**Test Results:** 50 assertions passed, 0 failed across all 7 sections
+
+**Next session should start with:** Visual polish or audit trail server-side filtering
+
+---
+
 ## Defect Fixes: UUID Normalization, Proxy Routes, Portal Access (2026-03-17)
 
 **PR:** #86
