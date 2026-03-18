@@ -106,7 +106,7 @@ func InitSchema(db *sql.DB) error {
 		CREATE TABLE IF NOT EXISTS issues (
 			id SERIAL PRIMARY KEY,
 			issue_id TEXT UNIQUE NOT NULL,
-			tenant_id TEXT NOT NULL,
+			tenant_id UUID NOT NULL,
 			title TEXT NOT NULL,
 			description TEXT NOT NULL DEFAULT '',
 			severity TEXT NOT NULL DEFAULT 'medium',
@@ -133,6 +133,16 @@ func InitSchema(db *sql.DB) error {
 		CREATE INDEX IF NOT EXISTS idx_issues_tenant ON issues(tenant_id);
 		CREATE INDEX IF NOT EXISTS idx_issues_status ON issues(tenant_id, status);
 		CREATE INDEX IF NOT EXISTS idx_issue_comments_issue ON issue_comments(issue_id);
+
+		-- Migrate existing TEXT tenant_id columns to UUID
+		DO $$ BEGIN
+			IF EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_name = 'issues' AND column_name = 'tenant_id' AND data_type = 'text'
+			) THEN
+				ALTER TABLE issues ALTER COLUMN tenant_id TYPE UUID USING tenant_id::UUID;
+			END IF;
+		END $$;
 	`
 
 	_, err := db.Exec(schema)

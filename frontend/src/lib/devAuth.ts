@@ -48,20 +48,35 @@ export async function generateDevToken(user: AuthUser): Promise<string> {
 
 // Default dev users for each role
 export const DEV_USERS: Record<string, AuthUser> = {
-  staff: { id: 'dev-staff-001', tenantId: 'dev-tenant-001', role: 'staff', name: 'Dev Staff User' },
-  admin: { id: 'dev-admin-001', tenantId: 'dev-tenant-001', role: 'admin', name: 'Dev Admin' },
+  staff: {
+    id: 'dev-staff-001',
+    tenantId: '00000000-0000-0000-0000-000000000001',
+    role: 'staff',
+    name: 'Dev Staff User',
+  },
+  admin: {
+    id: 'dev-admin-001',
+    tenantId: '00000000-0000-0000-0000-000000000001',
+    role: 'admin',
+    name: 'Dev Admin',
+  },
   member: {
     id: 'dev-member-001',
-    tenantId: 'dev-tenant-001',
+    tenantId: '00000000-0000-0000-0000-000000000001',
     role: 'member',
     name: 'Dev Member',
     memberId: 10001,
   },
   employer: {
     id: 'dev-employer-001',
-    tenantId: 'dev-tenant-001',
+    tenantId: '00000000-0000-0000-0000-000000000001',
     role: 'employer',
     name: 'Dev Employer',
   },
-  vendor: { id: 'dev-vendor-001', tenantId: 'dev-tenant-001', role: 'vendor', name: 'Dev Vendor' },
+  vendor: {
+    id: 'dev-vendor-001',
+    tenantId: '00000000-0000-0000-0000-000000000001',
+    role: 'vendor',
+    name: 'Dev Vendor',
+  },
 };
