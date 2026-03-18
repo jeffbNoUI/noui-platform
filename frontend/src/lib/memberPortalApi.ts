@@ -63,12 +63,21 @@ export const paymentAPI = {
 // Documents
 export const documentAPI = {
   list: (memberId: number) => fetchAPI<DocumentUpload[]>(`/api/v1/members/${memberId}/documents`),
-  upload: (issueId: string, file: File, documentType: string) => {
+  upload: (issueId: string, memberId: number, file: File, documentType: string) => {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('document_type', documentType);
-    return postAPI<DocumentUpload>(`/api/v1/issues/${issueId}/documents`, formData);
+    return postAPI<DocumentUpload>(
+      `/api/v1/issues/${issueId}/documents?member_id=${memberId}&document_type=${encodeURIComponent(documentType)}`,
+      formData,
+    );
   },
+  download: (documentId: string) =>
+    fetchAPI<{
+      document_id: string;
+      file_name: string;
+      content_type: string;
+      download_url: string;
+    }>(`/api/v1/documents/${documentId}/download`),
 };
 
 // Change requests (uses issues service)
