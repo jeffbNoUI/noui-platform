@@ -10,6 +10,9 @@ import ProfileSection from './profile/ProfileSection';
 import CalculatorSection from './calculator/CalculatorSection';
 import ApplicationSection from './application/ApplicationSection';
 import BenefitSection from './benefit/BenefitSection';
+import DeferredBenefitExplorer from './inactive/DeferredBenefitExplorer';
+import RefundEstimate from './inactive/RefundEstimate';
+import RefundApplication from './inactive/RefundApplication';
 import TourProvider from './tour/TourProvider';
 
 // ── Main Component ───────────────────────────────────────────────────────────
@@ -94,11 +97,30 @@ export default function MemberPortal({ memberID, retirementDate }: MemberPortalP
           <ApplicationSection memberId={memberID} personas={personas} />
         )}
         {activeSection === 'benefit' && <BenefitSection memberId={memberID} personas={personas} />}
+        {activeSection === 'projections' && (
+          <DeferredBenefitExplorer
+            memberId={memberID}
+            onBack={() => setActiveSection('dashboard')}
+          />
+        )}
+        {activeSection === 'refund' && (
+          <RefundEstimate
+            memberId={memberID}
+            onStartApplication={() => setActiveSection('refund-apply')}
+            onBack={() => setActiveSection('dashboard')}
+          />
+        )}
+        {activeSection === 'refund-apply' && (
+          <RefundApplication memberId={memberID} onBack={() => setActiveSection('refund')} />
+        )}
         {activeSection !== 'dashboard' &&
           activeSection !== 'profile' &&
           activeSection !== 'calculator' &&
           activeSection !== 'retirement-app' &&
-          activeSection !== 'benefit' && (
+          activeSection !== 'benefit' &&
+          activeSection !== 'projections' &&
+          activeSection !== 'refund' &&
+          activeSection !== 'refund-apply' && (
             <div
               data-testid={`section-${activeSection}`}
               style={{

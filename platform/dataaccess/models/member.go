@@ -161,3 +161,52 @@ type MemberSearchResult struct {
 	Dept      string `json:"dept"`
 	Status    string `json:"status"`
 }
+
+// RefundEstimate contains the refund calculation for an inactive member.
+type RefundEstimate struct {
+	MemberID              int     `json:"member_id"`
+	EmployeeContributions float64 `json:"employee_contributions"`
+	Interest              float64 `json:"interest"`
+	Total                 float64 `json:"total"`
+	MandatoryWithhold20   float64 `json:"mandatory_withhold_20pct"`
+	NetAfterWithhold      float64 `json:"net_after_withhold"`
+}
+
+// PaymentRecord represents a single benefit payment to a retiree.
+type PaymentRecord struct {
+	PaymentID     int       `json:"payment_id"`
+	MemberID      int       `json:"member_id"`
+	PaymentDate   time.Time `json:"payment_date"`
+	GrossAmount   float64   `json:"gross_amount"`
+	NetAmount     float64   `json:"net_amount"`
+	FederalTax    float64   `json:"federal_tax"`
+	StateTax      float64   `json:"state_tax"`
+	Deductions    float64   `json:"deductions"`
+	PaymentMethod string    `json:"payment_method"`
+}
+
+// TaxDocument represents a tax document (e.g. 1099-R) for a member.
+type TaxDocument struct {
+	DocID             int       `json:"doc_id"`
+	MemberID          int       `json:"member_id"`
+	DocType           string    `json:"doc_type"`
+	TaxYear           int       `json:"tax_year"`
+	IssuedDate        time.Time `json:"issued_date"`
+	GrossDistribution float64   `json:"gross_distribution"`
+	TaxableAmount     float64   `json:"taxable_amount"`
+	FederalWithheld   float64   `json:"federal_withheld"`
+	StateWithheld     float64   `json:"state_withheld"`
+}
+
+// Address represents a member mailing/residential address.
+type Address struct {
+	AddressID   int    `json:"address_id"`
+	MemberID    int    `json:"member_id"`
+	AddressType string `json:"address_type"`
+	Line1       string `json:"line1"`
+	Line2       string `json:"line2,omitempty"`
+	City        string `json:"city"`
+	State       string `json:"state"`
+	ZipCode     string `json:"zip_code"`
+	IsCurrent   bool   `json:"is_current"`
+}
