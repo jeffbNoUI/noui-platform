@@ -1,5 +1,57 @@
 # noui-platform — Build History
 
+## Member Portal Redesign — Phase 8: Messages & Activity (2026-03-18)
+
+**Branch:** `claude/charming-cerf`
+**Goal:** Implement Phase 8 (Tasks 56–61) — Messages & Activity section with activity tracker, secure messaging, interaction history, and notification bell.
+
+**What was built:**
+
+### Task 56: Activity Tracker
+- `useActivityTracker` hook: normalizes CRM conversations + issues into `ActivityItem[]` with urgency classification
+- `ActivityItem` + `ActivityTracker` components with Action Needed / In Progress / Completed buckets
+- 10 tests
+
+### Task 57: Secure Messaging
+- `MessageList`: conversation list with unread indicators, sorted by last activity
+- `MessageThread`: chat bubbles (inbound right/sage, outbound left/white) with reply input
+- 11 tests
+
+### Task 58: Compose Message
+- New conversation form: subject + body, validation, whitespace trimming, error handling
+- No attachment support (deferred to Phase 9 FileUpload)
+- 8 tests
+
+### Task 59: Interaction History
+- Read-only timeline filtered to public-visibility entries only
+- Channel filter dropdown (phone, email, mail, portal message, walk-in)
+- 8 tests
+
+### Task 60: MessagesSection Router
+- 3-tab layout: Activity / Messages / History
+- Compose flow integration (New Message → compose → back to Messages)
+- Wired into MemberPortal.tsx
+- 6 tests
+
+### Task 61: NotificationBell
+- `useNotifications` hook: badge count from active conversations
+- Bell with red badge (9+ cap), dropdown with recent items, click-outside close
+- Wired into MemberPortal header
+- 9 tests
+
+**Key decisions:**
+- Task 62 backend deferred — existing CRM APIs are sufficient
+- Activity aggregation uses unified feed with urgency buckets normalized across CRM + issues
+- No file attachments in ComposeMessage — deferred to Phase 9 FileUpload
+
+**Test results:** 187 test files, 1490 tests, all passing. Zero type errors.
+
+**Visual verification:** All components verified in browser with live backend data.
+
+**Next session:** Phase 9 — Documents (Tasks 63–68). See `docs/sessions/2026-03-18-phase9-starter.md`.
+
+---
+
 ## Member Portal Redesign — Phase 4: What-If Calculator (2026-03-18)
 
 **Branch:** `claude/compassionate-beaver`
