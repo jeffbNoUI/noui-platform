@@ -1,5 +1,35 @@
 # noui-platform — Build History
 
+## Defect Fixes: UUID Normalization, Proxy Routes, Portal Access (2026-03-17)
+
+**PR:** #86
+**Goal:** Fix three runtime defects affecting the Supervisor Dashboard, Services Hub Issues tab, and Member Portal navigation.
+
+**What was fixed:**
+
+### Defect 1: UUID Tenant ID Normalization
+- Supervisor Dashboard showed PostgreSQL error 22P02 — dev JWT used TEXT `'dev-tenant-001'` but columns were `UUID NOT NULL`
+- Normalized all dev auth tenant IDs to UUID `'00000000-0000-0000-0000-000000000001'`
+- Migrated issues and security service schemas from `TEXT` to `UUID` with conditional `ALTER COLUMN`
+- Updated all seed data (016, 017) to match
+
+### Defect 2: Missing Vite Dev Proxy Routes
+- Services Hub Issues tab showed "service unavailable" in dev mode
+- Added Vite proxy entries for `/api/v1/issues` (8092) and `/api/v1/security` (8093)
+
+### Defect 3: Staff Portal Access
+- Member Portal sidebar link did nothing for staff users
+- Added `'portal'` to `ROLE_ACCESS.staff` in `auth.ts`, updated tests
+
+### Test Results
+- Frontend: 131 test files, 947 tests — all passing
+- TypeScript typecheck: clean
+- Go builds: clean across all services
+
+**Next session should start with:** `docs/plans/2026-03-17-defect-fixes-next-session.md`
+
+---
+
 ## Services Hub — 7-Tab Admin Center (2026-03-17)
 
 **Branch:** `claude/strange-cray`
