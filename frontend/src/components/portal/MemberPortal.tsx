@@ -8,6 +8,7 @@ import MemberPortalShell from './MemberPortalShell';
 import DashboardRouter from './dashboard/DashboardRouter';
 import ProfileSection from './profile/ProfileSection';
 import CalculatorSection from './calculator/CalculatorSection';
+import ApplicationSection from './application/ApplicationSection';
 import TourProvider from './tour/TourProvider';
 
 // ── Main Component ───────────────────────────────────────────────────────────
@@ -88,9 +89,13 @@ export default function MemberPortal({ memberID, retirementDate }: MemberPortalP
         )}
         {activeSection === 'profile' && <ProfileSection memberId={memberID} personas={personas} />}
         {activeSection === 'calculator' && <CalculatorSection memberId={memberID} />}
+        {activeSection === 'retirement-app' && (
+          <ApplicationSection memberId={memberID} personas={personas} />
+        )}
         {activeSection !== 'dashboard' &&
           activeSection !== 'profile' &&
-          activeSection !== 'calculator' && (
+          activeSection !== 'calculator' &&
+          activeSection !== 'retirement-app' && (
             <div
               data-testid={`section-${activeSection}`}
               style={{
