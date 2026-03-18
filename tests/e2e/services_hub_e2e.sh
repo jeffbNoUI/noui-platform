@@ -12,9 +12,35 @@ set -euo pipefail
 
 BASE_URL="${BASE_URL:-http://localhost:3000}"
 TENANT_ID="00000000-0000-0000-0000-000000000001"
+DEV_SECRET="dev-secret-do-not-use-in-production"
 PASS_COUNT=0
 FAIL_COUNT=0
 TOTAL_COUNT=0
+
+# ─── JWT Generation ───────────────────────────────────────────────────────────
+# Generate an HS256 dev JWT matching the frontend devAuth.ts pattern.
+
+base64url_encode() {
+  openssl base64 -A | tr '+/' '-_' | tr -d '='
+}
+
+generate_dev_jwt() {
+  local header payload header_b64 payload_b64 signature
+  header='{"alg":"HS256","typ":"JWT"}'
+  payload="{\"sub\":\"dev-admin-001\",\"tenant_id\":\"${TENANT_ID}\",\"role\":\"admin\",\"member_id\":\"\",\"exp\":$(($(date +%s) + 3600))}"
+
+  header_b64=$(printf '%s' "$header" | base64url_encode)
+  payload_b64=$(printf '%s' "$payload" | base64url_encode)
+
+  signature=$(printf '%s' "${header_b64}.${payload_b64}" \
+    | openssl dgst -sha256 -hmac "$DEV_SECRET" -binary \
+    | base64url_encode)
+
+  echo "${header_b64}.${payload_b64}.${signature}"
+}
+
+DEV_TOKEN=$(generate_dev_jwt)
+AUTH_HEADER="Authorization: Bearer ${DEV_TOKEN}"
 
 # ─── Colors ───────────────────────────────────────────────────────────────────
 RED='\033[0;31m'
@@ -98,6 +124,7 @@ assert_contains() {
 do_get() {
   curl -s -w "\n%{http_code}" \
     "${BASE_URL}$1" \
+    -H "${AUTH_HEADER}" \
     -H "X-Tenant-ID: ${TENANT_ID}" 2>/dev/null || echo -e "\n000"
 }
 
@@ -105,6 +132,7 @@ do_post() {
   curl -s -w "\n%{http_code}" \
     -X POST "${BASE_URL}$1" \
     -H "Content-Type: application/json" \
+    -H "${AUTH_HEADER}" \
     -H "X-Tenant-ID: ${TENANT_ID}" \
     -d "$2" 2>/dev/null || echo -e "\n000"
 }
@@ -113,6 +141,7 @@ do_put() {
   curl -s -w "\n%{http_code}" \
     -X PUT "${BASE_URL}$1" \
     -H "Content-Type: application/json" \
+    -H "${AUTH_HEADER}" \
     -H "X-Tenant-ID: ${TENANT_ID}" \
     -d "$2" 2>/dev/null || echo -e "\n000"
 }
@@ -145,7 +174,7 @@ wait_for_services() {
     local attempts=0
     while [ $attempts -lt 30 ]; do
       local hc
-      hc=$(curl -s -o /dev/null -w "%{http_code}" "${BASE_URL}${ep}" -H "X-Tenant-ID: ${TENANT_ID}" 2>/dev/null || echo "000")
+      hc=$(curl -s -o /dev/null -w "%{http_code}" "${BASE_URL}${ep}" -H "${AUTH_HEADER}" -H "X-Tenant-ID: ${TENANT_ID}" 2>/dev/null || echo "000")
       if [ "$hc" = "200" ]; then
         echo -e "  ${GREEN}✓${NC} ${svc} is ready"
         break
@@ -241,7 +270,7 @@ if [ "$DQ_ISSUE_COUNT" -gt 0 ] 2>/dev/null; then
   ORIGINAL_STATUS=$(echo "$BODY" | jq -r '.data[0].status' 2>/dev/null)
   echo -e "  ${YELLOW}→ Testing PUT on issue ${FIRST_ISSUE_ID} (status: ${ORIGINAL_STATUS})${NC}"
 
-  RESPONSE=$(do_put "/api/v1/dq/issues/${FIRST_ISSUE_ID}" '{"status":"acknowledged","resolutionNote":"E2E test"}')
+  RESPONSE=$(do_put "/api/v1/dq/issues/${FIRST_ISSUE_ID}" '{"status":"resolved","resolutionNote":"E2E test"}')
   extract_http "$RESPONSE"
   assert_status "PUT /dq/issues/{id} update status" "200" "$HTTP_CODE"
 
@@ -353,8 +382,8 @@ RESPONSE=$(do_post "/api/v1/issues" "$ISSUE_PAYLOAD")
 extract_http "$RESPONSE"
 assert_status "POST /issues (create)" "201" "$HTTP_CODE"
 
-# Extract the new issue ID
-NEW_ISSUE_ID=$(echo "$BODY" | jq -r '.data.issueId // .data.id // empty' 2>/dev/null)
+# Extract the numeric ID (used by GET/PUT endpoints)
+NEW_ISSUE_ID=$(echo "$BODY" | jq -r '.data.id // empty' 2>/dev/null)
 echo -e "  ${YELLOW}→ Created issue: ${NEW_ISSUE_ID}${NC}"
 
 if [ -n "$NEW_ISSUE_ID" ]; then
