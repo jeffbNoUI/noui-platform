@@ -14,6 +14,7 @@ import MessagesSection from './messages/MessagesSection';
 import DeferredBenefitExplorer from './inactive/DeferredBenefitExplorer';
 import RefundEstimate from './inactive/RefundEstimate';
 import RefundApplication from './inactive/RefundApplication';
+import NotificationBell from './shared/NotificationBell';
 import TourProvider from './tour/TourProvider';
 
 // ── Main Component ───────────────────────────────────────────────────────────
@@ -83,6 +84,14 @@ export default function MemberPortal({ memberID, retirementDate }: MemberPortalP
         personas={personas}
         activeSection={activeSection}
         onNavigate={setActiveSection}
+        header={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 24px' }}>
+            <NotificationBell
+              memberId={String(memberID)}
+              onNotificationClick={() => setActiveSection('messages')}
+            />
+          </div>
+        }
       >
         {activeSection === 'dashboard' && (
           <DashboardRouter
