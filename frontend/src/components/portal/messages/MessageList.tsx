@@ -22,7 +22,6 @@ export default function MessageList({ memberId, onCompose }: MessageListProps) {
         conversationId={selectedConv.conversationId}
         contactId={contact.contactId}
         subject={selectedConv.subject || 'Message'}
-        memberId={memberId}
         onBack={() => setSelectedConvId(null)}
       />
     );

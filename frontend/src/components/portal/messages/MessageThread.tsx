@@ -7,7 +7,6 @@ interface MessageThreadProps {
   conversationId: string;
   contactId: string;
   subject: string;
-  memberId: string;
   onBack: () => void;
 }
 
