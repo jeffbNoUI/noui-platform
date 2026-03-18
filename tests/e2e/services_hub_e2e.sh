@@ -86,7 +86,7 @@ assert_json_not_null() {
 assert_contains() {
   local label="$1" haystack="$2" needle="$3"
   TOTAL_COUNT=$((TOTAL_COUNT + 1))
-  if echo "$haystack" | grep -q "$needle"; then
+  if echo "$haystack" | grep -qF "$needle"; then
     echo -e "  ${GREEN}✓${NC} $label — contains \"$needle\""
     PASS_COUNT=$((PASS_COUNT + 1))
   else
@@ -317,8 +317,8 @@ RESPONSE=$(do_post "/api/v1/security/events" "$EVENT_PAYLOAD")
 extract_http "$RESPONSE"
 assert_status "POST /security/events (login_success)" "201" "$HTTP_CODE"
 
-# Read events back — the one we just posted should appear
-RESPONSE=$(do_get "/api/v1/security/events?limit=5")
+# Read events back — use limit=50 to tolerate repeated runs
+RESPONSE=$(do_get "/api/v1/security/events?limit=50")
 extract_http "$RESPONSE"
 assert_status "GET /security/events" "200" "$HTTP_CODE"
 assert_json_gte "events count >= 1" "$BODY" ".pagination.total" "1"
