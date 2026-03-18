@@ -1,5 +1,55 @@
 # noui-platform — Build History
 
+## Member Portal Redesign — Phase 1: Foundation (2026-03-17)
+
+**Branch:** `claude/mystifying-chebyshev`
+**Goal:** Implement Phase 1 (7 tasks) of the Member Portal Redesign plan — types, configuration, database schema, seed data, dev auth, API client, and proxy routes.
+
+**What was built:**
+
+### Task 1: Plan Profile Types & Configuration Loader
+- `frontend/src/types/PlanProfile.ts` — 15 TypeScript interfaces for plan-driven portal configuration
+- `frontend/src/config/plan-profile.yaml` — DERP plan profile (3 tiers, eligibility rules, payment options, document checklists, glossary)
+- `frontend/src/lib/planProfile.ts` — Cached config loader with helper functions (getFieldPermission, getDocumentChecklist, etc.)
+- 14 tests covering identity, tiers, permissions, checklists, glossary
+
+### Task 2: Member Portal Types & Persona Resolver
+- `frontend/src/types/MemberPortal.ts` — Types for personas, preferences, scenarios, notifications, payments, documents, change requests
+- `resolveMemberPersona()` — Returns array of personas (supports dual-role members like active + beneficiary)
+- 8 tests covering all persona resolution paths
+
+### Task 3: Database Migration 016
+- `domains/pension/schema/016_member_portal.sql` — 7 tables: member_account_links, member_preferences, saved_scenarios, notifications, member_documents, payment_history, tax_documents
+- ALTER TABLE retirement_case: added initiated_by, bounce_message, bounce_stage columns
+
+### Task 4: Seed Data
+- `domains/pension/seed/018_member_portal_seed.sql` — 8 account links, 8 preferences, 4 saved scenarios, 18 payment records, 5 tax documents, 8 notifications
+
+### Task 5: Dev Auth Extension
+- Extended `devAuth.ts` with 8 member persona accounts (active near/early, inactive vested/not-vested, retiree, survivor, death benefit, dual role)
+- `memberAccountToAuthUser()` converter function
+- 4 new tests
+
+### Task 6: Member Portal API Client
+- `frontend/src/lib/memberPortalApi.ts` — 9 API service objects (memberAuth, preferences, scenarios, notifications, payments, documents, changeRequests, addresses, refunds)
+- 12 tests using Go API envelope pattern `{data: ...}`
+
+### Task 7: Vite Proxy Routes
+- Added proxy entries for `/api/v1/member-auth`, `/api/v1/scenarios`, `/api/v1/notifications` (other paths covered by existing prefixes)
+
+**Key decisions:**
+- Named portal documents table `member_documents` to avoid conflicts
+- Corrected plan's `ALTER TABLE cases` → `ALTER TABLE retirement_case`
+- Mapped personas to existing seed member IDs (10001–10012) instead of creating new ones
+- Only 3 new proxy routes needed — other portal paths already matched existing prefixes
+
+**Test Results:** 985 tests passing, 134 test files, 0 TypeScript errors
+**Browser Verified:** App loads cleanly, Staff Portal renders correctly, no console errors
+
+**Next session should start with:** Phase 2, Task 8 of the Member Portal Redesign plan (`docs/plans/2026-03-17-member-portal-redesign-plan.md`)
+
+---
+
 ## Services Hub Integration Tests (2026-03-17)
 
 **Branch:** `claude/gifted-zhukovsky`
