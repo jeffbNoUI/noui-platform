@@ -1,5 +1,5 @@
 import { C, BODY } from '@/lib/designSystem';
-import DocumentUploader from '@/components/portal/shared/DocumentUploader';
+import FileUpload from '@/components/portal/shared/FileUpload';
 import type { RequiredDocument } from '@/types/RetirementApplication';
 
 interface UploadDocsStageProps {
@@ -161,14 +161,15 @@ export default function UploadDocsStage({
                 )}
               </div>
 
-              <DocumentUploader
-                documentType={doc.document_type}
+              <FileUpload
+                id={doc.document_type}
                 label={doc.label}
                 acceptedFormats={formats}
                 maxSizeMb={maxSize}
-                onUpload={(file) => onUpload(doc.document_type, file)}
+                onFileSelected={(file) => onUpload(doc.document_type, file)}
                 status={status}
                 filename={doc.document_id ? `${doc.label} uploaded` : undefined}
+                compact
               />
             </div>
           );
