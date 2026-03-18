@@ -17,6 +17,27 @@ const COMMON_STEPS: TourStep[] = [
       'Use the sidebar to move between sections of your portal. The items shown are based on your account type.',
     position: 'right',
   },
+  {
+    id: 'nav-documents',
+    targetId: 'nav-documents',
+    title: 'Your Documents',
+    description: 'Upload required documents and view your complete document history here.',
+    position: 'right',
+  },
+  {
+    id: 'nav-messages',
+    targetId: 'nav-messages',
+    title: 'Messages',
+    description: 'Send messages to plan staff and view your communication history.',
+    position: 'right',
+  },
+  {
+    id: 'nav-preferences',
+    targetId: 'nav-preferences',
+    title: 'Preferences',
+    description: 'Customize notification settings, accessibility options, and account security.',
+    position: 'right',
+  },
 ];
 
 const ACTIVE_STEPS: TourStep[] = [
@@ -44,6 +65,14 @@ const ACTIVE_STEPS: TourStep[] = [
       'Items that need your attention appear here — incomplete profile fields, pending documents, or unread messages.',
     position: 'right',
   },
+  {
+    id: 'documents-checklist',
+    targetId: 'documents-section',
+    title: 'Document Checklist',
+    description:
+      'When you start your retirement application, required documents will appear here. Upload them to keep your application moving.',
+    position: 'bottom',
+  },
 ];
 
 const RETIREE_STEPS: TourStep[] = [
@@ -52,6 +81,22 @@ const RETIREE_STEPS: TourStep[] = [
     targetId: 'next-payment',
     title: 'Your Next Payment',
     description: 'See your upcoming payment amount, deductions, and deposit date at a glance.',
+    position: 'bottom',
+  },
+  {
+    id: 'tax-documents',
+    targetId: 'nav-tax-documents',
+    title: 'Tax Documents',
+    description:
+      'Download your 1099-R forms for tax filing. Documents are available each January for the prior tax year.',
+    position: 'right',
+  },
+  {
+    id: 'payment-history',
+    targetId: 'benefit-section',
+    title: 'Payment History',
+    description:
+      'View your complete payment history including gross amounts, deductions, and net deposits.',
     position: 'bottom',
   },
 ];
@@ -65,6 +110,14 @@ const INACTIVE_STEPS: TourStep[] = [
       'Compare your available options: a deferred pension benefit (if vested) or a refund of your contributions.',
     position: 'bottom',
   },
+  {
+    id: 'refund-option',
+    targetId: 'nav-refund',
+    title: 'Request a Refund',
+    description:
+      'If you are no longer employed, you can request a refund of your contributions. Review the details and start the process here.',
+    position: 'right',
+  },
 ];
 
 const BENEFICIARY_STEPS: TourStep[] = [
@@ -73,6 +126,14 @@ const BENEFICIARY_STEPS: TourStep[] = [
     targetId: 'next-payment',
     title: 'Survivor Benefit',
     description: 'Your survivor benefit payment details are shown here.',
+    position: 'bottom',
+  },
+  {
+    id: 'death-benefit-info',
+    targetId: 'benefit-section',
+    title: 'Benefit Details',
+    description:
+      'View your survivor benefit details, payment schedule, and any lump sum death benefit information.',
     position: 'bottom',
   },
 ];
@@ -88,4 +149,4 @@ export function getTourSteps(persona: MemberPersona): TourStep[] {
   return [...COMMON_STEPS, ...(personaSteps[persona] ?? [])];
 }
 
-export const CURRENT_TOUR_VERSION = 1;
+export const CURRENT_TOUR_VERSION = 2;

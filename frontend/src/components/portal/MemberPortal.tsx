@@ -15,6 +15,7 @@ import DocumentSection from './documents/DocumentSection';
 import DeferredBenefitExplorer from './inactive/DeferredBenefitExplorer';
 import RefundEstimate from './inactive/RefundEstimate';
 import RefundApplication from './inactive/RefundApplication';
+import PreferencesSection from './preferences/PreferencesSection';
 import NotificationBell from './shared/NotificationBell';
 import TourProvider from './tour/TourProvider';
 
@@ -126,6 +127,7 @@ export default function MemberPortal({ memberID, retirementDate }: MemberPortalP
         )}
         {activeSection === 'documents' && <DocumentSection memberId={String(memberID)} />}
         {activeSection === 'messages' && <MessagesSection memberId={String(memberID)} />}
+        {activeSection === 'preferences' && <PreferencesSection memberId={String(memberID)} />}
         {activeSection !== 'dashboard' &&
           activeSection !== 'profile' &&
           activeSection !== 'calculator' &&
@@ -135,7 +137,8 @@ export default function MemberPortal({ memberID, retirementDate }: MemberPortalP
           activeSection !== 'refund' &&
           activeSection !== 'refund-apply' &&
           activeSection !== 'documents' &&
-          activeSection !== 'messages' && (
+          activeSection !== 'messages' &&
+          activeSection !== 'preferences' && (
             <div
               data-testid={`section-${activeSection}`}
               style={{
