@@ -10,9 +10,11 @@ import ProfileSection from './profile/ProfileSection';
 import CalculatorSection from './calculator/CalculatorSection';
 import ApplicationSection from './application/ApplicationSection';
 import BenefitSection from './benefit/BenefitSection';
+import MessagesSection from './messages/MessagesSection';
 import DeferredBenefitExplorer from './inactive/DeferredBenefitExplorer';
 import RefundEstimate from './inactive/RefundEstimate';
 import RefundApplication from './inactive/RefundApplication';
+import NotificationBell from './shared/NotificationBell';
 import TourProvider from './tour/TourProvider';
 
 // ── Main Component ───────────────────────────────────────────────────────────
@@ -82,6 +84,14 @@ export default function MemberPortal({ memberID, retirementDate }: MemberPortalP
         personas={personas}
         activeSection={activeSection}
         onNavigate={setActiveSection}
+        header={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 24px' }}>
+            <NotificationBell
+              memberId={String(memberID)}
+              onNotificationClick={() => setActiveSection('messages')}
+            />
+          </div>
+        }
       >
         {activeSection === 'dashboard' && (
           <DashboardRouter
@@ -113,6 +123,7 @@ export default function MemberPortal({ memberID, retirementDate }: MemberPortalP
         {activeSection === 'refund-apply' && (
           <RefundApplication memberId={memberID} onBack={() => setActiveSection('refund')} />
         )}
+        {activeSection === 'messages' && <MessagesSection memberId={String(memberID)} />}
         {activeSection !== 'dashboard' &&
           activeSection !== 'profile' &&
           activeSection !== 'calculator' &&
@@ -120,7 +131,8 @@ export default function MemberPortal({ memberID, retirementDate }: MemberPortalP
           activeSection !== 'benefit' &&
           activeSection !== 'projections' &&
           activeSection !== 'refund' &&
-          activeSection !== 'refund-apply' && (
+          activeSection !== 'refund-apply' &&
+          activeSection !== 'messages' && (
             <div
               data-testid={`section-${activeSection}`}
               style={{
