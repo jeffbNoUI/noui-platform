@@ -79,6 +79,18 @@ export default defineConfig({
         target: 'http://localhost:8093',
         changeOrigin: true,
       },
+      '/api/v1/member-auth': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
+      '/api/v1/scenarios': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
+      '/api/v1/notifications': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
     },
   },
 });
