@@ -1,5 +1,46 @@
 # noui-platform — Build History
 
+## Member Portal Redesign — Phase 10: Notifications & Preferences (2026-03-18)
+
+**Branch:** `claude/determined-meitner`
+**Goal:** Complete Phase 10 (Tasks 69–75) — Preferences section, notification provider, guided tour expansion, and final portal wiring.
+
+**What was built:**
+
+### Tasks 69–72: Preferences Section (Frontend)
+- **PreferencesSection** — 3-tab container (Communication, Accessibility, Security) following DocumentSection pattern
+- **CommunicationPreferences** — Notification type × channel matrix driven by plan-profile.yaml, legally required items enforced as always-on, SMS opt-in with phone number input
+- **AccessibilityPreferences** — Text size radio group (Standard/Larger/Largest), high contrast toggle, reduce motion toggle, live CSS custom property updates
+- **SecurityPreferences** — Clerk-delegated password change, 2FA management, active sessions display, account activity section
+- **useMemberPreferences hook** — react-query CRUD for member preferences (GET/PUT)
+- 23 component tests across 4 test files
+
+### Task 73: Notification Provider Interface (Go backend)
+- `NotificationProvider` interface: `Send`, `GetStatus` in `platform/dataaccess/notify/`
+- `ConsoleProvider` — dev adapter with in-memory store, structured slog logging, thread-safe (sync.RWMutex)
+- Same interface+adapter pattern as ECM provider
+- 8 tests (interface compliance, send/status roundtrip, validation, unique IDs)
+
+### Task 74: Guided Tour Content
+- Expanded tour steps for all 4 personas: 4 common + persona-specific steps
+- Active: 8 steps (was 4), Retiree: 7 (was 2), Inactive: 6 (was 2), Beneficiary: 6 (was 2)
+- Bumped CURRENT_TOUR_VERSION to 2 (triggers re-tour for returning users)
+- Updated TourProvider tests for new step counts
+- 7 new tour step tests
+
+### Task 75: Final Portal Wiring
+- Added "⚙ Preferences" to sidebar NAV_ITEMS (visible to all personas)
+- Wired PreferencesSection into MemberPortal.tsx section router
+- Updated fallback exclusion list
+
+**Test totals:** Go dataaccess 85 tests (77 existing + 8 notify), Frontend 1,560 tests (197 files). All green.
+
+**Visual verification:** All 3 preference tabs render correctly in browser. Tour shows "1 of 8" for active persona.
+
+**After Phase 10, only Phase 11 (Polish & E2E Testing) remains to complete the portal redesign.**
+
+---
+
 ## Member Portal Redesign — Phase 9: Documents (2026-03-18)
 
 **Branch:** `claude/agitated-greider`

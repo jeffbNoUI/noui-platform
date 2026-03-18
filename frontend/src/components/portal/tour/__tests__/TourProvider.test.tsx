@@ -87,7 +87,7 @@ describe('TourProvider', () => {
 
   it('does NOT auto-start when tour completed and version current', async () => {
     renderWithProviders(
-      <TourProvider {...defaultProps} tourCompleted={true} tourVersion={1} autoStart>
+      <TourProvider {...defaultProps} tourCompleted={true} tourVersion={2} autoStart>
         <div>Content</div>
       </TourProvider>,
     );
@@ -111,8 +111,8 @@ describe('TourProvider', () => {
       { timeout: 1000 },
     );
 
-    // Active persona has common steps + active steps = 4 total
-    expect(screen.getByText(/1 of 4/)).toBeInTheDocument();
+    // Active persona has 4 common steps + 4 active steps = 8 total
+    expect(screen.getByText(/1 of 8/)).toBeInTheDocument();
   });
 
   it('navigates to next step on Next click', async () => {
@@ -134,9 +134,9 @@ describe('TourProvider', () => {
 
     fireEvent.click(screen.getByTestId('tour-next'));
 
-    // Second step is "Your Estimated Benefit" (benefit-hero)
-    expect(screen.getByText('Your Estimated Benefit')).toBeInTheDocument();
-    expect(screen.getByText(/2 of 4/)).toBeInTheDocument();
+    // Second step is "Your Documents" (nav-documents, a common step)
+    expect(screen.getByText('Your Documents')).toBeInTheDocument();
+    expect(screen.getByText(/2 of 8/)).toBeInTheDocument();
   });
 
   it('navigates back on Back click', async () => {
@@ -155,11 +155,11 @@ describe('TourProvider', () => {
 
     // Go forward
     fireEvent.click(screen.getByTestId('tour-next'));
-    expect(screen.getByText(/2 of 4/)).toBeInTheDocument();
+    expect(screen.getByText(/2 of 8/)).toBeInTheDocument();
 
     // Go back
     fireEvent.click(screen.getByTestId('tour-prev'));
-    expect(screen.getByText(/1 of 4/)).toBeInTheDocument();
+    expect(screen.getByText(/1 of 8/)).toBeInTheDocument();
   });
 
   it('calls onTourComplete when skipping', async () => {
@@ -198,11 +198,14 @@ describe('TourProvider', () => {
       { timeout: 1000 },
     );
 
-    // Retiree has 2 steps (common + retiree). Navigate through both.
-    expect(screen.getByText(/1 of 2/)).toBeInTheDocument();
+    // Retiree has 7 steps (4 common + 3 retiree). Navigate through all.
+    expect(screen.getByText(/1 of 7/)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByTestId('tour-next'));
-    expect(screen.getByText(/2 of 2/)).toBeInTheDocument();
+    // Click through to the last step
+    for (let i = 0; i < 6; i++) {
+      fireEvent.click(screen.getByTestId('tour-next'));
+    }
+    expect(screen.getByText(/7 of 7/)).toBeInTheDocument();
 
     // Last step shows "Done" instead of "Next"
     expect(screen.getByText('Done')).toBeInTheDocument();
@@ -230,7 +233,7 @@ describe('TourProvider', () => {
   });
 
   it('shows persona-specific steps for each persona', async () => {
-    // Beneficiary gets common (1) + beneficiary (1) = 2 steps
+    // Beneficiary gets common (4) + beneficiary (2) = 6 steps
     renderWithProviders(
       <TourProvider {...defaultProps} persona="beneficiary" autoStart>
         <div>Content</div>
@@ -239,7 +242,7 @@ describe('TourProvider', () => {
 
     await waitFor(
       () => {
-        expect(screen.getByText(/1 of 2/)).toBeInTheDocument();
+        expect(screen.getByText(/1 of 6/)).toBeInTheDocument();
       },
       { timeout: 1000 },
     );

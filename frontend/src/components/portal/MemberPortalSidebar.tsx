@@ -48,6 +48,12 @@ const NAV_ITEMS: SidebarNavItem[] = [
   { key: 'retirement-app', label: 'Retire', icon: '★', personas: ['active'] },
   { key: 'refund', label: 'Refund', icon: '↩', personas: ['inactive'] },
   { key: 'tax-documents', label: 'Tax Documents', icon: '⊞', personas: ['retiree'] },
+  {
+    key: 'preferences',
+    label: 'Preferences',
+    icon: '⚙',
+    personas: ['active', 'inactive', 'retiree', 'beneficiary'],
+  },
 ];
 
 // ── Props ────────────────────────────────────────────────────────────────────
