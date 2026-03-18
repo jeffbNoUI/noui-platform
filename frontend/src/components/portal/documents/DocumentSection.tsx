@@ -1,8 +1,12 @@
 import { useState } from 'react';
 import { C, BODY, DISPLAY } from '@/lib/designSystem';
+import DocumentChecklist from './DocumentChecklist';
+import DocumentArchive from './DocumentArchive';
 
 interface DocumentSectionProps {
   memberId: string;
+  memberStatus?: string;
+  memberData?: Record<string, unknown>;
 }
 
 type SubTab = 'checklist' | 'archive';
@@ -12,7 +16,11 @@ const TABS: { key: SubTab; label: string }[] = [
   { key: 'archive', label: 'All Documents' },
 ];
 
-export default function DocumentSection({ memberId: _memberId }: DocumentSectionProps) {
+export default function DocumentSection({
+  memberId,
+  memberStatus = 'ACTIVE',
+  memberData = {},
+}: DocumentSectionProps) {
   const [activeTab, setActiveTab] = useState<SubTab>('checklist');
 
   return (
@@ -65,11 +73,13 @@ export default function DocumentSection({ memberId: _memberId }: DocumentSection
 
       {/* Tab content */}
       {activeTab === 'checklist' && (
-        <div data-testid="document-checklist-placeholder">Document checklist coming soon</div>
+        <DocumentChecklist
+          memberId={memberId}
+          memberStatus={memberStatus}
+          memberData={memberData}
+        />
       )}
-      {activeTab === 'archive' && (
-        <div data-testid="document-archive-placeholder">Document archive coming soon</div>
-      )}
+      {activeTab === 'archive' && <DocumentArchive memberId={memberId} />}
     </div>
   );
 }
