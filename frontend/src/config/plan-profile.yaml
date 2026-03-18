@@ -1,0 +1,245 @@
+# DERP — Denver Employees Retirement Plan
+# Plan Profile Configuration — drives all plan-specific portal behavior
+
+identity:
+  plan_name: "Denver Employees Retirement Plan"
+  plan_short_name: "DERP"
+  administrator_name: "Denver Employees Retirement Plan"
+  phone: "(303) 555-0100"
+  email: "memberservices@derp.example.gov"
+  address: "777 Grant Street, Suite 400, Denver, CO 80203"
+
+benefit_structure:
+  type: "defined_benefit"
+  formula_display: "AMS x Multiplier x Years of Service"
+  has_tiers: true
+  tiers:
+    - id: "tier_1"
+      label: "Tier 1"
+      description: "Members hired before September 1, 2004"
+      multiplier_display: "2.0%"
+      ams_window_months: 36
+      ams_window_label: "Highest 36 consecutive months"
+    - id: "tier_2"
+      label: "Tier 2"
+      description: "Members hired September 1, 2004 through June 30, 2011"
+      multiplier_display: "1.5%"
+      ams_window_months: 36
+      ams_window_label: "Highest 36 consecutive months"
+    - id: "tier_3"
+      label: "Tier 3"
+      description: "Members hired on or after July 1, 2011"
+      multiplier_display: "1.5%"
+      ams_window_months: 60
+      ams_window_label: "Highest 60 consecutive months"
+  eligibility_rules:
+    - id: "normal_retirement"
+      label: "Normal Retirement"
+      description: "Age 65 with 5 years of service"
+    - id: "rule_of_75"
+      label: "Rule of 75"
+      description: "Age plus years of service equals 75 or more, with minimum age 55"
+      applies_to_tiers: ["tier_1", "tier_2"]
+    - id: "rule_of_85"
+      label: "Rule of 85"
+      description: "Age plus years of service equals 85 or more, with minimum age 60"
+      applies_to_tiers: ["tier_3"]
+    - id: "early_retirement"
+      label: "Early Retirement"
+      description: "Age 55 (Tiers 1 & 2) or age 60 (Tier 3) with 5 years of service, with benefit reduction"
+  payment_options:
+    - id: "life_only"
+      label: "Life Only"
+      description: "Highest monthly payment for your lifetime. No survivor benefit."
+      has_survivor: false
+    - id: "joint_50"
+      label: "Joint & 50% Survivor"
+      description: "Reduced monthly payment. Your beneficiary receives 50% of your benefit after your death."
+      has_survivor: true
+      survivor_pct: 50
+    - id: "joint_75"
+      label: "Joint & 75% Survivor"
+      description: "Further reduced monthly payment. Your beneficiary receives 75% of your benefit after your death."
+      has_survivor: true
+      survivor_pct: 75
+    - id: "joint_100"
+      label: "Joint & 100% Survivor"
+      description: "Lowest monthly payment. Your beneficiary receives 100% of your benefit after your death."
+      has_survivor: true
+      survivor_pct: 100
+  early_retirement_reduction:
+    label: "Early Retirement Reduction"
+    description_template: "Benefits are reduced by {reduction_pct}% for each year before age 65"
+  service_credit:
+    types_available:
+      - id: "earned"
+        label: "Earned Service"
+        counts_for_eligibility: true
+        counts_for_benefit: true
+      - id: "purchased"
+        label: "Purchased Service"
+        counts_for_eligibility: false
+        counts_for_benefit: true
+      - id: "military"
+        label: "Military Service"
+        counts_for_eligibility: true
+        counts_for_benefit: true
+    purchase_allowed: true
+    purchase_allowed_inactive: false
+
+member_statuses:
+  - id: "active"
+    label: "Active Member"
+    persona: "active"
+  - id: "inactive"
+    label: "Inactive Member"
+    persona: "inactive"
+    show_refund_option: true
+    show_deferred_option: true
+  - id: "deferred"
+    label: "Deferred Vested"
+    persona: "inactive"
+    show_deferred_option: true
+  - id: "retired"
+    label: "Retiree"
+    persona: "retiree"
+  - id: "deceased_survivor"
+    label: "Deceased (Survivor Receiving)"
+    persona: "beneficiary"
+  - id: "deceased_lump"
+    label: "Deceased (Lump Sum)"
+    persona: "beneficiary"
+
+documents:
+  checklist_rules:
+    - document_type: "proof_of_age"
+      label: "Proof of Age"
+      required_when: "always"
+      contexts: ["retirement_application", "refund_application"]
+      accepted_formats: ["pdf", "jpg", "png"]
+      max_size_mb: 10
+    - document_type: "marriage_certificate"
+      label: "Marriage Certificate"
+      required_when: "member.marital_status == 'married'"
+      contexts: ["retirement_application"]
+      accepted_formats: ["pdf", "jpg", "png"]
+      max_size_mb: 10
+    - document_type: "direct_deposit_form"
+      label: "Direct Deposit Authorization"
+      required_when: "always"
+      contexts: ["retirement_application", "refund_application"]
+      accepted_formats: ["pdf"]
+      max_size_mb: 5
+    - document_type: "tax_withholding"
+      label: "Tax Withholding Election (W-4P)"
+      required_when: "always"
+      contexts: ["retirement_application"]
+      accepted_formats: ["pdf"]
+      max_size_mb: 5
+    - document_type: "divorce_decree"
+      label: "Divorce Decree / DRO"
+      required_when: "member.marital_status == 'divorced'"
+      contexts: ["retirement_application"]
+      accepted_formats: ["pdf"]
+      max_size_mb: 20
+    - document_type: "death_certificate"
+      label: "Death Certificate"
+      required_when: "always"
+      contexts: ["death_notification", "survivor_claim"]
+      accepted_formats: ["pdf", "jpg", "png"]
+      max_size_mb: 10
+    - document_type: "beneficiary_proof_of_age"
+      label: "Beneficiary Proof of Age"
+      required_when: "always"
+      contexts: ["survivor_claim"]
+      accepted_formats: ["pdf", "jpg", "png"]
+      max_size_mb: 10
+
+field_permissions:
+  immediate_edit:
+    - "phone"
+    - "email"
+    - "mailing_address"
+  staff_review:
+    - "legal_name"
+    - "date_of_birth"
+    - "ssn"
+    - "marital_status"
+    - "beneficiaries"
+
+data_change_impacts:
+  - trigger: "beneficiary_change"
+    resets_stages: ["payment_option"]
+    reason: "Changing beneficiaries may affect your payment option selection"
+    notify_staff: true
+  - trigger: "marital_status_change"
+    resets_stages: ["payment_option", "document_checklist"]
+    reason: "Changes to marital status affect required documents and payment options"
+    notify_staff: true
+  - trigger: "address_change"
+    resets_stages: []
+    reason: "Address updates are processed immediately"
+    notify_staff: false
+
+notifications:
+  channels_available: ["in_portal", "email", "sms"]
+  always_on: ["in_portal"]
+  default_email: true
+  default_sms: false
+  legally_required:
+    - "application_status_change"
+    - "benefit_amount_final"
+    - "payment_issue"
+
+notification_templates:
+  application_received:
+    email_subject: "Your retirement application has been received"
+    email_body: "Dear {member_name}, we have received your retirement application. Your application ID is {case_id}. We will review your application and contact you if additional information is needed."
+    sms_body: "DERP: Your retirement application {case_id} has been received. Check your portal for details."
+    in_portal_title: "Application Received"
+    in_portal_body: "Your retirement application has been received and is being reviewed."
+  application_status_change:
+    email_subject: "Update on your retirement application"
+    email_body: "Dear {member_name}, your application {case_id} has been updated to: {new_status}. {status_message}"
+    sms_body: "DERP: Your application {case_id} status changed to {new_status}. Check your portal."
+    in_portal_title: "Application Update"
+    in_portal_body: "Your application status has changed to {new_status}. {status_message}"
+  document_needed:
+    email_subject: "Document needed for your application"
+    email_body: "Dear {member_name}, we need {document_type} for your application {case_id}. Please upload it through your member portal."
+    sms_body: "DERP: A document is needed for your application. Check your portal."
+    in_portal_title: "Document Needed"
+    in_portal_body: "Please upload {document_type} for your application."
+
+help_content:
+  glossary_source: "knowledgebase"
+  tour_version: 1
+  plan_specific_terms:
+    - term: "Rule of 75"
+      definition: "You may retire when your age plus years of earned service equals 75 or more, provided you are at least age 55."
+      applies_to_tiers: ["tier_1", "tier_2"]
+    - term: "Rule of 85"
+      definition: "You may retire when your age plus years of earned service equals 85 or more, provided you are at least age 60."
+      applies_to_tiers: ["tier_3"]
+    - term: "AMS"
+      definition: "Average Monthly Salary — the average of your highest consecutive months of salary, used to calculate your retirement benefit."
+    - term: "Vesting"
+      definition: "After 5 years of earned service, you are vested and eligible for a future retirement benefit even if you leave employment."
+    - term: "Purchased Service"
+      definition: "Additional service credit you can buy to increase your benefit amount. Purchased service counts toward your benefit calculation but NOT toward eligibility rules like Rule of 75 or Rule of 85."
+    - term: "Early Retirement Reduction"
+      definition: "If you retire before age 65 without meeting a Rule of 75/85, your benefit is reduced. Tiers 1 and 2: 3% per year under 65. Tier 3: 6% per year under 65."
+
+refund:
+  available: true
+  includes_employee_contributions: true
+  includes_interest: true
+  includes_employer_contributions: false
+  mandatory_withholding_pct: 20
+  rollover_allowed: true
+  early_withdrawal_penalty_age: 59
+  early_withdrawal_penalty_pct: 10
+
+death_benefits:
+  lump_sum_available: true
+  survivor_pension_available: true
