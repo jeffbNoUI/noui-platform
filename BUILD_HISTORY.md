@@ -1,5 +1,75 @@
 # noui-platform — Build History
 
+## Member Portal Redesign — Phase 4: What-If Calculator (2026-03-18)
+
+**Branch:** `claude/compassionate-beaver`
+**Goal:** Implement Phase 4 (Tasks 25–33) of the Member Portal Redesign plan — complete what-if retirement calculator with guided wizard, open calculator, saved scenarios, staleness detection, and contextual help.
+
+**What was built:**
+
+### Task 25: Calculator Hooks
+- `useWhatIfCalculator` — Wraps 3 intelligence API calls (eligibility, benefit calc, payment options) with 500ms debounce, exposes `inputs`, `updateInput`, `calculateNow`, `result`, `toScenario()`
+- `useSavedScenarios` — CRUD hook using React Query mutations with cache invalidation
+- 15 tests
+
+### Task 26: Guided Wizard
+- 5-step wizard: Retirement Date → Service Purchase → Salary Growth → Payment Option → Results
+- `WizardStep` reusable layout with contextual data panel
+- Progress bar, Back/Next navigation, validation (date required before advancing)
+- 11 tests
+
+### Task 27: Results Display
+- `FormulaBreakdown` — AMS × multiplier × years transparency
+- `WaitComparison` — Side-by-side "what if you wait?" at multiple dates
+- `PaymentOptionTable` — Payment option comparison with beneficiary context
+- `BenefitResult` — Composite component composing all three
+- 8 tests
+
+### Task 28: Open Calculator
+- Side-by-side input/result layout with all controls in one panel
+- Real-time updates via debounced calculator hook
+- 5 tests
+
+### Task 29: Calculator Section Router
+- Mode toggle (Guided / Open Calculator)
+- Integrates `useWhatIfCalculator`, `useSavedScenarios`, wait scenarios, save functionality
+- 7 tests
+
+### Task 30: Saved Scenarios
+- `SaveScenarioDialog` — Modal with label input
+- `SavedScenariosList` — Cards with stale indicator, delete, compare
+- `ScenarioCompare` — Side-by-side table with best-benefit highlighting
+- 9 tests
+
+### Task 31: Staleness Detection
+- `computeDataVersion()` — djb2 hash of member data fields (member_id, earned_years, purchased_years, military_years, beneficiary_count, plan_config_version)
+- `isScenarioStale()` — Version comparison
+- 11 tests
+
+### Task 32: Contextual Help Panel
+- `ContextualHelpPanel` — Collapsible glossary panel, section-filtered (calculator/profile/dashboard), tier-filtered
+- `GlossaryItem` — Term + definition + optional tier note
+- 8 tests
+
+### Task 33: Wire into Portal Shell
+- Replaced `projections` nav item with `calculator` ("Plan My Retirement") for active + inactive personas
+- Added `CalculatorSection` route in `MemberPortal.tsx`
+- Updated 2 existing test files for new nav key
+
+**Totals:** 62 files changed, 8,268 lines added. 74 new tests. 1,210 total tests passing across 160 test files.
+
+**Key decisions:**
+- Calculator never computes monetary values in frontend — all calculations go through intelligence service API
+- Staleness detection uses djb2 hash (non-cryptographic, fast) to compare data snapshots
+- Guided wizard defaults to 5 steps; open calculator shows all inputs simultaneously
+- Plan-profile-driven payment options and glossary terms ensure plan portability
+
+**Next session should:**
+- Start Phase 5 (Retirement Application) at Task 34, or
+- Create PR to merge Phase 3+4 work from this branch
+
+---
+
 ## Member Portal Redesign — Phase 1: Foundation (2026-03-17)
 
 **Branch:** `claude/mystifying-chebyshev`
