@@ -117,8 +117,8 @@ describe('MemberPortal', () => {
 
     // Dashboard router should no longer be visible
     expect(screen.queryByTestId('dashboard-router')).not.toBeInTheDocument();
-    // Placeholder section should be visible
-    expect(screen.getByTestId('section-profile')).toBeInTheDocument();
+    // Profile section should be visible
+    expect(screen.getByTestId('profile-section')).toBeInTheDocument();
   });
 
   it('wraps content in TourProvider', async () => {

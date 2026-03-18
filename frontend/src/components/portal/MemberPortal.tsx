@@ -6,6 +6,7 @@ import type { MemberPortalProps } from './MemberPortalUtils';
 import { DEMO_MEMBER } from './MemberPortalUtils';
 import MemberPortalShell from './MemberPortalShell';
 import DashboardRouter from './dashboard/DashboardRouter';
+import ProfileSection from './profile/ProfileSection';
 import TourProvider from './tour/TourProvider';
 
 // ── Main Component ───────────────────────────────────────────────────────────
@@ -84,7 +85,8 @@ export default function MemberPortal({ memberID, retirementDate }: MemberPortalP
             onNavigate={setActiveSection}
           />
         )}
-        {activeSection !== 'dashboard' && (
+        {activeSection === 'profile' && <ProfileSection memberId={memberID} personas={personas} />}
+        {activeSection !== 'dashboard' && activeSection !== 'profile' && (
           <div
             data-testid={`section-${activeSection}`}
             style={{
