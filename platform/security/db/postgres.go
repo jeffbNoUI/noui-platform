@@ -105,7 +105,7 @@ func InitSchema(db *sql.DB) error {
 	schema := `
 		CREATE TABLE IF NOT EXISTS security_events (
 			id SERIAL PRIMARY KEY,
-			tenant_id TEXT NOT NULL,
+			tenant_id UUID NOT NULL,
 			event_type TEXT NOT NULL,
 			actor_id TEXT NOT NULL DEFAULT '',
 			actor_email TEXT NOT NULL DEFAULT '',
@@ -117,7 +117,7 @@ func InitSchema(db *sql.DB) error {
 
 		CREATE TABLE IF NOT EXISTS active_sessions (
 			id SERIAL PRIMARY KEY,
-			tenant_id TEXT NOT NULL,
+			tenant_id UUID NOT NULL,
 			user_id TEXT NOT NULL,
 			session_id TEXT UNIQUE NOT NULL,
 			email TEXT NOT NULL DEFAULT '',
@@ -133,6 +133,22 @@ func InitSchema(db *sql.DB) error {
 		CREATE INDEX IF NOT EXISTS idx_security_events_created ON security_events(tenant_id, created_at DESC);
 		CREATE INDEX IF NOT EXISTS idx_active_sessions_tenant ON active_sessions(tenant_id);
 		CREATE INDEX IF NOT EXISTS idx_active_sessions_seen ON active_sessions(last_seen_at);
+
+		-- Migrate existing TEXT tenant_id columns to UUID
+		DO $$ BEGIN
+			IF EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_name = 'security_events' AND column_name = 'tenant_id' AND data_type = 'text'
+			) THEN
+				ALTER TABLE security_events ALTER COLUMN tenant_id TYPE UUID USING tenant_id::UUID;
+			END IF;
+			IF EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_name = 'active_sessions' AND column_name = 'tenant_id' AND data_type = 'text'
+			) THEN
+				ALTER TABLE active_sessions ALTER COLUMN tenant_id TYPE UUID USING tenant_id::UUID;
+			END IF;
+		END $$;
 	`
 
 	_, err := db.Exec(schema)

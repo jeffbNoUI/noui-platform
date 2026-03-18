@@ -70,6 +70,14 @@ export default defineConfig({
         target: 'http://localhost:8089',
         changeOrigin: true,
       },
+      '/api/v1/issues': {
+        target: 'http://localhost:8092',
+        changeOrigin: true,
+      },
+      '/api/v1/security': {
+        target: 'http://localhost:8093',
+        changeOrigin: true,
+      },
     },
   },
 });

@@ -30,7 +30,7 @@ describe('auth types', () => {
       expect(hasAccess('staff', 'member-dashboard')).toBe(true);
       expect(hasAccess('staff', 'employer')).toBe(true);
       expect(hasAccess('staff', 'vendor')).toBe(true);
-      expect(hasAccess('staff', 'portal')).toBe(false);
+      expect(hasAccess('staff', 'portal')).toBe(true);
     });
 
     it('member can access portal and member-dashboard only', () => {

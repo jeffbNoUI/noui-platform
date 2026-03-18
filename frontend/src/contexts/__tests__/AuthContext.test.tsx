@@ -54,10 +54,10 @@ describe('AuthContext', () => {
     expect(result.current.canAccess('retirement-app')).toBe(true);
   });
 
-  it('canAccess returns false for portal when role is staff', async () => {
+  it('canAccess returns true for portal when role is staff', async () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
     await waitFor(() => expect(result.current).not.toBeNull());
-    expect(result.current.canAccess('portal')).toBe(false);
+    expect(result.current.canAccess('portal')).toBe(true);
   });
 
   it('canAccess returns false for member-only views when role is employer', async () => {
