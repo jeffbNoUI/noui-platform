@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/noui/platform/dataaccess/ecm"
 	"github.com/noui/platform/dataaccess/models"
 	"github.com/noui/platform/dbcontext"
 	"github.com/noui/platform/validation"
@@ -20,12 +21,13 @@ import (
 
 // Handler holds dependencies for API handlers.
 type Handler struct {
-	DB *sql.DB
+	DB  *sql.DB
+	ECM ecm.ECMProvider
 }
 
-// NewHandler creates a Handler with the given database connection.
-func NewHandler(db *sql.DB) *Handler {
-	return &Handler{DB: db}
+// NewHandler creates a Handler with the given database connection and ECM provider.
+func NewHandler(db *sql.DB, ecmProvider ecm.ECMProvider) *Handler {
+	return &Handler{DB: db, ECM: ecmProvider}
 }
 
 // RegisterRoutes sets up all API routes on the given mux.
@@ -45,6 +47,12 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/members/{id}/tax-documents", h.GetTaxDocuments)
 	mux.HandleFunc("GET /api/v1/members/{id}/addresses", h.GetAddresses)
 	mux.HandleFunc("PUT /api/v1/members/{id}/addresses/{aid}", h.UpdateAddress)
+
+	// Document endpoints
+	mux.HandleFunc("POST /api/v1/issues/{id}/documents", h.UploadDocument)
+	mux.HandleFunc("GET /api/v1/issues/{id}/documents", h.ListIssueDocuments)
+	mux.HandleFunc("GET /api/v1/documents/{id}/download", h.DownloadDocument)
+	mux.HandleFunc("GET /api/v1/members/{id}/documents", h.ListMemberDocuments)
 }
 
 // HealthCheck returns service health status.

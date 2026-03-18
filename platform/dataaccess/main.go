@@ -15,6 +15,7 @@ import (
 	"github.com/noui/platform/auth"
 	"github.com/noui/platform/dataaccess/api"
 	"github.com/noui/platform/dataaccess/db"
+	"github.com/noui/platform/dataaccess/ecm"
 	"github.com/noui/platform/dbcontext"
 	"github.com/noui/platform/healthutil"
 	"github.com/noui/platform/logging"
@@ -35,8 +36,12 @@ func main() {
 	}
 	defer database.Close()
 
+	ecmDir := os.Getenv("ECM_STORAGE_DIR")
+	ecmProvider := ecm.NewLocalProvider(ecmDir)
+	slog.Info("ecm provider initialized", "type", "local", "dir", ecmDir)
+
 	counters := healthutil.NewRequestCounters()
-	handler := api.NewHandler(database)
+	handler := api.NewHandler(database, ecmProvider)
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
 	mux.HandleFunc("GET /health/detail", healthutil.NewDetailHandler("dataaccess", "0.1.0", startedAt, database, counters))
