@@ -7,6 +7,7 @@ import { DEMO_MEMBER } from './MemberPortalUtils';
 import MemberPortalShell from './MemberPortalShell';
 import DashboardRouter from './dashboard/DashboardRouter';
 import ProfileSection from './profile/ProfileSection';
+import CalculatorSection from './calculator/CalculatorSection';
 import TourProvider from './tour/TourProvider';
 
 // ── Main Component ───────────────────────────────────────────────────────────
@@ -86,19 +87,22 @@ export default function MemberPortal({ memberID, retirementDate }: MemberPortalP
           />
         )}
         {activeSection === 'profile' && <ProfileSection memberId={memberID} personas={personas} />}
-        {activeSection !== 'dashboard' && activeSection !== 'profile' && (
-          <div
-            data-testid={`section-${activeSection}`}
-            style={{
-              padding: 32,
-              textAlign: 'center',
-              color: C.textSecondary,
-              fontFamily: BODY,
-            }}
-          >
-            {activeSection.charAt(0).toUpperCase() + activeSection.slice(1)} section coming soon
-          </div>
-        )}
+        {activeSection === 'calculator' && <CalculatorSection memberId={memberID} />}
+        {activeSection !== 'dashboard' &&
+          activeSection !== 'profile' &&
+          activeSection !== 'calculator' && (
+            <div
+              data-testid={`section-${activeSection}`}
+              style={{
+                padding: 32,
+                textAlign: 'center',
+                color: C.textSecondary,
+                fontFamily: BODY,
+              }}
+            >
+              {activeSection.charAt(0).toUpperCase() + activeSection.slice(1)} section coming soon
+            </div>
+          )}
       </MemberPortalShell>
     </TourProvider>
   );

@@ -59,6 +59,6 @@ describe('MemberPortalShell', () => {
       </MemberPortalShell>,
     );
     expect(screen.getByTestId('nav-benefit')).toBeInTheDocument();
-    expect(screen.queryByTestId('nav-projections')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('nav-calculator')).not.toBeInTheDocument();
   });
 });
