@@ -40,6 +40,11 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/members/{id}/dro", h.GetDRO)
 	mux.HandleFunc("GET /api/v1/members/{id}/contributions", h.GetContributions)
 	mux.HandleFunc("GET /api/v1/members/{id}/service-credit", h.GetServiceCredit)
+	mux.HandleFunc("GET /api/v1/members/{id}/refund-estimate", h.GetRefundEstimate)
+	mux.HandleFunc("GET /api/v1/members/{id}/payments", h.GetPaymentHistory)
+	mux.HandleFunc("GET /api/v1/members/{id}/tax-documents", h.GetTaxDocuments)
+	mux.HandleFunc("GET /api/v1/members/{id}/addresses", h.GetAddresses)
+	mux.HandleFunc("PUT /api/v1/members/{id}/addresses/{aid}", h.UpdateAddress)
 }
 
 // HealthCheck returns service health status.
@@ -668,6 +673,300 @@ func (h *Handler) GetServiceCredit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeSuccess(w, result)
+}
+
+// GetRefundEstimate returns the refund estimate for an inactive member.
+func (h *Handler) GetRefundEstimate(w http.ResponseWriter, r *http.Request) {
+	memberID, err := parseMemberID(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_MEMBER_ID", "Member ID must be a positive integer")
+		return
+	}
+
+	// Verify member exists
+	var exists bool
+	err = dbcontext.DB(r.Context(), h.DB).QueryRowContext(r.Context(),
+		"SELECT EXISTS(SELECT 1 FROM MEMBER_MASTER WHERE MEMBER_ID = $1)", memberID,
+	).Scan(&exists)
+	if err != nil {
+		slog.Error("error checking member existence", "memberID", memberID, "error", err)
+		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
+		return
+	}
+	if !exists {
+		writeError(w, http.StatusNotFound, "MEMBER_NOT_FOUND",
+			"No member found with ID "+strconv.Itoa(memberID))
+		return
+	}
+
+	query := `
+		SELECT COALESCE(SUM(EE_CONTRIB), 0),
+		       COALESCE(SUM(INTEREST_AMT), 0)
+		FROM CONTRIBUTION_HIST
+		WHERE MEMBER_ID = $1`
+
+	var ee, interest float64
+	err = dbcontext.DB(r.Context(), h.DB).QueryRowContext(r.Context(), query, memberID).Scan(&ee, &interest)
+	if err != nil {
+		slog.Error("error querying refund estimate", "memberID", memberID, "error", err)
+		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
+		return
+	}
+
+	total := ee + interest
+	result := models.RefundEstimate{
+		MemberID:              memberID,
+		EmployeeContributions: ee,
+		Interest:              interest,
+		Total:                 total,
+		MandatoryWithhold20:   total * 0.20,
+		NetAfterWithhold:      total * 0.80,
+	}
+
+	writeSuccess(w, result)
+}
+
+// GetPaymentHistory returns paginated payment records for a retiree.
+func (h *Handler) GetPaymentHistory(w http.ResponseWriter, r *http.Request) {
+	memberID, err := parseMemberID(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_MEMBER_ID", "Member ID must be a positive integer")
+		return
+	}
+
+	limit, offset := validation.Pagination(intParam(r, "limit", 100), intParam(r, "offset", 0), 200)
+
+	query := `
+		SELECT COUNT(*) OVER() AS total_count,
+		       PAYMENT_ID, MEMBER_ID, PAYMENT_DATE, GROSS_AMOUNT, NET_AMOUNT,
+		       FEDERAL_TAX, STATE_TAX, DEDUCTIONS, PAYMENT_METHOD
+		FROM PAYMENT_HISTORY
+		WHERE MEMBER_ID = $1
+		ORDER BY PAYMENT_DATE DESC
+		LIMIT $2 OFFSET $3`
+
+	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, memberID, limit, offset)
+	if err != nil {
+		slog.Error("error querying payment history", "memberID", memberID, "error", err)
+		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
+		return
+	}
+	defer rows.Close()
+
+	var payments []models.PaymentRecord
+	total := 0
+	for rows.Next() {
+		var p models.PaymentRecord
+		if err := rows.Scan(&total, &p.PaymentID, &p.MemberID, &p.PaymentDate,
+			&p.GrossAmount, &p.NetAmount, &p.FederalTax, &p.StateTax,
+			&p.Deductions, &p.PaymentMethod); err != nil {
+			slog.Error("error scanning payment row", "error", err)
+			continue
+		}
+		payments = append(payments, p)
+	}
+
+	writePaginated(w, payments, total, limit, offset)
+}
+
+// GetTaxDocuments returns tax documents (1099-R, etc.) for a member.
+func (h *Handler) GetTaxDocuments(w http.ResponseWriter, r *http.Request) {
+	memberID, err := parseMemberID(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_MEMBER_ID", "Member ID must be a positive integer")
+		return
+	}
+
+	limit, offset := validation.Pagination(intParam(r, "limit", 50), intParam(r, "offset", 0), 100)
+
+	query := `
+		SELECT COUNT(*) OVER() AS total_count,
+		       DOC_ID, MEMBER_ID, DOC_TYPE, TAX_YEAR, ISSUED_DATE,
+		       GROSS_DISTRIBUTION, TAXABLE_AMOUNT, FEDERAL_WITHHELD, STATE_WITHHELD
+		FROM TAX_DOCUMENTS
+		WHERE MEMBER_ID = $1
+		ORDER BY TAX_YEAR DESC
+		LIMIT $2 OFFSET $3`
+
+	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, memberID, limit, offset)
+	if err != nil {
+		slog.Error("error querying tax documents", "memberID", memberID, "error", err)
+		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
+		return
+	}
+	defer rows.Close()
+
+	var docs []models.TaxDocument
+	total := 0
+	for rows.Next() {
+		var d models.TaxDocument
+		if err := rows.Scan(&total, &d.DocID, &d.MemberID, &d.DocType, &d.TaxYear,
+			&d.IssuedDate, &d.GrossDistribution, &d.TaxableAmount,
+			&d.FederalWithheld, &d.StateWithheld); err != nil {
+			slog.Error("error scanning tax document row", "error", err)
+			continue
+		}
+		docs = append(docs, d)
+	}
+
+	writePaginated(w, docs, total, limit, offset)
+}
+
+// GetAddresses returns address records for a member.
+func (h *Handler) GetAddresses(w http.ResponseWriter, r *http.Request) {
+	memberID, err := parseMemberID(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_MEMBER_ID", "Member ID must be a positive integer")
+		return
+	}
+
+	query := `
+		SELECT ADDRESS_ID, MEMBER_ID, ADDRESS_TYPE, LINE1, COALESCE(LINE2, ''),
+		       CITY, STATE, ZIP_CODE, IS_CURRENT
+		FROM MEMBER_ADDRESS
+		WHERE MEMBER_ID = $1
+		ORDER BY IS_CURRENT DESC, ADDRESS_TYPE`
+
+	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, memberID)
+	if err != nil {
+		slog.Error("error querying addresses", "memberID", memberID, "error", err)
+		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
+		return
+	}
+	defer rows.Close()
+
+	var addresses []models.Address
+	for rows.Next() {
+		var a models.Address
+		if err := rows.Scan(&a.AddressID, &a.MemberID, &a.AddressType, &a.Line1,
+			&a.Line2, &a.City, &a.State, &a.ZipCode, &a.IsCurrent); err != nil {
+			slog.Error("error scanning address row", "error", err)
+			continue
+		}
+		addresses = append(addresses, a)
+	}
+
+	writeSuccess(w, addresses)
+}
+
+// UpdateAddress updates a member's address.
+func (h *Handler) UpdateAddress(w http.ResponseWriter, r *http.Request) {
+	memberID, err := parseMemberID(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_MEMBER_ID", "Member ID must be a positive integer")
+		return
+	}
+
+	aidStr := r.PathValue("aid")
+	if aidStr == "" {
+		// Fallback: parse from URL path
+		parts := strings.Split(r.URL.Path, "/addresses/")
+		if len(parts) == 2 {
+			aidStr = parts[1]
+		}
+	}
+	addressID, err := strconv.Atoi(aidStr)
+	if err != nil || addressID <= 0 {
+		writeError(w, http.StatusBadRequest, "INVALID_ADDRESS_ID", "Address ID must be a positive integer")
+		return
+	}
+
+	var input struct {
+		Line1       *string `json:"line1"`
+		Line2       *string `json:"line2"`
+		City        *string `json:"city"`
+		State       *string `json:"state"`
+		ZipCode     *string `json:"zip_code"`
+		AddressType *string `json:"address_type"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "Invalid JSON body")
+		return
+	}
+
+	// Validate fields
+	var errs validation.Errors
+	if input.AddressType != nil {
+		errs.Enum("address_type", *input.AddressType, []string{"mailing", "residential"})
+	}
+	if input.State != nil {
+		errs.MaxLen("state", *input.State, 2)
+		if len(*input.State) < 2 {
+			errs.Required("state", "")
+		}
+	}
+	if input.ZipCode != nil {
+		errs.MaxLen("zip_code", *input.ZipCode, 10)
+	}
+	if input.Line1 != nil {
+		errs.MaxLen("line1", *input.Line1, 200)
+	}
+	if errs.HasErrors() {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		return
+	}
+
+	// Build dynamic update
+	setClauses := []string{}
+	args := []interface{}{}
+	argIdx := 1
+
+	if input.Line1 != nil {
+		setClauses = append(setClauses, fmt.Sprintf("LINE1 = $%d", argIdx))
+		args = append(args, *input.Line1)
+		argIdx++
+	}
+	if input.Line2 != nil {
+		setClauses = append(setClauses, fmt.Sprintf("LINE2 = $%d", argIdx))
+		args = append(args, *input.Line2)
+		argIdx++
+	}
+	if input.City != nil {
+		setClauses = append(setClauses, fmt.Sprintf("CITY = $%d", argIdx))
+		args = append(args, *input.City)
+		argIdx++
+	}
+	if input.State != nil {
+		setClauses = append(setClauses, fmt.Sprintf("STATE = $%d", argIdx))
+		args = append(args, *input.State)
+		argIdx++
+	}
+	if input.ZipCode != nil {
+		setClauses = append(setClauses, fmt.Sprintf("ZIP_CODE = $%d", argIdx))
+		args = append(args, *input.ZipCode)
+		argIdx++
+	}
+	if input.AddressType != nil {
+		setClauses = append(setClauses, fmt.Sprintf("ADDRESS_TYPE = $%d", argIdx))
+		args = append(args, *input.AddressType)
+		argIdx++
+	}
+
+	if len(setClauses) == 0 {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "No fields to update")
+		return
+	}
+
+	query := fmt.Sprintf("UPDATE MEMBER_ADDRESS SET %s WHERE ADDRESS_ID = $%d AND MEMBER_ID = $%d RETURNING ADDRESS_ID, MEMBER_ID, ADDRESS_TYPE, LINE1, COALESCE(LINE2, ''), CITY, STATE, ZIP_CODE, IS_CURRENT",
+		strings.Join(setClauses, ", "), argIdx, argIdx+1)
+	args = append(args, addressID, memberID)
+
+	var a models.Address
+	err = dbcontext.DB(r.Context(), h.DB).QueryRowContext(r.Context(), query, args...).Scan(
+		&a.AddressID, &a.MemberID, &a.AddressType, &a.Line1, &a.Line2,
+		&a.City, &a.State, &a.ZipCode, &a.IsCurrent,
+	)
+	if err == sql.ErrNoRows {
+		writeError(w, http.StatusNotFound, "ADDRESS_NOT_FOUND", "Address not found for this member")
+		return
+	}
+	if err != nil {
+		slog.Error("error updating address", "memberID", memberID, "addressID", addressID, "error", err)
+		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database update failed")
+		return
+	}
+
+	writeSuccess(w, a)
 }
 
 // --- Helper functions ---

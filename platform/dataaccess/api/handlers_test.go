@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -345,6 +346,17 @@ func serveWithPathValue(h *Handler, method, path string) *httptest.ResponseRecor
 	mux := http.NewServeMux()
 	h.RegisterRoutes(mux)
 	req := httptest.NewRequest(method, path, nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	return w
+}
+
+// serveWithPathValueAndBody dispatches a request with a JSON body through a real ServeMux.
+func serveWithPathValueAndBody(h *Handler, method, path, body string) *httptest.ResponseRecorder {
+	mux := http.NewServeMux()
+	h.RegisterRoutes(mux)
+	req := httptest.NewRequest(method, path, strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 	return w
@@ -1345,5 +1357,299 @@ func TestSearchMembers_LimitCap(t *testing.T) {
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("SearchMembers(limit cap) status = %d, want %d", w.Code, http.StatusOK)
+	}
+}
+
+// --- GetRefundEstimate ---
+
+func TestGetRefundEstimate_InvalidID(t *testing.T) {
+	h, _ := newMockHandler(t)
+	w := serveWithPathValue(h, "GET", "/api/v1/members/abc/refund-estimate")
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestGetRefundEstimate_MemberNotFound(t *testing.T) {
+	h, mock := newMockHandler(t)
+
+	mock.ExpectQuery("SELECT EXISTS").
+		WithArgs(99999).
+		WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(false))
+
+	w := serveWithPathValue(h, "GET", "/api/v1/members/99999/refund-estimate")
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusNotFound)
+	}
+}
+
+func TestGetRefundEstimate_Valid(t *testing.T) {
+	h, mock := newMockHandler(t)
+
+	mock.ExpectQuery("SELECT EXISTS").
+		WithArgs(10003).
+		WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
+
+	mock.ExpectQuery("SELECT COALESCE").
+		WithArgs(10003).
+		WillReturnRows(sqlmock.NewRows([]string{"ee", "interest"}).
+			AddRow(45000.0, 8500.0))
+
+	w := serveWithPathValue(h, "GET", "/api/v1/members/10003/refund-estimate")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+
+	var body struct {
+		Data models.RefundEstimate `json:"data"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("body parse error: %v", err)
+	}
+	if body.Data.EmployeeContributions != 45000.0 {
+		t.Errorf("EmployeeContributions = %f, want 45000.0", body.Data.EmployeeContributions)
+	}
+	if body.Data.Interest != 8500.0 {
+		t.Errorf("Interest = %f, want 8500.0", body.Data.Interest)
+	}
+	if body.Data.Total != 53500.0 {
+		t.Errorf("Total = %f, want 53500.0", body.Data.Total)
+	}
+	// 20% mandatory withholding
+	if body.Data.MandatoryWithhold20 != 10700.0 {
+		t.Errorf("MandatoryWithhold20 = %f, want 10700.0", body.Data.MandatoryWithhold20)
+	}
+	if body.Data.NetAfterWithhold != 42800.0 {
+		t.Errorf("NetAfterWithhold = %f, want 42800.0", body.Data.NetAfterWithhold)
+	}
+}
+
+func TestGetRefundEstimate_ZeroContributions(t *testing.T) {
+	h, mock := newMockHandler(t)
+
+	mock.ExpectQuery("SELECT EXISTS").
+		WithArgs(10003).
+		WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
+
+	mock.ExpectQuery("SELECT COALESCE").
+		WithArgs(10003).
+		WillReturnRows(sqlmock.NewRows([]string{"ee", "interest"}).
+			AddRow(0.0, 0.0))
+
+	w := serveWithPathValue(h, "GET", "/api/v1/members/10003/refund-estimate")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+
+	var body struct {
+		Data models.RefundEstimate `json:"data"`
+	}
+	json.Unmarshal(w.Body.Bytes(), &body)
+	if body.Data.Total != 0.0 {
+		t.Errorf("Total = %f, want 0.0", body.Data.Total)
+	}
+}
+
+// --- GetPaymentHistory ---
+
+func TestGetPaymentHistory_InvalidID(t *testing.T) {
+	h, _ := newMockHandler(t)
+	w := serveWithPathValue(h, "GET", "/api/v1/members/abc/payments")
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestGetPaymentHistory_WithRecords(t *testing.T) {
+	h, mock := newMockHandler(t)
+
+	payDate := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+	rows := sqlmock.NewRows([]string{
+		"total_count",
+		"PAYMENT_ID", "MEMBER_ID", "PAYMENT_DATE", "GROSS_AMOUNT", "NET_AMOUNT",
+		"FEDERAL_TAX", "STATE_TAX", "DEDUCTIONS", "PAYMENT_METHOD",
+	}).AddRow(
+		1,
+		1, 10001, payDate, 2100.00, 1750.00,
+		250.00, 80.00, 20.00, "DIRECT_DEPOSIT",
+	)
+
+	mock.ExpectQuery("SELECT COUNT").
+		WithArgs(10001, 100, 0).
+		WillReturnRows(rows)
+
+	w := serveWithPathValue(h, "GET", "/api/v1/members/10001/payments")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+
+	var body struct {
+		Data       []models.PaymentRecord `json:"data"`
+		Pagination struct {
+			Total int `json:"total"`
+		} `json:"pagination"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("body parse error: %v", err)
+	}
+	if len(body.Data) != 1 {
+		t.Fatalf("expected 1 payment, got %d", len(body.Data))
+	}
+	if body.Data[0].GrossAmount != 2100.00 {
+		t.Errorf("GrossAmount = %f, want 2100.00", body.Data[0].GrossAmount)
+	}
+	if body.Data[0].PaymentMethod != "DIRECT_DEPOSIT" {
+		t.Errorf("PaymentMethod = %q, want DIRECT_DEPOSIT", body.Data[0].PaymentMethod)
+	}
+}
+
+// --- GetTaxDocuments ---
+
+func TestGetTaxDocuments_InvalidID(t *testing.T) {
+	h, _ := newMockHandler(t)
+	w := serveWithPathValue(h, "GET", "/api/v1/members/abc/tax-documents")
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestGetTaxDocuments_WithRecords(t *testing.T) {
+	h, mock := newMockHandler(t)
+
+	issuedDate := time.Date(2026, 1, 31, 0, 0, 0, 0, time.UTC)
+	rows := sqlmock.NewRows([]string{
+		"total_count",
+		"DOC_ID", "MEMBER_ID", "DOC_TYPE", "TAX_YEAR", "ISSUED_DATE",
+		"GROSS_DISTRIBUTION", "TAXABLE_AMOUNT", "FEDERAL_WITHHELD", "STATE_WITHHELD",
+	}).AddRow(
+		1,
+		1, 10001, "1099-R", 2025, issuedDate,
+		25200.00, 25200.00, 3000.00, 960.00,
+	)
+
+	mock.ExpectQuery("SELECT COUNT").
+		WithArgs(10001, 50, 0).
+		WillReturnRows(rows)
+
+	w := serveWithPathValue(h, "GET", "/api/v1/members/10001/tax-documents")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+
+	var body struct {
+		Data       []models.TaxDocument `json:"data"`
+		Pagination struct {
+			Total int `json:"total"`
+		} `json:"pagination"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("body parse error: %v", err)
+	}
+	if len(body.Data) != 1 {
+		t.Fatalf("expected 1 tax document, got %d", len(body.Data))
+	}
+	if body.Data[0].DocType != "1099-R" {
+		t.Errorf("DocType = %q, want 1099-R", body.Data[0].DocType)
+	}
+	if body.Data[0].TaxYear != 2025 {
+		t.Errorf("TaxYear = %d, want 2025", body.Data[0].TaxYear)
+	}
+}
+
+// --- GetAddresses ---
+
+func TestGetAddresses_InvalidID(t *testing.T) {
+	h, _ := newMockHandler(t)
+	w := serveWithPathValue(h, "GET", "/api/v1/members/abc/addresses")
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestGetAddresses_WithRecords(t *testing.T) {
+	h, mock := newMockHandler(t)
+
+	rows := sqlmock.NewRows([]string{
+		"ADDRESS_ID", "MEMBER_ID", "ADDRESS_TYPE", "LINE1", "LINE2",
+		"CITY", "STATE", "ZIP_CODE", "IS_CURRENT",
+	}).AddRow(
+		1, 10001, "mailing", "123 Main St", "",
+		"Denver", "CO", "80202", true,
+	)
+
+	mock.ExpectQuery("SELECT ADDRESS_ID").
+		WithArgs(10001).
+		WillReturnRows(rows)
+
+	w := serveWithPathValue(h, "GET", "/api/v1/members/10001/addresses")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+
+	var body struct {
+		Data []models.Address `json:"data"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("body parse error: %v", err)
+	}
+	if len(body.Data) != 1 {
+		t.Fatalf("expected 1 address, got %d", len(body.Data))
+	}
+	if body.Data[0].City != "Denver" {
+		t.Errorf("City = %q, want Denver", body.Data[0].City)
+	}
+	if !body.Data[0].IsCurrent {
+		t.Error("IsCurrent should be true")
+	}
+}
+
+// --- UpdateAddress ---
+
+func TestUpdateAddress_InvalidMemberID(t *testing.T) {
+	h, _ := newMockHandler(t)
+	w := serveWithPathValue(h, "PUT", "/api/v1/members/abc/addresses/1")
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestUpdateAddress_Valid(t *testing.T) {
+	h, mock := newMockHandler(t)
+
+	mock.ExpectQuery("UPDATE MEMBER_ADDRESS").
+		WillReturnRows(sqlmock.NewRows([]string{
+			"ADDRESS_ID", "MEMBER_ID", "ADDRESS_TYPE", "LINE1", "LINE2",
+			"CITY", "STATE", "ZIP_CODE", "IS_CURRENT",
+		}).AddRow(
+			1, 10001, "mailing", "456 Oak Ave", "",
+			"Denver", "CO", "80203", true,
+		))
+
+	body := `{"line1":"456 Oak Ave","zip_code":"80203"}`
+	w := serveWithPathValueAndBody(h, "PUT", "/api/v1/members/10001/addresses/1", body)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d\nbody: %s", w.Code, http.StatusOK, w.Body.String())
+	}
+
+	var resp struct {
+		Data models.Address `json:"data"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("body parse error: %v", err)
+	}
+	if resp.Data.Line1 != "456 Oak Ave" {
+		t.Errorf("Line1 = %q, want 456 Oak Ave", resp.Data.Line1)
 	}
 }
