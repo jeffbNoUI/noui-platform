@@ -1,9 +1,10 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import yaml from '@rollup/plugin-yaml';
 import path from 'path';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), yaml()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -76,6 +77,18 @@ export default defineConfig({
       },
       '/api/v1/security': {
         target: 'http://localhost:8093',
+        changeOrigin: true,
+      },
+      '/api/v1/member-auth': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
+      '/api/v1/scenarios': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
+      '/api/v1/notifications': {
+        target: 'http://localhost:8081',
         changeOrigin: true,
       },
     },
