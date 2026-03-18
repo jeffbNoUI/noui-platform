@@ -80,7 +80,7 @@ describe('AuthContext', () => {
     });
 
     expect(result.current.user.role).toBe('member');
-    expect(result.current.user.name).toBe('Dev Member');
+    expect(result.current.user.name).toBe('Robert Martinez');
     expect(localStorage.getItem('noui_dev_role')).toBe('member');
   });
 

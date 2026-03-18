@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { generateDevToken, DEV_USERS } from '@/lib/devAuth';
+import {
+  generateDevToken,
+  DEV_USERS,
+  DEV_MEMBER_ACCOUNTS,
+  memberAccountToAuthUser,
+} from '@/lib/devAuth';
 
 describe('devAuth', () => {
   describe('generateDevToken', () => {
@@ -64,6 +69,35 @@ describe('devAuth', () => {
     it('member user has a memberId', () => {
       expect(DEV_USERS.member.memberId).toBeDefined();
       expect(typeof DEV_USERS.member.memberId).toBe('number');
+    });
+  });
+
+  describe('DEV_MEMBER_ACCOUNTS', () => {
+    it('has 8 member persona accounts', () => {
+      expect(DEV_MEMBER_ACCOUNTS).toHaveLength(8);
+    });
+
+    it('each account has unique id and memberId', () => {
+      const ids = DEV_MEMBER_ACCOUNTS.map((a) => a.id);
+      const memberIds = DEV_MEMBER_ACCOUNTS.map((a) => a.memberId);
+      expect(new Set(ids).size).toBe(8);
+      expect(new Set(memberIds).size).toBe(8);
+    });
+
+    it('all accounts have role member', () => {
+      for (const account of DEV_MEMBER_ACCOUNTS) {
+        expect(account.role).toBe('member');
+      }
+    });
+
+    it('memberAccountToAuthUser converts correctly', () => {
+      const account = DEV_MEMBER_ACCOUNTS[0];
+      const authUser = memberAccountToAuthUser(account);
+      expect(authUser.id).toBe(account.id);
+      expect(authUser.role).toBe('member');
+      expect(authUser.memberId).toBe(account.memberId);
+      expect(authUser.name).toBe(account.name);
+      expect(authUser.tenantId).toBeTruthy();
     });
   });
 });

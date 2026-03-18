@@ -61,10 +61,10 @@ export const DEV_USERS: Record<string, AuthUser> = {
     name: 'Dev Admin',
   },
   member: {
-    id: 'dev-member-001',
+    id: 'dev-member-active-near',
     tenantId: '00000000-0000-0000-0000-000000000001',
     role: 'member',
-    name: 'Dev Member',
+    name: 'Robert Martinez',
     memberId: 10001,
   },
   employer: {
@@ -80,3 +80,82 @@ export const DEV_USERS: Record<string, AuthUser> = {
     name: 'Dev Vendor',
   },
 };
+
+// Member persona accounts for dev mode — each maps to a different member ID
+export interface DevMemberAccount {
+  id: string;
+  role: 'member';
+  label: string;
+  memberId: number;
+  name: string;
+}
+
+export const DEV_MEMBER_ACCOUNTS: DevMemberAccount[] = [
+  {
+    id: 'dev-member-active-near',
+    role: 'member',
+    label: 'Active (near retirement)',
+    memberId: 10001,
+    name: 'Robert Martinez',
+  },
+  {
+    id: 'dev-member-active-early',
+    role: 'member',
+    label: 'Active (early career)',
+    memberId: 10002,
+    name: 'Jennifer Kim',
+  },
+  {
+    id: 'dev-member-inactive-vested',
+    role: 'member',
+    label: 'Inactive (vested)',
+    memberId: 10003,
+    name: 'David Washington',
+  },
+  {
+    id: 'dev-member-inactive-novest',
+    role: 'member',
+    label: 'Inactive (not vested)',
+    memberId: 10009,
+    name: "Thomas O'Brien",
+  },
+  {
+    id: 'dev-member-retiree',
+    role: 'member',
+    label: 'Retiree',
+    memberId: 10006,
+    name: 'Maria Santos',
+  },
+  {
+    id: 'dev-member-survivor',
+    role: 'member',
+    label: 'Survivor beneficiary',
+    memberId: 10011,
+    name: 'Richard Chen',
+  },
+  {
+    id: 'dev-member-deathben',
+    role: 'member',
+    label: 'Death benefit recipient',
+    memberId: 10012,
+    name: 'Patricia Moore',
+  },
+  {
+    id: 'dev-member-dual',
+    role: 'member',
+    label: 'Dual role (member + beneficiary)',
+    memberId: 10010,
+    name: 'Angela Davis',
+  },
+];
+
+// Convert a DEV_MEMBER_ACCOUNT to an AuthUser
+export function memberAccountToAuthUser(account: DevMemberAccount): AuthUser {
+  return {
+    id: account.id,
+    tenantId: '00000000-0000-0000-0000-000000000001',
+    role: account.role,
+    name: account.name,
+    memberId: account.memberId,
+  };
+}
