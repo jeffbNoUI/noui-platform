@@ -17,39 +17,9 @@ const mockMember = {
   marital_status: 'M',
 };
 
-const mockContributions = {
-  member_id: 10001,
-  total_ee_contributions: 168420,
-  total_er_contributions: 244430,
-  total_interest: 0,
-  current_ee_balance: 168420,
-  current_er_balance: 244430,
-  period_count: 0,
-};
-
-const mockBeneficiaries = [
-  {
-    bene_id: 1,
-    member_id: 10001,
-    bene_type: 'PRIMARY',
-    first_name: 'Maria',
-    last_name: 'Martinez',
-    relationship: 'Spouse',
-    alloc_pct: 100,
-    eff_date: '2005-01-01',
-  },
-];
-
-const mockCalculation = {
-  maximum_benefit: 4847,
-};
-
 let memberData: typeof mockMember | undefined = mockMember;
 let memberLoading = false;
 let memberError: Error | null = null;
-let contribData: typeof mockContributions | undefined = mockContributions;
-let beneData: typeof mockBeneficiaries | undefined = mockBeneficiaries;
-let calcData: typeof mockCalculation | undefined = mockCalculation;
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -59,44 +29,25 @@ vi.mock('@/hooks/useMember', () => ({
     isLoading: memberLoading,
     error: memberError,
   }),
-  useContributions: () => ({ data: contribData }),
-  useBeneficiaries: () => ({ data: beneData }),
+  useContributions: () => ({ data: undefined }),
+  useBeneficiaries: () => ({ data: undefined }),
   useServiceCredit: () => ({ data: undefined }),
 }));
 
 vi.mock('@/hooks/useBenefitCalculation', () => ({
-  useBenefitCalculation: () => ({ data: calcData }),
+  useBenefitCalculation: () => ({ data: undefined }),
+  useEligibility: () => ({ data: undefined }),
+  useScenario: () => ({ data: undefined }),
 }));
 
-vi.mock('@/hooks/useCRM', () => ({
-  useContactByMemberId: () => ({ data: null }),
-  useMemberConversations: () => ({ data: [] }),
-  useMemberPublicInteractions: () => ({ data: [] }),
-  useCreateMemberMessage: () => ({ mutate: vi.fn() }),
-  useCreateMemberConversation: () => ({ mutate: vi.fn() }),
+vi.mock('@/hooks/usePayments', () => ({
+  usePayments: () => ({ data: [] }),
+  useTaxDocuments: () => ({ data: [] }),
 }));
 
-vi.mock('@/hooks/useCorrespondence', () => ({
-  useCorrespondenceHistory: () => ({ data: [] }),
+vi.mock('@/hooks/useRefundEstimate', () => ({
+  useRefundEstimate: () => ({ data: null }),
 }));
-
-vi.mock('../BenefitProjectionChart', () => ({
-  default: () => <div data-testid="benefit-projection-chart" />,
-}));
-
-vi.mock('../ContributionBars', () => ({
-  default: () => <div data-testid="contribution-bars" />,
-}));
-
-vi.mock('../AIChatPanel', () => ({
-  default: () => <div data-testid="ai-chat-panel" />,
-}));
-
-vi.mock('../MemberCorrespondenceTab', () => ({
-  default: () => <div data-testid="member-correspondence-tab">Letters Content</div>,
-}));
-
-// MemberMessageCenter is defined inside MemberPortal.tsx so we don't need to mock it separately
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 
@@ -113,51 +64,15 @@ describe('MemberPortal', () => {
     memberData = mockMember;
     memberLoading = false;
     memberError = null;
-    contribData = mockContributions;
-    beneData = mockBeneficiaries;
-    calcData = mockCalculation;
-    defaultProps.onSwitchToWorkspace.mockClear();
-    defaultProps.onSwitchToCRM.mockClear();
-    defaultProps.onChangeView.mockClear();
   });
 
-  it('renders member name and ID in the nav bar', async () => {
+  it('renders the portal shell with sidebar navigation', async () => {
     renderWithProviders(<MemberPortal {...defaultProps} />);
     await waitFor(() => {
-      expect(screen.getByText('Robert A. Martinez')).toBeInTheDocument();
+      expect(screen.getByTestId('member-portal-shell')).toBeInTheDocument();
     });
-    expect(screen.getByText('DERP-0010001')).toBeInTheDocument();
-  });
-
-  it('renders hero banner with greeting and estimated monthly benefit', async () => {
-    renderWithProviders(<MemberPortal {...defaultProps} />);
-    await waitFor(() => {
-      expect(screen.getByText('Est. Monthly Benefit')).toBeInTheDocument();
-    });
-    // Estimated monthly benefit formatted as currency ($4,847)
-    expect(screen.getByText('$4,847')).toBeInTheDocument();
-    // Greeting contains first name
-    expect(screen.getByText(/Good .+, Robert\./)).toBeInTheDocument();
-  });
-
-  it('renders contribution summary stat cards', async () => {
-    renderWithProviders(<MemberPortal {...defaultProps} />);
-    await waitFor(() => {
-      expect(screen.getByText('Employee Contributions')).toBeInTheDocument();
-    });
-    expect(screen.getByText('Employer Contributions')).toBeInTheDocument();
-    expect(screen.getByText('Current Account Balance')).toBeInTheDocument();
-    // $168k employee, $244k employer, $413k balance
-    expect(screen.getByText('$168k')).toBeInTheDocument();
-    expect(screen.getByText('$244k')).toBeInTheDocument();
-    expect(screen.getByText('$413k')).toBeInTheDocument();
-  });
-
-  it('renders beneficiary info in the dashboard', async () => {
-    renderWithProviders(<MemberPortal {...defaultProps} />);
-    await waitFor(() => {
-      expect(screen.getByText(/Maria Martinez/)).toBeInTheDocument();
-    });
+    // Sidebar navigation should be present
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
   });
 
   it('shows loading state when member data is loading', () => {
@@ -167,40 +82,67 @@ describe('MemberPortal', () => {
     expect(screen.getByText('Loading member data...')).toBeInTheDocument();
   });
 
-  it('renders nav tabs including My Benefits, Messages, and Letters', async () => {
+  it('falls back to demo data on error', async () => {
+    memberData = undefined;
+    memberError = new Error('API error');
     renderWithProviders(<MemberPortal {...defaultProps} />);
+    // Should render shell (demo member resolves to active persona)
     await waitFor(() => {
-      expect(screen.getByText('My Benefits')).toBeInTheDocument();
-    });
-    expect(screen.getByText('Messages')).toBeInTheDocument();
-    expect(screen.getByText('Letters')).toBeInTheDocument();
-    expect(screen.getByText('Projections')).toBeInTheDocument();
-  });
-
-  it('switches to Letters tab and renders correspondence component', async () => {
-    renderWithProviders(<MemberPortal {...defaultProps} />);
-    await waitFor(() => {
-      expect(screen.getByText('Letters')).toBeInTheDocument();
-    });
-    fireEvent.click(screen.getByText('Letters'));
-    expect(screen.getByTestId('member-correspondence-tab')).toBeInTheDocument();
-  });
-
-  it('shows vesting status for vested member', async () => {
-    renderWithProviders(<MemberPortal {...defaultProps} />);
-    await waitFor(() => {
-      // "Fully Vested" appears in hero banner and milestones — at least one exists
-      const vested = screen.getAllByText('Fully Vested');
-      expect(vested.length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByTestId('member-portal-shell')).toBeInTheDocument();
     });
   });
 
-  it('renders retirement milestones section', async () => {
+  it('renders dashboard router as default section', async () => {
     renderWithProviders(<MemberPortal {...defaultProps} />);
     await waitFor(() => {
-      expect(screen.getByText('Retirement Milestones')).toBeInTheDocument();
+      expect(screen.getByTestId('dashboard-router')).toBeInTheDocument();
     });
-    expect(screen.getAllByText('Fully Vested').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('10-Year Service Mark')).toBeInTheDocument();
+  });
+
+  it('renders sidebar nav items for active member persona', async () => {
+    renderWithProviders(<MemberPortal {...defaultProps} />);
+    await waitFor(() => {
+      expect(screen.getByText('Dashboard')).toBeInTheDocument();
+    });
+    expect(screen.getByText('My Profile')).toBeInTheDocument();
+  });
+
+  it('navigates to other sections via sidebar', async () => {
+    renderWithProviders(<MemberPortal {...defaultProps} />);
+    await waitFor(() => {
+      expect(screen.getByText('My Profile')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('My Profile'));
+
+    // Dashboard router should no longer be visible
+    expect(screen.queryByTestId('dashboard-router')).not.toBeInTheDocument();
+    // Placeholder section should be visible
+    expect(screen.getByTestId('section-profile')).toBeInTheDocument();
+  });
+
+  it('wraps content in TourProvider', async () => {
+    renderWithProviders(<MemberPortal {...defaultProps} />);
+    // Tour auto-starts for first visit — wait for the tooltip to appear
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('tour-tooltip')).toBeInTheDocument();
+      },
+      { timeout: 1000 },
+    );
+  });
+
+  it('renders active member dashboard by default for status A', async () => {
+    renderWithProviders(<MemberPortal {...defaultProps} />);
+    await waitFor(() => {
+      expect(screen.getByTestId('active-member-dashboard')).toBeInTheDocument();
+    });
+  });
+
+  it('has loading test id on loading state', () => {
+    memberLoading = true;
+    memberData = undefined;
+    renderWithProviders(<MemberPortal {...defaultProps} />);
+    expect(screen.getByTestId('member-portal-loading')).toBeInTheDocument();
   });
 });
