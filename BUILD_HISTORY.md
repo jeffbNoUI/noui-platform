@@ -1,5 +1,55 @@
 # noui-platform — Build History
 
+## Member Portal Redesign — Phase 9: Documents (2026-03-18)
+
+**Branch:** `claude/agitated-greider`
+**Goal:** Complete Phase 9 (Tasks 63–68) — Full document pipeline from plan profile rules through ECM storage to archive UI.
+
+**What was built:**
+
+### Task 67: ECM Integration (Go backend)
+- `ECMProvider` interface: `Ingest`, `Retrieve`, `Delete` in `platform/dataaccess/ecm/`
+- Local filesystem adapter for dev/testing (production adapters added per-client)
+- 8 tests
+
+### Task 68: Document Upload & Download Endpoints (Go backend)
+- 4 endpoints: POST upload (multipart/ECM), GET issue docs, GET member docs, GET download URL
+- Handler struct extended with ECM provider dependency injection
+- 13 tests (sqlmock + local ECM adapter)
+
+### Task 63: DocumentSection Shell (Frontend)
+- Two-tab container: "My Checklist" + "All Documents"
+- Wired into MemberPortal sidebar navigation
+- 4 tests
+
+### Task 64: DocumentChecklist (Frontend)
+- `useDocumentChecklist` hook: merges plan profile rules with existing uploads via react-query
+- `statusToContext()` maps member status → plan profile context
+- Outstanding items show FileUpload (compact) per item; received items show checkmark
+- 15 tests (9 component + 6 hook)
+
+### Task 65: DocumentArchive (Frontend)
+- Categorized view: uploaded by member, from plan, DRO court orders
+- Type filter dropdown, download via ECM signed URL
+- DRO security: "Request Copy" only (no direct download)
+- 9 tests
+
+### API Layer Updates
+- `documentAPI.upload()` signature fixed to match backend (member_id as query param)
+- Added `documentAPI.download()` method
+
+**Test totals:** Go dataaccess 77 tests, Frontend 1,530 tests (192 files). All green.
+
+**Key decisions:**
+- ECM as pluggable interface — local adapter for dev, production adapters added per-client deployment
+- Document checklist context driven by member status (ACTIVE→retirement, INACTIVE→refund, etc.)
+- Shared react-query cache key between checklist and archive for automatic cross-tab sync
+- DRO download restriction implemented as render-level decision, not permissions system
+
+**Next:** Phase 10 — Notifications & Preferences (Tasks 69–75). See `docs/sessions/2026-03-18-phase10-session11-starter.md`.
+
+---
+
 ## Member Portal Redesign — Phase 8: Messages & Activity (2026-03-18)
 
 **Branch:** `claude/charming-cerf`
