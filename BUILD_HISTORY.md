@@ -1,5 +1,50 @@
 # noui-platform — Build History
 
+## Rules & Test Explorer (2026-03-19)
+
+**Branch:** `claude/sweet-lalande`
+**Goal:** Configuration support tool for viewing business rules, test execution status, and demo case walkthroughs with full traceability.
+
+**What was built:**
+
+### Backend — KB Service Extension (6 new endpoints)
+- `platform/knowledgebase/rules/` package — YAML rule loader, `go test -json` report parser, demo case JSON loader
+- `GET /api/v1/kb/rules/definitions` — full rule definitions parsed from YAML (9 domain files, ~50 rules)
+- `GET /api/v1/kb/rules/definitions/{ruleId}` — single rule with test status enrichment
+- `GET /api/v1/kb/test-report` — CI test report summary with per-rule aggregation
+- `GET /api/v1/kb/test-report/{ruleId}` — tests linked to a specific rule
+- `GET /api/v1/kb/demo-cases` / `GET /api/v1/kb/demo-cases/{caseId}` — demo case fixtures
+- In-memory cache with configurable TTL (default 5 min), thread-safe with RWMutex
+- Added `gopkg.in/yaml.v3` dependency to KB service
+
+### Frontend — 2 new views, 21 new components
+- **Rules Explorer** (`/rules-explorer` view mode) — browse rules by domain, search, see inline test pass/fail
+  - 4 structured logic renderers: Conditional (IF/THEN blocks), Formula (code blocks), Lookup Table (data grids), Procedural (numbered steps)
+  - Rule detail with 4 tabs: Logic, Inputs/Outputs, Tests, Governance
+  - Test status badges on every rule from CI report
+- **Demo Cases** (`/demo-cases` view mode) — 4 member scenario walkthroughs
+  - Calculation Trace: step-by-step rule execution with clickable rule links
+  - Member Profile with service credit breakdown and purchased service warnings
+  - Test Points checklist
+- Cross-linking between Rules Explorer and Demo Cases (bidirectional navigation)
+- Sidebar navigation: new "Configuration / Reference" section
+
+### Infrastructure
+- `scripts/generate-test-report.sh` — generates `go test -json` output for intelligence service
+- `test-results/test-rule-mapping.json` — 27 test→rule mappings
+- Docker Compose volume mounts for rules, demo cases, and test results
+
+### Test Coverage
+- Backend: 26 Go tests (types, loader, testreport, democase, 9 handler tests)
+- Frontend: 40 new component/page tests (1755 total, 221 test files)
+- All existing tests unaffected — zero regressions
+
+### Stats
+- 59 files changed, +4,340 lines
+- 10 commits on branch
+
+---
+
 ## Employer Domain Phase 6: Service Credit Purchase (2026-03-19)
 
 **Branch:** `claude/youthful-euclid` → merged as PR #109
