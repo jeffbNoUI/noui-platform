@@ -26,6 +26,13 @@ import type {
   RefundApplication,
   RefundCalculationResult,
   EligibilityResult,
+  WaretDesignation,
+  WaretTracking,
+  WaretYTDSummary,
+  WaretPenalty,
+  WaretICDisclosure,
+  WaretTrackingResult,
+  PERACareConflictResult,
 } from '@/types/Employer';
 
 const PORTAL = '/api/v1/employer';
@@ -316,4 +323,117 @@ export const employerTerminationsAPI = {
 
   checkEligibility: (id: string) =>
     fetchAPI<EligibilityResult>(`${TERMINATIONS}/refunds/${id}/eligibility`),
+};
+
+// ─── WARET API ───────────────────────────────────────────────────────────────
+
+const WARET = '/api/v1/waret';
+
+export const employerWaretAPI = {
+  // ─── Designations ────────────────────────────────────────────────────────────
+  createDesignation: (data: {
+    orgId: string;
+    ssnHash: string;
+    firstName: string;
+    lastName: string;
+    designationType: string;
+    calendarYear: number;
+    districtId?: string;
+    orpExempt?: boolean;
+    retireeId?: string;
+    notes?: string;
+  }) => postAPI<WaretDesignation>(`${WARET}/designations`, data),
+
+  listDesignations: (orgId: string, year?: number, status?: string, limit = 25, offset = 0) =>
+    fetchPaginatedAPI<WaretDesignation>(
+      `${WARET}/designations${toQueryString({
+        org_id: orgId,
+        year: year ? String(year) : '',
+        status: status ?? '',
+        limit,
+        offset,
+      })}`,
+    ),
+
+  getDesignation: (id: string) => fetchAPI<WaretDesignation>(`${WARET}/designations/${id}`),
+
+  approveDesignation: (id: string) =>
+    putAPI<{ status: string }>(`${WARET}/designations/${id}/approve`, {}),
+
+  revokeDesignation: (id: string, reason: string) =>
+    putAPI<{ status: string }>(`${WARET}/designations/${id}/revoke`, { reason }),
+
+  // ─── Tracking ────────────────────────────────────────────────────────────────
+  recordWorkDay: (data: {
+    designationId: string;
+    orgId: string;
+    workDate: string;
+    hoursWorked: string;
+    retireeId?: string;
+    notes?: string;
+  }) =>
+    postAPI<{ tracking: WaretTracking; limits: WaretTrackingResult }>(`${WARET}/tracking`, data),
+
+  listTracking: (designationId: string, limit = 25, offset = 0) =>
+    fetchPaginatedAPI<WaretTracking>(
+      `${WARET}/tracking${toQueryString({ designation_id: designationId, limit, offset })}`,
+    ),
+
+  getYTDSummary: (designationId: string) =>
+    fetchAPI<WaretYTDSummary>(`${WARET}/tracking/summary/${designationId}`),
+
+  // ─── Penalties ───────────────────────────────────────────────────────────────
+  assessPenalty: (data: {
+    designationId: string;
+    ssnHash: string;
+    penaltyType: string;
+    penaltyMonth: string;
+    monthlyBenefit: string;
+    daysOverLimit?: number;
+    spreadMonths?: number;
+    retireeId?: string;
+  }) => postAPI<WaretPenalty>(`${WARET}/penalties`, data),
+
+  listPenalties: (designationId: string, limit = 25, offset = 0) =>
+    fetchPaginatedAPI<WaretPenalty>(
+      `${WARET}/penalties${toQueryString({ designation_id: designationId, limit, offset })}`,
+    ),
+
+  appealPenalty: (id: string, note: string) =>
+    putAPI<{ status: string }>(`${WARET}/penalties/${id}/appeal`, { note }),
+
+  waivePenalty: (id: string, reason: string) =>
+    putAPI<{ status: string }>(`${WARET}/penalties/${id}/waive`, { reason }),
+
+  // ─── IC Disclosures ──────────────────────────────────────────────────────────
+  createDisclosure: (data: {
+    ssnHash: string;
+    orgId: string;
+    calendarYear: number;
+    icStartDate: string;
+    icDescription: string;
+    icEndDate?: string;
+    estimatedHours?: string;
+    estimatedCompensation?: string;
+    retireeId?: string;
+  }) => postAPI<WaretICDisclosure>(`${WARET}/disclosures`, data),
+
+  listDisclosures: (ssnHash: string, year?: number, limit = 25, offset = 0) =>
+    fetchPaginatedAPI<WaretICDisclosure>(
+      `${WARET}/disclosures${toQueryString({
+        ssn_hash: ssnHash,
+        year: year ? String(year) : '',
+        limit,
+        offset,
+      })}`,
+    ),
+
+  // ─── PERACare ────────────────────────────────────────────────────────────────
+  checkPERACare: (id: string, hasActiveSubsidy: boolean) =>
+    postAPI<PERACareConflictResult>(`${WARET}/designations/${id}/peracare-check`, {
+      hasActiveSubsidy,
+    }),
+
+  resolvePERACare: (id: string) =>
+    putAPI<{ status: string }>(`${WARET}/designations/${id}/peracare-resolve`, {}),
 };

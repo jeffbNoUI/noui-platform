@@ -9,6 +9,7 @@ import type { EmployerTab } from './layout/PortalNav';
 import EmployerDashboard from './dashboard/EmployerDashboard';
 import TerminationForm from './terminations/TerminationForm';
 import CertificationHoldPanel from './terminations/CertificationHold';
+import DesignationDashboard from './waret/DesignationDashboard';
 
 // ── Phase placeholders ──────────────────────────────────────────────────────
 
@@ -16,7 +17,6 @@ const PHASE_MAP: Partial<Record<EmployerTab, number>> = {
   communications: 2,
   reporting: 3,
   enrollment: 3,
-  waret: 4,
   scp: 4,
 };
 
@@ -124,8 +124,11 @@ export default function EmployerPortalApp() {
           </div>
         )}
 
+        {activeTab === 'waret' && <DesignationDashboard orgId={effectiveOrgId} />}
+
         {activeTab !== 'dashboard' &&
           activeTab !== 'terminations' &&
+          activeTab !== 'waret' &&
           PHASE_MAP[activeTab] !== undefined && (
             <PhasePlaceholder
               tab={activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
