@@ -14,13 +14,14 @@ func TestCleanupExpiredSessions_DeletesSome(t *testing.T) {
 	}
 	defer db.Close()
 
-	mock.ExpectExec("DELETE FROM active_sessions").
-		WillReturnResult(sqlmock.NewResult(0, 5))
-
 	cfg := models.JobConfig{
 		SessionIdleTimeoutMin: 30,
 		SessionMaxLifetimeHr:  8,
 	}
+
+	mock.ExpectExec("DELETE FROM active_sessions").
+		WithArgs(30, 8).
+		WillReturnResult(sqlmock.NewResult(0, 5))
 
 	CleanupExpiredSessions(db, cfg)
 

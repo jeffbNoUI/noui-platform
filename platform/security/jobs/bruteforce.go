@@ -3,11 +3,13 @@ package jobs
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	"encoding/json"
 	"log/slog"
 
 	"github.com/noui/platform/security/models"
 )
+
+const defaultTenantID = "00000000-0000-0000-0000-000000000001"
 
 // CheckBruteForce detects actors who exceeded the failed login threshold and creates alert events.
 func CheckBruteForce(db *sql.DB, cfg models.JobConfig) {
@@ -62,14 +64,23 @@ func CheckBruteForce(db *sql.DB, cfg models.JobConfig) {
 		}
 
 		// Insert alert event — resolve tenant_id from the actor's existing events
-		metadata := fmt.Sprintf(`{"failed_count":%d,"window_minutes":%d,"ip_address":"%s"}`,
-			actor.FailCount, cfg.BruteForceWindowMin, actor.IPAddress)
+		metaMap := map[string]interface{}{
+			"failed_count":   actor.FailCount,
+			"window_minutes": cfg.BruteForceWindowMin,
+			"ip_address":     actor.IPAddress,
+		}
+		metaBytes, err := json.Marshal(metaMap)
+		if err != nil {
+			slog.Error("failed to marshal metadata", "error", err)
+			continue
+		}
+		metadata := string(metaBytes)
 
 		_, err = db.ExecContext(ctx,
 			`INSERT INTO security_events (tenant_id, event_type, actor_id, actor_email, ip_address, metadata)
 			 VALUES ((SELECT COALESCE(
 			   (SELECT DISTINCT tenant_id FROM security_events WHERE actor_id = $1 ORDER BY tenant_id LIMIT 1),
-			   '00000000-0000-0000-0000-000000000001'::UUID
+			   '`+defaultTenantID+`'::UUID
 			 )), 'brute_force_detected', $1, $2, $3, $4)`,
 			actor.ActorID, actor.ActorEmail, actor.IPAddress, metadata,
 		)
