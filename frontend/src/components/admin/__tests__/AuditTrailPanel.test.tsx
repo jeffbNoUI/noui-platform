@@ -8,6 +8,11 @@ vi.mock('@/hooks/useAuditLog', () => ({
   useAuditLog: (...args: unknown[]) => mockUseAuditLog(...args),
 }));
 
+const mockUseSecurityEvents = vi.fn();
+vi.mock('@/hooks/useSecurityEvents', () => ({
+  useSecurityEvents: (...args: unknown[]) => mockUseSecurityEvents(...args),
+}));
+
 const MOCK_ENTRIES = {
   items: [
     {
@@ -35,6 +40,34 @@ const MOCK_ENTRIES = {
   pagination: { total: 2, limit: 50, offset: 0, hasMore: false },
 };
 
+const MOCK_SECURITY_EVENTS = {
+  items: [
+    {
+      id: 101,
+      tenantId: 't1',
+      eventType: 'login_success',
+      actorId: 'user-abc',
+      actorEmail: 'alice@example.com',
+      ipAddress: '10.0.0.1',
+      userAgent: 'Chrome',
+      metadata: '{}',
+      createdAt: '2026-03-17T14:35:00Z',
+    },
+    {
+      id: 102,
+      tenantId: 't1',
+      eventType: 'session_end',
+      actorId: 'user-xyz',
+      actorEmail: 'bob@example.com',
+      ipAddress: '10.0.0.2',
+      userAgent: 'Firefox',
+      metadata: '{}',
+      createdAt: '2026-03-17T14:25:00Z',
+    },
+  ],
+  pagination: { total: 2, limit: 25, offset: 0, hasMore: false },
+};
+
 function makeManyEntries(count: number) {
   return {
     items: Array.from({ length: count }, (_, i) => ({
@@ -55,6 +88,11 @@ describe('AuditTrailPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseAuditLog.mockReturnValue({ data: MOCK_ENTRIES, isLoading: false, isError: false });
+    mockUseSecurityEvents.mockReturnValue({
+      data: MOCK_SECURITY_EVENTS,
+      isLoading: false,
+      isError: false,
+    });
   });
 
   it('renders filter controls', () => {
@@ -82,8 +120,9 @@ describe('AuditTrailPanel', () => {
     expect(screen.getByText(/loading/i)).toBeInTheDocument();
   });
 
-  it('shows error state gracefully', () => {
+  it('shows error state gracefully when both sources fail', () => {
     mockUseAuditLog.mockReturnValue({ data: undefined, isLoading: false, isError: true });
+    mockUseSecurityEvents.mockReturnValue({ data: undefined, isLoading: false, isError: true });
     renderWithProviders(<AuditTrailPanel />);
     expect(screen.getByText(/unavailable/i)).toBeInTheDocument();
   });
@@ -180,5 +219,40 @@ describe('AuditTrailPanel', () => {
     renderWithProviders(<AuditTrailPanel />);
     fireEvent.click(screen.getByRole('button', { name: /load more/i }));
     expect(mockUseAuditLog).toHaveBeenCalledWith(expect.objectContaining({ offset: 50 }));
+  });
+
+  // --- Cross-service audit trail tests ---
+
+  it('renders security events alongside CRM audit entries', () => {
+    renderWithProviders(<AuditTrailPanel />);
+    expect(screen.getByText(/Updated phone number/)).toBeInTheDocument();
+    expect(screen.getAllByText(/login_success/).length).toBeGreaterThan(0);
+  });
+
+  it('sorts merged entries by timestamp descending (newest first)', () => {
+    renderWithProviders(<AuditTrailPanel />);
+    const items = screen.getAllByRole('listitem');
+    const texts = items.map((li) => li.textContent);
+    const loginIdx = texts.findIndex((t) => t?.includes('login_success'));
+    const updateIdx = texts.findIndex((t) => t?.includes('Updated phone'));
+    expect(loginIdx).toBeLessThan(updateIdx);
+  });
+
+  it('shows source badge to distinguish CRM vs Security entries', () => {
+    renderWithProviders(<AuditTrailPanel />);
+    expect(screen.getAllByText('CRM').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Security').length).toBeGreaterThan(0);
+  });
+
+  it('renders with only CRM data when security hook errors', () => {
+    mockUseSecurityEvents.mockReturnValue({ data: undefined, isLoading: false, isError: true });
+    renderWithProviders(<AuditTrailPanel />);
+    expect(screen.getByText(/Updated phone number/)).toBeInTheDocument();
+  });
+
+  it('renders with only security data when CRM hook errors', () => {
+    mockUseAuditLog.mockReturnValue({ data: undefined, isLoading: false, isError: true });
+    renderWithProviders(<AuditTrailPanel />);
+    expect(screen.getAllByText(/login_success/).length).toBeGreaterThan(0);
   });
 });
