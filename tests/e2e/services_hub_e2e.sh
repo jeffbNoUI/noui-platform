@@ -10,190 +10,34 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 BASE_URL="${BASE_URL:-http://localhost:3000}"
 TENANT_ID="00000000-0000-0000-0000-000000000001"
-DEV_SECRET="dev-secret-do-not-use-in-production"
 PASS_COUNT=0
 FAIL_COUNT=0
 TOTAL_COUNT=0
 
-# ─── JWT Generation ───────────────────────────────────────────────────────────
-# Generate an HS256 dev JWT matching the frontend devAuth.ts pattern.
-
-base64url_encode() {
-  openssl base64 -A | tr '+/' '-_' | tr -d '='
-}
-
-generate_dev_jwt() {
-  local header payload header_b64 payload_b64 signature
-  header='{"alg":"HS256","typ":"JWT"}'
-  payload="{\"sub\":\"dev-admin-001\",\"tenant_id\":\"${TENANT_ID}\",\"role\":\"admin\",\"member_id\":\"\",\"exp\":$(($(date +%s) + 3600))}"
-
-  header_b64=$(printf '%s' "$header" | base64url_encode)
-  payload_b64=$(printf '%s' "$payload" | base64url_encode)
-
-  signature=$(printf '%s' "${header_b64}.${payload_b64}" \
-    | openssl dgst -sha256 -hmac "$DEV_SECRET" -binary \
-    | base64url_encode)
-
-  echo "${header_b64}.${payload_b64}.${signature}"
-}
+# ─── Source shared libraries ─────────────────────────────────────────────────
+source "${SCRIPT_DIR}/lib/colors.sh"
+source "${SCRIPT_DIR}/lib/assert.sh"
+source "${SCRIPT_DIR}/lib/jwt.sh"
+source "${SCRIPT_DIR}/lib/http.sh"
 
 DEV_TOKEN=$(generate_dev_jwt)
 AUTH_HEADER="Authorization: Bearer ${DEV_TOKEN}"
 
-# ─── Colors ───────────────────────────────────────────────────────────────────
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-CYAN='\033[0;36m'
-NC='\033[0m'
-
-# ─── Helpers ──────────────────────────────────────────────────────────────────
-
-log_header() {
-  echo -e "\n${CYAN}═══ $1 ═══${NC}"
-}
-
-assert_status() {
-  local label="$1" expected="$2" actual="$3"
-  TOTAL_COUNT=$((TOTAL_COUNT + 1))
-  if [ "$expected" = "$actual" ]; then
-    echo -e "  ${GREEN}✓${NC} $label (HTTP $actual)"
-    PASS_COUNT=$((PASS_COUNT + 1))
-  else
-    echo -e "  ${RED}✗${NC} $label — expected HTTP $expected, got $actual"
-    FAIL_COUNT=$((FAIL_COUNT + 1))
-  fi
-}
-
-assert_json_field() {
-  local label="$1" json="$2" jq_expr="$3" expected="$4"
-  TOTAL_COUNT=$((TOTAL_COUNT + 1))
-  local actual
-  actual=$(echo "$json" | jq -r "$jq_expr" 2>/dev/null || echo "JQ_ERROR")
-  if [ "$actual" = "$expected" ]; then
-    echo -e "  ${GREEN}✓${NC} $label = $actual"
-    PASS_COUNT=$((PASS_COUNT + 1))
-  else
-    echo -e "  ${RED}✗${NC} $label — expected \"$expected\", got \"$actual\""
-    FAIL_COUNT=$((FAIL_COUNT + 1))
-  fi
-}
-
-assert_json_gte() {
-  local label="$1" json="$2" jq_expr="$3" min_val="$4"
-  TOTAL_COUNT=$((TOTAL_COUNT + 1))
-  local actual
-  actual=$(echo "$json" | jq -r "$jq_expr" 2>/dev/null || echo "0")
-  if [ "$actual" -ge "$min_val" ] 2>/dev/null; then
-    echo -e "  ${GREEN}✓${NC} $label = $actual (>= $min_val)"
-    PASS_COUNT=$((PASS_COUNT + 1))
-  else
-    echo -e "  ${RED}✗${NC} $label — expected >= $min_val, got \"$actual\""
-    FAIL_COUNT=$((FAIL_COUNT + 1))
-  fi
-}
-
-assert_json_not_null() {
-  local label="$1" json="$2" jq_expr="$3"
-  TOTAL_COUNT=$((TOTAL_COUNT + 1))
-  local actual
-  actual=$(echo "$json" | jq -r "$jq_expr" 2>/dev/null || echo "null")
-  if [ "$actual" != "null" ] && [ "$actual" != "" ]; then
-    echo -e "  ${GREEN}✓${NC} $label = $actual"
-    PASS_COUNT=$((PASS_COUNT + 1))
-  else
-    echo -e "  ${RED}✗${NC} $label — got null/empty"
-    FAIL_COUNT=$((FAIL_COUNT + 1))
-  fi
-}
-
-assert_contains() {
-  local label="$1" haystack="$2" needle="$3"
-  TOTAL_COUNT=$((TOTAL_COUNT + 1))
-  if echo "$haystack" | grep -qF "$needle"; then
-    echo -e "  ${GREEN}✓${NC} $label — contains \"$needle\""
-    PASS_COUNT=$((PASS_COUNT + 1))
-  else
-    echo -e "  ${RED}✗${NC} $label — does not contain \"$needle\""
-    FAIL_COUNT=$((FAIL_COUNT + 1))
-  fi
-}
-
-do_get() {
-  curl -s -w "\n%{http_code}" \
-    "${BASE_URL}$1" \
-    -H "${AUTH_HEADER}" \
-    -H "X-Tenant-ID: ${TENANT_ID}" 2>/dev/null || echo -e "\n000"
-}
-
-do_post() {
-  curl -s -w "\n%{http_code}" \
-    -X POST "${BASE_URL}$1" \
-    -H "Content-Type: application/json" \
-    -H "${AUTH_HEADER}" \
-    -H "X-Tenant-ID: ${TENANT_ID}" \
-    -d "$2" 2>/dev/null || echo -e "\n000"
-}
-
-do_put() {
-  curl -s -w "\n%{http_code}" \
-    -X PUT "${BASE_URL}$1" \
-    -H "Content-Type: application/json" \
-    -H "${AUTH_HEADER}" \
-    -H "X-Tenant-ID: ${TENANT_ID}" \
-    -d "$2" 2>/dev/null || echo -e "\n000"
-}
-
-extract_http() {
-  local response="$1"
-  HTTP_CODE=$(echo "$response" | tail -1)
-  BODY=$(echo "$response" | sed '$d')
-  if [ -z "$HTTP_CODE" ] || ! [[ "$HTTP_CODE" =~ ^[0-9]+$ ]]; then
-    HTTP_CODE="000"
-    BODY=""
-  fi
-}
-
-wait_for_services() {
-  echo -e "${YELLOW}Waiting for services to be healthy...${NC}"
-  local endpoints=(
-    "/api/v1/health/aggregate"
-    "/api/v1/dq/score"
-    "/api/v1/cases/stats"
-    "/api/v1/issues/stats"
-    "/api/v1/security/events/stats"
-    "/api/v1/kb/rules"
-    "/api/v1/crm/audit?limit=1"
-  )
-  local names=("healthagg" "dataquality" "casemanagement" "issues" "security" "knowledgebase" "crm")
-  for i in "${!endpoints[@]}"; do
-    local svc="${names[$i]}"
-    local ep="${endpoints[$i]}"
-    local attempts=0
-    while [ $attempts -lt 30 ]; do
-      local hc
-      hc=$(curl -s -o /dev/null -w "%{http_code}" "${BASE_URL}${ep}" -H "${AUTH_HEADER}" -H "X-Tenant-ID: ${TENANT_ID}" 2>/dev/null || echo "000")
-      if [ "$hc" = "200" ]; then
-        echo -e "  ${GREEN}✓${NC} ${svc} is ready"
-        break
-      fi
-      attempts=$((attempts + 1))
-      sleep 2
-    done
-    if [ $attempts -ge 30 ]; then
-      echo -e "  ${RED}✗${NC} ${svc} did not become healthy after 60s"
-      exit 1
-    fi
-  done
-  echo ""
-}
-
 # ─── Parse flags ──────────────────────────────────────────────────────────────
 
 if [[ "${1:-}" == "--wait" ]]; then
-  wait_for_services
+  wait_for_services \
+    "healthagg:/api/v1/health/aggregate" \
+    "dataquality:/api/v1/dq/score" \
+    "casemanagement:/api/v1/cases/stats" \
+    "issues:/api/v1/issues/stats" \
+    "security:/api/v1/security/events/stats" \
+    "knowledgebase:/api/v1/kb/rules" \
+    "crm:/api/v1/crm/audit?limit=1"
 fi
 
 echo -e "${CYAN}Services Hub Integration Tests${NC}"
@@ -439,17 +283,4 @@ assert_json_not_null "first rule has description" "$BODY" ".data[0].description"
 # SUMMARY
 # ═══════════════════════════════════════════════════════════════════════════════
 
-echo ""
-echo -e "${CYAN}═══════════════════════════════════════════${NC}"
-echo -e "  ${GREEN}Passed:${NC} ${PASS_COUNT}"
-echo -e "  ${RED}Failed:${NC} ${FAIL_COUNT}"
-echo -e "  Total:  ${TOTAL_COUNT}"
-echo -e "${CYAN}═══════════════════════════════════════════${NC}"
-
-if [ "$FAIL_COUNT" -gt 0 ]; then
-  echo -e "\n${RED}FAIL${NC} — $FAIL_COUNT test(s) failed"
-  exit 1
-else
-  echo -e "\n${GREEN}PASS${NC} — all $TOTAL_COUNT tests passed"
-  exit 0
-fi
+print_summary

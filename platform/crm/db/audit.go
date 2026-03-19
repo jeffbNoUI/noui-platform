@@ -57,7 +57,17 @@ func (s *Store) WriteAuditLog(ctx context.Context, entry *AuditEntry) error {
 // GetAuditLog retrieves audit log entries for a given entity or tenant scope.
 // If entityType and entityID are provided, results are scoped to that entity.
 // If only entityType is provided, results are scoped to that entity type within the tenant.
-func (s *Store) GetAuditLog(ctx context.Context, tenantID string, entityType string, entityID string, limit int) ([]AuditEntry, error) {
+// AuditFilter holds optional filter parameters for audit log queries.
+type AuditFilter struct {
+	EntityType string
+	EntityID   string
+	AgentID    string
+	DateFrom   string // RFC 3339 or YYYY-MM-DD
+	DateTo     string // RFC 3339 or YYYY-MM-DD
+	Limit      int
+}
+
+func (s *Store) GetAuditLog(ctx context.Context, tenantID string, filter AuditFilter) ([]AuditEntry, error) {
 	query := `
 		SELECT
 			audit_id, tenant_id, event_time, event_type,
@@ -71,22 +81,37 @@ func (s *Store) GetAuditLog(ctx context.Context, tenantID string, entityType str
 	args := []interface{}{tenantID}
 	argIdx := 2
 
-	if entityType != "" {
+	if filter.EntityType != "" {
 		query += fmt.Sprintf(" AND entity_type = $%d", argIdx)
-		args = append(args, entityType)
+		args = append(args, filter.EntityType)
 		argIdx++
 	}
-	if entityID != "" {
+	if filter.EntityID != "" {
 		query += fmt.Sprintf(" AND entity_id = $%d", argIdx)
-		args = append(args, entityID)
+		args = append(args, filter.EntityID)
+		argIdx++
+	}
+	if filter.AgentID != "" {
+		query += fmt.Sprintf(" AND agent_id = $%d", argIdx)
+		args = append(args, filter.AgentID)
+		argIdx++
+	}
+	if filter.DateFrom != "" {
+		query += fmt.Sprintf(" AND event_time >= $%d", argIdx)
+		args = append(args, filter.DateFrom)
+		argIdx++
+	}
+	if filter.DateTo != "" {
+		query += fmt.Sprintf(" AND event_time <= $%d", argIdx)
+		args = append(args, filter.DateTo)
 		argIdx++
 	}
 
 	query += " ORDER BY event_time DESC"
 
-	if limit > 0 {
+	if filter.Limit > 0 {
 		query += fmt.Sprintf(" LIMIT $%d", argIdx)
-		args = append(args, limit)
+		args = append(args, filter.Limit)
 		argIdx++
 	}
 

@@ -897,12 +897,19 @@ func (h *Handler) GetTaxonomy(w http.ResponseWriter, r *http.Request) {
 // --- Audit Handler ---
 
 func (h *Handler) GetAuditLog(w http.ResponseWriter, r *http.Request) {
-	tenantID := tenantID(r)
-	entityType := r.URL.Query().Get("entity_type")
-	entityID := r.URL.Query().Get("entity_id")
+	tid := tenantID(r)
 	limit, _ := validation.Pagination(intParam(r, "limit", 50), 0, 200)
 
-	entries, err := h.store.GetAuditLog(r.Context(), tenantID, entityType, entityID, limit)
+	filter := crmdb.AuditFilter{
+		EntityType: r.URL.Query().Get("entity_type"),
+		EntityID:   r.URL.Query().Get("entity_id"),
+		AgentID:    r.URL.Query().Get("agent_id"),
+		DateFrom:   r.URL.Query().Get("date_from"),
+		DateTo:     r.URL.Query().Get("date_to"),
+		Limit:      limit,
+	}
+
+	entries, err := h.store.GetAuditLog(r.Context(), tid, filter)
 	if err != nil {
 		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
