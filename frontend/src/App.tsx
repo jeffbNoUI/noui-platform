@@ -22,7 +22,7 @@ const MemberPortal = lazy(() => import('@/components/portal/MemberPortal'));
 const MemberDashboard = lazy(() => import('@/components/dashboard/MemberDashboard'));
 const RetirementApplication = lazy(() => import('@/components/RetirementApplication'));
 const CRMWorkspace = lazy(() => import('@/components/CRMWorkspace'));
-const EmployerPortal = lazy(() => import('@/components/portal/EmployerPortal'));
+const EmployerPortalApp = lazy(() => import('@/components/employer-portal/EmployerPortalApp'));
 const VendorPortal = lazy(() => import('@/components/portal/VendorPortal'));
 
 function PortalLoading() {
@@ -468,7 +468,7 @@ function AppInner() {
         {cmdPalette}
         <ErrorBoundary portalName="Employer Portal">
           <Suspense fallback={<PortalLoading />}>
-            <EmployerPortal onChangeView={handleChangeView} />
+            <EmployerPortalApp />
           </Suspense>
         </ErrorBoundary>
         <DevRoleSwitcher />

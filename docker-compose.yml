@@ -37,6 +37,12 @@ services:
       - ./domains/pension/schema/013_row_level_security.sql:/docker-entrypoint-initdb.d/026_row_level_security.sql
       - ./domains/pension/schema/014_performance_indexes.sql:/docker-entrypoint-initdb.d/027_performance_indexes.sql
       - ./domains/pension/schema/015_preferences_schema.sql:/docker-entrypoint-initdb.d/028_preferences_schema.sql
+      - ./domains/pension/schema/020_employer_shared.sql:/docker-entrypoint-initdb.d/029_employer_shared.sql
+      - ./domains/pension/schema/021_employer_reporting.sql:/docker-entrypoint-initdb.d/030_employer_reporting.sql
+      - ./domains/pension/schema/022_employer_enrollment.sql:/docker-entrypoint-initdb.d/031_employer_enrollment.sql
+      - ./domains/pension/schema/023_employer_terminations.sql:/docker-entrypoint-initdb.d/032_employer_terminations.sql
+      - ./domains/pension/schema/024_employer_waret.sql:/docker-entrypoint-initdb.d/033_employer_waret.sql
+      - ./domains/pension/schema/025_employer_scp.sql:/docker-entrypoint-initdb.d/034_employer_scp.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U derp"]
       interval: 5s
@@ -272,6 +278,132 @@ services:
       pgbouncer:
         condition: service_healthy
 
+  employer-portal:
+    build:
+      context: ./platform
+      dockerfile: employer-portal/Dockerfile
+    ports:
+      - "8094:8094"
+    environment:
+      PORT: "8094"
+      DB_HOST: pgbouncer
+      DB_PORT: "6432"
+      DB_USER: derp
+      DB_PASSWORD: derp
+      DB_NAME: derp
+      DB_SSLMODE: disable
+      DB_MAX_OPEN_CONNS: "5"
+      DB_MAX_IDLE_CONNS: "2"
+      CORS_ORIGIN: "http://localhost:3000"
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+
+  employer-reporting:
+    build:
+      context: ./platform
+      dockerfile: employer-reporting/Dockerfile
+    ports:
+      - "8095:8095"
+    environment:
+      PORT: "8095"
+      DB_HOST: pgbouncer
+      DB_PORT: "6432"
+      DB_USER: derp
+      DB_PASSWORD: derp
+      DB_NAME: derp
+      DB_SSLMODE: disable
+      DB_MAX_OPEN_CONNS: "5"
+      DB_MAX_IDLE_CONNS: "2"
+      CORS_ORIGIN: "http://localhost:3000"
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+
+  employer-enrollment:
+    build:
+      context: ./platform
+      dockerfile: employer-enrollment/Dockerfile
+    ports:
+      - "8096:8096"
+    environment:
+      PORT: "8096"
+      DB_HOST: pgbouncer
+      DB_PORT: "6432"
+      DB_USER: derp
+      DB_PASSWORD: derp
+      DB_NAME: derp
+      DB_SSLMODE: disable
+      DB_MAX_OPEN_CONNS: "5"
+      DB_MAX_IDLE_CONNS: "2"
+      CORS_ORIGIN: "http://localhost:3000"
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+
+  employer-terminations:
+    build:
+      context: ./platform
+      dockerfile: employer-terminations/Dockerfile
+    ports:
+      - "8097:8097"
+    environment:
+      PORT: "8097"
+      DB_HOST: pgbouncer
+      DB_PORT: "6432"
+      DB_USER: derp
+      DB_PASSWORD: derp
+      DB_NAME: derp
+      DB_SSLMODE: disable
+      DB_MAX_OPEN_CONNS: "5"
+      DB_MAX_IDLE_CONNS: "2"
+      CORS_ORIGIN: "http://localhost:3000"
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+
+  employer-waret:
+    build:
+      context: ./platform
+      dockerfile: employer-waret/Dockerfile
+    ports:
+      - "8098:8098"
+    environment:
+      PORT: "8098"
+      DB_HOST: pgbouncer
+      DB_PORT: "6432"
+      DB_USER: derp
+      DB_PASSWORD: derp
+      DB_NAME: derp
+      DB_SSLMODE: disable
+      DB_MAX_OPEN_CONNS: "5"
+      DB_MAX_IDLE_CONNS: "2"
+      CORS_ORIGIN: "http://localhost:3000"
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+
+  employer-scp:
+    build:
+      context: ./platform
+      dockerfile: employer-scp/Dockerfile
+    ports:
+      - "8099:8099"
+    environment:
+      PORT: "8099"
+      DB_HOST: pgbouncer
+      DB_PORT: "6432"
+      DB_USER: derp
+      DB_PASSWORD: derp
+      DB_NAME: derp
+      DB_SSLMODE: disable
+      DB_MAX_OPEN_CONNS: "5"
+      DB_MAX_IDLE_CONNS: "2"
+      CORS_ORIGIN: "http://localhost:3000"
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+
   connector:
     build:
       context: ./connector
@@ -290,7 +422,7 @@ services:
       - "8091:8091"
     environment:
       PORT: "8091"
-      HEALTH_SERVICES: "dataaccess:http://dataaccess:8081,intelligence:http://intelligence:8082,crm:http://crm:8083,correspondence:http://correspondence:8085,dataquality:http://dataquality:8086,knowledgebase:http://knowledgebase:8087,casemanagement:http://casemanagement:8088,preferences:http://preferences:8089,connector:http://connector:8090:/healthz,issues:http://issues:8092,security:http://security:8093"
+      HEALTH_SERVICES: "dataaccess:http://dataaccess:8081,intelligence:http://intelligence:8082,crm:http://crm:8083,correspondence:http://correspondence:8085,dataquality:http://dataquality:8086,knowledgebase:http://knowledgebase:8087,casemanagement:http://casemanagement:8088,preferences:http://preferences:8089,connector:http://connector:8090:/healthz,issues:http://issues:8092,security:http://security:8093,employer-portal:http://employer-portal:8094,employer-reporting:http://employer-reporting:8095,employer-enrollment:http://employer-enrollment:8096,employer-terminations:http://employer-terminations:8097,employer-waret:http://employer-waret:8098,employer-scp:http://employer-scp:8099"
       CORS_ORIGIN: "http://localhost:3000"
     depends_on:
       - dataaccess
@@ -304,6 +436,12 @@ services:
       - connector
       - issues
       - security
+      - employer-portal
+      - employer-reporting
+      - employer-enrollment
+      - employer-terminations
+      - employer-waret
+      - employer-scp
 
   frontend:
     build:
@@ -321,6 +459,12 @@ services:
       - correspondence
       - issues
       - security
+      - employer-portal
+      - employer-reporting
+      - employer-enrollment
+      - employer-terminations
+      - employer-waret
+      - employer-scp
 
 volumes:
   pgdata:

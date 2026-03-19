@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [apiresponse, dataaccess, intelligence, crm, correspondence, dataquality, knowledgebase, casemanagement, issues, preferences, security]
+        service: [apiresponse, dataaccess, intelligence, crm, correspondence, dataquality, knowledgebase, casemanagement, issues, preferences, security, employer-shared, employer-portal, employer-reporting, employer-enrollment, employer-terminations, employer-waret, employer-scp]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
