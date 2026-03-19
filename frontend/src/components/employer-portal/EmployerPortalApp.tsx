@@ -7,6 +7,8 @@ import AlertBanner from './layout/AlertBanner';
 import PortalNav from './layout/PortalNav';
 import type { EmployerTab } from './layout/PortalNav';
 import EmployerDashboard from './dashboard/EmployerDashboard';
+import TerminationForm from './terminations/TerminationForm';
+import CertificationHoldPanel from './terminations/CertificationHold';
 
 // ── Phase placeholders ──────────────────────────────────────────────────────
 
@@ -14,7 +16,6 @@ const PHASE_MAP: Partial<Record<EmployerTab, number>> = {
   communications: 2,
   reporting: 3,
   enrollment: 3,
-  terminations: 3,
   waret: 4,
   scp: 4,
 };
@@ -116,12 +117,21 @@ export default function EmployerPortalApp() {
       <div style={{ maxWidth: 1320, margin: '0 auto', padding: '24px 32px 60px' }}>
         {activeTab === 'dashboard' && <EmployerDashboard orgId={effectiveOrgId} />}
 
-        {activeTab !== 'dashboard' && PHASE_MAP[activeTab] !== undefined && (
-          <PhasePlaceholder
-            tab={activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-            phase={PHASE_MAP[activeTab]!}
-          />
+        {activeTab === 'terminations' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+            <TerminationForm orgId={effectiveOrgId} />
+            <CertificationHoldPanel orgId={effectiveOrgId} />
+          </div>
         )}
+
+        {activeTab !== 'dashboard' &&
+          activeTab !== 'terminations' &&
+          PHASE_MAP[activeTab] !== undefined && (
+            <PhasePlaceholder
+              tab={activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+              phase={PHASE_MAP[activeTab]!}
+            />
+          )}
       </div>
     </div>
   );

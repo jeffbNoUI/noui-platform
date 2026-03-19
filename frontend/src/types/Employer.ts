@@ -316,3 +316,136 @@ export interface PERAChoiceElection {
   createdAt: string;
   updatedAt: string;
 }
+
+// ─── Terminations types (Phase 4) ────────────────────────────────────────────
+// Match Go models from platform/employer-terminations/db/models.go
+
+export type TerminationReason =
+  | 'RESIGNATION'
+  | 'RETIREMENT'
+  | 'LAYOFF'
+  | 'TERMINATION'
+  | 'DEATH'
+  | 'DISABILITY'
+  | 'OTHER';
+
+export type CertificationStatus =
+  | 'SUBMITTED'
+  | 'UNDER_REVIEW'
+  | 'VERIFIED'
+  | 'REJECTED'
+  | 'CANCELLED';
+
+export type HoldStatus =
+  | 'PENDING'
+  | 'REMINDER_SENT'
+  | 'ESCALATED'
+  | 'RESOLVED'
+  | 'CANCELLED'
+  | 'EXPIRED';
+
+export type RefundApplicationStatus =
+  | 'DRAFT'
+  | 'SUBMITTED'
+  | 'HOLD_PENDING_CERTIFICATION'
+  | 'ELIGIBILITY_CHECK'
+  | 'CALCULATION_COMPLETE'
+  | 'PAYMENT_SCHEDULED'
+  | 'PAYMENT_LOCKED'
+  | 'DISBURSED'
+  | 'DENIED'
+  | 'CANCELLED'
+  | 'FORFEITURE_ACKNOWLEDGED';
+
+export type RefundPaymentMethod = 'DIRECT_DEPOSIT' | 'ROLLOVER' | 'PARTIAL_ROLLOVER' | 'CHECK';
+
+export interface TerminationCertification {
+  id: string;
+  orgId: string;
+  memberId: string | null;
+  ssnHash: string;
+  firstName: string;
+  lastName: string;
+  lastDayWorked: string;
+  terminationReason: TerminationReason;
+  finalContributionDate: string | null;
+  finalSalaryAmount: string | null;
+  certificationStatus: CertificationStatus;
+  submittedBy: string;
+  verifiedBy: string | null;
+  verifiedAt: string | null;
+  rejectedBy: string | null;
+  rejectedAt: string | null;
+  rejectionReason: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CertificationHold {
+  id: string;
+  refundApplicationId: string;
+  orgId: string;
+  memberId: string | null;
+  ssnHash: string;
+  holdStatus: HoldStatus;
+  holdReason: string;
+  countdownDays: number;
+  expiresAt: string;
+  reminderSentAt: string | null;
+  escalatedAt: string | null;
+  resolvedBy: string | null;
+  resolvedAt: string | null;
+  resolutionNote: string | null;
+  certificationId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RefundApplication {
+  id: string;
+  memberId: string | null;
+  ssnHash: string;
+  firstName: string;
+  lastName: string;
+  hireDate: string;
+  terminationDate: string | null;
+  separationDate: string | null;
+  yearsOfService: string | null;
+  isVested: boolean;
+  hasDisabilityApp: boolean;
+  disabilityAppDate: string | null;
+  employeeContributions: string;
+  interestRate: string | null;
+  interestAmount: string;
+  grossRefund: string;
+  federalTaxWithholding: string;
+  droDeduction: string;
+  netRefund: string;
+  paymentMethod: RefundPaymentMethod | null;
+  rolloverAmount: string | null;
+  directAmount: string | null;
+  applicationStatus: RefundApplicationStatus;
+  forfeitureAcknowledged: boolean;
+  forfeitureAcknowledgedAt: string | null;
+  memberSignature: boolean;
+  notarized: boolean;
+  w9Received: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RefundCalculationResult {
+  employeeContributions: string;
+  interestRate: string;
+  interestAmount: string;
+  grossRefund: string;
+  federalTaxWithholding: string;
+  droDeduction: string;
+  netRefund: string;
+}
+
+export interface EligibilityResult {
+  eligible: boolean;
+  reasons: string[];
+}
