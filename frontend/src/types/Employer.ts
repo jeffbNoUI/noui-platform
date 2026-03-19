@@ -605,3 +605,103 @@ export interface PERACareConflictResult {
   subsidyRemoved: boolean;
   reason: string;
 }
+
+// ─── SCP (Service Credit Purchase) types ────────────────────────────────────
+// Match the Go model types from platform/employer-scp/db/models.go
+
+export type SCPServiceType =
+  | 'REFUNDED_PRIOR_PERA'
+  | 'MILITARY_USERRA'
+  | 'PRIOR_PUBLIC_EMPLOYMENT'
+  | 'LEAVE_OF_ABSENCE'
+  | 'PERACHOICE_TRANSFER';
+
+export type SCPRequestStatus =
+  | 'DRAFT'
+  | 'QUOTED'
+  | 'PENDING_DOCS'
+  | 'UNDER_REVIEW'
+  | 'APPROVED'
+  | 'PAYING'
+  | 'COMPLETED'
+  | 'EXPIRED'
+  | 'DENIED'
+  | 'CANCELLED';
+
+export type SCPPaymentMethod = 'LUMP_SUM' | 'DIRECT_ROLLOVER' | 'INSTALLMENT';
+
+export interface SCPCostFactor {
+  id: string;
+  tier: string;
+  hireDateFrom: string;
+  hireDateTo: string;
+  ageAtPurchase: number;
+  effectiveDate: string;
+  expiryDate: string | null;
+  costFactor: string;
+  sourceDocument: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SCPRequest {
+  id: string;
+  orgId: string;
+  memberId: string | null;
+  ssnHash: string;
+  firstName: string;
+  lastName: string;
+  serviceType: SCPServiceType;
+  tier: string;
+  yearsRequested: string;
+  costFactorId: string | null;
+  costFactor: string | null;
+  annualSalaryAtPurchase: string | null;
+  totalCost: string | null;
+  paymentMethod: SCPPaymentMethod | null;
+  amountPaid: string;
+  amountRemaining: string;
+  quoteDate: string | null;
+  quoteExpires: string | null;
+  quoteRecalculated: boolean;
+  documentationReceived: boolean;
+  documentationVerified: boolean;
+  verifiedBy: string | null;
+  verifiedAt: string | null;
+  // CRITICAL: Exclusion flags — immutable after creation
+  excludesFromRuleOf7585: boolean;
+  excludesFromIpr: boolean;
+  excludesFromVesting: boolean;
+  requestStatus: SCPRequestStatus;
+  submittedBy: string | null;
+  submittedAt: string | null;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  reviewNote: string | null;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  deniedBy: string | null;
+  deniedAt: string | null;
+  denialReason: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SCPCostQuoteResult {
+  costFactor: string;
+  annualSalary: string;
+  yearsRequested: string;
+  totalCost: string;
+  quoteDate: string;
+  quoteExpires: string;
+}
+
+export interface SCPEligibilityResult {
+  eligible: boolean;
+  serviceType: string;
+  label: string;
+  requiredDocs: string[];
+  errors?: string[];
+}

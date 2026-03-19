@@ -33,6 +33,10 @@ import type {
   WaretICDisclosure,
   WaretTrackingResult,
   PERACareConflictResult,
+  SCPCostFactor,
+  SCPRequest,
+  SCPCostQuoteResult,
+  SCPEligibilityResult,
 } from '@/types/Employer';
 
 const PORTAL = '/api/v1/employer';
@@ -436,4 +440,108 @@ export const employerWaretAPI = {
 
   resolvePERACare: (id: string) =>
     putAPI<{ status: string }>(`${WARET}/designations/${id}/peracare-resolve`, {}),
+};
+
+// ─── SCP (Service Credit Purchase) API ──────────────────────────────────────
+const SCP = '/api/v1/scp';
+
+export const employerScpAPI = {
+  // ─── Cost Factors ────────────────────────────────────────────────────────────
+  listCostFactors: (tier?: string, activeOnly = true, limit = 50, offset = 0) =>
+    fetchPaginatedAPI<SCPCostFactor>(
+      `${SCP}/cost-factors${toQueryString({
+        tier: tier ?? '',
+        active: activeOnly ? 'true' : '',
+        limit,
+        offset,
+      })}`,
+    ),
+
+  lookupCostFactor: (tier: string, hireDate: string, age: number) =>
+    fetchAPI<SCPCostFactor>(
+      `${SCP}/cost-factors/lookup${toQueryString({
+        tier,
+        hire_date: hireDate,
+        age: String(age),
+      })}`,
+    ),
+
+  createCostFactor: (data: {
+    tier: string;
+    hireDateFrom: string;
+    hireDateTo: string;
+    ageAtPurchase: number;
+    effectiveDate: string;
+    costFactor: string;
+    sourceDocument?: string;
+    notes?: string;
+  }) => postAPI<SCPCostFactor>(`${SCP}/cost-factors`, data),
+
+  // ─── Cost Quotes ─────────────────────────────────────────────────────────────
+  generateQuote: (data: {
+    tier: string;
+    hireDate: string;
+    ageAtPurchase: number;
+    annualSalary: string;
+    yearsRequested: string;
+  }) => postAPI<{ factor: SCPCostFactor; quote: SCPCostQuoteResult }>(`${SCP}/quotes`, data),
+
+  // ─── Purchase Requests ───────────────────────────────────────────────────────
+  createRequest: (data: {
+    orgId: string;
+    ssnHash: string;
+    firstName: string;
+    lastName: string;
+    serviceType: string;
+    tier: string;
+    yearsRequested: string;
+    memberId?: string;
+    notes?: string;
+  }) => postAPI<SCPRequest>(`${SCP}/requests`, data),
+
+  getRequest: (id: string) => fetchAPI<SCPRequest>(`${SCP}/requests/${id}`),
+
+  listRequests: (orgId: string, status?: string, limit = 25, offset = 0) =>
+    fetchPaginatedAPI<SCPRequest>(
+      `${SCP}/requests${toQueryString({
+        org_id: orgId,
+        status: status ?? '',
+        limit,
+        offset,
+      })}`,
+    ),
+
+  applyQuote: (
+    id: string,
+    data: {
+      costFactorId: string;
+      costFactor: string;
+      annualSalary: string;
+      totalCost: string;
+      quoteDate: string;
+      quoteExpires: string;
+    },
+  ) => putAPI<{ status: string }>(`${SCP}/requests/${id}/quote`, data),
+
+  submitDocumentation: (id: string) =>
+    putAPI<{ status: string }>(`${SCP}/requests/${id}/submit-docs`, {}),
+
+  approveRequest: (id: string) => putAPI<{ status: string }>(`${SCP}/requests/${id}/approve`, {}),
+
+  denyRequest: (id: string, reason: string) =>
+    putAPI<{ status: string }>(`${SCP}/requests/${id}/deny`, { reason }),
+
+  recordPayment: (id: string, amount: string, paymentMethod: string) =>
+    postAPI<{ status: string }>(`${SCP}/requests/${id}/payment`, {
+      amount,
+      paymentMethod,
+    }),
+
+  cancelRequest: (id: string) => putAPI<{ status: string }>(`${SCP}/requests/${id}/cancel`, {}),
+
+  // ─── Eligibility ─────────────────────────────────────────────────────────────
+  checkEligibility: (serviceType: string, tier: string) =>
+    fetchAPI<SCPEligibilityResult>(
+      `${SCP}/eligibility${toQueryString({ service_type: serviceType, tier })}`,
+    ),
 };

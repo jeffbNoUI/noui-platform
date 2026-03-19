@@ -10,6 +10,9 @@ import EmployerDashboard from './dashboard/EmployerDashboard';
 import TerminationForm from './terminations/TerminationForm';
 import CertificationHoldPanel from './terminations/CertificationHold';
 import DesignationDashboard from './waret/DesignationDashboard';
+import CostQuote from './scp/CostQuote';
+import PurchaseRequest from './scp/PurchaseRequest';
+import PaymentTracker from './scp/PaymentTracker';
 
 // ── Phase placeholders ──────────────────────────────────────────────────────
 
@@ -17,7 +20,6 @@ const PHASE_MAP: Partial<Record<EmployerTab, number>> = {
   communications: 2,
   reporting: 3,
   enrollment: 3,
-  scp: 4,
 };
 
 function PhasePlaceholder({ tab, phase }: { tab: string; phase: number }) {
@@ -126,9 +128,18 @@ export default function EmployerPortalApp() {
 
         {activeTab === 'waret' && <DesignationDashboard orgId={effectiveOrgId} />}
 
+        {activeTab === 'scp' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+            <CostQuote orgId={effectiveOrgId} />
+            <PurchaseRequest orgId={effectiveOrgId} />
+            <PaymentTracker orgId={effectiveOrgId} />
+          </div>
+        )}
+
         {activeTab !== 'dashboard' &&
           activeTab !== 'terminations' &&
           activeTab !== 'waret' &&
+          activeTab !== 'scp' &&
           PHASE_MAP[activeTab] !== undefined && (
             <PhasePlaceholder
               tab={activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
