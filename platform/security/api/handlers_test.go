@@ -721,6 +721,11 @@ func TestMapClerkEventType(t *testing.T) {
 		{"session.created", "session_start"},
 		{"session.ended", "session_end"},
 		{"user.updated", "role_change"},
+		{"user.created", "account_created"},
+		{"user.deleted", "account_deleted"},
+		{"session.revoked", "session_revoked"},
+		{"organization.membership.created", "org_member_added"},
+		{"organization.membership.deleted", "org_member_removed"},
 		{"unknown.event", ""},
 	}
 
