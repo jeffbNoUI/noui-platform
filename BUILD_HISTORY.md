@@ -1,5 +1,43 @@
 # noui-platform — Build History
 
+## Employer Domain Phase 6: Service Credit Purchase (2026-03-19)
+
+**Branch:** `claude/youthful-euclid` → merged as PR #109
+**Goal:** Build the SCP (Service Credit Purchase) service — cost factor lookup, exclusion flag enforcement, payment tracking.
+
+**What was built:**
+
+### Database schema (`domains/pension/schema/025_employer_scp.sql`)
+- `scp_cost_factor` — actuarial cost factor lookup with versioning (tier × hire date × age)
+- `scp_request` — purchase requests with 3 immutable boolean exclusion flags
+- PostgreSQL `BEFORE UPDATE` trigger `trg_scp_exclusion_immutable` prevents any modification of exclusion flags after creation (defense-in-depth)
+
+### Go service (`platform/employer-scp/`, port 8099, 47 tests)
+- `domain/costfactor.go` — `CalculateCost` using `math/big.Rat` for penny accuracy, 60-day quote expiry
+- `domain/eligibility.go` — 5 service types (refunded PERA, military/USERRA, prior public, leave of absence, PERAChoice transfer), 3 tiers, documentation requirements
+- `domain/exclusions.go` — flag creation (always true), validation, immutability verification
+- `db/store.go` — full CRUD + quote application, payment recording, approval/denial workflows
+- `api/handlers.go` — 15 endpoints across cost factors, quotes, requests, eligibility
+- 19 handler tests + 13 cost factor tests + 5 eligibility tests + 10 exclusion tests
+
+### Frontend (17 tests)
+- `CostQuote.tsx` — tier/age/salary quote generator with form validation
+- `PurchaseRequest.tsx` — request CRUD with exclusion flag notice, status badges, approve/deny/cancel actions
+- `PaymentTracker.tsx` — payment progress with progress bars, record payment form
+- `useEmployerScp.ts` — 10 React Query hooks (queries + mutations with cache invalidation)
+- `employerApi.ts` — SCP API client appended (cost factors, quotes, requests, eligibility)
+- `Employer.ts` — SCP types appended (SCPCostFactor, SCPRequest, SCPEligibilityResult, etc.)
+- SCP tab wired into `EmployerPortalApp.tsx` (will be visible when Phase 7 swaps App.tsx)
+
+**Key design decisions:**
+- Exclusion flags enforced at 3 levels: domain logic, store layer (hardcoded true), and DB trigger
+- SCP BPI document not yet available — framework built with cost factor lookup; details to be filled when BPI is retrieved
+- Cost calculation formula: `totalCost = yearsRequested × annualSalary × costFactor` using `math/big.Rat`
+
+**Test totals:** 1,709 frontend tests (212 files), 234 Go tests across 7 employer modules. All passing, zero regressions.
+
+---
+
 ## Employer Domain — Phase 5: WARET (2026-03-19)
 
 **Branch:** `claude/happy-montalcini`
