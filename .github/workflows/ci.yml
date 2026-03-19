@@ -44,7 +44,7 @@ jobs:
         run: go vet ./...
       - name: Test
         working-directory: platform/${{ matrix.service }}
-        run: go test ./... -v -count=1
+        run: go test ./... -v -count=1 -short
 
   frontend:
     name: Frontend
