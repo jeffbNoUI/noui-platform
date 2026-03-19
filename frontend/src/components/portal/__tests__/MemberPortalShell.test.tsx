@@ -1,64 +1,50 @@
-import { describe, it, expect, vi } from 'vitest';
-import { screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
+import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@/test/helpers';
 import MemberPortalShell from '../MemberPortalShell';
 
 describe('MemberPortalShell', () => {
-  const defaultProps = {
-    memberId: 10001,
-    personas: ['active' as const],
-    activeSection: 'dashboard',
-    onNavigate: vi.fn(),
-  };
-
-  it('renders the shell with sidebar and main content area', () => {
+  it('renders the shell with main content area', () => {
     renderWithProviders(
-      <MemberPortalShell {...defaultProps}>
+      <MemberPortalShell>
         <div data-testid="test-content">Hello</div>
       </MemberPortalShell>,
     );
     expect(screen.getByTestId('member-portal-shell')).toBeInTheDocument();
-    expect(screen.getByRole('navigation')).toBeInTheDocument();
     expect(screen.getByRole('main')).toBeInTheDocument();
     expect(screen.getByTestId('test-content')).toBeInTheDocument();
   });
 
   it('renders optional header slot', () => {
     renderWithProviders(
-      <MemberPortalShell {...defaultProps} header={<div data-testid="custom-header">Header</div>}>
+      <MemberPortalShell header={<div data-testid="custom-header">Header</div>}>
         <div>Content</div>
       </MemberPortalShell>,
     );
     expect(screen.getByTestId('custom-header')).toBeInTheDocument();
   });
 
-  it('delegates navigation to onNavigate callback', () => {
-    const onNavigate = vi.fn();
+  it('uses single-column layout without sidebar', () => {
     renderWithProviders(
-      <MemberPortalShell {...defaultProps} onNavigate={onNavigate}>
+      <MemberPortalShell>
         <div>Content</div>
       </MemberPortalShell>,
     );
-    fireEvent.click(screen.getByTestId('nav-profile'));
-    expect(onNavigate).toHaveBeenCalledWith('profile');
+
+    const shell = screen.getByTestId('member-portal-shell');
+    // Should NOT use display:flex (old sidebar layout)
+    expect(shell.style.display).not.toBe('flex');
   });
 
-  it('passes badge counts to sidebar', () => {
+  it('constrains main content width', () => {
     renderWithProviders(
-      <MemberPortalShell {...defaultProps} badgeCounts={{ messages: 5 }}>
+      <MemberPortalShell>
         <div>Content</div>
       </MemberPortalShell>,
     );
-    expect(screen.getByText('5')).toBeInTheDocument();
-  });
 
-  it('filters sidebar items based on persona', () => {
-    renderWithProviders(
-      <MemberPortalShell {...defaultProps} personas={['retiree']}>
-        <div>Content</div>
-      </MemberPortalShell>,
-    );
-    expect(screen.getByTestId('nav-benefit')).toBeInTheDocument();
-    expect(screen.queryByTestId('nav-calculator')).not.toBeInTheDocument();
+    const main = screen.getByRole('main');
+    expect(main.style.maxWidth).toBe('1320px');
+    expect(main.style.margin).toBe('0px auto');
   });
 });

@@ -10,6 +10,10 @@ import {
 import BenefitHero from './BenefitHero';
 import MilestoneTimeline from './MilestoneTimeline';
 import ActionItems, { type ActionItem } from './ActionItems';
+import CardGrid from '../CardGrid';
+import NavigationCard from '../NavigationCard';
+import { getCardsForPersona } from '../cardDefinitions';
+import { getHintForCard } from '../learningHints';
 
 export interface ActiveMemberDashboardProps {
   memberId: number;
@@ -53,11 +57,20 @@ export default function ActiveMemberDashboard({
     });
   }
 
-  // Quick links
-  const quickLinks = [
-    { key: 'projections', label: 'Explore retirement scenarios', icon: '◈' },
-    { key: 'profile', label: 'Update my profile', icon: '◉' },
-  ];
+  // Build card summaries from loaded data
+  const personas: 'active'[] = ['active'];
+  const cards = getCardsForPersona(personas);
+
+  const summaries: Record<string, string | undefined> = {
+    profile: effectiveMember.first_name ? 'Review your personal information' : undefined,
+    calculator: estimatedMonthly
+      ? `Est. $${Math.round(estimatedMonthly).toLocaleString()}/mo`
+      : undefined,
+    'retirement-app': undefined,
+    documents: undefined,
+    messages: undefined,
+    preferences: undefined,
+  };
 
   return (
     <div
@@ -76,34 +89,21 @@ export default function ActiveMemberDashboard({
         <MilestoneTimeline milestones={milestones} />
       </div>
 
-      {/* Quick link cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        {quickLinks.map((link) => (
-          <button
-            key={link.key}
-            onClick={() => onNavigate?.(link.key)}
-            data-testid={`quick-link-${link.key}`}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              padding: '16px 20px',
-              background: C.cardBg,
-              border: `1px solid ${C.border}`,
-              borderRadius: 10,
-              cursor: 'pointer',
-              fontFamily: BODY,
-              fontSize: 14,
-              fontWeight: 500,
-              color: C.navy,
-              textAlign: 'left',
-            }}
-          >
-            <span style={{ fontSize: 20 }}>{link.icon}</span>
-            {link.label}
-          </button>
+      {/* Navigation cards */}
+      <CardGrid>
+        {cards.map((card) => (
+          <NavigationCard
+            key={card.key}
+            icon={card.icon}
+            title={card.label}
+            summary={summaries[card.key] ?? card.staticSummary}
+            tourId={`card-${card.key}`}
+            accentColor={card.accentColor}
+            hint={getHintForCard(card.key, personas)}
+            onClick={() => onNavigate?.(card.key)}
+          />
         ))}
-      </div>
+      </CardGrid>
     </div>
   );
 }
