@@ -1,5 +1,26 @@
 # noui-platform — Build History
 
+## Visual Polish + Cross-Service Audit + Clerk Events (2026-03-19)
+
+**Branch:** `claude/quizzical-lovelace`
+**Goal:** Complete visual polish items, add cross-service audit trail, extend Clerk webhook event types.
+
+**What was built:**
+
+1. **DQ Score formatting fix** — `OperationalMetricsPanel.tsx` now uses `.toFixed(1)` to display `98.6%` instead of raw float `98.61538461538461%`. +1 test.
+2. **Cross-service audit trail** — `AuditTrailPanel.tsx` now fetches from both `/crm/audit` and `/security/events`, merges and sorts by timestamp descending. Source badges (CRM in gray, Security in violet) distinguish entries. Either source can fail independently. Updated CSV export includes Source column. +5 tests.
+3. **Clerk webhook event types** — Added 5 new mappings to security service: `user.created`→`account_created`, `user.deleted`→`account_deleted`, `session.revoked`→`session_revoked`, `organization.membership.created`→`org_member_added`, `organization.membership.deleted`→`org_member_removed`. Total: 9 mapped types. +5 test cases.
+
+**Design exploration (deferred):**
+4. **Background job infrastructure** — Full design session exploring PostgreSQL `SKIP LOCKED`, Redis/asynq, and NATS approaches. Decision: defer until concrete need. Recommended approach: PG-native `SKIP LOCKED` behind a database-agnostic `JobStore` interface (portable across SQL Server, Oracle, DB2). Design captured in Claude memory.
+5. **Database portability** — Noted as future consideration. `SKIP LOCKED` pattern works across all major enterprise databases. Repository adapter pattern recommended for new services.
+
+**Test totals:** Frontend 1,636 tests (204 files). Security Go 49 tests. All green.
+
+**Next session starter:** `docs/sessions/2026-03-19-next-session-starter.md` — options for job infra, frontend polish, or SLA tracking.
+
+---
+
 ## Employer Domain — Phase 1: Foundation (2026-03-19)
 
 **Branch:** `claude/pedantic-kepler`

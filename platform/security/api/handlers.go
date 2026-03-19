@@ -261,6 +261,16 @@ func mapClerkEventType(clerkType string) string {
 		return "session_end"
 	case "user.updated":
 		return "role_change"
+	case "user.created":
+		return "account_created"
+	case "user.deleted":
+		return "account_deleted"
+	case "session.revoked":
+		return "session_revoked"
+	case "organization.membership.created":
+		return "org_member_added"
+	case "organization.membership.deleted":
+		return "org_member_removed"
 	default:
 		return ""
 	}

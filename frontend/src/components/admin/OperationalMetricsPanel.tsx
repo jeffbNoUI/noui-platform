@@ -44,7 +44,7 @@ export default function OperationalMetricsPanel() {
   const slaOnTrackPct = slaTotal > 0 ? ((slaStats!.onTrack / slaTotal) * 100).toFixed(1) : null;
   const slaOnTrack = slaOnTrackPct ? `${slaOnTrackPct}%` : dash;
   const avgProcessing = slaStats ? `${slaStats.avgProcessingDays} days` : dash;
-  const dqValue = dqScore ? `${dqScore.overallScore}%` : dash;
+  const dqValue = dqScore ? `${dqScore.overallScore.toFixed(1)}%` : dash;
 
   // Pipeline bar data (sorted by count descending)
   const stages = caseStats?.caseloadByStage
