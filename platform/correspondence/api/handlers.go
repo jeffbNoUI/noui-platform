@@ -38,6 +38,10 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	// Generate
 	mux.HandleFunc("POST /api/v1/correspondence/generate", h.Generate)
 
+	// Employer templates
+	mux.HandleFunc("GET /api/v1/correspondence/templates/employer", h.ListEmployerTemplates)
+	mux.HandleFunc("POST /api/v1/correspondence/generate/employer", h.GenerateEmployer)
+
 	// History
 	mux.HandleFunc("GET /api/v1/correspondence/history", h.ListHistory)
 	mux.HandleFunc("GET /api/v1/correspondence/history/{id}", h.GetCorrespondence)

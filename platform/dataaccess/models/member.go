@@ -198,6 +198,19 @@ type TaxDocument struct {
 	StateWithheld     float64   `json:"state_withheld"`
 }
 
+// EmployerMemberSummary provides aggregate member stats for an employer organization.
+type EmployerMemberSummary struct {
+	OrgID           string `json:"org_id"`
+	TotalMembers    int    `json:"total_members"`
+	ActiveCount     int    `json:"active_count"`
+	RetiredCount    int    `json:"retired_count"`
+	TerminatedCount int    `json:"terminated_count"`
+	DeferredCount   int    `json:"deferred_count"`
+	Tier1Count      int    `json:"tier1_count"`
+	Tier2Count      int    `json:"tier2_count"`
+	Tier3Count      int    `json:"tier3_count"`
+}
+
 // Address represents a member mailing/residential address.
 type Address struct {
 	AddressID   int    `json:"address_id"`

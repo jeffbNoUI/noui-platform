@@ -48,6 +48,10 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/members/{id}/addresses", h.GetAddresses)
 	mux.HandleFunc("PUT /api/v1/members/{id}/addresses/{aid}", h.UpdateAddress)
 
+	// Employer-scoped member endpoints
+	mux.HandleFunc("GET /api/v1/employer/{orgId}/members", h.EmployerMemberRoster)
+	mux.HandleFunc("GET /api/v1/employer/{orgId}/members/summary", h.EmployerMemberSummary)
+
 	// Document endpoints
 	mux.HandleFunc("POST /api/v1/issues/{id}/documents", h.UploadDocument)
 	mux.HandleFunc("GET /api/v1/issues/{id}/documents", h.ListIssueDocuments)

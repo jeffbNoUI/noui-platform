@@ -41,6 +41,11 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/dq/score", h.GetScore)
 	mux.HandleFunc("GET /api/v1/dq/score/trend", h.GetScoreTrend)
 
+	// Employer-scoped DQ
+	mux.HandleFunc("GET /api/v1/dq/employer/{orgId}/score", h.GetEmployerScore)
+	mux.HandleFunc("GET /api/v1/dq/employer/{orgId}/issues", h.ListEmployerIssues)
+	mux.HandleFunc("GET /api/v1/dq/employer/{orgId}/checks", h.ListEmployerChecks)
+
 	// Issues
 	mux.HandleFunc("GET /api/v1/dq/issues", h.ListIssues)
 	mux.HandleFunc("PUT /api/v1/dq/issues/{id}", h.UpdateIssue)

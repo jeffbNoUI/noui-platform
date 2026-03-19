@@ -69,6 +69,11 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/crm/organizations", h.ListOrganizations)
 	mux.HandleFunc("POST /api/v1/crm/organizations", h.CreateOrganization)
 	mux.HandleFunc("GET /api/v1/crm/organizations/{id}", h.GetOrganization)
+	mux.HandleFunc("GET /api/v1/crm/organizations/{id}/interactions", h.ListOrgInteractions)
+	mux.HandleFunc("GET /api/v1/crm/organizations/{id}/contacts", h.ListOrgContacts)
+
+	// Employer interactions
+	mux.HandleFunc("POST /api/v1/crm/interactions/employer", h.CreateEmployerInteraction)
 
 	// Taxonomy
 	mux.HandleFunc("GET /api/v1/crm/taxonomy", h.GetTaxonomy)

@@ -223,6 +223,49 @@ func RenderTemplate(tmpl *models.Template, mergeData map[string]string) (string,
 }
 
 // ============================================================
+// EMPLOYER CONTEXT QUERIES
+// ============================================================
+
+// GetOrgMergeFields looks up employer organization details from crm_organization
+// and returns them as merge field key-value pairs.
+func (s *Store) GetOrgMergeFields(ctx context.Context, orgID string) (map[string]string, error) {
+	query := `
+		SELECT org_name, ein, reporting_frequency
+		FROM crm_organization
+		WHERE org_id = $1 AND deleted_at IS NULL`
+
+	var orgName string
+	var ein, reportingFrequency sql.NullString
+
+	err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, query, orgID).Scan(
+		&orgName, &ein, &reportingFrequency,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("getting org merge fields for %s: %w", orgID, err)
+	}
+
+	fields := map[string]string{
+		"org_name": orgName,
+	}
+	if ein.Valid {
+		fields["ein"] = ein.String
+	}
+	if reportingFrequency.Valid {
+		fields["reporting_frequency"] = reportingFrequency.String
+	}
+
+	return fields, nil
+}
+
+// RenderTemplatePublic is a Store method that wraps the package-level RenderTemplate function.
+func (s *Store) RenderTemplatePublic(tmpl *models.Template, mergeData map[string]string) (string, error) {
+	return RenderTemplate(tmpl, mergeData)
+}
+
+// ============================================================
 // CORRESPONDENCE HISTORY QUERIES
 // ============================================================
 

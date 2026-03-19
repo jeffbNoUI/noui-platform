@@ -94,6 +94,30 @@ type DQScoreTrend struct {
 // API REQUEST TYPES
 // ============================================================
 
+// EmployerDQSummary provides a DQ score scoped to employer domain tables.
+type EmployerDQSummary struct {
+	OrgID          string  `json:"orgId"`
+	OverallScore   float64 `json:"overallScore"`
+	TotalChecks    int     `json:"totalChecks"`
+	PassingChecks  int     `json:"passingChecks"`
+	OpenIssues     int     `json:"openIssues"`
+	CriticalIssues int     `json:"criticalIssues"`
+}
+
+// Employer DQ check categories for employer-domain-specific quality checks.
+const (
+	EmpCheckContributionAmount   = "CONTRIBUTION_AMOUNT"
+	EmpCheckEnrollmentTimeliness = "ENROLLMENT_TIMELINESS"
+	EmpCheckReportingCompliance  = "REPORTING_COMPLIANCE"
+	EmpCheckTerminationComplete  = "TERMINATION_COMPLETENESS"
+)
+
+// EmployerTargetTables lists the DB tables that belong to the employer domain.
+var EmployerTargetTables = []string{
+	"contribution_file", "contribution_record", "contribution_exception",
+	"enrollment_submission", "termination_certification", "certification_hold",
+}
+
 // UpdateIssueRequest contains the mutable fields for updating a DQ issue.
 type UpdateIssueRequest struct {
 	Status         *string `json:"status,omitempty"`

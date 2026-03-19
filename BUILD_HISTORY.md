@@ -1,5 +1,61 @@
 # noui-platform — Build History
 
+## Employer Domain Phase 8: Cross-Service Enhancement (2026-03-19)
+
+**Branch:** `claude/brave-mendel`
+**Goal:** Make 5 existing platform services employer-aware with new endpoints and queries.
+
+**What was built:**
+
+### 8.1 — Data Access (`platform/dataaccess/`)
+- `api/employer_handlers.go` — 2 handlers: `EmployerMemberRoster` (paginated), `EmployerMemberSummary` (tier/status breakdown)
+- Member↔employer bridge via CRM JOINs: `crm_org_contact` → `crm_contact(legacy_mbr_id)` → `MEMBER_MASTER(member_id)`
+- `api/employer_handlers_test.go` — 5 tests
+
+### 8.2 — CRM (`platform/crm/`)
+- `db/employer_queries.go` — `ListOrgInteractions`, `ListOrgContacts`
+- `api/employer_handlers.go` — 3 handlers + 6 employer interaction category constants
+- `api/employer_handlers_test.go` — 7 tests
+
+### 8.3 — Correspondence (`platform/correspondence/`)
+- `db/postgres.go` — `GetOrgMergeFields`, `RenderTemplatePublic` methods
+- `api/employer_handlers.go` — `ListEmployerTemplates`, `GenerateEmployer` (auto-populates org merge fields)
+- `models/types.go` — `EmployerGenerateRequest`, `EmployerMergeFields` (7 fields)
+- `api/employer_handlers_test.go` — 5 tests
+
+### 8.4 — Data Quality (`platform/dataquality/`)
+- `db/employer_queries.go` — `GetEmployerScore`, `ListEmployerIssues`, `ListEmployerChecks` (all filtered to 6 employer target tables)
+- `api/employer_handlers.go` — 3 handlers with UUID validation
+- `models/types.go` — `EmployerDQSummary`, 4 check category constants, `EmployerTargetTables`
+- `api/employer_handlers_test.go` — 11 tests
+
+### 8.5 — Case Management (`platform/casemanagement/`)
+- `domain/triggers.go` — 5 trigger type → case config mappings (enrollment, termination, contribution exception, WARET, SCP)
+- `db/employer_queries.go` — `ListCasesByEmployer`, `GetEmployerCaseSummary`, `GetCaseByTriggerRef` (idempotency)
+- `api/employer_handlers.go` — 3 handlers: `ListEmployerCases`, `GetEmployerCaseSummary`, `CreateEmployerCase`
+- `models/types.go` — `EmployerTriggerTypes`, `CreateEmployerCaseRequest`, `EmployerCaseSummary`, `TriggerConfig`
+- Routes under `/api/v1/employer/{orgId}/cases` prefix (avoids Go 1.22 ServeMux wildcard conflict with `/cases/{id}`)
+- `api/employer_handlers_test.go` — 17 tests
+
+**New endpoints (13 total):**
+- `GET /api/v1/employer/{orgId}/members` — member roster
+- `GET /api/v1/employer/{orgId}/members/summary` — member summary
+- `GET /api/v1/crm/organizations/{id}/interactions` — org interactions
+- `GET /api/v1/crm/organizations/{id}/contacts` — org contacts
+- `POST /api/v1/crm/interactions/employer` — create employer interaction
+- `GET /api/v1/correspondence/templates/employer` — employer templates
+- `POST /api/v1/correspondence/generate/employer` — generate employer letter
+- `GET /api/v1/dq/employer/{orgId}/score` — employer DQ score
+- `GET /api/v1/dq/employer/{orgId}/issues` — employer DQ issues
+- `GET /api/v1/dq/employer/{orgId}/checks` — employer DQ checks
+- `GET /api/v1/employer/{orgId}/cases` — employer cases
+- `GET /api/v1/employer/{orgId}/cases/summary` — employer case summary
+- `POST /api/v1/employer/cases` — create case from employer trigger
+
+**Test results:** All 5 services build clean, all tests pass (0 regressions). 45 new employer tests across 5 services.
+
+---
+
 ## Employer Domain Phase 7: Integration (2026-03-19)
 
 **Branch:** `claude/hopeful-diffie` → merged as PR #110

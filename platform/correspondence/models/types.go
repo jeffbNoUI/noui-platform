@@ -78,6 +78,21 @@ type GenerateRequest struct {
 	MergeData  map[string]string `json:"mergeData"`
 }
 
+// EmployerGenerateRequest contains fields for generating employer-context correspondence.
+// OrgID is used to look up employer details to pre-fill merge fields.
+type EmployerGenerateRequest struct {
+	TemplateID string            `json:"templateId"`
+	OrgID      string            `json:"orgId"`
+	ContactID  *string           `json:"contactId,omitempty"`
+	MergeData  map[string]string `json:"mergeData"`
+}
+
+// EmployerMergeFields lists the auto-populated merge field keys for employer templates.
+var EmployerMergeFields = []string{
+	"org_name", "ein", "division_code", "division_name",
+	"primary_contact_name", "primary_contact_email", "reporting_frequency",
+}
+
 // UpdateCorrespondenceRequest contains the mutable fields for updating correspondence.
 type UpdateCorrespondenceRequest struct {
 	Status          *string `json:"status,omitempty"`
