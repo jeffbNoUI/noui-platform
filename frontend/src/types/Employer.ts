@@ -449,3 +449,159 @@ export interface EligibilityResult {
   eligible: boolean;
   reasons: string[];
 }
+
+// ─── WARET (Working After Retirement) types ────────────────────────────────
+
+export type WaretDesignationType = 'STANDARD' | '140_DAY' | 'CRITICAL_SHORTAGE';
+export type WaretDesignationStatus =
+  | 'PENDING'
+  | 'APPROVED'
+  | 'ACTIVE'
+  | 'EXPIRED'
+  | 'REVOKED'
+  | 'SUSPENDED';
+export type WaretPenaltyType = 'OVER_LIMIT' | 'FIRST_BUSINESS_DAY' | 'NON_DISCLOSURE';
+export type WaretPenaltyStatus =
+  | 'ASSESSED'
+  | 'APPEALED'
+  | 'CONFIRMED'
+  | 'WAIVED'
+  | 'COLLECTING'
+  | 'COLLECTED';
+export type WaretTrackingStatus = 'RECORDED' | 'VERIFIED' | 'DISPUTED' | 'VOIDED';
+export type WaretDisclosureStatus = 'SUBMITTED' | 'REVIEWED' | 'FLAGGED' | 'CLEARED';
+
+export interface WaretDesignation {
+  id: string;
+  orgId: string;
+  retireeId: string | null;
+  ssnHash: string;
+  firstName: string;
+  lastName: string;
+  designationType: WaretDesignationType;
+  calendarYear: number;
+  dayLimit: number | null;
+  hourLimit: number | null;
+  consecutiveYears: number;
+  districtId: string | null;
+  orpExempt: boolean;
+  designationStatus: WaretDesignationStatus;
+  peracareConflict: boolean;
+  peracareLetterSentAt: string | null;
+  peracareResponseDue: string | null;
+  peracareResolved: boolean;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  revokedBy: string | null;
+  revokedAt: string | null;
+  revocationReason: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WaretTracking {
+  id: string;
+  designationId: string;
+  orgId: string;
+  retireeId: string | null;
+  workDate: string;
+  hoursWorked: string;
+  countsAsDay: boolean;
+  ytdDays: number;
+  ytdHours: string;
+  entryStatus: WaretTrackingStatus;
+  submittedBy: string;
+  verifiedBy: string | null;
+  verifiedAt: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WaretYTDSummary {
+  designationId: string;
+  orgId: string;
+  retireeId: string | null;
+  ssnHash: string;
+  calendarYear: number;
+  designationType: WaretDesignationType;
+  dayLimit: number | null;
+  hourLimit: number | null;
+  orpExempt: boolean;
+  totalDays: number;
+  totalHours: string;
+  daysRemaining: number | null;
+  hoursRemaining: string | null;
+  overLimit: boolean;
+}
+
+export interface WaretPenalty {
+  id: string;
+  designationId: string;
+  retireeId: string | null;
+  ssnHash: string;
+  penaltyType: WaretPenaltyType;
+  penaltyMonth: string;
+  monthlyBenefit: string;
+  daysOverLimit: number;
+  penaltyRate: string;
+  penaltyAmount: string;
+  employerRecovery: string;
+  retireeRecovery: string;
+  spreadMonths: number;
+  monthlyDeduction: string;
+  penaltyStatus: WaretPenaltyStatus;
+  assessedBy: string | null;
+  assessedAt: string;
+  appealedAt: string | null;
+  appealNote: string | null;
+  waivedBy: string | null;
+  waivedAt: string | null;
+  waiverReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WaretICDisclosure {
+  id: string;
+  retireeId: string | null;
+  ssnHash: string;
+  orgId: string;
+  calendarYear: number;
+  icStartDate: string;
+  icEndDate: string | null;
+  icDescription: string;
+  estimatedHours: string | null;
+  estimatedCompensation: string | null;
+  disclosureStatus: WaretDisclosureStatus;
+  submittedAt: string;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  reviewNote: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WaretValidationResult {
+  valid: boolean;
+  reasons: string[];
+}
+
+export interface WaretTrackingResult {
+  countsAsDay: boolean;
+  hoursWorked: string;
+  newYtdDays: number;
+  newYtdHours: string;
+  overDayLimit: boolean;
+  overHourLimit: boolean;
+  daysRemaining: number | null;
+  hoursRemaining: string | null;
+}
+
+export interface PERACareConflictResult {
+  hasConflict: boolean;
+  responseDue: string | null;
+  subsidyRemoved: boolean;
+  reason: string;
+}
