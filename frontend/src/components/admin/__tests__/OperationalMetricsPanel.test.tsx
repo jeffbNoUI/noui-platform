@@ -124,4 +124,34 @@ describe('OperationalMetricsPanel', () => {
     renderWithProviders(<OperationalMetricsPanel />);
     expect(screen.getByText('Active Cases')).toBeInTheDocument();
   });
+
+  it('shows unavailability banner when all hooks return no data', () => {
+    mockCaseStats.mockReturnValue({ data: undefined, isLoading: false });
+    mockSLAStats.mockReturnValue({ data: undefined, isLoading: false });
+    mockVolumeStats.mockReturnValue({ data: undefined, isLoading: false });
+    mockCommitmentStats.mockReturnValue({ data: undefined, isLoading: false });
+    mockDQScore.mockReturnValue({ data: undefined, isLoading: false });
+    renderWithProviders(<OperationalMetricsPanel />);
+    expect(screen.getByRole('alert')).toHaveTextContent(/unavailable/i);
+  });
+
+  it('does NOT show banner while loading', () => {
+    mockCaseStats.mockReturnValue({ data: undefined, isLoading: true });
+    mockSLAStats.mockReturnValue({ data: undefined, isLoading: true });
+    mockVolumeStats.mockReturnValue({ data: undefined, isLoading: false });
+    mockCommitmentStats.mockReturnValue({ data: undefined, isLoading: false });
+    mockDQScore.mockReturnValue({ data: undefined, isLoading: false });
+    renderWithProviders(<OperationalMetricsPanel />);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('does NOT show banner when any data is available', () => {
+    mockCaseStats.mockReturnValue({ data: CASE_STATS, isLoading: false });
+    mockSLAStats.mockReturnValue({ data: undefined, isLoading: false });
+    mockVolumeStats.mockReturnValue({ data: undefined, isLoading: false });
+    mockCommitmentStats.mockReturnValue({ data: undefined, isLoading: false });
+    mockDQScore.mockReturnValue({ data: undefined, isLoading: false });
+    renderWithProviders(<OperationalMetricsPanel />);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
 });

@@ -2,11 +2,18 @@
 package api
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log/slog"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
 
 	"github.com/noui/platform/apiresponse"
 	"github.com/noui/platform/auth"
@@ -183,9 +190,21 @@ func (h *Handler) DeleteSession(w http.ResponseWriter, r *http.Request) {
 // --- Clerk Webhook Handler ---
 
 func (h *Handler) ClerkWebhook(w http.ResponseWriter, r *http.Request) {
-	// TODO: Validate Clerk webhook signatures for production use.
+	// Read raw body for signature verification, then unmarshal.
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		apiresponse.WriteError(w, http.StatusBadRequest, "security", "INVALID_REQUEST", "failed to read request body")
+		return
+	}
+	defer r.Body.Close()
+
+	if err := verifyClerkSignature(r.Header, bodyBytes); err != nil {
+		apiresponse.WriteError(w, http.StatusUnauthorized, "security", "UNAUTHORIZED", err.Error())
+		return
+	}
+
 	var payload models.ClerkWebhookPayload
-	if err := decodeJSON(r, &payload); err != nil {
+	if err := json.Unmarshal(bodyBytes, &payload); err != nil {
 		apiresponse.WriteError(w, http.StatusBadRequest, "security", "INVALID_REQUEST", err.Error())
 		return
 	}
@@ -316,4 +335,48 @@ func intParam(r *http.Request, name string, defaultVal int) int {
 		return defaultVal
 	}
 	return v
+}
+
+// verifyClerkSignature validates Svix webhook signatures used by Clerk.
+// If CLERK_WEBHOOK_SECRET is not set, validation is skipped (dev mode).
+func verifyClerkSignature(headers http.Header, body []byte) error {
+	secret := os.Getenv("CLERK_WEBHOOK_SECRET")
+	if secret == "" {
+		slog.Warn("CLERK_WEBHOOK_SECRET not set — skipping webhook signature validation (dev mode)")
+		return nil
+	}
+
+	svixID := headers.Get("svix-id")
+	svixTimestamp := headers.Get("svix-timestamp")
+	svixSignature := headers.Get("svix-signature")
+
+	if svixID == "" || svixTimestamp == "" || svixSignature == "" {
+		return fmt.Errorf("missing svix signature headers")
+	}
+
+	// Clerk/Svix secrets are base64-encoded with a "whsec_" prefix
+	secretBytes, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(secret, "whsec_"))
+	if err != nil {
+		return fmt.Errorf("invalid webhook secret encoding")
+	}
+
+	// Signed content: "${svix_id}.${svix_timestamp}.${body}"
+	signedContent := fmt.Sprintf("%s.%s.%s", svixID, svixTimestamp, string(body))
+
+	mac := hmac.New(sha256.New, secretBytes)
+	mac.Write([]byte(signedContent))
+	expected := base64.StdEncoding.EncodeToString(mac.Sum(nil))
+
+	// svix-signature may contain multiple signatures: "v1,<sig1> v1,<sig2>"
+	for _, sig := range strings.Split(svixSignature, " ") {
+		parts := strings.SplitN(sig, ",", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		if hmac.Equal([]byte(expected), []byte(parts[1])) {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("invalid webhook signature")
 }
