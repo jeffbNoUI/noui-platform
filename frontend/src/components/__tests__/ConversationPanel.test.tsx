@@ -78,7 +78,7 @@ function setupFetch(conversation: Conversation | null) {
         json: () =>
           Promise.resolve({
             data: conversation,
-            meta: { request_id: 'test', timestamp: new Date().toISOString() },
+            meta: { requestId: 'test', timestamp: new Date().toISOString() },
           }),
       });
     }
@@ -90,7 +90,7 @@ function setupFetch(conversation: Conversation | null) {
         json: () =>
           Promise.resolve({
             data: { ...conversation, status: 'resolved' },
-            meta: { request_id: 'test', timestamp: new Date().toISOString() },
+            meta: { requestId: 'test', timestamp: new Date().toISOString() },
           }),
       });
     }

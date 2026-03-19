@@ -40,7 +40,7 @@ function setupFetch(outreachItems: Outreach[]) {
           Promise.resolve({
             data: outreachItems,
             pagination: { total: outreachItems.length, limit: 25, offset: 0, hasMore: false },
-            meta: { request_id: 'test', timestamp: new Date().toISOString() },
+            meta: { requestId: 'test', timestamp: new Date().toISOString() },
           }),
       });
     }
@@ -51,7 +51,7 @@ function setupFetch(outreachItems: Outreach[]) {
         json: () =>
           Promise.resolve({
             data: { ...outreachItems[0], ...body },
-            meta: { request_id: 'test', timestamp: new Date().toISOString() },
+            meta: { requestId: 'test', timestamp: new Date().toISOString() },
           }),
       });
     }
@@ -60,7 +60,7 @@ function setupFetch(outreachItems: Outreach[]) {
       json: () =>
         Promise.resolve({
           data: null,
-          meta: { request_id: 'test', timestamp: new Date().toISOString() },
+          meta: { requestId: 'test', timestamp: new Date().toISOString() },
         }),
     });
   });

@@ -56,7 +56,7 @@ function normalizeEnums(obj: unknown): unknown {
 
 export interface APIResponse<T> {
   data: T;
-  meta: { request_id: string; timestamp: string };
+  meta: { requestId: string; timestamp: string };
 }
 
 export class APIError extends Error {

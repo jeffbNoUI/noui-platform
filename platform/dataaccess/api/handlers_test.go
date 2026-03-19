@@ -10,6 +10,7 @@ import (
 	"time"
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
+	"github.com/noui/platform/apiresponse"
 	"github.com/noui/platform/dataaccess/models"
 )
 
@@ -93,17 +94,17 @@ func TestNullStr_Null(t *testing.T) {
 
 func TestWriteJSON(t *testing.T) {
 	w := httptest.NewRecorder()
-	writeJSON(w, http.StatusOK, map[string]string{"key": "value"})
+	apiresponse.WriteJSON(w, http.StatusOK, map[string]string{"key": "value"})
 
 	if w.Code != http.StatusOK {
-		t.Errorf("writeJSON status = %d, want %d", w.Code, http.StatusOK)
+		t.Errorf("WriteJSON status = %d, want %d", w.Code, http.StatusOK)
 	}
 	if ct := w.Header().Get("Content-Type"); ct != "application/json" {
 		t.Errorf("Content-Type = %q, want application/json", ct)
 	}
 	var body map[string]string
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
-		t.Fatalf("writeJSON body parse error: %v", err)
+		t.Fatalf("WriteJSON body parse error: %v", err)
 	}
 	if body["key"] != "value" {
 		t.Errorf("body[key] = %q, want %q", body["key"], "value")
@@ -112,25 +113,25 @@ func TestWriteJSON(t *testing.T) {
 
 func TestWriteSuccess(t *testing.T) {
 	w := httptest.NewRecorder()
-	writeSuccess(w, map[string]string{"hello": "world"})
+	apiresponse.WriteSuccess(w, http.StatusOK, "dataaccess", map[string]string{"hello": "world"})
 
 	if w.Code != http.StatusOK {
-		t.Errorf("writeSuccess status = %d, want %d", w.Code, http.StatusOK)
+		t.Errorf("WriteSuccess status = %d, want %d", w.Code, http.StatusOK)
 	}
 
 	var body map[string]interface{}
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
-		t.Fatalf("writeSuccess body parse error: %v", err)
+		t.Fatalf("WriteSuccess body parse error: %v", err)
 	}
 	if body["data"] == nil {
-		t.Error("writeSuccess response missing 'data' field")
+		t.Error("WriteSuccess response missing 'data' field")
 	}
 	meta, ok := body["meta"].(map[string]interface{})
 	if !ok {
-		t.Fatal("writeSuccess response missing 'meta' field")
+		t.Fatal("WriteSuccess response missing 'meta' field")
 	}
-	if meta["request_id"] == nil || meta["request_id"] == "" {
-		t.Error("meta.request_id should not be empty")
+	if meta["requestId"] == nil || meta["requestId"] == "" {
+		t.Error("meta.requestId should not be empty")
 	}
 	if meta["timestamp"] == nil || meta["timestamp"] == "" {
 		t.Error("meta.timestamp should not be empty")
@@ -139,19 +140,19 @@ func TestWriteSuccess(t *testing.T) {
 
 func TestWriteError(t *testing.T) {
 	w := httptest.NewRecorder()
-	writeError(w, http.StatusBadRequest, "INVALID", "bad input")
+	apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "INVALID", "bad input")
 
 	if w.Code != http.StatusBadRequest {
-		t.Errorf("writeError status = %d, want %d", w.Code, http.StatusBadRequest)
+		t.Errorf("WriteError status = %d, want %d", w.Code, http.StatusBadRequest)
 	}
 
 	var body map[string]interface{}
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
-		t.Fatalf("writeError body parse error: %v", err)
+		t.Fatalf("WriteError body parse error: %v", err)
 	}
 	errObj, ok := body["error"].(map[string]interface{})
 	if !ok {
-		t.Fatal("writeError response missing 'error' field")
+		t.Fatal("WriteError response missing 'error' field")
 	}
 	if errObj["code"] != "INVALID" {
 		t.Errorf("error.code = %q, want %q", errObj["code"], "INVALID")
@@ -159,8 +160,8 @@ func TestWriteError(t *testing.T) {
 	if errObj["message"] != "bad input" {
 		t.Errorf("error.message = %q, want %q", errObj["message"], "bad input")
 	}
-	if errObj["request_id"] == nil || errObj["request_id"] == "" {
-		t.Error("error.request_id should not be empty")
+	if errObj["requestId"] == nil || errObj["requestId"] == "" {
+		t.Error("error.requestId should not be empty")
 	}
 }
 

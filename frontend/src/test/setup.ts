@@ -4,7 +4,7 @@ import '@testing-library/jest-dom';
 globalThis.fetch = vi.fn(() =>
   Promise.resolve({
     ok: true,
-    json: () => Promise.resolve({ data: null, meta: { request_id: 'test', timestamp: new Date().toISOString() } }),
+    json: () => Promise.resolve({ data: null, meta: { requestId: 'test', timestamp: new Date().toISOString() } }),
   } as Response)
 );
 

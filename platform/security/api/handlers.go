@@ -5,12 +5,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"strconv"
-	"time"
 
-	"github.com/google/uuid"
+	"github.com/noui/platform/apiresponse"
 	"github.com/noui/platform/auth"
 	secdb "github.com/noui/platform/security/db"
 	"github.com/noui/platform/security/models"
@@ -49,7 +47,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 // HealthCheck returns service health status.
 func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{
+	apiresponse.WriteJSON(w, http.StatusOK, map[string]string{
 		"status":  "ok",
 		"service": "security",
 		"version": "0.1.0",
@@ -74,17 +72,17 @@ func (h *Handler) ListEvents(w http.ResponseWriter, r *http.Request) {
 
 	events, total, err := h.store.ListEvents(r.Context(), tid, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "security", "DB_ERROR", err.Error())
 		return
 	}
 
-	writePaginated(w, events, total, filter.Limit, filter.Offset)
+	apiresponse.WritePaginated(w, "security", events, total, filter.Limit, filter.Offset)
 }
 
 func (h *Handler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateEventRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "security", "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -93,18 +91,18 @@ func (h *Handler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	errs.Enum("eventType", req.EventType, models.EventTypeValues)
 	errs.Required("actorId", req.ActorID)
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "security", "INVALID_REQUEST", errs.Error())
 		return
 	}
 
 	tid := tenantID(r)
 	event, err := h.store.CreateEvent(r.Context(), tid, req)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "security", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusCreated, event)
+	apiresponse.WriteSuccess(w, http.StatusCreated, "security", event)
 }
 
 func (h *Handler) GetEventStats(w http.ResponseWriter, r *http.Request) {
@@ -112,11 +110,11 @@ func (h *Handler) GetEventStats(w http.ResponseWriter, r *http.Request) {
 
 	stats, err := h.store.GetEventStats(r.Context(), tid)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "security", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, stats)
+	apiresponse.WriteSuccess(w, http.StatusOK, "security", stats)
 }
 
 // --- Session Handlers ---
@@ -126,20 +124,20 @@ func (h *Handler) ListActiveSessions(w http.ResponseWriter, r *http.Request) {
 
 	sessions, err := h.store.ListActiveSessions(r.Context(), tid)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "security", "DB_ERROR", err.Error())
 		return
 	}
 	if sessions == nil {
 		sessions = []models.ActiveSession{}
 	}
 
-	writeSuccess(w, http.StatusOK, sessions)
+	apiresponse.WriteSuccess(w, http.StatusOK, "security", sessions)
 }
 
 func (h *Handler) UpsertSession(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateSessionRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "security", "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -147,24 +145,24 @@ func (h *Handler) UpsertSession(w http.ResponseWriter, r *http.Request) {
 	errs.Required("userId", req.UserID)
 	errs.Required("sessionId", req.SessionID)
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "security", "INVALID_REQUEST", errs.Error())
 		return
 	}
 
 	tid := tenantID(r)
 	session, err := h.store.UpsertSession(r.Context(), tid, req)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "security", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusCreated, session)
+	apiresponse.WriteSuccess(w, http.StatusCreated, "security", session)
 }
 
 func (h *Handler) DeleteSession(w http.ResponseWriter, r *http.Request) {
 	sessionID := r.PathValue("sessionId")
 	if sessionID == "" {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "sessionId is required")
+		apiresponse.WriteError(w, http.StatusBadRequest, "security", "INVALID_REQUEST", "sessionId is required")
 		return
 	}
 
@@ -172,14 +170,14 @@ func (h *Handler) DeleteSession(w http.ResponseWriter, r *http.Request) {
 	err := h.store.DeleteSession(r.Context(), tid, sessionID)
 	if err != nil {
 		if err == secdb.ErrNotFound {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "Session not found")
+			apiresponse.WriteError(w, http.StatusNotFound, "security", "NOT_FOUND", "Session not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "security", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, map[string]string{"status": "deleted"})
+	apiresponse.WriteSuccess(w, http.StatusOK, "security", map[string]string{"status": "deleted"})
 }
 
 // --- Clerk Webhook Handler ---
@@ -188,12 +186,12 @@ func (h *Handler) ClerkWebhook(w http.ResponseWriter, r *http.Request) {
 	// TODO: Validate Clerk webhook signatures for production use.
 	var payload models.ClerkWebhookPayload
 	if err := decodeJSON(r, &payload); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "security", "INVALID_REQUEST", err.Error())
 		return
 	}
 
 	if payload.Type == "" {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "type is required")
+		apiresponse.WriteError(w, http.StatusBadRequest, "security", "INVALID_REQUEST", "type is required")
 		return
 	}
 
@@ -201,7 +199,7 @@ func (h *Handler) ClerkWebhook(w http.ResponseWriter, r *http.Request) {
 	eventType := mapClerkEventType(payload.Type)
 	if eventType == "" {
 		// Unrecognized event type — acknowledge but skip
-		writeSuccess(w, http.StatusOK, map[string]string{"status": "ignored", "clerkType": payload.Type})
+		apiresponse.WriteSuccess(w, http.StatusOK, "security", map[string]string{"status": "ignored", "clerkType": payload.Type})
 		return
 	}
 
@@ -226,11 +224,11 @@ func (h *Handler) ClerkWebhook(w http.ResponseWriter, r *http.Request) {
 
 	event, err := h.store.CreateEvent(r.Context(), tid, req)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "security", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusCreated, event)
+	apiresponse.WriteSuccess(w, http.StatusCreated, "security", event)
 }
 
 // mapClerkEventType maps Clerk webhook event types to our internal event types.
@@ -306,57 +304,6 @@ func decodeJSON(r *http.Request, v any) error {
 	}
 	defer r.Body.Close()
 	return json.NewDecoder(r.Body).Decode(v)
-}
-
-func writeJSON(w http.ResponseWriter, status int, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(v); err != nil {
-		slog.Error("error encoding JSON response", "error", err)
-	}
-}
-
-func writeSuccess(w http.ResponseWriter, status int, data any) {
-	resp := map[string]any{
-		"data": data,
-		"meta": map[string]any{
-			"request_id": uuid.New().String(),
-			"timestamp":  time.Now().UTC().Format(time.RFC3339),
-			"service":    "security",
-			"version":    "v1",
-		},
-	}
-	writeJSON(w, status, resp)
-}
-
-func writePaginated(w http.ResponseWriter, data any, total, limit, offset int) {
-	resp := map[string]any{
-		"data": data,
-		"pagination": map[string]any{
-			"total":   total,
-			"limit":   limit,
-			"offset":  offset,
-			"hasMore": offset+limit < total,
-		},
-		"meta": map[string]any{
-			"request_id": uuid.New().String(),
-			"timestamp":  time.Now().UTC().Format(time.RFC3339),
-			"service":    "security",
-			"version":    "v1",
-		},
-	}
-	writeJSON(w, http.StatusOK, resp)
-}
-
-func writeError(w http.ResponseWriter, status int, code, message string) {
-	resp := map[string]any{
-		"error": map[string]any{
-			"code":       code,
-			"message":    message,
-			"request_id": uuid.New().String(),
-		},
-	}
-	writeJSON(w, status, resp)
 }
 
 func intParam(r *http.Request, name string, defaultVal int) int {

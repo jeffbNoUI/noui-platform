@@ -43,7 +43,7 @@ function setupFetch(contacts: Contact[], hasMore = false) {
               offset: 0,
               hasMore,
             },
-            meta: { request_id: 'test', timestamp: new Date().toISOString() },
+            meta: { requestId: 'test', timestamp: new Date().toISOString() },
           }),
       });
     }

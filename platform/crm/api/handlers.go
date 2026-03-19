@@ -7,12 +7,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/noui/platform/apiresponse"
 	"github.com/noui/platform/auth"
 	crmdb "github.com/noui/platform/crm/db"
 	"github.com/noui/platform/crm/models"
@@ -79,7 +79,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 // HealthCheck returns service health status.
 func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{
+	apiresponse.WriteJSON(w, http.StatusOK, map[string]string{
 		"status":  "ok",
 		"service": "crm",
 		"version": "0.1.0",
@@ -101,17 +101,17 @@ func (h *Handler) SearchContacts(w http.ResponseWriter, r *http.Request) {
 
 	contacts, total, err := h.store.ListContacts(r.Context(), tenantID, params)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
-	writePaginated(w, contacts, total, params.Limit, params.Offset)
+	apiresponse.WritePaginated(w, "crm", contacts, total, params.Limit, params.Offset)
 }
 
 func (h *Handler) CreateContact(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateContactRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "crm", "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -135,7 +135,7 @@ func (h *Handler) CreateContact(w http.ResponseWriter, r *http.Request) {
 		errs.DateYMDOptional("dateOfBirth", *req.DateOfBirth)
 	}
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "crm", "INVALID_REQUEST", errs.Error())
 		return
 	}
 
@@ -164,11 +164,11 @@ func (h *Handler) CreateContact(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.store.CreateContact(r.Context(), &contact); err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusCreated, contact)
+	apiresponse.WriteSuccess(w, http.StatusCreated, "crm", contact)
 }
 
 func (h *Handler) GetContact(w http.ResponseWriter, r *http.Request) {
@@ -176,14 +176,14 @@ func (h *Handler) GetContact(w http.ResponseWriter, r *http.Request) {
 	contact, err := h.store.GetContact(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "Contact not found")
+			apiresponse.WriteError(w, http.StatusNotFound, "crm", "NOT_FOUND", "Contact not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, contact)
+	apiresponse.WriteSuccess(w, http.StatusOK, "crm", contact)
 }
 
 func (h *Handler) UpdateContact(w http.ResponseWriter, r *http.Request) {
@@ -192,16 +192,16 @@ func (h *Handler) UpdateContact(w http.ResponseWriter, r *http.Request) {
 	existing, err := h.store.GetContact(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "Contact not found")
+			apiresponse.WriteError(w, http.StatusNotFound, "crm", "NOT_FOUND", "Contact not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
 	var req models.UpdateContactRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "crm", "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -225,7 +225,7 @@ func (h *Handler) UpdateContact(w http.ResponseWriter, r *http.Request) {
 		errs.DateYMDOptional("dateOfBirth", *req.DateOfBirth)
 	}
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "crm", "INVALID_REQUEST", errs.Error())
 		return
 	}
 
@@ -234,11 +234,11 @@ func (h *Handler) UpdateContact(w http.ResponseWriter, r *http.Request) {
 	existing.UpdatedBy = "system"
 
 	if err := h.store.UpdateContact(r.Context(), existing); err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, existing)
+	apiresponse.WriteSuccess(w, http.StatusOK, "crm", existing)
 }
 
 func (h *Handler) GetContactByLegacyID(w http.ResponseWriter, r *http.Request) {
@@ -248,14 +248,14 @@ func (h *Handler) GetContactByLegacyID(w http.ResponseWriter, r *http.Request) {
 	contact, err := h.store.GetContactByLegacyID(r.Context(), tenantID, legacyID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "Contact not found for legacy ID")
+			apiresponse.WriteError(w, http.StatusNotFound, "crm", "NOT_FOUND", "Contact not found for legacy ID")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, contact)
+	apiresponse.WriteSuccess(w, http.StatusOK, "crm", contact)
 }
 
 func (h *Handler) GetContactTimeline(w http.ResponseWriter, r *http.Request) {
@@ -264,11 +264,11 @@ func (h *Handler) GetContactTimeline(w http.ResponseWriter, r *http.Request) {
 
 	timeline, err := h.store.GetContactTimeline(r.Context(), contactID, limit, offset)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, timeline)
+	apiresponse.WriteSuccess(w, http.StatusOK, "crm", timeline)
 }
 
 // --- Conversation Handlers ---
@@ -282,17 +282,17 @@ func (h *Handler) ListConversations(w http.ResponseWriter, r *http.Request) {
 
 	conversations, total, err := h.store.ListConversations(r.Context(), tenantID, status, anchorType, anchorID, limit, offset)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
-	writePaginated(w, conversations, total, limit, offset)
+	apiresponse.WritePaginated(w, "crm", conversations, total, limit, offset)
 }
 
 func (h *Handler) CreateConversation(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateConversationRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "crm", "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -309,7 +309,7 @@ func (h *Handler) CreateConversation(w http.ResponseWriter, r *http.Request) {
 		errs.MaxLen("topicSubcategory", *req.TopicSubcategory, 100)
 	}
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "crm", "INVALID_REQUEST", errs.Error())
 		return
 	}
 
@@ -332,11 +332,11 @@ func (h *Handler) CreateConversation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.store.CreateConversation(r.Context(), &conv); err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusCreated, conv)
+	apiresponse.WriteSuccess(w, http.StatusCreated, "crm", conv)
 }
 
 func (h *Handler) GetConversation(w http.ResponseWriter, r *http.Request) {
@@ -344,14 +344,14 @@ func (h *Handler) GetConversation(w http.ResponseWriter, r *http.Request) {
 	conv, err := h.store.GetConversation(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "Conversation not found")
+			apiresponse.WriteError(w, http.StatusNotFound, "crm", "NOT_FOUND", "Conversation not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, conv)
+	apiresponse.WriteSuccess(w, http.StatusOK, "crm", conv)
 }
 
 func (h *Handler) UpdateConversation(w http.ResponseWriter, r *http.Request) {
@@ -360,16 +360,16 @@ func (h *Handler) UpdateConversation(w http.ResponseWriter, r *http.Request) {
 	existing, err := h.store.GetConversation(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "Conversation not found")
+			apiresponse.WriteError(w, http.StatusNotFound, "crm", "NOT_FOUND", "Conversation not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
 	var req models.UpdateConversationRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "crm", "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -381,7 +381,7 @@ func (h *Handler) UpdateConversation(w http.ResponseWriter, r *http.Request) {
 		errs.MaxLen("resolutionSummary", *req.ResolutionSummary, 5000)
 	}
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "crm", "INVALID_REQUEST", errs.Error())
 		return
 	}
 
@@ -390,11 +390,11 @@ func (h *Handler) UpdateConversation(w http.ResponseWriter, r *http.Request) {
 	existing.UpdatedBy = "system"
 
 	if err := h.store.UpdateConversation(r.Context(), existing); err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, existing)
+	apiresponse.WriteSuccess(w, http.StatusOK, "crm", existing)
 }
 
 // --- Interaction Handlers ---
@@ -413,17 +413,17 @@ func (h *Handler) ListInteractions(w http.ResponseWriter, r *http.Request) {
 
 	interactions, total, err := h.store.ListInteractions(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
-	writePaginated(w, interactions, total, filter.Limit, filter.Offset)
+	apiresponse.WritePaginated(w, "crm", interactions, total, filter.Limit, filter.Offset)
 }
 
 func (h *Handler) CreateInteraction(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateInteractionRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "crm", "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -443,7 +443,7 @@ func (h *Handler) CreateInteraction(w http.ResponseWriter, r *http.Request) {
 		errs.MaxLen("summary", *req.Summary, 5000)
 	}
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "crm", "INVALID_REQUEST", errs.Error())
 		return
 	}
 
@@ -474,11 +474,11 @@ func (h *Handler) CreateInteraction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.store.CreateInteraction(r.Context(), &interaction); err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusCreated, interaction)
+	apiresponse.WriteSuccess(w, http.StatusCreated, "crm", interaction)
 }
 
 func (h *Handler) GetInteraction(w http.ResponseWriter, r *http.Request) {
@@ -486,14 +486,14 @@ func (h *Handler) GetInteraction(w http.ResponseWriter, r *http.Request) {
 	interaction, err := h.store.GetInteraction(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "Interaction not found")
+			apiresponse.WriteError(w, http.StatusNotFound, "crm", "NOT_FOUND", "Interaction not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, interaction)
+	apiresponse.WriteSuccess(w, http.StatusOK, "crm", interaction)
 }
 
 // --- Note Handlers ---
@@ -501,7 +501,7 @@ func (h *Handler) GetInteraction(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CreateNote(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateNoteRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "crm", "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -520,7 +520,7 @@ func (h *Handler) CreateNote(w http.ResponseWriter, r *http.Request) {
 		errs.MaxLen("nextStep", *req.NextStep, 1000)
 	}
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "crm", "INVALID_REQUEST", errs.Error())
 		return
 	}
 
@@ -547,18 +547,18 @@ func (h *Handler) CreateNote(w http.ResponseWriter, r *http.Request) {
 	if req.AIConfidence != nil {
 		v, err := strconv.ParseFloat(*req.AIConfidence, 64)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "aiConfidence must be a decimal number")
+			apiresponse.WriteError(w, http.StatusBadRequest, "crm", "INVALID_REQUEST", "aiConfidence must be a decimal number")
 			return
 		}
 		note.AIConfidence = &v
 	}
 
 	if err := h.store.CreateNote(r.Context(), &note); err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusCreated, note)
+	apiresponse.WriteSuccess(w, http.StatusCreated, "crm", note)
 }
 
 // --- Commitment Handlers ---
@@ -571,17 +571,17 @@ func (h *Handler) ListCommitments(w http.ResponseWriter, r *http.Request) {
 
 	commitments, total, err := h.store.ListCommitments(r.Context(), tenantID, status, ownerAgent, limit, offset)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
-	writePaginated(w, commitments, total, limit, offset)
+	apiresponse.WritePaginated(w, "crm", commitments, total, limit, offset)
 }
 
 func (h *Handler) CreateCommitment(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateCommitmentRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "crm", "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -594,7 +594,7 @@ func (h *Handler) CreateCommitment(w http.ResponseWriter, r *http.Request) {
 	errs.Required("ownerAgent", req.OwnerAgent)
 	errs.MaxLen("ownerAgent", req.OwnerAgent, 200)
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "crm", "INVALID_REQUEST", errs.Error())
 		return
 	}
 
@@ -623,11 +623,11 @@ func (h *Handler) CreateCommitment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.store.CreateCommitment(r.Context(), &commitment); err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusCreated, commitment)
+	apiresponse.WriteSuccess(w, http.StatusCreated, "crm", commitment)
 }
 
 func (h *Handler) UpdateCommitment(w http.ResponseWriter, r *http.Request) {
@@ -636,16 +636,16 @@ func (h *Handler) UpdateCommitment(w http.ResponseWriter, r *http.Request) {
 	existing, err := h.store.GetCommitment(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "Commitment not found")
+			apiresponse.WriteError(w, http.StatusNotFound, "crm", "NOT_FOUND", "Commitment not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
 	var req models.UpdateCommitmentRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "crm", "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -657,7 +657,7 @@ func (h *Handler) UpdateCommitment(w http.ResponseWriter, r *http.Request) {
 		errs.MaxLen("fulfillmentNote", *req.FulfillmentNote, 5000)
 	}
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "crm", "INVALID_REQUEST", errs.Error())
 		return
 	}
 
@@ -666,11 +666,11 @@ func (h *Handler) UpdateCommitment(w http.ResponseWriter, r *http.Request) {
 	existing.UpdatedBy = "system"
 
 	if err := h.store.UpdateCommitment(r.Context(), existing); err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, existing)
+	apiresponse.WriteSuccess(w, http.StatusOK, "crm", existing)
 }
 
 // --- Outreach Handlers ---
@@ -683,17 +683,17 @@ func (h *Handler) ListOutreach(w http.ResponseWriter, r *http.Request) {
 
 	outreach, total, err := h.store.ListOutreach(r.Context(), tenantID, status, assignedAgent, limit, offset)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
-	writePaginated(w, outreach, total, limit, offset)
+	apiresponse.WritePaginated(w, "crm", outreach, total, limit, offset)
 }
 
 func (h *Handler) CreateOutreach(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateOutreachRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "crm", "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -712,7 +712,7 @@ func (h *Handler) CreateOutreach(w http.ResponseWriter, r *http.Request) {
 		errs.Enum("priority", *req.Priority, []string{"LOW", "NORMAL", "HIGH", "URGENT"})
 	}
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "crm", "INVALID_REQUEST", errs.Error())
 		return
 	}
 
@@ -746,11 +746,11 @@ func (h *Handler) CreateOutreach(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.store.CreateOutreach(r.Context(), &outreach); err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusCreated, outreach)
+	apiresponse.WriteSuccess(w, http.StatusCreated, "crm", outreach)
 }
 
 func (h *Handler) UpdateOutreach(w http.ResponseWriter, r *http.Request) {
@@ -759,16 +759,16 @@ func (h *Handler) UpdateOutreach(w http.ResponseWriter, r *http.Request) {
 	existing, err := h.store.GetOutreach(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "Outreach not found")
+			apiresponse.WriteError(w, http.StatusNotFound, "crm", "NOT_FOUND", "Outreach not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
 	var req models.UpdateOutreachRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "crm", "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -780,7 +780,7 @@ func (h *Handler) UpdateOutreach(w http.ResponseWriter, r *http.Request) {
 		errs.MaxLen("resultOutcome", *req.ResultOutcome, 200)
 	}
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "crm", "INVALID_REQUEST", errs.Error())
 		return
 	}
 
@@ -789,11 +789,11 @@ func (h *Handler) UpdateOutreach(w http.ResponseWriter, r *http.Request) {
 	existing.UpdatedBy = "system"
 
 	if err := h.store.UpdateOutreach(r.Context(), existing); err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, existing)
+	apiresponse.WriteSuccess(w, http.StatusOK, "crm", existing)
 }
 
 // --- Organization Handlers ---
@@ -805,17 +805,17 @@ func (h *Handler) ListOrganizations(w http.ResponseWriter, r *http.Request) {
 
 	orgs, total, err := h.store.ListOrganizations(r.Context(), tenantID, orgType, limit, offset)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
-	writePaginated(w, orgs, total, limit, offset)
+	apiresponse.WritePaginated(w, "crm", orgs, total, limit, offset)
 }
 
 func (h *Handler) CreateOrganization(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateOrganizationRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "crm", "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -837,7 +837,7 @@ func (h *Handler) CreateOrganization(w http.ResponseWriter, r *http.Request) {
 		errs.MaxLen("ein", *req.EIN, 20)
 	}
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "crm", "INVALID_REQUEST", errs.Error())
 		return
 	}
 
@@ -859,11 +859,11 @@ func (h *Handler) CreateOrganization(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.store.CreateOrganization(r.Context(), &org); err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusCreated, org)
+	apiresponse.WriteSuccess(w, http.StatusCreated, "crm", org)
 }
 
 func (h *Handler) GetOrganization(w http.ResponseWriter, r *http.Request) {
@@ -871,14 +871,14 @@ func (h *Handler) GetOrganization(w http.ResponseWriter, r *http.Request) {
 	org, err := h.store.GetOrganization(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "Organization not found")
+			apiresponse.WriteError(w, http.StatusNotFound, "crm", "NOT_FOUND", "Organization not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, org)
+	apiresponse.WriteSuccess(w, http.StatusOK, "crm", org)
 }
 
 // --- Taxonomy Handler ---
@@ -887,11 +887,11 @@ func (h *Handler) GetTaxonomy(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantID(r)
 	categories, err := h.store.GetTaxonomyTree(r.Context(), tenantID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, categories)
+	apiresponse.WriteSuccess(w, http.StatusOK, "crm", categories)
 }
 
 // --- Audit Handler ---
@@ -904,11 +904,11 @@ func (h *Handler) GetAuditLog(w http.ResponseWriter, r *http.Request) {
 
 	entries, err := h.store.GetAuditLog(r.Context(), tenantID, entityType, entityID, limit)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, entries)
+	apiresponse.WriteSuccess(w, http.StatusOK, "crm", entries)
 }
 
 // --- Helper Functions ---
@@ -930,56 +930,6 @@ func decodeJSON(r *http.Request, v interface{}) error {
 	return json.NewDecoder(r.Body).Decode(v)
 }
 
-func writeJSON(w http.ResponseWriter, status int, v interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(v); err != nil {
-		slog.Error("error encoding JSON response", "error", err)
-	}
-}
-
-func writeSuccess(w http.ResponseWriter, status int, data interface{}) {
-	resp := map[string]interface{}{
-		"data": data,
-		"meta": map[string]interface{}{
-			"request_id": uuid.New().String(),
-			"timestamp":  time.Now().UTC().Format(time.RFC3339),
-			"service":    "crm",
-			"version":    "v1",
-		},
-	}
-	writeJSON(w, status, resp)
-}
-
-func writePaginated(w http.ResponseWriter, data interface{}, total, limit, offset int) {
-	resp := map[string]interface{}{
-		"data": data,
-		"pagination": map[string]interface{}{
-			"total":   total,
-			"limit":   limit,
-			"offset":  offset,
-			"hasMore": offset+limit < total,
-		},
-		"meta": map[string]interface{}{
-			"request_id": uuid.New().String(),
-			"timestamp":  time.Now().UTC().Format(time.RFC3339),
-			"service":    "crm",
-			"version":    "v1",
-		},
-	}
-	writeJSON(w, http.StatusOK, resp)
-}
-
-func writeError(w http.ResponseWriter, status int, code, message string) {
-	resp := map[string]interface{}{
-		"error": map[string]interface{}{
-			"code":       code,
-			"message":    message,
-			"request_id": uuid.New().String(),
-		},
-	}
-	writeJSON(w, status, resp)
-}
 
 func intParam(r *http.Request, name string, defaultVal int) int {
 	s := r.URL.Query().Get(name)
