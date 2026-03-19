@@ -512,6 +512,7 @@ function AppInner() {
             <RulesExplorer
               onNavigateToRule={handleNavigateToRule}
               onNavigateToDemoCase={handleNavigateToDemoCase}
+              onChangeView={handleChangeView}
               initialRuleId={selectedRuleId ?? undefined}
             />
           </Suspense>
@@ -529,7 +530,11 @@ function AppInner() {
         {cmdPalette}
         <ErrorBoundary portalName="Demo Cases">
           <Suspense fallback={<PortalLoading />}>
-            <DemoCasesPage onNavigateToRule={handleNavigateToRule} initialCaseId={selectedCaseId} />
+            <DemoCasesPage
+              onNavigateToRule={handleNavigateToRule}
+              onChangeView={handleChangeView}
+              initialCaseId={selectedCaseId}
+            />
           </Suspense>
         </ErrorBoundary>
         <DevRoleSwitcher />

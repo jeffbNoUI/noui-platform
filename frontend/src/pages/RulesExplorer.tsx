@@ -6,16 +6,19 @@ import DomainFilter from '@/components/rules/DomainFilter';
 import RulesList from '@/components/rules/RulesList';
 import RuleDetail from '@/components/rules/RuleDetail';
 import type { RuleDefinition } from '@/types/Rules';
+import type { ViewMode } from '@/types/auth';
 
 interface RulesExplorerProps {
   onNavigateToRule?: (ruleId: string) => void;
   onNavigateToDemoCase?: (caseId: string) => void;
+  onChangeView?: (mode: ViewMode) => void;
   initialRuleId?: string;
 }
 
 export default function RulesExplorer({
   onNavigateToRule,
   onNavigateToDemoCase,
+  onChangeView,
   initialRuleId,
 }: RulesExplorerProps) {
   const [selectedRuleId, setSelectedRuleId] = useState<string | null>(initialRuleId ?? null);
@@ -108,6 +111,20 @@ export default function RulesExplorer({
   // List view
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">Rules Explorer</h1>
+          <p className="mt-1 text-sm text-gray-500">Business rule definitions with test status</p>
+        </div>
+        {onChangeView && (
+          <button
+            onClick={() => onChangeView('staff')}
+            className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+          >
+            <span>←</span> Back to Staff Portal
+          </button>
+        )}
+      </div>
       <RulesSummaryBar
         totalRules={summary.total}
         passingRules={summary.passing}
