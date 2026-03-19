@@ -512,7 +512,7 @@ function AppInner() {
             <RulesExplorer
               onNavigateToRule={handleNavigateToRule}
               onNavigateToDemoCase={handleNavigateToDemoCase}
-              initialRuleId={selectedRuleId}
+              initialRuleId={selectedRuleId ?? undefined}
             />
           </Suspense>
         </ErrorBoundary>
