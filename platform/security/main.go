@@ -11,13 +11,17 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-co-op/gocron/v2"
 	"github.com/noui/platform/auth"
 	"github.com/noui/platform/dbcontext"
+	"github.com/noui/platform/envutil"
 	"github.com/noui/platform/healthutil"
 	"github.com/noui/platform/logging"
 	"github.com/noui/platform/ratelimit"
 	"github.com/noui/platform/security/api"
 	"github.com/noui/platform/security/db"
+	"github.com/noui/platform/security/jobs"
+	"github.com/noui/platform/security/models"
 )
 
 func main() {
@@ -33,6 +37,48 @@ func main() {
 		os.Exit(1)
 	}
 	defer database.Close()
+
+	// Load job configuration from environment
+	jobCfg := models.JobConfig{
+		SessionIdleTimeoutMin: envutil.GetEnvInt("SESSION_IDLE_TIMEOUT_MIN", 30),
+		SessionMaxLifetimeHr:  envutil.GetEnvInt("SESSION_MAX_LIFETIME_HR", 8),
+		BruteForceThreshold:   envutil.GetEnvInt("BRUTE_FORCE_THRESHOLD", 5),
+		BruteForceWindowMin:   envutil.GetEnvInt("BRUTE_FORCE_WINDOW_MIN", 15),
+	}
+
+	// Start background job scheduler
+	scheduler, err := gocron.NewScheduler()
+	if err != nil {
+		slog.Error("failed to create scheduler", "error", err)
+		os.Exit(1)
+	}
+
+	_, err = scheduler.NewJob(
+		gocron.DurationJob(5*time.Minute),
+		gocron.NewTask(func() { jobs.CleanupExpiredSessions(database, jobCfg) }),
+	)
+	if err != nil {
+		slog.Error("failed to register cleanup job", "error", err)
+		os.Exit(1)
+	}
+
+	_, err = scheduler.NewJob(
+		gocron.DurationJob(1*time.Minute),
+		gocron.NewTask(func() { jobs.CheckBruteForce(database, jobCfg) }),
+	)
+	if err != nil {
+		slog.Error("failed to register brute-force job", "error", err)
+		os.Exit(1)
+	}
+
+	scheduler.Start()
+	slog.Info("background jobs started",
+		"session_cleanup_interval", "5m",
+		"brute_force_interval", "1m",
+		"idle_timeout_min", jobCfg.SessionIdleTimeoutMin,
+		"max_lifetime_hr", jobCfg.SessionMaxLifetimeHr,
+		"brute_force_threshold", jobCfg.BruteForceThreshold,
+		"brute_force_window_min", jobCfg.BruteForceWindowMin)
 
 	counters := healthutil.NewRequestCounters()
 	handler := api.NewHandler(database)
@@ -85,6 +131,10 @@ func main() {
 
 	<-done
 	slog.Info("shutting down Security Events service...")
+
+	if err := scheduler.Shutdown(); err != nil {
+		slog.Error("scheduler shutdown error", "error", err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

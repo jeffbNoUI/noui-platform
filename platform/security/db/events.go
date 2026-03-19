@@ -132,11 +132,56 @@ func (s *Store) GetEventStats(ctx context.Context, tenantID string) (*models.Eve
 			(SELECT COUNT(*) FROM security_events
 			 WHERE tenant_id = $1 AND event_type = 'login_failure' AND created_at > NOW() - INTERVAL '24 hours') AS failed_logins_24h,
 			(SELECT COUNT(*) FROM security_events
-			 WHERE tenant_id = $1 AND event_type = 'role_change' AND created_at > NOW() - INTERVAL '7 days') AS role_changes_7d
-	`, tenantID).Scan(&stats.ActiveUsers, &stats.ActiveSessions, &stats.FailedLogins24h, &stats.RoleChanges7d)
+			 WHERE tenant_id = $1 AND event_type = 'role_change' AND created_at > NOW() - INTERVAL '7 days') AS role_changes_7d,
+			(SELECT COUNT(*) FROM security_events
+			 WHERE tenant_id = $1 AND event_type = 'brute_force_detected' AND created_at > NOW() - INTERVAL '24 hours') AS brute_force_alerts_24h
+	`, tenantID).Scan(&stats.ActiveUsers, &stats.ActiveSessions, &stats.FailedLogins24h, &stats.RoleChanges7d, &stats.BruteForceAlerts24h)
 	if err != nil {
 		return nil, err
 	}
 
 	return stats, nil
+}
+
+// CountFailedLoginsByActor returns actors who exceeded the failed login threshold within the window.
+func (s *Store) CountFailedLoginsByActor(ctx context.Context, threshold, windowMin int) ([]models.BruteForceActor, error) {
+	rows, err := s.DB.QueryContext(ctx,
+		`SELECT actor_id, actor_email, ip_address, COUNT(*) AS fail_count
+		 FROM security_events
+		 WHERE event_type = 'login_failure'
+		   AND created_at > NOW() - ($1 || ' minutes')::INTERVAL
+		 GROUP BY actor_id, actor_email, ip_address
+		 HAVING COUNT(*) >= $2`,
+		windowMin, threshold,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var actors []models.BruteForceActor
+	for rows.Next() {
+		var a models.BruteForceActor
+		if err := rows.Scan(&a.ActorID, &a.ActorEmail, &a.IPAddress, &a.FailCount); err != nil {
+			return nil, err
+		}
+		actors = append(actors, a)
+	}
+	return actors, rows.Err()
+}
+
+// HasRecentBruteForceAlert checks if a brute_force_detected event exists for the actor in the window.
+func (s *Store) HasRecentBruteForceAlert(ctx context.Context, actorID string, windowMin int) (bool, error) {
+	var count int
+	err := s.DB.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM security_events
+		 WHERE event_type = 'brute_force_detected'
+		   AND actor_id = $1
+		   AND created_at > NOW() - ($2 || ' minutes')::INTERVAL`,
+		actorID, windowMin,
+	).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }

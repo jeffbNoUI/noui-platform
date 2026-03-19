@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
@@ -14,6 +15,7 @@ import (
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
 	"github.com/noui/platform/apiresponse"
+	secdb "github.com/noui/platform/security/db"
 	"github.com/noui/platform/security/models"
 )
 
@@ -474,8 +476,8 @@ func TestGetEventStats(t *testing.T) {
 
 	mock.ExpectQuery("SELECT").
 		WithArgs(defaultTenantID).
-		WillReturnRows(sqlmock.NewRows([]string{"active_users", "active_sessions", "failed_logins_24h", "role_changes_7d"}).
-			AddRow(12, 5, 3, 1))
+		WillReturnRows(sqlmock.NewRows([]string{"active_users", "active_sessions", "failed_logins_24h", "role_changes_7d", "brute_force_alerts_24h"}).
+			AddRow(12, 5, 3, 1, 2))
 
 	w := serve(h, "GET", "/api/v1/security/events/stats", nil)
 
@@ -496,6 +498,9 @@ func TestGetEventStats(t *testing.T) {
 	}
 	if body.Data.FailedLogins24h != 3 {
 		t.Errorf("FailedLogins24h = %d, want 3", body.Data.FailedLogins24h)
+	}
+	if body.Data.BruteForceAlerts24h != 2 {
+		t.Errorf("BruteForceAlerts24h = %d, want 2", body.Data.BruteForceAlerts24h)
 	}
 	if body.Meta["requestId"] == nil || body.Meta["requestId"] == "" {
 		t.Error("meta.request_id should not be empty")
@@ -570,7 +575,7 @@ func TestListActiveSessions_Empty(t *testing.T) {
 	h, mock := newTestHandler(t)
 
 	mock.ExpectQuery("SELECT").
-		WithArgs(defaultTenantID).
+		WithArgs(defaultTenantID, 30).
 		WillReturnRows(sqlmock.NewRows(sessionCols))
 
 	w := serve(h, "GET", "/api/v1/security/sessions", nil)
@@ -909,5 +914,98 @@ func TestClerkWebhook_InvalidSignature(t *testing.T) {
 	if w.Code != http.StatusUnauthorized {
 		t.Errorf("ClerkWebhook(bad sig) status = %d, want %d\nbody: %s",
 			w.Code, http.StatusUnauthorized, w.Body.String())
+	}
+}
+
+// --- Session Cleanup ---
+
+func TestCleanupExpiredSessions(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	store := secdb.NewStore(db)
+
+	mock.ExpectExec("DELETE FROM active_sessions").
+		WillReturnResult(sqlmock.NewResult(0, 3))
+
+	count, err := store.CleanupExpiredSessions(context.Background(), 30, 8)
+	if err != nil {
+		t.Fatalf("CleanupExpiredSessions error: %v", err)
+	}
+	if count != 3 {
+		t.Errorf("cleaned = %d, want 3", count)
+	}
+}
+
+// --- Brute Force Query Methods ---
+
+func TestCountFailedLoginsByActor_AboveThreshold(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	store := secdb.NewStore(db)
+
+	mock.ExpectQuery("SELECT actor_id, actor_email, ip_address").
+		WillReturnRows(sqlmock.NewRows([]string{"actor_id", "actor_email", "ip_address", "fail_count"}).
+			AddRow("user-1", "user@example.com", "10.0.0.1", 7).
+			AddRow("user-2", "user2@example.com", "10.0.0.2", 5))
+
+	actors, err := store.CountFailedLoginsByActor(context.Background(), 5, 15)
+	if err != nil {
+		t.Fatalf("CountFailedLoginsByActor error: %v", err)
+	}
+	if len(actors) != 2 {
+		t.Fatalf("got %d actors, want 2", len(actors))
+	}
+	if actors[0].FailCount != 7 {
+		t.Errorf("actors[0].FailCount = %d, want 7", actors[0].FailCount)
+	}
+}
+
+func TestCountFailedLoginsByActor_NoneAboveThreshold(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	store := secdb.NewStore(db)
+
+	mock.ExpectQuery("SELECT actor_id, actor_email, ip_address").
+		WillReturnRows(sqlmock.NewRows([]string{"actor_id", "actor_email", "ip_address", "fail_count"}))
+
+	actors, err := store.CountFailedLoginsByActor(context.Background(), 5, 15)
+	if err != nil {
+		t.Fatalf("CountFailedLoginsByActor error: %v", err)
+	}
+	if len(actors) != 0 {
+		t.Errorf("got %d actors, want 0", len(actors))
+	}
+}
+
+func TestHasRecentBruteForceAlert(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	store := secdb.NewStore(db)
+
+	mock.ExpectQuery("SELECT COUNT").
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+
+	has, err := store.HasRecentBruteForceAlert(context.Background(), "user-1", 15)
+	if err != nil {
+		t.Fatalf("HasRecentBruteForceAlert error: %v", err)
+	}
+	if !has {
+		t.Error("expected true, got false")
 	}
 }

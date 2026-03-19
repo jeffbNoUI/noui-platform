@@ -207,8 +207,8 @@ func TestGetEventStats(t *testing.T) {
 
 	mock.ExpectQuery("SELECT").
 		WithArgs("tenant-1").
-		WillReturnRows(sqlmock.NewRows([]string{"active_users", "active_sessions", "failed_logins_24h", "role_changes_7d"}).
-			AddRow(12, 5, 3, 1))
+		WillReturnRows(sqlmock.NewRows([]string{"active_users", "active_sessions", "failed_logins_24h", "role_changes_7d", "brute_force_alerts_24h"}).
+			AddRow(12, 5, 3, 1, 2))
 
 	stats, err := s.GetEventStats(context.Background(), "tenant-1")
 	if err != nil {
@@ -225,6 +225,9 @@ func TestGetEventStats(t *testing.T) {
 	}
 	if stats.RoleChanges7d != 1 {
 		t.Errorf("RoleChanges7d = %d, want 1", stats.RoleChanges7d)
+	}
+	if stats.BruteForceAlerts24h != 2 {
+		t.Errorf("BruteForceAlerts24h = %d, want 2", stats.BruteForceAlerts24h)
 	}
 }
 
@@ -264,7 +267,7 @@ func TestListActiveSessions_Empty(t *testing.T) {
 	s, mock := newStore(t)
 
 	mock.ExpectQuery("SELECT").
-		WithArgs("tenant-1").
+		WithArgs("tenant-1", 30).
 		WillReturnRows(sqlmock.NewRows(sessionCols))
 
 	sessions, err := s.ListActiveSessions(context.Background(), "tenant-1")
@@ -285,7 +288,7 @@ func TestListActiveSessions_WithResults(t *testing.T) {
 		AddRow(2, "tenant-1", "user-2", "sess-2", "user2@example.com", "viewer", "10.0.0.2", "Firefox", now, now)
 
 	mock.ExpectQuery("SELECT").
-		WithArgs("tenant-1").
+		WithArgs("tenant-1", 30).
 		WillReturnRows(rows)
 
 	sessions, err := s.ListActiveSessions(context.Background(), "tenant-1")
