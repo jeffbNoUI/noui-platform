@@ -203,3 +203,52 @@ type MonthlyVolume struct {
 type VolumeStats struct {
 	Months []MonthlyVolume `json:"months"`
 }
+
+// ============================================================
+// EMPLOYER CASE MANAGEMENT
+// ============================================================
+
+// Employer trigger types that can auto-create cases.
+const (
+	TriggerEnrollmentSubmitted   = "ENROLLMENT_SUBMITTED"
+	TriggerTerminationCertified  = "TERMINATION_CERTIFIED"
+	TriggerContributionException = "CONTRIBUTION_EXCEPTION"
+	TriggerWARETDesignation      = "WARET_DESIGNATION"
+	TriggerSCPApplication        = "SCP_APPLICATION"
+)
+
+// EmployerTriggerTypes lists all valid employer trigger types.
+var EmployerTriggerTypes = []string{
+	TriggerEnrollmentSubmitted,
+	TriggerTerminationCertified,
+	TriggerContributionException,
+	TriggerWARETDesignation,
+	TriggerSCPApplication,
+}
+
+// CreateEmployerCaseRequest is the JSON body for creating a case from an employer event.
+type CreateEmployerCaseRequest struct {
+	EmployerOrgID      string `json:"employerOrgId"`
+	TriggerType        string `json:"triggerType"`
+	TriggerReferenceID string `json:"triggerReferenceId"`
+	MemberID           int    `json:"memberId"`
+	Priority           string `json:"priority,omitempty"`
+	AssignedTo         string `json:"assignedTo,omitempty"`
+}
+
+// EmployerCaseSummary provides case counts scoped to an employer org.
+type EmployerCaseSummary struct {
+	OrgID          string `json:"orgId"`
+	TotalCases     int    `json:"totalCases"`
+	ActiveCases    int    `json:"activeCases"`
+	CompletedCases int    `json:"completedCases"`
+	AtRiskCases    int    `json:"atRiskCases"`
+}
+
+// TriggerConfig maps a trigger type to its default case configuration.
+type TriggerConfig struct {
+	CaseType    string
+	Priority    string
+	SLADays     int
+	Description string
+}

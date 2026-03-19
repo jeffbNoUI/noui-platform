@@ -53,6 +53,11 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/cases/{id}/advance", h.AdvanceStage)
 	mux.HandleFunc("GET /api/v1/cases/{id}/history", h.GetStageHistory)
 
+	// Employer-scoped case management (separate prefix to avoid {id} wildcard conflict)
+	mux.HandleFunc("GET /api/v1/employer/{orgId}/cases", h.ListEmployerCases)
+	mux.HandleFunc("GET /api/v1/employer/{orgId}/cases/summary", h.GetEmployerCaseSummary)
+	mux.HandleFunc("POST /api/v1/employer/cases", h.CreateEmployerCase)
+
 	// Notes
 	mux.HandleFunc("GET /api/v1/cases/{id}/notes", h.ListNotes)
 	mux.HandleFunc("POST /api/v1/cases/{id}/notes", h.CreateNote)
