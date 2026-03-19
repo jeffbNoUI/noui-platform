@@ -1,0 +1,39 @@
+{
+  "TestDetermineTier/Tier_1_-_early_hire": "RULE-VESTING",
+  "TestDetermineTier/Tier_1_-_boundary_(day_before)": "RULE-VESTING",
+  "TestDetermineTier/Tier_2_-_boundary_(exact)": "RULE-VESTING",
+  "TestDetermineTier/Tier_2_-_mid_range": "RULE-VESTING",
+  "TestDetermineTier/Tier_2_-_boundary_(last_day)": "RULE-VESTING",
+  "TestDetermineTier/Tier_3_-_boundary_(exact)": "RULE-VESTING",
+  "TestDetermineTier/Tier_3_-_recent_hire": "RULE-VESTING",
+  "TestDetermineTier/Tier_3_-_new_hire": "RULE-VESTING",
+
+  "TestCalculateEarnedService/Martinez_service": "RULE-SVC-EARNED",
+  "TestCalculateEarnedService/Kim_service": "RULE-SVC-EARNED",
+  "TestCalculateEarnedService/Washington_service": "RULE-SVC-EARNED",
+
+  "TestEvaluateEligibility_Case1_Martinez": "RULE-RULE-OF-75",
+  "TestEvaluateEligibility_Case2_Kim": "RULE-EARLY-REDUCE-T12",
+  "TestEvaluateEligibility_Case3_Washington": "RULE-EARLY-REDUCE-T3",
+
+  "TestRuleOf75_Boundary": "RULE-RULE-OF-75",
+  "TestRuleOf75_JustBelow": "RULE-RULE-OF-75",
+  "TestPurchasedServiceExcludedFromRuleOf75": "RULE-RULE-OF-75",
+
+  "TestEarlyRetReduction_StatutoryTable": "RULE-EARLY-REDUCE-T12",
+
+  "TestRoundToCents": "RULE-ROUNDING",
+
+  "TestCalculateBenefit_Case1_Martinez": "RULE-BENEFIT-T1",
+  "TestCalculateBenefit_Case2_Kim": "RULE-BENEFIT-T2",
+  "TestCalculateBenefit_Case3_Washington": "RULE-BENEFIT-T3",
+
+  "TestCalculateDRO_Case4": "RULE-DRO-MARITAL-SHARE",
+
+  "TestCalculatePaymentOptions": "RULE-PAY-MAXIMUM",
+
+  "TestCalculateIPR/Martinez_IPR": "RULE-IPR",
+  "TestCalculateIPR/Kim_IPR_(earned_only)": "RULE-IPR",
+
+  "TestDeathBenefit_StatutoryTables": "RULE-DEATH-NORMAL"
+}
