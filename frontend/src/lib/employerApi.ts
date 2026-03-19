@@ -21,6 +21,11 @@ import type {
   EnrollmentSubmission,
   DuplicateFlag,
   PERAChoiceElection,
+  TerminationCertification,
+  CertificationHold,
+  RefundApplication,
+  RefundCalculationResult,
+  EligibilityResult,
 } from '@/types/Employer';
 
 const PORTAL = '/api/v1/employer';
@@ -218,4 +223,97 @@ export const employerEnrollmentAPI = {
 
   electPERAChoice: (id: string, plan: 'DB' | 'DC') =>
     putAPI<{ status: string }>(`${ENROLLMENT}/perachoice/${id}/elect`, { plan }),
+};
+
+// ─── Terminations API ─────────────────────────────────────────────────────────
+
+const TERMINATIONS = '/api/v1/terminations';
+
+export const employerTerminationsAPI = {
+  // ─── Certifications ─────────────────────────────────────────────────────────
+  createCertification: (data: {
+    orgId: string;
+    ssnHash: string;
+    firstName: string;
+    lastName: string;
+    lastDayWorked: string;
+    terminationReason: string;
+    finalContributionDate?: string;
+    finalSalaryAmount?: string;
+    memberId?: string;
+    notes?: string;
+  }) => postAPI<TerminationCertification>(`${TERMINATIONS}/certifications`, data),
+
+  listCertifications: (orgId: string, status?: string, limit = 25, offset = 0) =>
+    fetchPaginatedAPI<TerminationCertification>(
+      `${TERMINATIONS}/certifications${toQueryString({ org_id: orgId, status: status ?? '', limit, offset })}`,
+    ),
+
+  getCertification: (id: string) =>
+    fetchAPI<TerminationCertification>(`${TERMINATIONS}/certifications/${id}`),
+
+  verifyCertification: (id: string) =>
+    putAPI<{ status: string }>(`${TERMINATIONS}/certifications/${id}/verify`, {}),
+
+  rejectCertification: (id: string, reason: string) =>
+    putAPI<{ status: string }>(`${TERMINATIONS}/certifications/${id}/reject`, { reason }),
+
+  // ─── Holds ──────────────────────────────────────────────────────────────────
+  listHolds: (orgId: string, status?: string, limit = 25, offset = 0) =>
+    fetchPaginatedAPI<CertificationHold>(
+      `${TERMINATIONS}/holds${toQueryString({ org_id: orgId, status: status ?? '', limit, offset })}`,
+    ),
+
+  getHold: (id: string) => fetchAPI<CertificationHold>(`${TERMINATIONS}/holds/${id}`),
+
+  resolveHold: (id: string, certificationId: string, note: string) =>
+    putAPI<{ status: string }>(`${TERMINATIONS}/holds/${id}/resolve`, { certificationId, note }),
+
+  escalateHold: (id: string) =>
+    putAPI<{ status: string }>(`${TERMINATIONS}/holds/${id}/escalate`, {}),
+
+  // ─── Refund Applications ────────────────────────────────────────────────────
+  createRefund: (data: {
+    ssnHash: string;
+    firstName: string;
+    lastName: string;
+    hireDate: string;
+    employeeContributions: string;
+    memberId?: string;
+    terminationDate?: string;
+    separationDate?: string;
+    yearsOfService?: string;
+    isVested?: boolean;
+    hasDisabilityApp?: boolean;
+    disabilityAppDate?: string;
+  }) => postAPI<RefundApplication>(`${TERMINATIONS}/refunds`, data),
+
+  listRefunds: (ssnHash: string, status?: string, limit = 25, offset = 0) =>
+    fetchPaginatedAPI<RefundApplication>(
+      `${TERMINATIONS}/refunds${toQueryString({ ssn_hash: ssnHash, status: status ?? '', limit, offset })}`,
+    ),
+
+  getRefund: (id: string) => fetchAPI<RefundApplication>(`${TERMINATIONS}/refunds/${id}`),
+
+  calculateRefund: (id: string, interestRatePercent: string, droDeduction?: string) =>
+    postAPI<RefundCalculationResult>(`${TERMINATIONS}/refunds/${id}/calculate`, {
+      interestRatePercent,
+      droDeduction: droDeduction ?? '0',
+    }),
+
+  setupPayment: (
+    id: string,
+    data: {
+      paymentMethod: string;
+      rolloverAmount?: string;
+      directAmount?: string;
+      achRoutingNumber?: string;
+      achAccountNumber?: string;
+      rolloverInstitution?: string;
+      rolloverAccount?: string;
+    },
+  ) => putAPI<{ status: string }>(`${TERMINATIONS}/refunds/${id}/payment`, data),
+
+  checkEligibility: (id: string) =>
+    fetchAPI<EligibilityResult>(`${TERMINATIONS}/refunds/${id}/eligibility`),
 };
