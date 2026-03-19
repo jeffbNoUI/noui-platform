@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [dataaccess, intelligence, crm, correspondence, dataquality, knowledgebase]
+        service: [apiresponse, dataaccess, intelligence, crm, correspondence, dataquality, knowledgebase, casemanagement, issues, preferences, security]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
