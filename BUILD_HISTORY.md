@@ -1,5 +1,39 @@
 # noui-platform — Build History
 
+## Member Portal — Card-Based Dashboard Redesign (2026-03-19)
+
+**Branch:** `claude/funny-blackwell` → PR #100 (merged)
+**Goal:** Replace sidebar navigation with a card-based drill-down dashboard for a more modern, intuitive member experience.
+
+**What was built:**
+
+1. **Card-based navigation** — 7 new components replace the sidebar:
+   - `NavigationCard` — clickable card with left accent strip, badge count, hover lift animation
+   - `LearningHint` — expandable "Did you know?" educational hints (9 persona-aware hints)
+   - `CardGrid` — responsive grid (1 col mobile, 2 col tablet, 3 col desktop)
+   - `Breadcrumb` — trail navigation (Home › Documents › ...) with `aria-current` accessibility
+   - `cardDefinitions.ts` — single source of truth for card configuration (replaces `NAV_ITEMS`)
+   - `learningHints.ts` — curated educational content per card/persona
+   - `useBreakpoint.ts` — `matchMedia`-based responsive hook
+
+2. **Shell transformation** — `MemberPortalShell` simplified from two-column (sidebar + content) to single-column layout. `MemberPortal` now uses a navigation stack (`NavEntry[]`) instead of a flat `activeSection` string.
+
+3. **All 4 persona dashboards wired** — Active, Retiree, Inactive, Beneficiary dashboards all use `CardGrid` + `NavigationCard` instead of quick-link buttons. Cards filtered by persona, summaries computed from existing hook data.
+
+4. **Tour system retargeted** — All `data-tour-id` values changed from `nav-*`/`sidebar-nav` to `card-*`/`card-grid`. Version bumped from 2 → 3 to trigger re-tour for returning users.
+
+**Deleted:** `MemberPortalSidebar.tsx` + 2 test files.
+
+**Key decisions:**
+- Nav stack (not URL routing) — portal runs inside StaffPortal's routing, stack is self-contained
+- `onNavigate(section: string)` signature unchanged — label lookup from cardDefinitions in MemberPortal.tsx, zero downstream changes
+- `<div role="button">` instead of `<button>` for NavigationCard to allow nested LearningHint toggle buttons without DOM nesting violation
+- `useBreakpoint` gracefully handles missing `matchMedia` in JSDOM (defaults to desktop)
+
+**Test totals:** Frontend 1,625 tests (204 files). All green. No regressions.
+
+---
+
 ## API Consistency — Shared apiresponse Package (2026-03-18)
 
 **Branch:** `claude/eager-fermat` → PR #99
