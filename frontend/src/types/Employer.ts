@@ -214,3 +214,105 @@ export interface ManualEntryRecord {
   aapAmount: string;
   dcSupplementAmount: string;
 }
+
+// ─── Enrollment types (Phase 3) ──────────────────────────────────────────────
+// Match Go models from platform/employer-enrollment/db/models.go
+
+export type EnrollmentType = 'EMPLOYER_INITIATED' | 'MEMBER_INITIATED' | 'REHIRE';
+
+export type SubmissionStatus =
+  | 'DRAFT'
+  | 'SUBMITTED'
+  | 'VALIDATING'
+  | 'VALIDATED'
+  | 'DUPLICATE_REVIEW'
+  | 'APPROVED'
+  | 'REJECTED';
+
+export type DuplicateMatchType = 'SSN_EXACT' | 'NAME_DOB_FUZZY';
+
+export type DuplicateResolutionStatus =
+  | 'PENDING'
+  | 'CONFIRMED_DUPLICATE'
+  | 'FALSE_POSITIVE'
+  | 'AUTO_RESOLVED';
+
+export type PERAChoiceStatus = 'PENDING' | 'ELECTED_DC' | 'DEFAULTED_DB' | 'WAIVED' | 'INELIGIBLE';
+
+export interface EnrollmentSubmission {
+  id: string;
+  orgId: string;
+  submittedBy: string;
+  enrollmentType: EnrollmentType;
+  submissionStatus: SubmissionStatus;
+  ssnHash: string;
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+  hireDate: string;
+  planCode: 'DB' | 'DC' | 'ORP';
+  divisionCode: string;
+  tier: string | null;
+  middleName: string | null;
+  suffix: string | null;
+  gender: string | null;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  city: string | null;
+  state: string | null;
+  zipCode: string | null;
+  email: string | null;
+  phone: string | null;
+  isSafetyOfficer: boolean;
+  jobTitle: string | null;
+  annualSalary: string | null;
+  isRehire: boolean;
+  priorMemberId: string | null;
+  priorRefundTaken: boolean | null;
+  conflictStatus: string | null;
+  conflictFields: string | null;
+  conflictResolvedBy: string | null;
+  conflictResolvedAt: string | null;
+  validationErrors: string | null;
+  validatedAt: string | null;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  rejectedBy: string | null;
+  rejectedAt: string | null;
+  rejectionReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DuplicateFlag {
+  id: string;
+  submissionId: string;
+  matchType: DuplicateMatchType;
+  matchedMemberId: string | null;
+  matchedSubmissionId: string | null;
+  confidenceScore: string;
+  matchDetails: string | null;
+  resolutionStatus: DuplicateResolutionStatus;
+  resolvedBy: string | null;
+  resolvedAt: string | null;
+  resolutionNote: string | null;
+  createdAt: string;
+}
+
+export interface PERAChoiceElection {
+  id: string;
+  submissionId: string;
+  memberId: string | null;
+  hireDate: string;
+  windowOpens: string;
+  windowCloses: string;
+  electionStatus: PERAChoiceStatus;
+  electedAt: string | null;
+  electedPlan: 'DB' | 'DC' | null;
+  notificationSentAt: string | null;
+  dcTeamNotified: boolean;
+  reminderSentAt: string | null;
+  memberAcknowledged: boolean;
+  createdAt: string;
+  updatedAt: string;
+}

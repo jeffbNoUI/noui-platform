@@ -18,6 +18,9 @@ import type {
   ContributionPayment,
   LateInterestAccrual,
   ManualEntryRecord,
+  EnrollmentSubmission,
+  DuplicateFlag,
+  PERAChoiceElection,
 } from '@/types/Employer';
 
 const PORTAL = '/api/v1/employer';
@@ -138,4 +141,81 @@ export const employerReportingAPI = {
 
   // ─── Late Interest ──────────────────────────────────────────────────────────
   getInterest: (orgId: string) => fetchAPI<LateInterestAccrual[]>(`${REPORTING}/interest/${orgId}`),
+};
+
+// ─── Enrollment API ──────────────────────────────────────────────────────────
+
+const ENROLLMENT = '/api/v1/enrollment';
+
+export const employerEnrollmentAPI = {
+  // ─── Submissions ─────────────────────────────────────────────────────────────
+  createSubmission: (data: {
+    orgId: string;
+    enrollmentType: string;
+    ssnHash: string;
+    firstName: string;
+    lastName: string;
+    dateOfBirth: string;
+    hireDate: string;
+    planCode: string;
+    divisionCode: string;
+    middleName?: string;
+    suffix?: string;
+    gender?: string;
+    addressLine1?: string;
+    addressLine2?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    email?: string;
+    phone?: string;
+    isSafetyOfficer?: boolean;
+    jobTitle?: string;
+    annualSalary?: string;
+    isRehire?: boolean;
+    priorMemberId?: string;
+    priorRefundTaken?: boolean;
+  }) => postAPI<EnrollmentSubmission>(`${ENROLLMENT}/submissions`, data),
+
+  listSubmissions: (orgId: string, status?: string, limit = 25, offset = 0) =>
+    fetchPaginatedAPI<EnrollmentSubmission>(
+      `${ENROLLMENT}/submissions${toQueryString({ org_id: orgId, status: status ?? '', limit, offset })}`,
+    ),
+
+  getSubmission: (id: string) => fetchAPI<EnrollmentSubmission>(`${ENROLLMENT}/submissions/${id}`),
+
+  submitForValidation: (id: string) =>
+    putAPI<{ status: string }>(`${ENROLLMENT}/submissions/${id}/submit`, {}),
+
+  approveSubmission: (id: string) =>
+    putAPI<{ status: string }>(`${ENROLLMENT}/submissions/${id}/approve`, {}),
+
+  rejectSubmission: (id: string, reason: string) =>
+    putAPI<{ status: string }>(`${ENROLLMENT}/submissions/${id}/reject`, { reason }),
+
+  // ─── Duplicates ──────────────────────────────────────────────────────────────
+  listPendingDuplicates: (orgId: string, limit = 25, offset = 0) =>
+    fetchPaginatedAPI<DuplicateFlag>(
+      `${ENROLLMENT}/duplicates${toQueryString({ org_id: orgId, limit, offset })}`,
+    ),
+
+  listSubmissionDuplicates: (submissionId: string) =>
+    fetchAPI<{ items: DuplicateFlag[]; total: number }>(
+      `${ENROLLMENT}/submissions/${submissionId}/duplicates`,
+    ),
+
+  resolveDuplicate: (id: string, resolution: string, note: string) =>
+    putAPI<{ status: string }>(`${ENROLLMENT}/duplicates/${id}/resolve`, { resolution, note }),
+
+  // ─── PERAChoice ──────────────────────────────────────────────────────────────
+  listPERAChoicePending: (orgId: string, limit = 25, offset = 0) =>
+    fetchPaginatedAPI<PERAChoiceElection>(
+      `${ENROLLMENT}/perachoice${toQueryString({ org_id: orgId, limit, offset })}`,
+    ),
+
+  getPERAChoiceElection: (id: string) =>
+    fetchAPI<PERAChoiceElection>(`${ENROLLMENT}/perachoice/${id}`),
+
+  electPERAChoice: (id: string, plan: 'DB' | 'DC') =>
+    putAPI<{ status: string }>(`${ENROLLMENT}/perachoice/${id}/elect`, { plan }),
 };
