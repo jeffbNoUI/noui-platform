@@ -1,5 +1,33 @@
 # noui-platform — Build History
 
+## Employer Domain — Phase 2: Reporting Engine (2026-03-19)
+
+**Branch:** `claude/nifty-chatelet`
+**Goal:** Build Phase 2 of the 7-domain employer roadmap — contribution reporting engine with validation, exception workflow, payment setup, and late interest tracking.
+
+**What was built:**
+
+1. **`domains/pension/schema/021_employer_reporting.sql`** (NEW) — 5 tables: contribution_file (10 lifecycle states), contribution_record (per-member line items with SSN hash), contribution_exception (11 exception types, 5 statuses), contribution_payment (ACH/wire with 6 payment statuses), late_interest_accrual (per-period interest tracking). 13 indexes for query performance. All monetary columns NUMERIC — never float.
+
+2. **`platform/employer-reporting/`** (NEW) — Go HTTP service on port 8095. 15 API routes: file CRUD, manual entry with inline validation, exception queue (list/get/resolve/escalate), payment setup + history + cancellation, corrections, late interest. Full middleware chain matching employer-portal pattern. **Validation engine** (`domain/validator.go`): rate validation against contribution_rate_table with $0.01 tolerance, ORP separate code path (only AED/SAED validated), negative amount detection, total mismatch detection. 38 Go tests (21 handler + 17 domain). All passing.
+
+3. **`frontend/src/components/employer-portal/reporting/`** (NEW) — 6 React components: FileUpload (drag-drop zone + file list), ManualGrid (editable table with 11 columns), ValidationProgress (5-step stepper with record counts), ExceptionDashboard (filterable table with resolve/escalate), CorrectionWorkflow (file selector + correction form), PaymentSetup (ACH/wire selection + payment history).
+
+4. **`frontend/src/hooks/useEmployerReporting.ts`** (NEW) — 14 hooks: 7 query (useContributionFiles, useContributionFile, useContributionRecords, useExceptions, useException, usePayments, useLateInterest) + 7 mutation (useUploadManualEntry, useDeleteFile, useResolveException, useEscalateException, useSetupPayment, useCancelPayment, useSubmitCorrection).
+
+5. **`frontend/src/lib/employerApi.ts`** — Extended with `employerReportingAPI` object (15 API client methods for files, exceptions, payments, corrections, interest).
+
+6. **`frontend/src/types/Employer.ts`** — Updated placeholder types to match Go models. Added: FileStatus, ExceptionType, ExceptionStatus, PaymentMethod, PaymentStatus, ContributionRecord, ContributionPayment, LateInterestAccrual, ManualEntryRecord.
+
+**Test totals:** Frontend 1,651 tests (208 files). employer-reporting: 38 Go tests. employer-shared: 7 Go tests. employer-portal: 24 Go tests. All passing, zero regressions.
+
+**Zero conflicts:** All new directories/files — no existing files modified except employerApi.ts (reporting client appended) and Employer.ts (types updated from placeholders).
+
+**Data gaps (not blocking):** Late interest rate values, ORP member contribution rate, payment discrepancy threshold — all have schema slots built, awaiting COPERA confirmation. Validation engine works without these.
+
+**Next phase:** Phase 3 — Employer Enrollment (new member submissions, duplicate detection, PERAChoice tracking).
+---
+
 ## Visual Polish + Cross-Service Audit + Clerk Events (2026-03-19)
 
 **Branch:** `claude/quizzical-lovelace`
@@ -9,15 +37,9 @@
 
 1. **DQ Score formatting fix** — `OperationalMetricsPanel.tsx` now uses `.toFixed(1)` to display `98.6%` instead of raw float `98.61538461538461%`. +1 test.
 2. **Cross-service audit trail** — `AuditTrailPanel.tsx` now fetches from both `/crm/audit` and `/security/events`, merges and sorts by timestamp descending. Source badges (CRM in gray, Security in violet) distinguish entries. Either source can fail independently. Updated CSV export includes Source column. +5 tests.
-3. **Clerk webhook event types** — Added 5 new mappings to security service: `user.created`→`account_created`, `user.deleted`→`account_deleted`, `session.revoked`→`session_revoked`, `organization.membership.created`→`org_member_added`, `organization.membership.deleted`→`org_member_removed`. Total: 9 mapped types. +5 test cases.
-
-**Design exploration (deferred):**
-4. **Background job infrastructure** — Full design session exploring PostgreSQL `SKIP LOCKED`, Redis/asynq, and NATS approaches. Decision: defer until concrete need. Recommended approach: PG-native `SKIP LOCKED` behind a database-agnostic `JobStore` interface (portable across SQL Server, Oracle, DB2). Design captured in Claude memory.
-5. **Database portability** — Noted as future consideration. `SKIP LOCKED` pattern works across all major enterprise databases. Repository adapter pattern recommended for new services.
+3. **Clerk webhook event types** — Added 5 new mappings to security service: `user.created`, `user.deleted`, `session.revoked`, `organization.membership.created`, `organization.membership.deleted`. Total: 9 mapped types. +5 test cases.
 
 **Test totals:** Frontend 1,636 tests (204 files). Security Go 49 tests. All green.
-
-**Next session starter:** `docs/sessions/2026-03-19-next-session-starter.md` — options for job infra, frontend polish, or SLA tracking.
 
 ---
 
