@@ -1,5 +1,28 @@
 # noui-platform — Build History
 
+## Member Portal Redesign — Phase 11: Polish & E2E Testing (2026-03-18)
+
+**Branch:** `claude/confident-aryabhata`
+**Goal:** Final quality assurance pass — cross-section navigation, accessibility, error resilience, tour edge cases, design system consistency.
+
+**What was built:**
+
+### 5 new test files, 50 new tests (all test-only, zero component changes)
+
+1. **MemberPortal.navigation.test.tsx** (13 tests) — Full sidebar traversal for active/retiree/inactive/beneficiary personas, fallback "coming soon" sections, notification bell presence, back-to-dashboard navigation
+2. **MemberPortalSidebar.a11y.test.tsx** (11 tests) — ARIA landmarks (`role="navigation"`, `aria-label`), `aria-current="page"` tracking, collapse toggle labels, badge accessibility, focusability, no duplicate landmarks
+3. **MemberPortal.resilience.test.tsx** (10 tests) — Loading state, API error → demo data fallback, ErrorBoundary catch/retry, DEMO_MEMBER persona resolution
+4. **TourProvider.edge.test.tsx** (8 tests) — Inactive/beneficiary step counts, autoStart=false, version bump re-trigger, rapid clicking safety, skip button persistence, "Done" on last step
+5. **MemberPortal.consistency.test.tsx** (8 tests) — Design system colors/fonts (hex→rgb conversion for JSDOM), sidebar widths (56px/220px), border colors, badge rendering, collapsed text hiding
+
+**Key finding:** `resolveMemberPersona` compares `status_code.toLowerCase()` against full words ('active', 'inactive', 'retired'), not single-letter codes ('A', 'I', 'R'). Test mocks must use full words.
+
+**Test totals:** Frontend 1,610 tests (202 files). All green. No regressions.
+
+**Phase 11 completes the member portal redesign. All 11 phases are done.**
+
+---
+
 ## Member Portal Redesign — Phase 10: Notifications & Preferences (2026-03-18)
 
 **Branch:** `claude/determined-meitner`
