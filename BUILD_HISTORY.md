@@ -1,5 +1,51 @@
 # noui-platform — Build History
 
+## Employer Domain — Phase 5: WARET (2026-03-19)
+
+**Branch:** `claude/happy-montalcini`
+**Goal:** Build Phase 5 of the employer domain — Working After Retirement (WARET) service with penny-accurate penalty calculations, designation management, day tracking, and PERACare conflict detection.
+
+**What was built:**
+
+1. **`domains/pension/schema/024_employer_waret.sql`** (NEW) — 5 tables + 1 view: waret_designation (3 types with capacity/consecutive-year limits), waret_tracking (day definition: >4hrs = 1 day), waret_penalty (5% monthly benefit per over-limit day, `math/big.Rat`), waret_ic_disclosure (PERACare insurance carrier conflict tracking), waret_ytd_summary (aggregate view). All monetary columns NUMERIC.
+
+2. **`platform/employer-waret/`** (NEW) — Go HTTP service on port 8098. 4 domain packages:
+   - `domain/designation.go` — Validate employer type per designation, capacity check (10/district for 140-day), consecutive year limit (6yr + 1yr break), ORP exemption.
+   - `domain/tracking.go` — Day accumulation, hour-to-day conversion (>4hrs = 1 day), annual limit enforcement (110/720, 140/960, unlimited).
+   - `domain/penalty.go` — `math/big.Rat` penny-accurate: 5% of monthly benefit per over-limit day, effective month rule (day 1 = full cancellation), deduction spreading.
+   - `domain/peracare.go` — PERACare subsidy conflict detection, 30-day response window, auto-subsidy removal.
+   - 58 Go tests (handler + domain). All passing.
+
+3. **`frontend/src/components/employer-portal/waret/`** (NEW) — 4 components: DesignationForm (type selection + employer validation), DesignationDashboard (status overview + capacity), LimitTracker (day/hour accumulation + warnings), AnnualWorksheet (yearly summary + penalty history). 12 tests.
+
+4. **`frontend/src/hooks/useEmployerWaret.ts`** (NEW) — 10 hooks for designations, tracking, penalties, PERACare conflicts.
+
+5. **Shared files extended** — `employerApi.ts` (+120 lines WARET client), `Employer.ts` (+156 lines WARET types), `EmployerPortalApp.tsx` (WARET tab wired).
+
+**Test totals:** Frontend 1,692 tests (211 files). 187 Go tests across 6 employer modules (shared: 3, portal: 24, reporting: 38, enrollment: 23, terminations: 41, waret: 58). All passing, zero regressions.
+
+**Next phase:** Phase 6 — Service Credit Purchase (SCP). See `docs/sessions/2026-03-19-employer-domain-phase6-starter.md`.
+
+---
+
+## Employer Domain — Phase 4: Terminations & Refund (2026-03-19)
+
+**Branch:** `claude/happy-montalcini`
+**Goal:** Phase 4 — termination certifications, certification holds, and penny-accurate refund calculation using `math/big.Rat`.
+
+**Merged via:** PR #107
+
+---
+
+## Employer Domain — Phase 3: New Member Enrollment (2026-03-19)
+
+**Branch:** `claude/happy-montalcini`
+**Goal:** Phase 3 — new member submissions, duplicate detection, PERAChoice elections.
+
+**Merged via:** PR #106
+
+---
+
 ## Background Job Infrastructure — Security Service (2026-03-19)
 
 **Branch:** `claude/focused-driscoll`
