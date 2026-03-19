@@ -1,5 +1,38 @@
 # noui-platform — Build History
 
+## Employer Domain — Phase 1: Foundation (2026-03-19)
+
+**Branch:** `claude/pedantic-kepler`
+**Goal:** Build Phase 1 of the 7-domain employer roadmap — shared module, portal service, database schema, frontend scaffold.
+
+**What was built:**
+
+1. **`platform/employer-shared/`** (NEW) — Shared Go module with types for all 6 employer services: PortalRole (4 roles), ContributionCategory (7), PlanType (3), Tier (3), FileStatus (10 lifecycle states), ExceptionStatus (5), EnrollmentType (3), DesignationType (4 WARET), ServiceCreditType (5), Division struct, ContributionRateRow struct, LateInterestRate struct. 3 test functions (7 sub-tests).
+
+2. **`domains/pension/schema/020_employer_shared.sql`** (NEW) — 5 tables: employer_division (5 COPERA divisions), employer_portal_user (role-based access), contribution_rate_table (versioned rates keyed by division × safety_officer × effective_date), late_interest_rate (schema ready, no values yet), employer_alert (system-wide + org-specific). 14 rate rows seeded from COPERA fact sheet REV 1-26 (Jan 2025 + Jan 2026, all 5 divisions + Safety Officers). All rate totals verified against source document.
+
+3. **`platform/employer-portal/`** (NEW) — Go HTTP service on port 8094. 11 API routes: portal user CRUD, dashboard summary, alerts, rate tables, divisions. Full middleware chain (CORS → Auth → RateLimit → DBContext → Logging). 24 handler tests. Follows exact CRM service pattern.
+
+4. **`frontend/src/components/employer-portal/`** (NEW) — React portal with 7-tab navigation (Dashboard, Communications, Reporting, Enrollment, Terminations, WARET, SCP). Components: EmployerPortalApp, OrgBanner, AlertBanner, PortalNav, EmployerDashboard. API client (`employerApi.ts`), 10 React Query hooks, TypeScript types. 6 tests.
+
+5. **Vite proxy routes** — Added 6 proxy entries for employer services (ports 8094-8099).
+
+**Design documents:**
+- `docs/plans/2026-03-19-employer-domain-design.md` — Full 7-domain architecture with service topology, database schema, gap register
+- `docs/plans/2026-03-19-employer-domain-plan.md` — 8-phase implementation plan with 30+ tasks
+
+**Test totals:** Frontend 1,636 tests (206 files). employer-shared: 7 tests. employer-portal: 24 tests. All passing.
+
+**Zero conflicts:** All new directories — no existing files modified except vite.config.ts (proxy entries appended).
+
+**Data sourced:** COPERA contribution rates (Jan 2025 + Jan 2026) committed to `docs/copera-contribution-rates-jan2026.md`. Rate table key corrected to division × safety_officer × effective_date (not plan_type × tier).
+
+**Gaps flagged:** Late interest rate, minimum charge, payment discrepancy threshold, ORP rates, statutory caps/floors — all have schema slots built, awaiting COPERA confirmation.
+
+**Next phase:** Phase 2 — Employer Reporting engine (contribution validation, exceptions, payment setup).
+
+---
+
 ## E2E Test Gaps + Platform Polish (2026-03-19)
 
 **Branch:** `claude/sweet-mahavira`
