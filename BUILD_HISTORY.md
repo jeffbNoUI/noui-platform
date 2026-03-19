@@ -1,5 +1,42 @@
 # noui-platform — Build History
 
+## Background Job Infrastructure — Security Service (2026-03-19)
+
+**Branch:** `claude/focused-driscoll`
+**Goal:** Add in-process gocron scheduler to the security service with two background jobs: session cleanup and brute-force detection.
+
+**What was built:**
+
+1. **gocron scheduler in security service** — Scheduler starts alongside HTTP server, shuts down gracefully on SIGTERM. Two jobs registered: session cleanup (every 5 min), brute-force detection (every 1 min). All config via env vars with sensible defaults.
+
+2. **Session cleanup job** (`platform/security/jobs/cleanup.go`) — Deletes sessions exceeding idle timeout (default 30 min) or max lifetime (default 8 hr). Logs count of cleaned sessions. Parameterized `ListActiveSessions` to use same configurable timeout.
+
+3. **Brute-force detection job** (`platform/security/jobs/bruteforce.go`) — Queries `login_failure` events grouped by actor/IP within a configurable window (default 15 min). If count exceeds threshold (default 5), inserts `brute_force_detected` event with metadata (fail count, window, IP). Dedup prevents duplicate alerts within the same window. Uses `encoding/json.Marshal` for metadata (not string formatting).
+
+4. **Store methods added** — `CleanupExpiredSessions`, `CountFailedLoginsByActor`, `HasRecentBruteForceAlert` in db layer. `GetEventStats` extended with `bruteForceAlerts24h` count.
+
+5. **Types added** — `JobConfig` (4 env-var fields), `BruteForceActor` struct, `brute_force_detected` event type added to `EventTypeValues`.
+
+**Dependency added:** `github.com/go-co-op/gocron/v2 v2.19.1` — in-process cron scheduler for background jobs.
+
+**Config env vars (all with defaults):**
+- `SESSION_IDLE_TIMEOUT_MIN` = 30
+- `SESSION_MAX_LIFETIME_HR` = 8
+- `BRUTE_FORCE_THRESHOLD` = 5
+- `BRUTE_FORCE_WINDOW_MIN` = 15
+
+**Frontend impact:** Zero — brute-force alerts auto-appear in cross-service audit trail (already fetches all security events).
+
+**Test totals:** Security service: 3 packages (api, db, jobs), all passing. 6 new job tests + 4 new store tests + test updates. Frontend: 1,636 tests unchanged.
+
+**Design documents:**
+- `docs/plans/2026-03-19-job-infrastructure-design.md` — Design rationale (gocron vs SKIP LOCKED vs dedicated service)
+- `docs/plans/2026-03-19-job-infrastructure-plan.md` — 9-task TDD implementation plan
+
+**Next session:** Wire same gocron pattern into issues service for SLA breach detection. See `docs/sessions/2026-03-19-next-session-starter.md` Option C.
+
+---
+
 ## Visual Polish + Cross-Service Audit + Clerk Events (2026-03-19)
 
 **Branch:** `claude/quizzical-lovelace`
