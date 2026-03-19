@@ -1,5 +1,36 @@
 # noui-platform — Build History
 
+## Employer Domain Phase 7: Integration (2026-03-19)
+
+**Branch:** `claude/hopeful-diffie` → merged as PR #110
+**Goal:** Wire all 6 employer backend services into Docker, CI, and frontend routing.
+
+**What was built:**
+
+### docker-compose.yml
+- 6 new services: employer-portal (8094), employer-reporting (8095), employer-enrollment (8096), employer-terminations (8097), employer-waret (8098), employer-scp (8099)
+- 6 employer schema mounts in postgres init sequence (029–034)
+- healthagg HEALTH_SERVICES updated with all 6 employer endpoints
+- frontend depends_on updated with all 6 employer services
+- Total services: 21 (up from 15)
+
+### CI pipeline (.github/workflows/ci.yml)
+- 7 employer modules added to platform-services matrix: employer-shared, employer-portal, employer-reporting, employer-enrollment, employer-terminations, employer-waret, employer-scp
+- Total CI matrix entries: 18 (up from 11)
+
+### Frontend (App.tsx)
+- Swapped `EmployerPortal` → `EmployerPortalApp` from `@/components/employer-portal/EmployerPortalApp`
+- New component is self-contained tabbed portal with all 6 domain tabs
+- Vite proxy routes for 8094–8099 were already configured in prior phases
+
+**What was NOT needed:**
+- Nginx routing — no nginx.conf exists; Vite proxy handles dev routing
+- Seed data — employer domain uses API-driven data, not init.d seeds
+
+**Test totals:** 1,709 frontend tests (212 files), 234 Go tests across 7 employer modules. All passing, zero regressions.
+
+---
+
 ## Employer Domain Phase 6: Service Credit Purchase (2026-03-19)
 
 **Branch:** `claude/youthful-euclid` → merged as PR #109
