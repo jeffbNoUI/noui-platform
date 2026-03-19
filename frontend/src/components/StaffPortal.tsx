@@ -137,6 +137,23 @@ export default function StaffPortal({ onOpenCase, onViewMember, onChangeView }: 
               <span className="text-xs font-medium">{item.label}</span>
             </button>
           ))}
+
+          <div className="h-px bg-gray-200 my-2 mx-4" />
+
+          {/* Configuration / Reference links */}
+          {[
+            { key: 'rules-explorer' as ViewMode, label: 'Rules Explorer', icon: '\ud83d\udcdc' },
+            { key: 'demo-cases' as ViewMode, label: 'Demo Cases', icon: '\ud83e\uddea' },
+          ].map((item) => (
+            <button
+              key={item.key}
+              onClick={() => onChangeView(item.key)}
+              className="w-full flex items-center gap-2.5 px-4 py-2 text-left text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors"
+            >
+              <span className="text-sm">{item.icon}</span>
+              <span className="text-xs font-medium">{item.label}</span>
+            </button>
+          ))}
         </nav>
 
         {/* User */}
