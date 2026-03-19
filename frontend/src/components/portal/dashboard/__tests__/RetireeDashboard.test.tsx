@@ -67,13 +67,13 @@ describe('RetireeDashboard', () => {
     });
   });
 
-  it('shows quick links for tax docs, profile, and benefit management', async () => {
+  it('shows navigation cards for tax docs, profile, and benefit', async () => {
     renderWithProviders(<RetireeDashboard {...defaultProps} />);
     await waitFor(() => {
-      expect(screen.getByTestId('quick-link-tax-documents')).toBeInTheDocument();
+      expect(screen.getByTestId('card-tax-documents')).toBeInTheDocument();
     });
-    expect(screen.getByTestId('quick-link-profile')).toBeInTheDocument();
-    expect(screen.getByTestId('quick-link-benefit')).toBeInTheDocument();
+    expect(screen.getByTestId('card-profile')).toBeInTheDocument();
+    expect(screen.getByTestId('card-benefit')).toBeInTheDocument();
   });
 
   it('handles loading state', () => {

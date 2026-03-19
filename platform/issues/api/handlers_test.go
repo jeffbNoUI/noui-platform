@@ -10,6 +10,7 @@ import (
 	"time"
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
+	"github.com/noui/platform/apiresponse"
 	"github.com/noui/platform/issues/models"
 )
 
@@ -139,7 +140,7 @@ func TestDecodeJSON_NilBody(t *testing.T) {
 
 func TestWriteJSON(t *testing.T) {
 	w := httptest.NewRecorder()
-	writeJSON(w, http.StatusOK, map[string]string{"key": "value"})
+	apiresponse.WriteJSON(w, http.StatusOK, map[string]string{"key": "value"})
 
 	if w.Code != http.StatusOK {
 		t.Errorf("writeJSON status = %d, want %d", w.Code, http.StatusOK)
@@ -158,7 +159,7 @@ func TestWriteJSON(t *testing.T) {
 
 func TestWriteSuccess(t *testing.T) {
 	w := httptest.NewRecorder()
-	writeSuccess(w, http.StatusOK, map[string]string{"hello": "world"})
+	apiresponse.WriteSuccess(w, http.StatusOK, "issues", map[string]string{"hello": "world"})
 
 	if w.Code != http.StatusOK {
 		t.Errorf("writeSuccess status = %d, want %d", w.Code, http.StatusOK)
@@ -175,8 +176,8 @@ func TestWriteSuccess(t *testing.T) {
 	if !ok {
 		t.Fatal("writeSuccess missing 'meta' field")
 	}
-	if meta["request_id"] == nil || meta["request_id"] == "" {
-		t.Error("meta.request_id should not be empty")
+	if meta["requestId"] == nil || meta["requestId"] == "" {
+		t.Error("meta.requestId should not be empty")
 	}
 	if meta["timestamp"] == nil || meta["timestamp"] == "" {
 		t.Error("meta.timestamp should not be empty")
@@ -188,7 +189,7 @@ func TestWriteSuccess(t *testing.T) {
 
 func TestWriteError(t *testing.T) {
 	w := httptest.NewRecorder()
-	writeError(w, http.StatusBadRequest, "INVALID", "bad input")
+	apiresponse.WriteError(w, http.StatusBadRequest, "issues", "INVALID", "bad input")
 
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("writeError status = %d, want %d", w.Code, http.StatusBadRequest)
@@ -208,14 +209,14 @@ func TestWriteError(t *testing.T) {
 	if errObj["message"] != "bad input" {
 		t.Errorf("error.message = %q, want %q", errObj["message"], "bad input")
 	}
-	if errObj["request_id"] == nil || errObj["request_id"] == "" {
-		t.Error("error.request_id should not be empty")
+	if errObj["requestId"] == nil || errObj["requestId"] == "" {
+		t.Error("error.requestId should not be empty")
 	}
 }
 
 func TestWritePaginated(t *testing.T) {
 	w := httptest.NewRecorder()
-	writePaginated(w, []string{"a", "b"}, 10, 5, 0)
+	apiresponse.WritePaginated(w, "issues", []string{"a", "b"}, 10, 5, 0)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("writePaginated status = %d, want %d", w.Code, http.StatusOK)
@@ -243,7 +244,7 @@ func TestWritePaginated(t *testing.T) {
 
 func TestWritePaginated_NoMore(t *testing.T) {
 	w := httptest.NewRecorder()
-	writePaginated(w, []string{"a"}, 3, 5, 0)
+	apiresponse.WritePaginated(w, "issues", []string{"a"}, 3, 5, 0)
 
 	var body map[string]interface{}
 	json.Unmarshal(w.Body.Bytes(), &body)
@@ -387,8 +388,8 @@ func TestGetIssue_Valid(t *testing.T) {
 	if body.Data.Title != "Test issue" {
 		t.Errorf("Title = %q, want Test issue", body.Data.Title)
 	}
-	if body.Meta["request_id"] == nil || body.Meta["request_id"] == "" {
-		t.Error("meta.request_id should not be empty")
+	if body.Meta["requestId"] == nil || body.Meta["requestId"] == "" {
+		t.Error("meta.requestId should not be empty")
 	}
 }
 
@@ -843,7 +844,7 @@ func TestGetIssueStats(t *testing.T) {
 	if body.Data.ResolvedCount != 10 {
 		t.Errorf("ResolvedCount = %d, want 10", body.Data.ResolvedCount)
 	}
-	if body.Meta["request_id"] == nil || body.Meta["request_id"] == "" {
-		t.Error("meta.request_id should not be empty")
+	if body.Meta["requestId"] == nil || body.Meta["requestId"] == "" {
+		t.Error("meta.requestId should not be empty")
 	}
 }

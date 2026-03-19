@@ -98,7 +98,7 @@ function setupFetch(overrides?: { issues?: typeof MOCK_ISSUES; stats?: typeof MO
         json: () =>
           Promise.resolve({
             data: stats,
-            meta: { request_id: 'test', timestamp: new Date().toISOString() },
+            meta: { requestId: 'test', timestamp: new Date().toISOString() },
           }),
       });
     }
@@ -119,7 +119,7 @@ function setupFetch(overrides?: { issues?: typeof MOCK_ISSUES; stats?: typeof MO
           Promise.resolve({
             data: filtered,
             pagination: { total: filtered.length, limit: 25, offset: 0, hasMore: false },
-            meta: { request_id: 'test', timestamp: new Date().toISOString() },
+            meta: { requestId: 'test', timestamp: new Date().toISOString() },
           }),
       });
     }

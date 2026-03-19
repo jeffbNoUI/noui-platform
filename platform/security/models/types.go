@@ -81,4 +81,9 @@ var EventTypeValues = []string{
 	"session_start",
 	"session_end",
 	"password_reset",
+	"account_created",
+	"account_deleted",
+	"session_revoked",
+	"org_member_added",
+	"org_member_removed",
 }

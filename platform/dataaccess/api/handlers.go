@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
+	"github.com/noui/platform/apiresponse"
 	"github.com/noui/platform/dataaccess/ecm"
 	"github.com/noui/platform/dataaccess/models"
 	"github.com/noui/platform/dbcontext"
@@ -57,7 +57,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 // HealthCheck returns service health status.
 func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{
+	apiresponse.WriteJSON(w, http.StatusOK, map[string]string{
 		"status":  "ok",
 		"service": "dataaccess",
 		"version": "0.1.0",
@@ -68,14 +68,14 @@ func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) SearchMembers(w http.ResponseWriter, r *http.Request) {
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	if q == "" {
-		writeError(w, http.StatusBadRequest, "INVALID_QUERY", "q parameter is required")
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "INVALID_QUERY", "q parameter is required")
 		return
 	}
 
 	var errs validation.Errors
 	errs.MaxLen("q", q, 200)
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "INVALID_REQUEST", errs.Error())
 		return
 	}
 
@@ -97,7 +97,7 @@ func (h *Handler) SearchMembers(w http.ResponseWriter, r *http.Request) {
 	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, likePattern, q, limit)
 	if err != nil {
 		slog.Error("error searching members", "error", err)
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Search query failed")
+		apiresponse.WriteError(w, http.StatusInternalServerError, "dataaccess", "DB_ERROR", "Search query failed")
 		return
 	}
 	defer rows.Close()
@@ -112,14 +112,14 @@ func (h *Handler) SearchMembers(w http.ResponseWriter, r *http.Request) {
 		results = append(results, m)
 	}
 
-	writeSuccess(w, results)
+	apiresponse.WriteSuccess(w, http.StatusOK, "dataaccess", results)
 }
 
 // GetMember returns member profile with current employment info.
 func (h *Handler) GetMember(w http.ResponseWriter, r *http.Request) {
 	memberID, err := parseMemberID(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_MEMBER_ID", "Member ID must be a positive integer")
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "INVALID_MEMBER_ID", "Member ID must be a positive integer")
 		return
 	}
 
@@ -146,13 +146,13 @@ func (h *Handler) GetMember(w http.ResponseWriter, r *http.Request) {
 		&medicareFlag, &email, &deptName, &posTitle,
 	)
 	if err == sql.ErrNoRows {
-		writeError(w, http.StatusNotFound, "MEMBER_NOT_FOUND",
+		apiresponse.WriteError(w, http.StatusNotFound, "dataaccess", "MEMBER_NOT_FOUND",
 			"No member found with ID "+strconv.Itoa(memberID))
 		return
 	}
 	if err != nil {
 		slog.Error("error querying member", "memberID", memberID, "error", err)
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
+		apiresponse.WriteError(w, http.StatusInternalServerError, "dataaccess", "DB_ERROR", "Database query failed")
 		return
 	}
 
@@ -172,14 +172,14 @@ func (h *Handler) GetMember(w http.ResponseWriter, r *http.Request) {
 		member.RehireDate = &rehireDate.Time
 	}
 
-	writeSuccess(w, member)
+	apiresponse.WriteSuccess(w, http.StatusOK, "dataaccess", member)
 }
 
 // GetEmploymentHistory returns employment events for a member.
 func (h *Handler) GetEmploymentHistory(w http.ResponseWriter, r *http.Request) {
 	memberID, err := parseMemberID(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_MEMBER_ID", "Member ID must be a positive integer")
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "INVALID_MEMBER_ID", "Member ID must be a positive integer")
 		return
 	}
 
@@ -197,7 +197,7 @@ func (h *Handler) GetEmploymentHistory(w http.ResponseWriter, r *http.Request) {
 	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, memberID, limit, offset)
 	if err != nil {
 		slog.Error("error querying employment history", "memberID", memberID, "error", err)
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
+		apiresponse.WriteError(w, http.StatusInternalServerError, "dataaccess", "DB_ERROR", "Database query failed")
 		return
 	}
 	defer rows.Close()
@@ -225,14 +225,14 @@ func (h *Handler) GetEmploymentHistory(w http.ResponseWriter, r *http.Request) {
 		events = append(events, e)
 	}
 
-	writePaginated(w, events, total, limit, offset)
+	apiresponse.WritePaginated(w, "dataaccess", events, total, limit, offset)
 }
 
 // GetSalaryHistory returns salary records for a member with optional date filtering.
 func (h *Handler) GetSalaryHistory(w http.ResponseWriter, r *http.Request) {
 	memberID, err := parseMemberID(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_MEMBER_ID", "Member ID must be a positive integer")
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "INVALID_MEMBER_ID", "Member ID must be a positive integer")
 		return
 	}
 
@@ -266,7 +266,7 @@ func (h *Handler) GetSalaryHistory(w http.ResponseWriter, r *http.Request) {
 	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, args...)
 	if err != nil {
 		slog.Error("error querying salary", "memberID", memberID, "error", err)
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
+		apiresponse.WriteError(w, http.StatusInternalServerError, "dataaccess", "DB_ERROR", "Database query failed")
 		return
 	}
 	defer rows.Close()
@@ -290,7 +290,7 @@ func (h *Handler) GetSalaryHistory(w http.ResponseWriter, r *http.Request) {
 		records = append(records, s)
 	}
 
-	writePaginated(w, records, total, limit, offset)
+	apiresponse.WritePaginated(w, "dataaccess", records, total, limit, offset)
 }
 
 // GetAMS calculates the Average Monthly Salary for a member.
@@ -298,7 +298,7 @@ func (h *Handler) GetSalaryHistory(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetAMS(w http.ResponseWriter, r *http.Request) {
 	memberID, err := parseMemberID(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_MEMBER_ID", "Member ID must be a positive integer")
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "INVALID_MEMBER_ID", "Member ID must be a positive integer")
 		return
 	}
 
@@ -309,13 +309,13 @@ func (h *Handler) GetAMS(w http.ResponseWriter, r *http.Request) {
 		"SELECT TIER_CD, HIRE_DT FROM MEMBER_MASTER WHERE MEMBER_ID = $1", memberID,
 	).Scan(&tierCode, &hireDate)
 	if err == sql.ErrNoRows {
-		writeError(w, http.StatusNotFound, "MEMBER_NOT_FOUND",
+		apiresponse.WriteError(w, http.StatusNotFound, "dataaccess", "MEMBER_NOT_FOUND",
 			"No member found with ID "+strconv.Itoa(memberID))
 		return
 	}
 	if err != nil {
 		slog.Error("error querying member tier", "error", err)
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
+		apiresponse.WriteError(w, http.StatusInternalServerError, "dataaccess", "DB_ERROR", "Database query failed")
 		return
 	}
 
@@ -338,7 +338,7 @@ func (h *Handler) GetAMS(w http.ResponseWriter, r *http.Request) {
 	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, memberID)
 	if err != nil {
 		slog.Error("error querying salary for AMS", "error", err)
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
+		apiresponse.WriteError(w, http.StatusInternalServerError, "dataaccess", "DB_ERROR", "Database query failed")
 		return
 	}
 	defer rows.Close()
@@ -363,7 +363,7 @@ func (h *Handler) GetAMS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(monthlyTotals) == 0 {
-		writeError(w, http.StatusNotFound, "NO_SALARY_DATA",
+		apiresponse.WriteError(w, http.StatusNotFound, "dataaccess", "NO_SALARY_DATA",
 			"No salary records found for member "+strconv.Itoa(memberID))
 		return
 	}
@@ -434,14 +434,14 @@ func (h *Handler) GetAMS(w http.ResponseWriter, r *http.Request) {
 		MonthlyTotals:     windowTotals,
 	}
 
-	writeSuccess(w, result)
+	apiresponse.WriteSuccess(w, http.StatusOK, "dataaccess", result)
 }
 
 // GetBeneficiaries returns current beneficiary designations for a member.
 func (h *Handler) GetBeneficiaries(w http.ResponseWriter, r *http.Request) {
 	memberID, err := parseMemberID(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_MEMBER_ID", "Member ID must be a positive integer")
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "INVALID_MEMBER_ID", "Member ID must be a positive integer")
 		return
 	}
 
@@ -459,7 +459,7 @@ func (h *Handler) GetBeneficiaries(w http.ResponseWriter, r *http.Request) {
 	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, memberID, limit, offset)
 	if err != nil {
 		slog.Error("error querying beneficiaries", "error", err)
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
+		apiresponse.WriteError(w, http.StatusInternalServerError, "dataaccess", "DB_ERROR", "Database query failed")
 		return
 	}
 	defer rows.Close()
@@ -487,14 +487,14 @@ func (h *Handler) GetBeneficiaries(w http.ResponseWriter, r *http.Request) {
 		benes = append(benes, b)
 	}
 
-	writePaginated(w, benes, total, limit, offset)
+	apiresponse.WritePaginated(w, "dataaccess", benes, total, limit, offset)
 }
 
 // GetDRO returns domestic relations order records for a member.
 func (h *Handler) GetDRO(w http.ResponseWriter, r *http.Request) {
 	memberID, err := parseMemberID(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_MEMBER_ID", "Member ID must be a positive integer")
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "INVALID_MEMBER_ID", "Member ID must be a positive integer")
 		return
 	}
 
@@ -513,7 +513,7 @@ func (h *Handler) GetDRO(w http.ResponseWriter, r *http.Request) {
 	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, memberID, limit, offset)
 	if err != nil {
 		slog.Error("error querying DRO", "error", err)
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
+		apiresponse.WriteError(w, http.StatusInternalServerError, "dataaccess", "DB_ERROR", "Database query failed")
 		return
 	}
 	defer rows.Close()
@@ -545,14 +545,14 @@ func (h *Handler) GetDRO(w http.ResponseWriter, r *http.Request) {
 		dros = append(dros, d)
 	}
 
-	writePaginated(w, dros, total, limit, offset)
+	apiresponse.WritePaginated(w, "dataaccess", dros, total, limit, offset)
 }
 
 // GetContributions returns contribution records and summary for a member.
 func (h *Handler) GetContributions(w http.ResponseWriter, r *http.Request) {
 	memberID, err := parseMemberID(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_MEMBER_ID", "Member ID must be a positive integer")
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "INVALID_MEMBER_ID", "Member ID must be a positive integer")
 		return
 	}
 
@@ -572,7 +572,7 @@ func (h *Handler) GetContributions(w http.ResponseWriter, r *http.Request) {
 	)
 	if err != nil {
 		slog.Error("error querying contributions", "error", err)
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
+		apiresponse.WriteError(w, http.StatusInternalServerError, "dataaccess", "DB_ERROR", "Database query failed")
 		return
 	}
 
@@ -586,14 +586,14 @@ func (h *Handler) GetContributions(w http.ResponseWriter, r *http.Request) {
 
 	dbcontext.DB(r.Context(), h.DB).QueryRowContext(r.Context(), balQuery, memberID).Scan(&summary.CurrentEEBal, &summary.CurrentERBal)
 
-	writeSuccess(w, summary)
+	apiresponse.WriteSuccess(w, http.StatusOK, "dataaccess", summary)
 }
 
 // GetServiceCredit returns service credit records and summary for a member.
 func (h *Handler) GetServiceCredit(w http.ResponseWriter, r *http.Request) {
 	memberID, err := parseMemberID(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_MEMBER_ID", "Member ID must be a positive integer")
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "INVALID_MEMBER_ID", "Member ID must be a positive integer")
 		return
 	}
 
@@ -611,7 +611,7 @@ func (h *Handler) GetServiceCredit(w http.ResponseWriter, r *http.Request) {
 	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, memberID, limit, offset)
 	if err != nil {
 		slog.Error("error querying service credit", "error", err)
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
+		apiresponse.WriteError(w, http.StatusInternalServerError, "dataaccess", "DB_ERROR", "Database query failed")
 		return
 	}
 	defer rows.Close()
@@ -680,14 +680,14 @@ func (h *Handler) GetServiceCredit(w http.ResponseWriter, r *http.Request) {
 		Offset:  offset,
 	}
 
-	writeSuccess(w, result)
+	apiresponse.WriteSuccess(w, http.StatusOK, "dataaccess", result)
 }
 
 // GetRefundEstimate returns the refund estimate for an inactive member.
 func (h *Handler) GetRefundEstimate(w http.ResponseWriter, r *http.Request) {
 	memberID, err := parseMemberID(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_MEMBER_ID", "Member ID must be a positive integer")
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "INVALID_MEMBER_ID", "Member ID must be a positive integer")
 		return
 	}
 
@@ -698,11 +698,11 @@ func (h *Handler) GetRefundEstimate(w http.ResponseWriter, r *http.Request) {
 	).Scan(&exists)
 	if err != nil {
 		slog.Error("error checking member existence", "memberID", memberID, "error", err)
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
+		apiresponse.WriteError(w, http.StatusInternalServerError, "dataaccess", "DB_ERROR", "Database query failed")
 		return
 	}
 	if !exists {
-		writeError(w, http.StatusNotFound, "MEMBER_NOT_FOUND",
+		apiresponse.WriteError(w, http.StatusNotFound, "dataaccess", "MEMBER_NOT_FOUND",
 			"No member found with ID "+strconv.Itoa(memberID))
 		return
 	}
@@ -717,7 +717,7 @@ func (h *Handler) GetRefundEstimate(w http.ResponseWriter, r *http.Request) {
 	err = dbcontext.DB(r.Context(), h.DB).QueryRowContext(r.Context(), query, memberID).Scan(&ee, &interest)
 	if err != nil {
 		slog.Error("error querying refund estimate", "memberID", memberID, "error", err)
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
+		apiresponse.WriteError(w, http.StatusInternalServerError, "dataaccess", "DB_ERROR", "Database query failed")
 		return
 	}
 
@@ -731,14 +731,14 @@ func (h *Handler) GetRefundEstimate(w http.ResponseWriter, r *http.Request) {
 		NetAfterWithhold:      total * 0.80,
 	}
 
-	writeSuccess(w, result)
+	apiresponse.WriteSuccess(w, http.StatusOK, "dataaccess", result)
 }
 
 // GetPaymentHistory returns paginated payment records for a retiree.
 func (h *Handler) GetPaymentHistory(w http.ResponseWriter, r *http.Request) {
 	memberID, err := parseMemberID(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_MEMBER_ID", "Member ID must be a positive integer")
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "INVALID_MEMBER_ID", "Member ID must be a positive integer")
 		return
 	}
 
@@ -756,7 +756,7 @@ func (h *Handler) GetPaymentHistory(w http.ResponseWriter, r *http.Request) {
 	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, memberID, limit, offset)
 	if err != nil {
 		slog.Error("error querying payment history", "memberID", memberID, "error", err)
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
+		apiresponse.WriteError(w, http.StatusInternalServerError, "dataaccess", "DB_ERROR", "Database query failed")
 		return
 	}
 	defer rows.Close()
@@ -774,14 +774,14 @@ func (h *Handler) GetPaymentHistory(w http.ResponseWriter, r *http.Request) {
 		payments = append(payments, p)
 	}
 
-	writePaginated(w, payments, total, limit, offset)
+	apiresponse.WritePaginated(w, "dataaccess", payments, total, limit, offset)
 }
 
 // GetTaxDocuments returns tax documents (1099-R, etc.) for a member.
 func (h *Handler) GetTaxDocuments(w http.ResponseWriter, r *http.Request) {
 	memberID, err := parseMemberID(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_MEMBER_ID", "Member ID must be a positive integer")
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "INVALID_MEMBER_ID", "Member ID must be a positive integer")
 		return
 	}
 
@@ -799,7 +799,7 @@ func (h *Handler) GetTaxDocuments(w http.ResponseWriter, r *http.Request) {
 	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, memberID, limit, offset)
 	if err != nil {
 		slog.Error("error querying tax documents", "memberID", memberID, "error", err)
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
+		apiresponse.WriteError(w, http.StatusInternalServerError, "dataaccess", "DB_ERROR", "Database query failed")
 		return
 	}
 	defer rows.Close()
@@ -817,14 +817,14 @@ func (h *Handler) GetTaxDocuments(w http.ResponseWriter, r *http.Request) {
 		docs = append(docs, d)
 	}
 
-	writePaginated(w, docs, total, limit, offset)
+	apiresponse.WritePaginated(w, "dataaccess", docs, total, limit, offset)
 }
 
 // GetAddresses returns address records for a member.
 func (h *Handler) GetAddresses(w http.ResponseWriter, r *http.Request) {
 	memberID, err := parseMemberID(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_MEMBER_ID", "Member ID must be a positive integer")
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "INVALID_MEMBER_ID", "Member ID must be a positive integer")
 		return
 	}
 
@@ -838,7 +838,7 @@ func (h *Handler) GetAddresses(w http.ResponseWriter, r *http.Request) {
 	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, memberID)
 	if err != nil {
 		slog.Error("error querying addresses", "memberID", memberID, "error", err)
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
+		apiresponse.WriteError(w, http.StatusInternalServerError, "dataaccess", "DB_ERROR", "Database query failed")
 		return
 	}
 	defer rows.Close()
@@ -854,14 +854,14 @@ func (h *Handler) GetAddresses(w http.ResponseWriter, r *http.Request) {
 		addresses = append(addresses, a)
 	}
 
-	writeSuccess(w, addresses)
+	apiresponse.WriteSuccess(w, http.StatusOK, "dataaccess", addresses)
 }
 
 // UpdateAddress updates a member's address.
 func (h *Handler) UpdateAddress(w http.ResponseWriter, r *http.Request) {
 	memberID, err := parseMemberID(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_MEMBER_ID", "Member ID must be a positive integer")
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "INVALID_MEMBER_ID", "Member ID must be a positive integer")
 		return
 	}
 
@@ -875,7 +875,7 @@ func (h *Handler) UpdateAddress(w http.ResponseWriter, r *http.Request) {
 	}
 	addressID, err := strconv.Atoi(aidStr)
 	if err != nil || addressID <= 0 {
-		writeError(w, http.StatusBadRequest, "INVALID_ADDRESS_ID", "Address ID must be a positive integer")
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "INVALID_ADDRESS_ID", "Address ID must be a positive integer")
 		return
 	}
 
@@ -888,7 +888,7 @@ func (h *Handler) UpdateAddress(w http.ResponseWriter, r *http.Request) {
 		AddressType *string `json:"address_type"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "Invalid JSON body")
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "INVALID_REQUEST", "Invalid JSON body")
 		return
 	}
 
@@ -910,7 +910,7 @@ func (h *Handler) UpdateAddress(w http.ResponseWriter, r *http.Request) {
 		errs.MaxLen("line1", *input.Line1, 200)
 	}
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "INVALID_REQUEST", errs.Error())
 		return
 	}
 
@@ -951,7 +951,7 @@ func (h *Handler) UpdateAddress(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(setClauses) == 0 {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "No fields to update")
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "INVALID_REQUEST", "No fields to update")
 		return
 	}
 
@@ -965,16 +965,16 @@ func (h *Handler) UpdateAddress(w http.ResponseWriter, r *http.Request) {
 		&a.City, &a.State, &a.ZipCode, &a.IsCurrent,
 	)
 	if err == sql.ErrNoRows {
-		writeError(w, http.StatusNotFound, "ADDRESS_NOT_FOUND", "Address not found for this member")
+		apiresponse.WriteError(w, http.StatusNotFound, "dataaccess", "ADDRESS_NOT_FOUND", "Address not found for this member")
 		return
 	}
 	if err != nil {
 		slog.Error("error updating address", "memberID", memberID, "addressID", addressID, "error", err)
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database update failed")
+		apiresponse.WriteError(w, http.StatusInternalServerError, "dataaccess", "DB_ERROR", "Database update failed")
 		return
 	}
 
-	writeSuccess(w, a)
+	apiresponse.WriteSuccess(w, http.StatusOK, "dataaccess", a)
 }
 
 // --- Helper functions ---
@@ -1002,57 +1002,6 @@ func nullStr(ns sql.NullString) string {
 		return ns.String
 	}
 	return ""
-}
-
-func writeJSON(w http.ResponseWriter, status int, v interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(v); err != nil {
-		slog.Error("error encoding JSON response", "error", err)
-	}
-}
-
-func writePaginated(w http.ResponseWriter, items interface{}, total, limit, offset int) {
-	resp := map[string]interface{}{
-		"data": items,
-		"pagination": map[string]interface{}{
-			"total":   total,
-			"limit":   limit,
-			"offset":  offset,
-			"hasMore": offset+limit < total,
-		},
-		"meta": map[string]interface{}{
-			"request_id": uuid.New().String(),
-			"timestamp":  time.Now().UTC().Format(time.RFC3339),
-			"service":    "dataaccess",
-			"version":    "v1",
-		},
-	}
-	writeJSON(w, http.StatusOK, resp)
-}
-
-func writeSuccess(w http.ResponseWriter, data interface{}) {
-	resp := map[string]interface{}{
-		"data": data,
-		"meta": map[string]interface{}{
-			"request_id": uuid.New().String(),
-			"timestamp":  time.Now().UTC().Format(time.RFC3339),
-			"service":    "dataaccess",
-			"version":    "v1",
-		},
-	}
-	writeJSON(w, http.StatusOK, resp)
-}
-
-func writeError(w http.ResponseWriter, status int, code, message string) {
-	resp := map[string]interface{}{
-		"error": map[string]interface{}{
-			"code":       code,
-			"message":    message,
-			"request_id": uuid.New().String(),
-		},
-	}
-	writeJSON(w, status, resp)
 }
 
 func intParam(r *http.Request, name string, defaultVal int) int {

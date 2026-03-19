@@ -28,7 +28,7 @@ const CONTACT: Contact = {
 const EMPTY_PAGINATED = {
   data: [],
   pagination: { total: 0, limit: 25, offset: 0, hasMore: false },
-  meta: { request_id: 'test', timestamp: '2026-03-10T00:00:00Z' },
+  meta: { requestId: 'test', timestamp: '2026-03-10T00:00:00Z' },
 };
 
 const EMPTY_TIMELINE = {
@@ -39,7 +39,7 @@ const EMPTY_TIMELINE = {
     channels: [],
     dateRange: { earliest: '', latest: '' },
   },
-  meta: { request_id: 'test', timestamp: '2026-03-10T00:00:00Z' },
+  meta: { requestId: 'test', timestamp: '2026-03-10T00:00:00Z' },
 };
 
 // ── Fetch mock ─────────────────────────────────────────────────────────────
@@ -64,7 +64,7 @@ function setupFetch(opts?: { contact?: Contact | null }) {
         json: () =>
           Promise.resolve({
             data: contact,
-            meta: { request_id: 'test', timestamp: '2026-03-10T00:00:00Z' },
+            meta: { requestId: 'test', timestamp: '2026-03-10T00:00:00Z' },
           }),
       });
     }
@@ -91,7 +91,7 @@ function setupFetch(opts?: { contact?: Contact | null }) {
         json: () =>
           Promise.resolve({
             data: contact,
-            meta: { request_id: 'test', timestamp: '2026-03-10T00:00:00Z' },
+            meta: { requestId: 'test', timestamp: '2026-03-10T00:00:00Z' },
           }),
       });
     }
@@ -128,7 +128,7 @@ function setupFetch(opts?: { contact?: Contact | null }) {
         json: () =>
           Promise.resolve({
             data: [],
-            meta: { request_id: 'test', timestamp: '2026-03-10T00:00:00Z' },
+            meta: { requestId: 'test', timestamp: '2026-03-10T00:00:00Z' },
           }),
       });
     }
@@ -148,7 +148,7 @@ function setupFetch(opts?: { contact?: Contact | null }) {
               tier: 1,
               status: 'active',
             },
-            meta: { request_id: 'test', timestamp: '2026-03-10T00:00:00Z' },
+            meta: { requestId: 'test', timestamp: '2026-03-10T00:00:00Z' },
           }),
       });
     }
@@ -160,7 +160,7 @@ function setupFetch(opts?: { contact?: Contact | null }) {
         json: () =>
           Promise.resolve({
             data: { monthly_benefit: '3500.00', retirement_date: '2027-01-01' },
-            meta: { request_id: 'test', timestamp: '2026-03-10T00:00:00Z' },
+            meta: { requestId: 'test', timestamp: '2026-03-10T00:00:00Z' },
           }),
       });
     }
@@ -172,7 +172,7 @@ function setupFetch(opts?: { contact?: Contact | null }) {
         json: () =>
           Promise.resolve({
             data: { eligible: true },
-            meta: { request_id: 'test', timestamp: '2026-03-10T00:00:00Z' },
+            meta: { requestId: 'test', timestamp: '2026-03-10T00:00:00Z' },
           }),
       });
     }
@@ -183,7 +183,7 @@ function setupFetch(opts?: { contact?: Contact | null }) {
       json: () =>
         Promise.resolve({
           data: null,
-          meta: { request_id: 'test', timestamp: '2026-03-10T00:00:00Z' },
+          meta: { requestId: 'test', timestamp: '2026-03-10T00:00:00Z' },
         }),
     });
   });

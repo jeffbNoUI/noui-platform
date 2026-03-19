@@ -91,6 +91,31 @@ export default defineConfig({
         target: 'http://localhost:8081',
         changeOrigin: true,
       },
+      // Employer domain services (ports 8094-8099)
+      '/api/v1/employer': {
+        target: 'http://localhost:8094',
+        changeOrigin: true,
+      },
+      '/api/v1/reporting': {
+        target: 'http://localhost:8095',
+        changeOrigin: true,
+      },
+      '/api/v1/enrollment': {
+        target: 'http://localhost:8096',
+        changeOrigin: true,
+      },
+      '/api/v1/terminations': {
+        target: 'http://localhost:8097',
+        changeOrigin: true,
+      },
+      '/api/v1/waret': {
+        target: 'http://localhost:8098',
+        changeOrigin: true,
+      },
+      '/api/v1/scp': {
+        target: 'http://localhost:8099',
+        changeOrigin: true,
+      },
     },
   },
 });

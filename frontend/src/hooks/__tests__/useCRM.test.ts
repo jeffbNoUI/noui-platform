@@ -10,7 +10,7 @@ import {
   useContactSearch,
 } from '@/hooks/useCRM';
 
-const META = { request_id: 'test', timestamp: '2026-01-01T00:00:00Z' };
+const META = { requestId: 'test', timestamp: '2026-01-01T00:00:00Z' };
 
 function setupFetch() {
   const fetchMock = vi.fn().mockImplementation((url: string, init?: RequestInit) => {

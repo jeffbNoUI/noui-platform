@@ -35,13 +35,16 @@ export default function OperationalMetricsPanel() {
 
   const dash = '-';
 
+  // Detect when all data sources are unavailable (not loading, but no data)
+  const allUnavailable = !casesLoading && !slaLoading && !caseStats && !slaStats && !dqScore;
+
   // KPI values
   const activeCases = caseStats ? String(caseStats.totalActive) : dash;
   const slaTotal = slaStats ? slaStats.onTrack + slaStats.atRisk + slaStats.overdue : 0;
   const slaOnTrackPct = slaTotal > 0 ? ((slaStats!.onTrack / slaTotal) * 100).toFixed(1) : null;
   const slaOnTrack = slaOnTrackPct ? `${slaOnTrackPct}%` : dash;
   const avgProcessing = slaStats ? `${slaStats.avgProcessingDays} days` : dash;
-  const dqValue = dqScore ? `${dqScore.overallScore}%` : dash;
+  const dqValue = dqScore ? `${dqScore.overallScore.toFixed(1)}%` : dash;
 
   // Pipeline bar data (sorted by count descending)
   const stages = caseStats?.caseloadByStage
@@ -55,6 +58,15 @@ export default function OperationalMetricsPanel() {
 
   return (
     <div className="space-y-6">
+      {allUnavailable && (
+        <div
+          className="bg-amber-50 border border-amber-200 text-amber-700 px-3 py-2 rounded-lg text-xs font-medium"
+          role="alert"
+        >
+          Service metrics are currently unavailable. Check the Health tab for service status.
+        </div>
+      )}
+
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard label="Active Cases" value={activeCases} />

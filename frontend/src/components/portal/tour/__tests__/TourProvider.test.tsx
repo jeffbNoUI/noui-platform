@@ -22,7 +22,7 @@ let mockEl: HTMLDivElement | null = null;
 beforeEach(() => {
   // Provide a mock target element for spotlight to find
   mockEl = document.createElement('div');
-  mockEl.setAttribute('data-tour-id', 'sidebar-nav');
+  mockEl.setAttribute('data-tour-id', 'card-grid');
   mockEl.getBoundingClientRect = () => mockRect as DOMRect;
   document.body.appendChild(mockEl);
 });
@@ -87,7 +87,7 @@ describe('TourProvider', () => {
 
   it('does NOT auto-start when tour completed and version current', async () => {
     renderWithProviders(
-      <TourProvider {...defaultProps} tourCompleted={true} tourVersion={2} autoStart>
+      <TourProvider {...defaultProps} tourCompleted={true} tourVersion={3} autoStart>
         <div>Content</div>
       </TourProvider>,
     );
@@ -129,8 +129,8 @@ describe('TourProvider', () => {
       { timeout: 1000 },
     );
 
-    // First step is "Navigation" (sidebar-nav)
-    expect(screen.getByText('Navigation')).toBeInTheDocument();
+    // First step is "Your Dashboard" (card-grid)
+    expect(screen.getByText('Your Dashboard')).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('tour-next'));
 

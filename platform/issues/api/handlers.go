@@ -5,12 +5,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"strconv"
-	"time"
 
-	"github.com/google/uuid"
+	"github.com/noui/platform/apiresponse"
 	"github.com/noui/platform/auth"
 	issuedb "github.com/noui/platform/issues/db"
 	"github.com/noui/platform/issues/models"
@@ -50,7 +48,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 // HealthCheck returns service health status.
 func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{
+	apiresponse.WriteJSON(w, http.StatusOK, map[string]string{
 		"status":  "ok",
 		"service": "issues",
 		"version": "0.1.0",
@@ -75,17 +73,17 @@ func (h *Handler) ListIssues(w http.ResponseWriter, r *http.Request) {
 
 	issues, total, err := h.store.ListIssues(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "issues", "DB_ERROR", err.Error())
 		return
 	}
 
-	writePaginated(w, issues, total, filter.Limit, filter.Offset)
+	apiresponse.WritePaginated(w, "issues", issues, total, filter.Limit, filter.Offset)
 }
 
 func (h *Handler) GetIssue(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid issue id")
+		apiresponse.WriteError(w, http.StatusBadRequest, "issues", "INVALID_REQUEST", "invalid issue id")
 		return
 	}
 	tenantID := tenantID(r)
@@ -93,20 +91,20 @@ func (h *Handler) GetIssue(w http.ResponseWriter, r *http.Request) {
 	issue, err := h.store.GetIssueByID(r.Context(), tenantID, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "Issue not found")
+			apiresponse.WriteError(w, http.StatusNotFound, "issues", "NOT_FOUND", "Issue not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "issues", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, issue)
+	apiresponse.WriteSuccess(w, http.StatusOK, "issues", issue)
 }
 
 func (h *Handler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateIssueRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "issues", "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -121,24 +119,24 @@ func (h *Handler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 	errs.MaxLen("affectedService", req.AffectedService, 200)
 	errs.MaxLen("assignedTo", req.AssignedTo, 200)
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "issues", "INVALID_REQUEST", errs.Error())
 		return
 	}
 
 	tenantID := tenantID(r)
 	issue, err := h.store.CreateIssue(r.Context(), tenantID, req)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "issues", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusCreated, issue)
+	apiresponse.WriteSuccess(w, http.StatusCreated, "issues", issue)
 }
 
 func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid issue id")
+		apiresponse.WriteError(w, http.StatusBadRequest, "issues", "INVALID_REQUEST", "invalid issue id")
 		return
 	}
 	tenantID := tenantID(r)
@@ -147,16 +145,16 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 	_, err = h.store.GetIssueByID(r.Context(), tenantID, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "Issue not found")
+			apiresponse.WriteError(w, http.StatusNotFound, "issues", "NOT_FOUND", "Issue not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "issues", "DB_ERROR", err.Error())
 		return
 	}
 
 	var req models.UpdateIssueRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "issues", "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -187,22 +185,22 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 		errs.MaxLen("resolutionNote", *req.ResolutionNote, 10000)
 	}
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "issues", "INVALID_REQUEST", errs.Error())
 		return
 	}
 
 	if err := h.store.UpdateIssue(r.Context(), tenantID, id, req); err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "issues", "DB_ERROR", err.Error())
 		return
 	}
 
 	updated, err := h.store.GetIssueByID(r.Context(), tenantID, id)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "issues", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, updated)
+	apiresponse.WriteSuccess(w, http.StatusOK, "issues", updated)
 }
 
 // --- Comment Handlers ---
@@ -210,7 +208,7 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListComments(w http.ResponseWriter, r *http.Request) {
 	issueID, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid issue id")
+		apiresponse.WriteError(w, http.StatusBadRequest, "issues", "INVALID_REQUEST", "invalid issue id")
 		return
 	}
 
@@ -218,29 +216,29 @@ func (h *Handler) ListComments(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantID(r)
 	if _, err := h.store.GetIssueByID(r.Context(), tenantID, issueID); err != nil {
 		if err == sql.ErrNoRows {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "Issue not found")
+			apiresponse.WriteError(w, http.StatusNotFound, "issues", "NOT_FOUND", "Issue not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "issues", "DB_ERROR", err.Error())
 		return
 	}
 
 	comments, err := h.store.ListComments(r.Context(), issueID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "issues", "DB_ERROR", err.Error())
 		return
 	}
 	if comments == nil {
 		comments = []models.IssueComment{}
 	}
 
-	writeJSON(w, http.StatusOK, map[string]any{"data": comments})
+	apiresponse.WriteSuccess(w, http.StatusOK, "issues", comments)
 }
 
 func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	issueID, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid issue id")
+		apiresponse.WriteError(w, http.StatusBadRequest, "issues", "INVALID_REQUEST", "invalid issue id")
 		return
 	}
 
@@ -248,16 +246,16 @@ func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantID(r)
 	if _, err := h.store.GetIssueByID(r.Context(), tenantID, issueID); err != nil {
 		if err == sql.ErrNoRows {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "Issue not found")
+			apiresponse.WriteError(w, http.StatusNotFound, "issues", "NOT_FOUND", "Issue not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "issues", "DB_ERROR", err.Error())
 		return
 	}
 
 	var req models.CreateCommentRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "issues", "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -267,17 +265,17 @@ func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	errs.MaxLen("author", req.Author, 200)
 	errs.MaxLen("content", req.Content, 10000)
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "issues", "INVALID_REQUEST", errs.Error())
 		return
 	}
 
 	comment, err := h.store.CreateComment(r.Context(), issueID, req)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "issues", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusCreated, comment)
+	apiresponse.WriteSuccess(w, http.StatusCreated, "issues", comment)
 }
 
 // --- Stats Handler ---
@@ -287,11 +285,11 @@ func (h *Handler) GetIssueStats(w http.ResponseWriter, r *http.Request) {
 
 	stats, err := h.store.GetIssueStats(r.Context(), tenantID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "issues", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, stats)
+	apiresponse.WriteSuccess(w, http.StatusOK, "issues", stats)
 }
 
 // --- Helper Functions ---
@@ -311,57 +309,6 @@ func decodeJSON(r *http.Request, v any) error {
 	}
 	defer r.Body.Close()
 	return json.NewDecoder(r.Body).Decode(v)
-}
-
-func writeJSON(w http.ResponseWriter, status int, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(v); err != nil {
-		slog.Error("error encoding JSON response", "error", err)
-	}
-}
-
-func writeSuccess(w http.ResponseWriter, status int, data any) {
-	resp := map[string]any{
-		"data": data,
-		"meta": map[string]any{
-			"request_id": uuid.New().String(),
-			"timestamp":  time.Now().UTC().Format(time.RFC3339),
-			"service":    "issues",
-			"version":    "v1",
-		},
-	}
-	writeJSON(w, status, resp)
-}
-
-func writePaginated(w http.ResponseWriter, data any, total, limit, offset int) {
-	resp := map[string]any{
-		"data": data,
-		"pagination": map[string]any{
-			"total":   total,
-			"limit":   limit,
-			"offset":  offset,
-			"hasMore": offset+limit < total,
-		},
-		"meta": map[string]any{
-			"request_id": uuid.New().String(),
-			"timestamp":  time.Now().UTC().Format(time.RFC3339),
-			"service":    "issues",
-			"version":    "v1",
-		},
-	}
-	writeJSON(w, http.StatusOK, resp)
-}
-
-func writeError(w http.ResponseWriter, status int, code, message string) {
-	resp := map[string]any{
-		"error": map[string]any{
-			"code":       code,
-			"message":    message,
-			"request_id": uuid.New().String(),
-		},
-	}
-	writeJSON(w, status, resp)
 }
 
 func intParam(r *http.Request, name string, defaultVal int) int {

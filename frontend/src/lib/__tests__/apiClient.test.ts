@@ -28,7 +28,7 @@ describe('apiClient', () => {
   it('fetchAPI extracts .data from response', async () => {
     mockFetch({
       data: { id: 1, name: 'Test' },
-      meta: { request_id: 'r1', timestamp: '2026-01-01T00:00:00Z' },
+      meta: { requestId: 'r1', timestamp: '2026-01-01T00:00:00Z' },
     });
     const result = await fetchAPI('/v1/test');
     expect(result).toEqual({ id: 1, name: 'Test' });
@@ -37,7 +37,7 @@ describe('apiClient', () => {
   it('fetchAPI lowercases enum fields in response data', async () => {
     mockFetch({
       data: { id: 1, status: 'OPEN', channel: 'EMAIL', name: 'keep-case' },
-      meta: { request_id: 'r1', timestamp: '2026-01-01T00:00:00Z' },
+      meta: { requestId: 'r1', timestamp: '2026-01-01T00:00:00Z' },
     });
     const result = await fetchAPI<{ id: number; status: string; channel: string; name: string }>(
       '/v1/test',
@@ -50,7 +50,7 @@ describe('apiClient', () => {
   it('fetchAPI sets X-Request-ID header', async () => {
     const fetchMock = mockFetch({
       data: {},
-      meta: { request_id: 'r1', timestamp: '2026-01-01T00:00:00Z' },
+      meta: { requestId: 'r1', timestamp: '2026-01-01T00:00:00Z' },
     });
     await fetchAPI('/v1/test');
     const headers = fetchMock.mock.calls[0][1].headers as Headers;
@@ -63,7 +63,7 @@ describe('apiClient', () => {
     mockFetch({
       data: [{ id: 1 }, { id: 2 }],
       pagination: { total: 10, limit: 25, offset: 0, hasMore: true },
-      meta: { request_id: 'r1', timestamp: '2026-01-01T00:00:00Z' },
+      meta: { requestId: 'r1', timestamp: '2026-01-01T00:00:00Z' },
     });
     const result = await fetchPaginatedAPI('/v1/items');
     expect(result.items).toHaveLength(2);
@@ -74,7 +74,7 @@ describe('apiClient', () => {
   it('fetchPaginatedAPI defaults pagination when missing', async () => {
     mockFetch({
       data: [],
-      meta: { request_id: 'r1', timestamp: '2026-01-01T00:00:00Z' },
+      meta: { requestId: 'r1', timestamp: '2026-01-01T00:00:00Z' },
     });
     const result = await fetchPaginatedAPI('/v1/items');
     expect(result.items).toEqual([]);
@@ -86,7 +86,7 @@ describe('apiClient', () => {
   it('postAPI uppercases enum fields in request body', async () => {
     const fetchMock = mockFetch({
       data: { id: 1 },
-      meta: { request_id: 'r1', timestamp: '2026-01-01T00:00:00Z' },
+      meta: { requestId: 'r1', timestamp: '2026-01-01T00:00:00Z' },
     });
     await postAPI('/v1/items', { status: 'open', channel: 'email', name: 'keep' });
     const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
@@ -98,7 +98,7 @@ describe('apiClient', () => {
   it('postAPI sends Content-Type application/json', async () => {
     const fetchMock = mockFetch({
       data: {},
-      meta: { request_id: 'r1', timestamp: '2026-01-01T00:00:00Z' },
+      meta: { requestId: 'r1', timestamp: '2026-01-01T00:00:00Z' },
     });
     await postAPI('/v1/items', { foo: 'bar' });
     const headers = fetchMock.mock.calls[0][1].headers as Headers;
@@ -140,7 +140,7 @@ describe('apiClient', () => {
           json: () =>
             Promise.resolve({
               data: { recovered: true },
-              meta: { request_id: 'r2', timestamp: '2026-01-01T00:00:00Z' },
+              meta: { requestId: 'r2', timestamp: '2026-01-01T00:00:00Z' },
             }),
         });
       }),
