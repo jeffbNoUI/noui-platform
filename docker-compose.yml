@@ -131,6 +131,10 @@ services:
       dockerfile: knowledgebase/Dockerfile
     ports:
       - "8087:8087"
+    volumes:
+      - ./domains/pension/rules/definitions:/data/rules:ro
+      - ./domains/pension/demo-cases:/data/demo-cases:ro
+      - ./test-results:/data/test-results:ro
     environment:
       PORT: "8087"
       DB_HOST: pgbouncer
@@ -142,6 +146,11 @@ services:
       DB_MAX_OPEN_CONNS: "5"
       DB_MAX_IDLE_CONNS: "2"
       CORS_ORIGIN: "http://localhost:3000"
+      RULES_DIR: /data/rules
+      DEMO_CASES_DIR: /data/demo-cases
+      TEST_REPORT_PATH: /data/test-results/intelligence-report.json
+      TEST_MAPPING_PATH: /data/test-results/test-rule-mapping.json
+      RULES_CACHE_TTL_MIN: "5"
     depends_on:
       pgbouncer:
         condition: service_healthy
