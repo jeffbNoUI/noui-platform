@@ -8,10 +8,10 @@ describe('tourSteps', () => {
     for (const persona of personas) {
       const steps = getTourSteps(persona);
       const ids = steps.map((s) => s.id);
-      expect(ids).toContain('welcome-sidebar');
-      expect(ids).toContain('nav-documents');
-      expect(ids).toContain('nav-messages');
-      expect(ids).toContain('nav-preferences');
+      expect(ids).toContain('welcome-cards');
+      expect(ids).toContain('card-documents');
+      expect(ids).toContain('card-messages');
+      expect(ids).toContain('card-preferences');
     }
   });
 
@@ -49,7 +49,7 @@ describe('tourSteps', () => {
     }
   });
 
-  it('tour version is 2', () => {
-    expect(CURRENT_TOUR_VERSION).toBe(2);
+  it('tour version is 3', () => {
+    expect(CURRENT_TOUR_VERSION).toBe(3);
   });
 });

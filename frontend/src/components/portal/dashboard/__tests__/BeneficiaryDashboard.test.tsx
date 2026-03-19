@@ -59,12 +59,12 @@ describe('BeneficiaryDashboard', () => {
       });
     });
 
-    it('shows quick links for profile and messages', async () => {
+    it('shows navigation cards for profile and messages', async () => {
       renderWithProviders(<BeneficiaryDashboard {...defaultProps} />);
       await waitFor(() => {
-        expect(screen.getByTestId('quick-link-profile')).toBeInTheDocument();
+        expect(screen.getByTestId('card-profile')).toBeInTheDocument();
       });
-      expect(screen.getByTestId('quick-link-messages')).toBeInTheDocument();
+      expect(screen.getByTestId('card-messages')).toBeInTheDocument();
     });
   });
 
@@ -83,10 +83,10 @@ describe('BeneficiaryDashboard', () => {
       });
     });
 
-    it('shows documents quick link', async () => {
+    it('shows documents navigation card', async () => {
       renderWithProviders(<BeneficiaryDashboard {...defaultProps} benefitType="lump_sum" />);
       await waitFor(() => {
-        expect(screen.getByTestId('quick-link-documents')).toBeInTheDocument();
+        expect(screen.getByTestId('card-documents')).toBeInTheDocument();
       });
     });
   });

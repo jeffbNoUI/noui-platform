@@ -10,33 +10,33 @@ export interface TourStep {
 
 const COMMON_STEPS: TourStep[] = [
   {
-    id: 'welcome-sidebar',
-    targetId: 'sidebar-nav',
-    title: 'Navigation',
+    id: 'welcome-cards',
+    targetId: 'card-grid',
+    title: 'Your Dashboard',
     description:
-      'Use the sidebar to move between sections of your portal. The items shown are based on your account type.',
-    position: 'right',
+      'Your portal is organized into cards. Each card shows a summary and takes you to the full section when clicked.',
+    position: 'top',
   },
   {
-    id: 'nav-documents',
-    targetId: 'nav-documents',
+    id: 'card-documents',
+    targetId: 'card-documents',
     title: 'Your Documents',
     description: 'Upload required documents and view your complete document history here.',
-    position: 'right',
+    position: 'bottom',
   },
   {
-    id: 'nav-messages',
-    targetId: 'nav-messages',
+    id: 'card-messages',
+    targetId: 'card-messages',
     title: 'Messages',
     description: 'Send messages to plan staff and view your communication history.',
-    position: 'right',
+    position: 'bottom',
   },
   {
-    id: 'nav-preferences',
-    targetId: 'nav-preferences',
+    id: 'card-preferences',
+    targetId: 'card-preferences',
     title: 'Preferences',
     description: 'Customize notification settings, accessibility options, and account security.',
-    position: 'right',
+    position: 'bottom',
   },
 ];
 
@@ -85,11 +85,11 @@ const RETIREE_STEPS: TourStep[] = [
   },
   {
     id: 'tax-documents',
-    targetId: 'nav-tax-documents',
+    targetId: 'card-tax-documents',
     title: 'Tax Documents',
     description:
       'Download your 1099-R forms for tax filing. Documents are available each January for the prior tax year.',
-    position: 'right',
+    position: 'bottom',
   },
   {
     id: 'payment-history',
@@ -112,11 +112,11 @@ const INACTIVE_STEPS: TourStep[] = [
   },
   {
     id: 'refund-option',
-    targetId: 'nav-refund',
+    targetId: 'card-refund',
     title: 'Request a Refund',
     description:
       'If you are no longer employed, you can request a refund of your contributions. Review the details and start the process here.',
-    position: 'right',
+    position: 'bottom',
   },
 ];
 
@@ -149,4 +149,4 @@ export function getTourSteps(persona: MemberPersona): TourStep[] {
   return [...COMMON_STEPS, ...(personaSteps[persona] ?? [])];
 }
 
-export const CURRENT_TOUR_VERSION = 2;
+export const CURRENT_TOUR_VERSION = 3;

@@ -13,7 +13,7 @@ const mockMember = {
   dob: '1968-07-15',
   hire_date: '2000-03-15',
   tier_code: 1,
-  status_code: 'A',
+  status_code: 'active',
   marital_status: 'M',
 };
 
@@ -61,18 +61,16 @@ describe('MemberPortal', () => {
   };
 
   beforeEach(() => {
-    memberData = mockMember;
+    memberData = { ...mockMember };
     memberLoading = false;
     memberError = null;
   });
 
-  it('renders the portal shell with sidebar navigation', async () => {
+  it('renders the portal shell', async () => {
     renderWithProviders(<MemberPortal {...defaultProps} />);
     await waitFor(() => {
       expect(screen.getByTestId('member-portal-shell')).toBeInTheDocument();
     });
-    // Sidebar navigation should be present
-    expect(screen.getByRole('navigation')).toBeInTheDocument();
   });
 
   it('shows loading state when member data is loading', () => {
@@ -86,7 +84,6 @@ describe('MemberPortal', () => {
     memberData = undefined;
     memberError = new Error('API error');
     renderWithProviders(<MemberPortal {...defaultProps} />);
-    // Should render shell (demo member resolves to active persona)
     await waitFor(() => {
       expect(screen.getByTestId('member-portal-shell')).toBeInTheDocument();
     });
@@ -99,31 +96,52 @@ describe('MemberPortal', () => {
     });
   });
 
-  it('renders sidebar nav items for active member persona', async () => {
+  it('renders card grid for navigation on dashboard', async () => {
     renderWithProviders(<MemberPortal {...defaultProps} />);
     await waitFor(() => {
-      expect(screen.getByText('Dashboard')).toBeInTheDocument();
+      expect(screen.getByTestId('card-grid')).toBeInTheDocument();
     });
-    expect(screen.getByText('My Profile')).toBeInTheDocument();
   });
 
-  it('navigates to other sections via sidebar', async () => {
+  it('does not show breadcrumb on home', async () => {
     renderWithProviders(<MemberPortal {...defaultProps} />);
     await waitFor(() => {
-      expect(screen.getByText('My Profile')).toBeInTheDocument();
+      expect(screen.getByTestId('dashboard-router')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('breadcrumb')).not.toBeInTheDocument();
+  });
+
+  it('navigates to section via card click and shows breadcrumb', async () => {
+    renderWithProviders(<MemberPortal {...defaultProps} />);
+    await waitFor(() => {
+      expect(screen.getByTestId('card-profile')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText('My Profile'));
+    fireEvent.click(screen.getByTestId('card-profile'));
 
-    // Dashboard router should no longer be visible
     expect(screen.queryByTestId('dashboard-router')).not.toBeInTheDocument();
-    // Profile section should be visible
     expect(screen.getByTestId('profile-section')).toBeInTheDocument();
+    expect(screen.getByTestId('breadcrumb')).toBeInTheDocument();
+  });
+
+  it('navigates back to dashboard via breadcrumb', async () => {
+    renderWithProviders(<MemberPortal {...defaultProps} />);
+    await waitFor(() => {
+      expect(screen.getByTestId('card-profile')).toBeInTheDocument();
+    });
+
+    // Navigate to profile
+    fireEvent.click(screen.getByTestId('card-profile'));
+    expect(screen.getByTestId('profile-section')).toBeInTheDocument();
+
+    // Click breadcrumb Home
+    fireEvent.click(screen.getByTestId('breadcrumb-dashboard'));
+    expect(screen.getByTestId('dashboard-router')).toBeInTheDocument();
+    expect(screen.queryByTestId('breadcrumb')).not.toBeInTheDocument();
   });
 
   it('wraps content in TourProvider', async () => {
     renderWithProviders(<MemberPortal {...defaultProps} />);
-    // Tour auto-starts for first visit — wait for the tooltip to appear
     await waitFor(
       () => {
         expect(screen.getByTestId('tour-tooltip')).toBeInTheDocument();
@@ -132,7 +150,7 @@ describe('MemberPortal', () => {
     );
   });
 
-  it('renders active member dashboard by default for status A', async () => {
+  it('renders active member dashboard by default for status active', async () => {
     renderWithProviders(<MemberPortal {...defaultProps} />);
     await waitFor(() => {
       expect(screen.getByTestId('active-member-dashboard')).toBeInTheDocument();

@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useMember } from '@/hooks/useMember';
 import { resolveMemberPersona } from '@/types/MemberPortal';
 import { C, BODY, DISPLAY } from '@/lib/designSystem';
 import type { MemberPortalProps } from './MemberPortalUtils';
 import { DEMO_MEMBER } from './MemberPortalUtils';
+import { getLabelForSection, type NavEntry } from './cardDefinitions';
 import MemberPortalShell from './MemberPortalShell';
+import Breadcrumb from './Breadcrumb';
 import DashboardRouter from './dashboard/DashboardRouter';
 import ProfileSection from './profile/ProfileSection';
 import CalculatorSection from './calculator/CalculatorSection';
@@ -19,13 +21,30 @@ import PreferencesSection from './preferences/PreferencesSection';
 import NotificationBell from './shared/NotificationBell';
 import TourProvider from './tour/TourProvider';
 
+// ── Navigation helpers ──────────────────────────────────────────────────────
+
+const HOME: NavEntry = { section: 'dashboard', label: 'Home' };
+
 // ── Main Component ───────────────────────────────────────────────────────────
 
 export default function MemberPortal({ memberID, retirementDate }: MemberPortalProps) {
-  const [activeSection, setActiveSection] = useState('dashboard');
+  const [navStack, setNavStack] = useState<NavEntry[]>([HOME]);
   const [tourCompleted, setTourCompleted] = useState(false);
 
   const { data: member, isLoading: memberLoading, error: memberError } = useMember(memberID);
+
+  // Navigation actions
+  const navigateTo = useCallback((section: string) => {
+    setNavStack((prev) => [...prev, { section, label: getLabelForSection(section) }]);
+  }, []);
+
+  const navigateBack = useCallback((index: number) => {
+    setNavStack((prev) => prev.slice(0, index + 1));
+  }, []);
+
+  const goHome = useCallback(() => {
+    setNavStack([HOME]);
+  }, []);
 
   // Use real data if available, demo data as fallback
   const effectiveMember = member ?? (memberError ? DEMO_MEMBER : null);
@@ -72,6 +91,7 @@ export default function MemberPortal({ memberID, retirementDate }: MemberPortalP
 
   // Resolve persona(s) from member status
   const personas = resolveMemberPersona(effectiveMember);
+  const activeSection = navStack[navStack.length - 1].section;
 
   return (
     <TourProvider
@@ -82,25 +102,33 @@ export default function MemberPortal({ memberID, retirementDate }: MemberPortalP
       autoStart={!tourCompleted}
     >
       <MemberPortalShell
-        memberId={memberID}
-        personas={personas}
-        activeSection={activeSection}
-        onNavigate={setActiveSection}
         header={
-          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 24px' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              alignItems: 'center',
+              padding: '12px 24px',
+              maxWidth: 1320,
+              margin: '0 auto',
+              width: '100%',
+            }}
+          >
             <NotificationBell
               memberId={String(memberID)}
-              onNotificationClick={() => setActiveSection('messages')}
+              onNotificationClick={() => navigateTo('messages')}
             />
           </div>
         }
       >
+        <Breadcrumb trail={navStack} onNavigate={navigateBack} />
+
         {activeSection === 'dashboard' && (
           <DashboardRouter
             memberId={memberID}
             personas={personas}
             retirementDate={retirementDate}
-            onNavigate={setActiveSection}
+            onNavigate={navigateTo}
           />
         )}
         {activeSection === 'profile' && <ProfileSection memberId={memberID} personas={personas} />}
@@ -110,20 +138,17 @@ export default function MemberPortal({ memberID, retirementDate }: MemberPortalP
         )}
         {activeSection === 'benefit' && <BenefitSection memberId={memberID} personas={personas} />}
         {activeSection === 'projections' && (
-          <DeferredBenefitExplorer
-            memberId={memberID}
-            onBack={() => setActiveSection('dashboard')}
-          />
+          <DeferredBenefitExplorer memberId={memberID} onBack={goHome} />
         )}
         {activeSection === 'refund' && (
           <RefundEstimate
             memberId={memberID}
-            onStartApplication={() => setActiveSection('refund-apply')}
-            onBack={() => setActiveSection('dashboard')}
+            onStartApplication={() => navigateTo('refund-apply')}
+            onBack={goHome}
           />
         )}
         {activeSection === 'refund-apply' && (
-          <RefundApplication memberId={memberID} onBack={() => setActiveSection('refund')} />
+          <RefundApplication memberId={memberID} onBack={() => navigateTo('refund')} />
         )}
         {activeSection === 'documents' && <DocumentSection memberId={String(memberID)} />}
         {activeSection === 'messages' && <MessagesSection memberId={String(memberID)} />}

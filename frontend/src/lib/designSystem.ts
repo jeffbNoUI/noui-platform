@@ -45,4 +45,11 @@ export const C = {
   coral: '#D4725C',
   coralLight: '#FDF0EC',
   coralMuted: 'rgba(212, 114, 92, 0.12)',
+
+  // Card interactions
+  cardHoverShadow: '0 4px 16px rgba(0,0,0,0.06)',
+
+  // Learning hints
+  hintBg: '#FFFDF5',
+  hintBorder: 'rgba(196, 154, 60, 0.15)',
 } as const;
