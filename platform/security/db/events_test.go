@@ -207,8 +207,8 @@ func TestGetEventStats(t *testing.T) {
 
 	mock.ExpectQuery("SELECT").
 		WithArgs("tenant-1").
-		WillReturnRows(sqlmock.NewRows([]string{"active_users", "active_sessions", "failed_logins_24h", "role_changes_7d"}).
-			AddRow(12, 5, 3, 1))
+		WillReturnRows(sqlmock.NewRows([]string{"active_users", "active_sessions", "failed_logins_24h", "role_changes_7d", "brute_force_alerts_24h"}).
+			AddRow(12, 5, 3, 1, 2))
 
 	stats, err := s.GetEventStats(context.Background(), "tenant-1")
 	if err != nil {
@@ -225,6 +225,9 @@ func TestGetEventStats(t *testing.T) {
 	}
 	if stats.RoleChanges7d != 1 {
 		t.Errorf("RoleChanges7d = %d, want 1", stats.RoleChanges7d)
+	}
+	if stats.BruteForceAlerts24h != 2 {
+		t.Errorf("BruteForceAlerts24h = %d, want 2", stats.BruteForceAlerts24h)
 	}
 }
 
