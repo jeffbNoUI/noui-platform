@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/noui/platform/apiresponse"
 )
 
 // --- HealthCheck ---
@@ -87,7 +89,7 @@ func TestIntParam_Missing(t *testing.T) {
 
 func TestWriteJSON(t *testing.T) {
 	w := httptest.NewRecorder()
-	writeJSON(w, http.StatusOK, map[string]string{"key": "value"})
+	apiresponse.WriteJSON(w, http.StatusOK, map[string]string{"key": "value"})
 
 	if w.Code != http.StatusOK {
 		t.Errorf("writeJSON status = %d, want %d", w.Code, http.StatusOK)
@@ -99,7 +101,7 @@ func TestWriteJSON(t *testing.T) {
 
 func TestWriteSuccess(t *testing.T) {
 	w := httptest.NewRecorder()
-	writeSuccess(w, http.StatusOK, map[string]string{"title": "Test Article"})
+	apiresponse.WriteSuccess(w, http.StatusOK, "knowledgebase", map[string]string{"title": "Test Article"})
 
 	var body map[string]interface{}
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
@@ -115,8 +117,8 @@ func TestWriteSuccess(t *testing.T) {
 	if meta["service"] != "knowledgebase" {
 		t.Errorf("meta.service = %q, want %q", meta["service"], "knowledgebase")
 	}
-	if meta["request_id"] == nil || meta["request_id"] == "" {
-		t.Error("meta.request_id should not be empty")
+	if meta["requestId"] == nil || meta["requestId"] == "" {
+		t.Error("meta.requestId should not be empty")
 	}
 	if meta["version"] != "v1" {
 		t.Errorf("meta.version = %q, want %q", meta["version"], "v1")
@@ -125,7 +127,7 @@ func TestWriteSuccess(t *testing.T) {
 
 func TestWriteError(t *testing.T) {
 	w := httptest.NewRecorder()
-	writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "query required")
+	apiresponse.WriteError(w, http.StatusBadRequest, "knowledgebase", "INVALID_REQUEST", "query required")
 
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("writeError status = %d, want %d", w.Code, http.StatusBadRequest)
@@ -149,7 +151,7 @@ func TestWriteError(t *testing.T) {
 
 func TestWritePaginated(t *testing.T) {
 	w := httptest.NewRecorder()
-	writePaginated(w, []string{"article1", "article2"}, 50, 25, 0)
+	apiresponse.WritePaginated(w, "knowledgebase", []string{"article1", "article2"}, 50, 25, 0)
 
 	var body map[string]interface{}
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {

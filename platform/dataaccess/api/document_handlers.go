@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/noui/platform/apiresponse"
 	"github.com/noui/platform/dataaccess/ecm"
 	"github.com/noui/platform/dataaccess/models"
 	"github.com/noui/platform/dbcontext"
@@ -45,18 +46,18 @@ var allowedExtensions = map[string]bool{
 func (h *Handler) UploadDocument(w http.ResponseWriter, r *http.Request) {
 	issueID := parsePathID(r, "issues")
 	if issueID == "" {
-		writeError(w, http.StatusBadRequest, "INVALID_ISSUE_ID", "Issue ID is required")
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "INVALID_ISSUE_ID", "Issue ID is required")
 		return
 	}
 
 	memberIDStr := r.URL.Query().Get("member_id")
 	if memberIDStr == "" {
-		writeError(w, http.StatusBadRequest, "MISSING_MEMBER_ID", "member_id query parameter is required")
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "MISSING_MEMBER_ID", "member_id query parameter is required")
 		return
 	}
 	memberID, err := strconv.Atoi(memberIDStr)
 	if err != nil || memberID <= 0 {
-		writeError(w, http.StatusBadRequest, "INVALID_MEMBER_ID", "member_id must be a positive integer")
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "INVALID_MEMBER_ID", "member_id must be a positive integer")
 		return
 	}
 
@@ -69,13 +70,13 @@ func (h *Handler) UploadDocument(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize+1024) // small overhead for multipart headers
 
 	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
-		writeError(w, http.StatusBadRequest, "FILE_TOO_LARGE", "File exceeds maximum size of 25 MB")
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "FILE_TOO_LARGE", "File exceeds maximum size of 25 MB")
 		return
 	}
 
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "MISSING_FILE", "file form field is required")
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "MISSING_FILE", "file form field is required")
 		return
 	}
 	defer file.Close()
@@ -84,14 +85,14 @@ func (h *Handler) UploadDocument(w http.ResponseWriter, r *http.Request) {
 	fileName := header.Filename
 	ext := strings.ToLower(fileExtension(fileName))
 	if !allowedExtensions[ext] {
-		writeError(w, http.StatusBadRequest, "INVALID_FILE_TYPE",
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "INVALID_FILE_TYPE",
 			"File type not allowed. Accepted: PDF, JPG, JPEG, PNG, TIFF, HEIC, DOC, DOCX, XLS, XLSX")
 		return
 	}
 
 	// Validate file size
 	if header.Size > maxUploadSize {
-		writeError(w, http.StatusBadRequest, "FILE_TOO_LARGE", "File exceeds maximum size of 25 MB")
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "FILE_TOO_LARGE", "File exceeds maximum size of 25 MB")
 		return
 	}
 
@@ -99,7 +100,7 @@ func (h *Handler) UploadDocument(w http.ResponseWriter, r *http.Request) {
 	fileBytes, err := io.ReadAll(file)
 	if err != nil {
 		slog.Error("error reading uploaded file", "error", err)
-		writeError(w, http.StatusInternalServerError, "READ_ERROR", "Failed to read uploaded file")
+		apiresponse.WriteError(w, http.StatusInternalServerError, "dataaccess", "READ_ERROR", "Failed to read uploaded file")
 		return
 	}
 
@@ -120,7 +121,7 @@ func (h *Handler) UploadDocument(w http.ResponseWriter, r *http.Request) {
 	ref, err := h.ECM.Ingest(r.Context(), fileBytes, metadata)
 	if err != nil {
 		slog.Error("ecm ingest failed", "error", err, "member_id", memberID, "file_name", fileName)
-		writeError(w, http.StatusInternalServerError, "ECM_ERROR", "Failed to store document")
+		apiresponse.WriteError(w, http.StatusInternalServerError, "dataaccess", "ECM_ERROR", "Failed to store document")
 		return
 	}
 
@@ -142,7 +143,7 @@ func (h *Handler) UploadDocument(w http.ResponseWriter, r *http.Request) {
 	).Scan(&docID)
 	if err != nil {
 		slog.Error("error inserting document metadata", "error", err, "ecm_ref", ref.ID)
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Failed to store document metadata")
+		apiresponse.WriteError(w, http.StatusInternalServerError, "dataaccess", "DB_ERROR", "Failed to store document metadata")
 		return
 	}
 
@@ -168,15 +169,7 @@ func (h *Handler) UploadDocument(w http.ResponseWriter, r *http.Request) {
 		"file_name", fileName,
 	)
 
-	writeJSON(w, http.StatusCreated, map[string]interface{}{
-		"data": doc,
-		"meta": map[string]interface{}{
-			"request_id": uuid.New().String(),
-			"timestamp":  now.Format(time.RFC3339),
-			"service":    "dataaccess",
-			"version":    "v1",
-		},
-	})
+	apiresponse.WriteSuccess(w, http.StatusCreated, "dataaccess", doc)
 }
 
 // ListIssueDocuments returns documents attached to a specific issue.
@@ -184,7 +177,7 @@ func (h *Handler) UploadDocument(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListIssueDocuments(w http.ResponseWriter, r *http.Request) {
 	issueID := parsePathID(r, "issues")
 	if issueID == "" {
-		writeError(w, http.StatusBadRequest, "INVALID_ISSUE_ID", "Issue ID is required")
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "INVALID_ISSUE_ID", "Issue ID is required")
 		return
 	}
 
@@ -202,7 +195,7 @@ func (h *Handler) ListIssueDocuments(w http.ResponseWriter, r *http.Request) {
 	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, issueID, limit, offset)
 	if err != nil {
 		slog.Error("error querying issue documents", "issue_id", issueID, "error", err)
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
+		apiresponse.WriteError(w, http.StatusInternalServerError, "dataaccess", "DB_ERROR", "Database query failed")
 		return
 	}
 	defer rows.Close()
@@ -219,7 +212,7 @@ func (h *Handler) ListIssueDocuments(w http.ResponseWriter, r *http.Request) {
 		docs = append(docs, d)
 	}
 
-	writePaginated(w, docs, total, limit, offset)
+	apiresponse.WritePaginated(w, "dataaccess", docs, total, limit, offset)
 }
 
 // DownloadDocument returns the ECM URL/path for a document.
@@ -227,14 +220,14 @@ func (h *Handler) ListIssueDocuments(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) DownloadDocument(w http.ResponseWriter, r *http.Request) {
 	docID := parsePathID(r, "documents")
 	if docID == "" {
-		writeError(w, http.StatusBadRequest, "INVALID_DOCUMENT_ID", "Document ID is required")
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "INVALID_DOCUMENT_ID", "Document ID is required")
 		return
 	}
 
 	var errs validation.Errors
 	errs.UUID("document_id", docID)
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_DOCUMENT_ID", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "INVALID_DOCUMENT_ID", errs.Error())
 		return
 	}
 
@@ -243,12 +236,12 @@ func (h *Handler) DownloadDocument(w http.ResponseWriter, r *http.Request) {
 	query := `SELECT ecm_ref, file_name, content_type FROM documents WHERE document_id = $1`
 	err := dbcontext.DB(r.Context(), h.DB).QueryRowContext(r.Context(), query, docID).Scan(&ecmRef, &fileName, &contentType)
 	if err == sql.ErrNoRows {
-		writeError(w, http.StatusNotFound, "DOCUMENT_NOT_FOUND", "No document found with ID "+docID)
+		apiresponse.WriteError(w, http.StatusNotFound, "dataaccess", "DOCUMENT_NOT_FOUND", "No document found with ID "+docID)
 		return
 	}
 	if err != nil {
 		slog.Error("error querying document", "document_id", docID, "error", err)
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
+		apiresponse.WriteError(w, http.StatusInternalServerError, "dataaccess", "DB_ERROR", "Database query failed")
 		return
 	}
 
@@ -256,11 +249,11 @@ func (h *Handler) DownloadDocument(w http.ResponseWriter, r *http.Request) {
 	url, err := h.ECM.Retrieve(r.Context(), ecmRef)
 	if err != nil {
 		slog.Error("ecm retrieve failed", "ecm_ref", ecmRef, "error", err)
-		writeError(w, http.StatusInternalServerError, "ECM_ERROR", "Failed to retrieve document from storage")
+		apiresponse.WriteError(w, http.StatusInternalServerError, "dataaccess", "ECM_ERROR", "Failed to retrieve document from storage")
 		return
 	}
 
-	writeSuccess(w, map[string]string{
+	apiresponse.WriteSuccess(w, http.StatusOK, "dataaccess", map[string]string{
 		"document_id":  docID,
 		"file_name":    fileName,
 		"content_type": contentType,
@@ -273,7 +266,7 @@ func (h *Handler) DownloadDocument(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListMemberDocuments(w http.ResponseWriter, r *http.Request) {
 	memberID, err := parseMemberID(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_MEMBER_ID", "Member ID must be a positive integer")
+		apiresponse.WriteError(w, http.StatusBadRequest, "dataaccess", "INVALID_MEMBER_ID", "Member ID must be a positive integer")
 		return
 	}
 
@@ -291,7 +284,7 @@ func (h *Handler) ListMemberDocuments(w http.ResponseWriter, r *http.Request) {
 	rows, err := dbcontext.DB(r.Context(), h.DB).QueryContext(r.Context(), query, memberID, limit, offset)
 	if err != nil {
 		slog.Error("error querying member documents", "member_id", memberID, "error", err)
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", "Database query failed")
+		apiresponse.WriteError(w, http.StatusInternalServerError, "dataaccess", "DB_ERROR", "Database query failed")
 		return
 	}
 	defer rows.Close()
@@ -308,7 +301,7 @@ func (h *Handler) ListMemberDocuments(w http.ResponseWriter, r *http.Request) {
 		docs = append(docs, d)
 	}
 
-	writePaginated(w, docs, total, limit, offset)
+	apiresponse.WritePaginated(w, "dataaccess", docs, total, limit, offset)
 }
 
 // parsePathID extracts a path segment value after the given resource name.

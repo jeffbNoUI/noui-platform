@@ -30,7 +30,7 @@ function setupFetch() {
               updatedAt: '2026-03-15T10:00:00Z',
               updatedBy: 'agent-sarah',
             },
-            meta: { request_id: 'test', timestamp: '2026-03-15T10:00:00Z' },
+            meta: { requestId: 'test', timestamp: '2026-03-15T10:00:00Z' },
           }),
       });
     }
@@ -55,7 +55,7 @@ function setupFetch() {
               updatedAt: '2026-03-15T10:00:00Z',
               updatedBy: 'agent-sarah',
             },
-            meta: { request_id: 'test', timestamp: '2026-03-15T10:00:00Z' },
+            meta: { requestId: 'test', timestamp: '2026-03-15T10:00:00Z' },
           }),
       });
     }
@@ -64,7 +64,7 @@ function setupFetch() {
       json: () =>
         Promise.resolve({
           data: {},
-          meta: { request_id: 'test', timestamp: '2026-03-15T10:00:00Z' },
+          meta: { requestId: 'test', timestamp: '2026-03-15T10:00:00Z' },
         }),
     });
   });

@@ -39,7 +39,7 @@ function setupFetch() {
       json: () =>
         Promise.resolve({
           data,
-          meta: { request_id: 'test', timestamp: '2026-01-01T00:00:00Z' },
+          meta: { requestId: 'test', timestamp: '2026-01-01T00:00:00Z' },
         }),
     });
   });

@@ -1,5 +1,23 @@
 # noui-platform — Build History
 
+## API Consistency — Shared apiresponse Package (2026-03-18)
+
+**Branch:** `claude/eager-fermat` → PR #99
+**Goal:** Extract duplicated API response helpers into a shared package, standardize `requestId` (camelCase).
+
+**What was built:**
+
+1. **`platform/apiresponse/`** (NEW) — Shared response envelope package with `WriteSuccess`, `WriteError`, `WritePaginated`, `WriteJSON`, `BuildSuccess`, `BuildPaginated`. 8 unit tests.
+2. **10 platform services wired** — dataaccess, intelligence, crm, correspondence, dataquality, knowledgebase, casemanagement, issues, preferences, security. ~460 lines of duplicated local helpers removed.
+3. **`requestId` standardized** — All Go services and frontend types/mocks changed from `request_id` (snake_case) to `requestId` (camelCase). 32 frontend test files updated.
+4. **CI matrix expanded** — Added apiresponse, casemanagement, issues, preferences, security to the platform-services CI job (6 → 11 services).
+
+**Cleanup:** Closed PR #79 (unmergeable `nostalgic-moser` branch), deleted worktree and branch.
+
+**Test totals:** Frontend 1,610 tests (202 files). All 11 Go service test suites passing. 14/14 CI jobs green.
+
+---
+
 ## CI Fix + Session Cleanup (2026-03-18)
 
 **Branch:** `main` (direct commit)

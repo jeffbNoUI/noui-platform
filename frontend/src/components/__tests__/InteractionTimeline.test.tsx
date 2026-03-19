@@ -56,7 +56,7 @@ function setupFetch(timeline: ContactTimeline | null) {
         json: () =>
           Promise.resolve({
             data: timeline,
-            meta: { request_id: 'test', timestamp: new Date().toISOString() },
+            meta: { requestId: 'test', timestamp: new Date().toISOString() },
           }),
       });
     }
@@ -66,7 +66,7 @@ function setupFetch(timeline: ContactTimeline | null) {
       json: () =>
         Promise.resolve({
           data: null,
-          meta: { request_id: 'test', timestamp: new Date().toISOString() },
+          meta: { requestId: 'test', timestamp: new Date().toISOString() },
         }),
     });
   });
