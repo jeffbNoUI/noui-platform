@@ -31,10 +31,11 @@ type ActiveSession struct {
 
 // EventStats holds aggregated security event metrics for summary cards.
 type EventStats struct {
-	ActiveUsers     int `json:"activeUsers"`
-	ActiveSessions  int `json:"activeSessions"`
-	FailedLogins24h int `json:"failedLogins24h"`
-	RoleChanges7d   int `json:"roleChanges7d"`
+	ActiveUsers         int `json:"activeUsers"`
+	ActiveSessions      int `json:"activeSessions"`
+	FailedLogins24h     int `json:"failedLogins24h"`
+	RoleChanges7d       int `json:"roleChanges7d"`
+	BruteForceAlerts24h int `json:"bruteForceAlerts24h"`
 }
 
 // EventFilter holds query params for listing security events.
@@ -73,6 +74,22 @@ type ClerkWebhookPayload struct {
 	Data map[string]interface{} `json:"data"`
 }
 
+// JobConfig holds configuration for background jobs, loaded from environment variables.
+type JobConfig struct {
+	SessionIdleTimeoutMin int // SESSION_IDLE_TIMEOUT_MIN, default 30
+	SessionMaxLifetimeHr  int // SESSION_MAX_LIFETIME_HR, default 8
+	BruteForceThreshold   int // BRUTE_FORCE_THRESHOLD, default 5
+	BruteForceWindowMin   int // BRUTE_FORCE_WINDOW_MIN, default 15
+}
+
+// BruteForceActor represents an actor who exceeded the failed login threshold.
+type BruteForceActor struct {
+	ActorID    string `json:"actorId"`
+	ActorEmail string `json:"actorEmail"`
+	IPAddress  string `json:"ipAddress"`
+	FailCount  int    `json:"failCount"`
+}
+
 // EventType enum values.
 var EventTypeValues = []string{
 	"login_success",
@@ -86,4 +103,5 @@ var EventTypeValues = []string{
 	"session_revoked",
 	"org_member_added",
 	"org_member_removed",
+	"brute_force_detected",
 }
