@@ -2,13 +2,18 @@ package api
 
 import (
 	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
+	"github.com/noui/platform/apiresponse"
 	"github.com/noui/platform/security/models"
 )
 
@@ -126,7 +131,7 @@ func TestDecodeJSON_NilBody(t *testing.T) {
 
 func TestWriteJSON(t *testing.T) {
 	w := httptest.NewRecorder()
-	writeJSON(w, http.StatusOK, map[string]string{"key": "value"})
+	apiresponse.WriteJSON(w, http.StatusOK, map[string]string{"key": "value"})
 
 	if w.Code != http.StatusOK {
 		t.Errorf("writeJSON status = %d, want %d", w.Code, http.StatusOK)
@@ -145,7 +150,7 @@ func TestWriteJSON(t *testing.T) {
 
 func TestWriteSuccess(t *testing.T) {
 	w := httptest.NewRecorder()
-	writeSuccess(w, http.StatusOK, map[string]string{"hello": "world"})
+	apiresponse.WriteSuccess(w, http.StatusOK, "security", map[string]string{"hello": "world"})
 
 	if w.Code != http.StatusOK {
 		t.Errorf("writeSuccess status = %d, want %d", w.Code, http.StatusOK)
@@ -162,8 +167,8 @@ func TestWriteSuccess(t *testing.T) {
 	if !ok {
 		t.Fatal("writeSuccess missing 'meta' field")
 	}
-	if meta["request_id"] == nil || meta["request_id"] == "" {
-		t.Error("meta.request_id should not be empty")
+	if meta["requestId"] == nil || meta["requestId"] == "" {
+		t.Error("meta.requestId should not be empty")
 	}
 	if meta["timestamp"] == nil || meta["timestamp"] == "" {
 		t.Error("meta.timestamp should not be empty")
@@ -175,7 +180,7 @@ func TestWriteSuccess(t *testing.T) {
 
 func TestWriteError(t *testing.T) {
 	w := httptest.NewRecorder()
-	writeError(w, http.StatusBadRequest, "INVALID", "bad input")
+	apiresponse.WriteError(w, http.StatusBadRequest, "security", "INVALID", "bad input")
 
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("writeError status = %d, want %d", w.Code, http.StatusBadRequest)
@@ -195,14 +200,14 @@ func TestWriteError(t *testing.T) {
 	if errObj["message"] != "bad input" {
 		t.Errorf("error.message = %q, want %q", errObj["message"], "bad input")
 	}
-	if errObj["request_id"] == nil || errObj["request_id"] == "" {
-		t.Error("error.request_id should not be empty")
+	if errObj["requestId"] == nil || errObj["requestId"] == "" {
+		t.Error("error.requestId should not be empty")
 	}
 }
 
 func TestWritePaginated(t *testing.T) {
 	w := httptest.NewRecorder()
-	writePaginated(w, []string{"a", "b"}, 10, 5, 0)
+	apiresponse.WritePaginated(w, "security", []string{"a", "b"}, 10, 5, 0)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("writePaginated status = %d, want %d", w.Code, http.StatusOK)
@@ -230,7 +235,7 @@ func TestWritePaginated(t *testing.T) {
 
 func TestWritePaginated_NoMore(t *testing.T) {
 	w := httptest.NewRecorder()
-	writePaginated(w, []string{"a"}, 3, 5, 0)
+	apiresponse.WritePaginated(w, "security", []string{"a"}, 3, 5, 0)
 
 	var body map[string]interface{}
 	json.Unmarshal(w.Body.Bytes(), &body)
@@ -398,7 +403,7 @@ func TestCreateEvent_Valid(t *testing.T) {
 	if body.Data.EventType != "login_success" {
 		t.Errorf("EventType = %q, want login_success", body.Data.EventType)
 	}
-	if body.Meta["request_id"] == nil || body.Meta["request_id"] == "" {
+	if body.Meta["requestId"] == nil || body.Meta["requestId"] == "" {
 		t.Error("meta.request_id should not be empty")
 	}
 }
@@ -492,7 +497,7 @@ func TestGetEventStats(t *testing.T) {
 	if body.Data.FailedLogins24h != 3 {
 		t.Errorf("FailedLogins24h = %d, want 3", body.Data.FailedLogins24h)
 	}
-	if body.Meta["request_id"] == nil || body.Meta["request_id"] == "" {
+	if body.Meta["requestId"] == nil || body.Meta["requestId"] == "" {
 		t.Error("meta.request_id should not be empty")
 	}
 }
@@ -716,6 +721,11 @@ func TestMapClerkEventType(t *testing.T) {
 		{"session.created", "session_start"},
 		{"session.ended", "session_end"},
 		{"user.updated", "role_change"},
+		{"user.created", "account_created"},
+		{"user.deleted", "account_deleted"},
+		{"session.revoked", "session_revoked"},
+		{"organization.membership.created", "org_member_added"},
+		{"organization.membership.deleted", "org_member_removed"},
 		{"unknown.event", ""},
 	}
 
@@ -771,5 +781,133 @@ func TestExtractClerkEmail(t *testing.T) {
 	}
 	if got := extractClerkEmail(data2); got != "" {
 		t.Errorf("extractClerkEmail(empty arr) = %q, want empty", got)
+	}
+}
+
+// --- Webhook Signature Validation ---
+
+// signWebhookPayload creates valid svix headers for a given body and secret.
+func signWebhookPayload(body []byte, secret string) (svixID, svixTimestamp, svixSignature string) {
+	svixID = "msg_test123"
+	svixTimestamp = fmt.Sprintf("%d", time.Now().Unix())
+
+	secretBytes, _ := base64.StdEncoding.DecodeString(secret)
+	signedContent := fmt.Sprintf("%s.%s.%s", svixID, svixTimestamp, string(body))
+
+	mac := hmac.New(sha256.New, secretBytes)
+	mac.Write([]byte(signedContent))
+	sig := base64.StdEncoding.EncodeToString(mac.Sum(nil))
+	svixSignature = "v1," + sig
+	return
+}
+
+func TestClerkWebhook_NoSecret_SkipsValidation(t *testing.T) {
+	// With no CLERK_WEBHOOK_SECRET set, webhook should work (dev mode)
+	t.Setenv("CLERK_WEBHOOK_SECRET", "")
+	h, mock := newTestHandler(t)
+
+	now := time.Now().UTC()
+	mock.ExpectQuery("INSERT INTO security_events").
+		WillReturnRows(sqlmock.NewRows(eventCols).AddRow(
+			1, defaultTenantID, "login_success", "user-1", "",
+			"", "", "{}", now,
+		))
+
+	body, _ := json.Marshal(models.ClerkWebhookPayload{
+		Type: "user.signed_in",
+		Data: map[string]interface{}{"id": "user-1"},
+	})
+
+	w := serve(h, "POST", "/api/v1/security/webhook/clerk", body)
+
+	if w.Code != http.StatusCreated {
+		t.Errorf("ClerkWebhook(no secret) status = %d, want %d\nbody: %s",
+			w.Code, http.StatusCreated, w.Body.String())
+	}
+}
+
+func TestClerkWebhook_ValidSignature(t *testing.T) {
+	rawSecret := "dGVzdC1zZWNyZXQtZm9yLXVuaXQtdGVzdHM=" // base64("test-secret-for-unit-tests")
+	t.Setenv("CLERK_WEBHOOK_SECRET", rawSecret)
+
+	h, mock := newTestHandler(t)
+
+	now := time.Now().UTC()
+	mock.ExpectQuery("INSERT INTO security_events").
+		WillReturnRows(sqlmock.NewRows(eventCols).AddRow(
+			1, defaultTenantID, "login_success", "user-1", "",
+			"", "", "{}", now,
+		))
+
+	body, _ := json.Marshal(models.ClerkWebhookPayload{
+		Type: "user.signed_in",
+		Data: map[string]interface{}{"id": "user-1"},
+	})
+
+	svixID, svixTS, svixSig := signWebhookPayload(body, rawSecret)
+
+	mux := http.NewServeMux()
+	h.RegisterRoutes(mux)
+	req := httptest.NewRequest("POST", "/api/v1/security/webhook/clerk", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("svix-id", svixID)
+	req.Header.Set("svix-timestamp", svixTS)
+	req.Header.Set("svix-signature", svixSig)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("ClerkWebhook(valid sig) status = %d, want %d\nbody: %s",
+			w.Code, http.StatusCreated, w.Body.String())
+	}
+}
+
+func TestClerkWebhook_MissingSignatureHeaders(t *testing.T) {
+	t.Setenv("CLERK_WEBHOOK_SECRET", "dGVzdC1zZWNyZXQ=")
+
+	h, _ := newTestHandler(t)
+
+	body, _ := json.Marshal(models.ClerkWebhookPayload{
+		Type: "user.signed_in",
+		Data: map[string]interface{}{"id": "user-1"},
+	})
+
+	// No svix headers — should fail
+	mux := http.NewServeMux()
+	h.RegisterRoutes(mux)
+	req := httptest.NewRequest("POST", "/api/v1/security/webhook/clerk", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("ClerkWebhook(no headers) status = %d, want %d\nbody: %s",
+			w.Code, http.StatusUnauthorized, w.Body.String())
+	}
+}
+
+func TestClerkWebhook_InvalidSignature(t *testing.T) {
+	t.Setenv("CLERK_WEBHOOK_SECRET", "dGVzdC1zZWNyZXQ=")
+
+	h, _ := newTestHandler(t)
+
+	body, _ := json.Marshal(models.ClerkWebhookPayload{
+		Type: "user.signed_in",
+		Data: map[string]interface{}{"id": "user-1"},
+	})
+
+	mux := http.NewServeMux()
+	h.RegisterRoutes(mux)
+	req := httptest.NewRequest("POST", "/api/v1/security/webhook/clerk", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("svix-id", "msg_test123")
+	req.Header.Set("svix-timestamp", fmt.Sprintf("%d", time.Now().Unix()))
+	req.Header.Set("svix-signature", "v1,aW52YWxpZC1zaWduYXR1cmU=")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("ClerkWebhook(bad sig) status = %d, want %d\nbody: %s",
+			w.Code, http.StatusUnauthorized, w.Body.String())
 	}
 }

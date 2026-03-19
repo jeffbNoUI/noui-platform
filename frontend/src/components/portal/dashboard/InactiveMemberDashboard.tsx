@@ -4,6 +4,10 @@ import { useBenefitCalculation } from '@/hooks/useBenefitCalculation';
 import { useRefundEstimate } from '@/hooks/useRefundEstimate';
 import { isVested, DEMO_MEMBER } from '../MemberPortalUtils';
 import OptionsComparison from './OptionsComparison';
+import CardGrid from '../CardGrid';
+import NavigationCard from '../NavigationCard';
+import { getCardsForPersona } from '../cardDefinitions';
+import { getHintForCard } from '../learningHints';
 
 export interface InactiveMemberDashboardProps {
   memberId: number;
@@ -22,7 +26,6 @@ export default function InactiveMemberDashboard({
   // Deferred benefit estimate (only for vested)
   const { data: calculation } = useBenefitCalculation(
     memberId,
-    // Use age 65 as estimated retirement date for deferred benefit
     effectiveMember
       ? `${new Date(effectiveMember.dob + 'T00:00:00').getFullYear() + 65}-01-01`
       : '',
@@ -37,6 +40,20 @@ export default function InactiveMemberDashboard({
       </div>
     );
   }
+
+  const personas: 'inactive'[] = ['inactive'];
+  const cards = getCardsForPersona(personas);
+
+  const summaries: Record<string, string | undefined> = {
+    profile: 'Review your personal information',
+    calculator: vested ? 'Explore deferred benefit scenarios' : undefined,
+    refund: refundEstimate
+      ? `Est. $${Number(refundEstimate.total ?? 0).toLocaleString()}`
+      : undefined,
+    documents: undefined,
+    messages: undefined,
+    preferences: undefined,
+  };
 
   return (
     <div
@@ -71,6 +88,22 @@ export default function InactiveMemberDashboard({
         isLoading={refundLoading}
         onNavigate={onNavigate}
       />
+
+      {/* Navigation cards */}
+      <CardGrid>
+        {cards.map((card) => (
+          <NavigationCard
+            key={card.key}
+            icon={card.icon}
+            title={card.label}
+            summary={summaries[card.key] ?? card.staticSummary}
+            tourId={`card-${card.key}`}
+            accentColor={card.accentColor}
+            hint={getHintForCard(card.key, personas)}
+            onClick={() => onNavigate?.(card.key)}
+          />
+        ))}
+      </CardGrid>
     </div>
   );
 }

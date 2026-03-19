@@ -2,15 +2,20 @@
 package api
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
+	"os"
 	"strconv"
-	"time"
+	"strings"
 
-	"github.com/google/uuid"
+	"github.com/noui/platform/apiresponse"
 	"github.com/noui/platform/auth"
 	secdb "github.com/noui/platform/security/db"
 	"github.com/noui/platform/security/models"
@@ -49,7 +54,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 // HealthCheck returns service health status.
 func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{
+	apiresponse.WriteJSON(w, http.StatusOK, map[string]string{
 		"status":  "ok",
 		"service": "security",
 		"version": "0.1.0",
@@ -74,17 +79,17 @@ func (h *Handler) ListEvents(w http.ResponseWriter, r *http.Request) {
 
 	events, total, err := h.store.ListEvents(r.Context(), tid, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "security", "DB_ERROR", err.Error())
 		return
 	}
 
-	writePaginated(w, events, total, filter.Limit, filter.Offset)
+	apiresponse.WritePaginated(w, "security", events, total, filter.Limit, filter.Offset)
 }
 
 func (h *Handler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateEventRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "security", "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -93,18 +98,18 @@ func (h *Handler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	errs.Enum("eventType", req.EventType, models.EventTypeValues)
 	errs.Required("actorId", req.ActorID)
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "security", "INVALID_REQUEST", errs.Error())
 		return
 	}
 
 	tid := tenantID(r)
 	event, err := h.store.CreateEvent(r.Context(), tid, req)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "security", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusCreated, event)
+	apiresponse.WriteSuccess(w, http.StatusCreated, "security", event)
 }
 
 func (h *Handler) GetEventStats(w http.ResponseWriter, r *http.Request) {
@@ -112,11 +117,11 @@ func (h *Handler) GetEventStats(w http.ResponseWriter, r *http.Request) {
 
 	stats, err := h.store.GetEventStats(r.Context(), tid)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "security", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, stats)
+	apiresponse.WriteSuccess(w, http.StatusOK, "security", stats)
 }
 
 // --- Session Handlers ---
@@ -126,20 +131,20 @@ func (h *Handler) ListActiveSessions(w http.ResponseWriter, r *http.Request) {
 
 	sessions, err := h.store.ListActiveSessions(r.Context(), tid)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "security", "DB_ERROR", err.Error())
 		return
 	}
 	if sessions == nil {
 		sessions = []models.ActiveSession{}
 	}
 
-	writeSuccess(w, http.StatusOK, sessions)
+	apiresponse.WriteSuccess(w, http.StatusOK, "security", sessions)
 }
 
 func (h *Handler) UpsertSession(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateSessionRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "security", "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -147,24 +152,24 @@ func (h *Handler) UpsertSession(w http.ResponseWriter, r *http.Request) {
 	errs.Required("userId", req.UserID)
 	errs.Required("sessionId", req.SessionID)
 	if errs.HasErrors() {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", errs.Error())
+		apiresponse.WriteError(w, http.StatusBadRequest, "security", "INVALID_REQUEST", errs.Error())
 		return
 	}
 
 	tid := tenantID(r)
 	session, err := h.store.UpsertSession(r.Context(), tid, req)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "security", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusCreated, session)
+	apiresponse.WriteSuccess(w, http.StatusCreated, "security", session)
 }
 
 func (h *Handler) DeleteSession(w http.ResponseWriter, r *http.Request) {
 	sessionID := r.PathValue("sessionId")
 	if sessionID == "" {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "sessionId is required")
+		apiresponse.WriteError(w, http.StatusBadRequest, "security", "INVALID_REQUEST", "sessionId is required")
 		return
 	}
 
@@ -172,28 +177,40 @@ func (h *Handler) DeleteSession(w http.ResponseWriter, r *http.Request) {
 	err := h.store.DeleteSession(r.Context(), tid, sessionID)
 	if err != nil {
 		if err == secdb.ErrNotFound {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "Session not found")
+			apiresponse.WriteError(w, http.StatusNotFound, "security", "NOT_FOUND", "Session not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "security", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, map[string]string{"status": "deleted"})
+	apiresponse.WriteSuccess(w, http.StatusOK, "security", map[string]string{"status": "deleted"})
 }
 
 // --- Clerk Webhook Handler ---
 
 func (h *Handler) ClerkWebhook(w http.ResponseWriter, r *http.Request) {
-	// TODO: Validate Clerk webhook signatures for production use.
+	// Read raw body for signature verification, then unmarshal.
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		apiresponse.WriteError(w, http.StatusBadRequest, "security", "INVALID_REQUEST", "failed to read request body")
+		return
+	}
+	defer r.Body.Close()
+
+	if err := verifyClerkSignature(r.Header, bodyBytes); err != nil {
+		apiresponse.WriteError(w, http.StatusUnauthorized, "security", "UNAUTHORIZED", err.Error())
+		return
+	}
+
 	var payload models.ClerkWebhookPayload
-	if err := decodeJSON(r, &payload); err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+	if err := json.Unmarshal(bodyBytes, &payload); err != nil {
+		apiresponse.WriteError(w, http.StatusBadRequest, "security", "INVALID_REQUEST", err.Error())
 		return
 	}
 
 	if payload.Type == "" {
-		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "type is required")
+		apiresponse.WriteError(w, http.StatusBadRequest, "security", "INVALID_REQUEST", "type is required")
 		return
 	}
 
@@ -201,7 +218,7 @@ func (h *Handler) ClerkWebhook(w http.ResponseWriter, r *http.Request) {
 	eventType := mapClerkEventType(payload.Type)
 	if eventType == "" {
 		// Unrecognized event type — acknowledge but skip
-		writeSuccess(w, http.StatusOK, map[string]string{"status": "ignored", "clerkType": payload.Type})
+		apiresponse.WriteSuccess(w, http.StatusOK, "security", map[string]string{"status": "ignored", "clerkType": payload.Type})
 		return
 	}
 
@@ -226,11 +243,11 @@ func (h *Handler) ClerkWebhook(w http.ResponseWriter, r *http.Request) {
 
 	event, err := h.store.CreateEvent(r.Context(), tid, req)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		apiresponse.WriteError(w, http.StatusInternalServerError, "security", "DB_ERROR", err.Error())
 		return
 	}
 
-	writeSuccess(w, http.StatusCreated, event)
+	apiresponse.WriteSuccess(w, http.StatusCreated, "security", event)
 }
 
 // mapClerkEventType maps Clerk webhook event types to our internal event types.
@@ -244,6 +261,16 @@ func mapClerkEventType(clerkType string) string {
 		return "session_end"
 	case "user.updated":
 		return "role_change"
+	case "user.created":
+		return "account_created"
+	case "user.deleted":
+		return "account_deleted"
+	case "session.revoked":
+		return "session_revoked"
+	case "organization.membership.created":
+		return "org_member_added"
+	case "organization.membership.deleted":
+		return "org_member_removed"
 	default:
 		return ""
 	}
@@ -308,57 +335,6 @@ func decodeJSON(r *http.Request, v any) error {
 	return json.NewDecoder(r.Body).Decode(v)
 }
 
-func writeJSON(w http.ResponseWriter, status int, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(v); err != nil {
-		slog.Error("error encoding JSON response", "error", err)
-	}
-}
-
-func writeSuccess(w http.ResponseWriter, status int, data any) {
-	resp := map[string]any{
-		"data": data,
-		"meta": map[string]any{
-			"request_id": uuid.New().String(),
-			"timestamp":  time.Now().UTC().Format(time.RFC3339),
-			"service":    "security",
-			"version":    "v1",
-		},
-	}
-	writeJSON(w, status, resp)
-}
-
-func writePaginated(w http.ResponseWriter, data any, total, limit, offset int) {
-	resp := map[string]any{
-		"data": data,
-		"pagination": map[string]any{
-			"total":   total,
-			"limit":   limit,
-			"offset":  offset,
-			"hasMore": offset+limit < total,
-		},
-		"meta": map[string]any{
-			"request_id": uuid.New().String(),
-			"timestamp":  time.Now().UTC().Format(time.RFC3339),
-			"service":    "security",
-			"version":    "v1",
-		},
-	}
-	writeJSON(w, http.StatusOK, resp)
-}
-
-func writeError(w http.ResponseWriter, status int, code, message string) {
-	resp := map[string]any{
-		"error": map[string]any{
-			"code":       code,
-			"message":    message,
-			"request_id": uuid.New().String(),
-		},
-	}
-	writeJSON(w, status, resp)
-}
-
 func intParam(r *http.Request, name string, defaultVal int) int {
 	s := r.URL.Query().Get(name)
 	if s == "" {
@@ -369,4 +345,48 @@ func intParam(r *http.Request, name string, defaultVal int) int {
 		return defaultVal
 	}
 	return v
+}
+
+// verifyClerkSignature validates Svix webhook signatures used by Clerk.
+// If CLERK_WEBHOOK_SECRET is not set, validation is skipped (dev mode).
+func verifyClerkSignature(headers http.Header, body []byte) error {
+	secret := os.Getenv("CLERK_WEBHOOK_SECRET")
+	if secret == "" {
+		slog.Warn("CLERK_WEBHOOK_SECRET not set — skipping webhook signature validation (dev mode)")
+		return nil
+	}
+
+	svixID := headers.Get("svix-id")
+	svixTimestamp := headers.Get("svix-timestamp")
+	svixSignature := headers.Get("svix-signature")
+
+	if svixID == "" || svixTimestamp == "" || svixSignature == "" {
+		return fmt.Errorf("missing svix signature headers")
+	}
+
+	// Clerk/Svix secrets are base64-encoded with a "whsec_" prefix
+	secretBytes, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(secret, "whsec_"))
+	if err != nil {
+		return fmt.Errorf("invalid webhook secret encoding")
+	}
+
+	// Signed content: "${svix_id}.${svix_timestamp}.${body}"
+	signedContent := fmt.Sprintf("%s.%s.%s", svixID, svixTimestamp, string(body))
+
+	mac := hmac.New(sha256.New, secretBytes)
+	mac.Write([]byte(signedContent))
+	expected := base64.StdEncoding.EncodeToString(mac.Sum(nil))
+
+	// svix-signature may contain multiple signatures: "v1,<sig1> v1,<sig2>"
+	for _, sig := range strings.Split(svixSignature, " ") {
+		parts := strings.SplitN(sig, ",", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		if hmac.Equal([]byte(expected), []byte(parts[1])) {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("invalid webhook signature")
 }

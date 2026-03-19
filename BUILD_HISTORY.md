@@ -1,5 +1,128 @@
 # noui-platform — Build History
 
+## Employer Domain — Phase 2: Reporting Engine (2026-03-19)
+
+**Branch:** `claude/nifty-chatelet`
+**Goal:** Build Phase 2 of the 7-domain employer roadmap — contribution reporting engine with validation, exception workflow, payment setup, and late interest tracking.
+
+**What was built:**
+
+1. **`domains/pension/schema/021_employer_reporting.sql`** (NEW) — 5 tables: contribution_file (10 lifecycle states), contribution_record (per-member line items with SSN hash), contribution_exception (11 exception types, 5 statuses), contribution_payment (ACH/wire with 6 payment statuses), late_interest_accrual (per-period interest tracking). 13 indexes for query performance. All monetary columns NUMERIC — never float.
+
+2. **`platform/employer-reporting/`** (NEW) — Go HTTP service on port 8095. 15 API routes: file CRUD, manual entry with inline validation, exception queue (list/get/resolve/escalate), payment setup + history + cancellation, corrections, late interest. Full middleware chain matching employer-portal pattern. **Validation engine** (`domain/validator.go`): rate validation against contribution_rate_table with $0.01 tolerance, ORP separate code path (only AED/SAED validated), negative amount detection, total mismatch detection. 38 Go tests (21 handler + 17 domain). All passing.
+
+3. **`frontend/src/components/employer-portal/reporting/`** (NEW) — 6 React components: FileUpload (drag-drop zone + file list), ManualGrid (editable table with 11 columns), ValidationProgress (5-step stepper with record counts), ExceptionDashboard (filterable table with resolve/escalate), CorrectionWorkflow (file selector + correction form), PaymentSetup (ACH/wire selection + payment history).
+
+4. **`frontend/src/hooks/useEmployerReporting.ts`** (NEW) — 14 hooks: 7 query (useContributionFiles, useContributionFile, useContributionRecords, useExceptions, useException, usePayments, useLateInterest) + 7 mutation (useUploadManualEntry, useDeleteFile, useResolveException, useEscalateException, useSetupPayment, useCancelPayment, useSubmitCorrection).
+
+5. **`frontend/src/lib/employerApi.ts`** — Extended with `employerReportingAPI` object (15 API client methods for files, exceptions, payments, corrections, interest).
+
+6. **`frontend/src/types/Employer.ts`** — Updated placeholder types to match Go models. Added: FileStatus, ExceptionType, ExceptionStatus, PaymentMethod, PaymentStatus, ContributionRecord, ContributionPayment, LateInterestAccrual, ManualEntryRecord.
+
+**Test totals:** Frontend 1,651 tests (208 files). employer-reporting: 38 Go tests. employer-shared: 7 Go tests. employer-portal: 24 Go tests. All passing, zero regressions.
+
+**Zero conflicts:** All new directories/files — no existing files modified except employerApi.ts (reporting client appended) and Employer.ts (types updated from placeholders).
+
+**Data gaps (not blocking):** Late interest rate values, ORP member contribution rate, payment discrepancy threshold — all have schema slots built, awaiting COPERA confirmation. Validation engine works without these.
+
+**Next phase:** Phase 3 — Employer Enrollment (new member submissions, duplicate detection, PERAChoice tracking).
+---
+
+## Visual Polish + Cross-Service Audit + Clerk Events (2026-03-19)
+
+**Branch:** `claude/quizzical-lovelace`
+**Goal:** Complete visual polish items, add cross-service audit trail, extend Clerk webhook event types.
+
+**What was built:**
+
+1. **DQ Score formatting fix** — `OperationalMetricsPanel.tsx` now uses `.toFixed(1)` to display `98.6%` instead of raw float `98.61538461538461%`. +1 test.
+2. **Cross-service audit trail** — `AuditTrailPanel.tsx` now fetches from both `/crm/audit` and `/security/events`, merges and sorts by timestamp descending. Source badges (CRM in gray, Security in violet) distinguish entries. Either source can fail independently. Updated CSV export includes Source column. +5 tests.
+3. **Clerk webhook event types** — Added 5 new mappings to security service: `user.created`, `user.deleted`, `session.revoked`, `organization.membership.created`, `organization.membership.deleted`. Total: 9 mapped types. +5 test cases.
+
+**Test totals:** Frontend 1,636 tests (204 files). Security Go 49 tests. All green.
+
+---
+
+## Employer Domain — Phase 1: Foundation (2026-03-19)
+
+**Branch:** `claude/pedantic-kepler`
+**Goal:** Build Phase 1 of the 7-domain employer roadmap — shared module, portal service, database schema, frontend scaffold.
+
+**What was built:**
+
+1. **`platform/employer-shared/`** (NEW) — Shared Go module with types for all 6 employer services: PortalRole (4 roles), ContributionCategory (7), PlanType (3), Tier (3), FileStatus (10 lifecycle states), ExceptionStatus (5), EnrollmentType (3), DesignationType (4 WARET), ServiceCreditType (5), Division struct, ContributionRateRow struct, LateInterestRate struct. 3 test functions (7 sub-tests).
+
+2. **`domains/pension/schema/020_employer_shared.sql`** (NEW) — 5 tables: employer_division (5 COPERA divisions), employer_portal_user (role-based access), contribution_rate_table (versioned rates keyed by division × safety_officer × effective_date), late_interest_rate (schema ready, no values yet), employer_alert (system-wide + org-specific). 14 rate rows seeded from COPERA fact sheet REV 1-26 (Jan 2025 + Jan 2026, all 5 divisions + Safety Officers). All rate totals verified against source document.
+
+3. **`platform/employer-portal/`** (NEW) — Go HTTP service on port 8094. 11 API routes: portal user CRUD, dashboard summary, alerts, rate tables, divisions. Full middleware chain (CORS → Auth → RateLimit → DBContext → Logging). 24 handler tests. Follows exact CRM service pattern.
+
+4. **`frontend/src/components/employer-portal/`** (NEW) — React portal with 7-tab navigation (Dashboard, Communications, Reporting, Enrollment, Terminations, WARET, SCP). Components: EmployerPortalApp, OrgBanner, AlertBanner, PortalNav, EmployerDashboard. API client (`employerApi.ts`), 10 React Query hooks, TypeScript types. 6 tests.
+
+5. **Vite proxy routes** — Added 6 proxy entries for employer services (ports 8094-8099).
+
+**Design documents:**
+- `docs/plans/2026-03-19-employer-domain-design.md` — Full 7-domain architecture with service topology, database schema, gap register
+- `docs/plans/2026-03-19-employer-domain-plan.md` — 8-phase implementation plan with 30+ tasks
+
+**Test totals:** Frontend 1,636 tests (206 files). employer-shared: 7 tests. employer-portal: 24 tests. All passing.
+
+**Zero conflicts:** All new directories — no existing files modified except vite.config.ts (proxy entries appended).
+
+**Data sourced:** COPERA contribution rates (Jan 2025 + Jan 2026) committed to `docs/copera-contribution-rates-jan2026.md`. Rate table key corrected to division × safety_officer × effective_date (not plan_type × tier).
+
+**Gaps flagged:** Late interest rate, minimum charge, payment discrepancy threshold, ORP rates, statutory caps/floors — all have schema slots built, awaiting COPERA confirmation.
+
+**Next phase:** Phase 2 — Employer Reporting engine (contribution validation, exceptions, payment setup).
+
+---
+
+## E2E Test Gaps + Platform Polish (2026-03-19)
+
+**Branch:** `claude/sweet-mahavira`
+**Goal:** Fill E2E integration test gaps, wire tests into CI, and complete medium-priority visual/backend polish.
+
+**What was built:**
+
+### E2E Integration Tests
+1. **Shared test libraries** (`tests/e2e/lib/`) — 4 files: colors, assertions, JWT generation, HTTP helpers. Eliminated ~120 lines of duplication across scripts.
+2. **Refactored existing scripts** — `services_hub_e2e.sh` and `correspondence_e2e.sh` now source shared libs. Added JWT auth to correspondence tests (was missing).
+3. **`negative_paths_e2e.sh`** (NEW) — 21 assertions: auth failures (401 — no auth, malformed token, expired), validation errors (400 — empty body, field overflow, missing required), not found (404), pagination edge cases.
+4. **`workflows_e2e.sh`** (NEW) — 20 assertions: case lifecycle (create→note→advance→history→stats), correspondence→CRM audit trail, issue lifecycle with comments.
+5. **CI wiring** — New `e2e` job in `.github/workflows/ci.yml`: boots Docker Compose stack, waits for health, runs all 4 E2E scripts, collects logs on failure, tears down. `continue-on-error: true` initially.
+6. **Total: ~118 E2E assertions across 4 scripts** (was ~65 across 2).
+
+### Backend Polish
+7. **Audit Trail filtering** — Added `agent_id`, `date_from`, `date_to` query params to `GET /api/v1/crm/audit`. Introduced `AuditFilter` struct in `platform/crm/db/audit.go`.
+8. **Clerk webhook signature validation** — Replaced TODO with Svix HMAC-SHA256 signature checking. Skips validation in dev mode (no `CLERK_WEBHOOK_SECRET`). 4 new tests.
+
+### Frontend Polish
+9. **Tab bar responsive icons** — Added `lucide-react` dependency with 7 icons (Heart, Database, ScrollText, BarChart3, Shield, AlertCircle, Settings). Icon-only mode on mobile (<640px), icon+text on desktop. `aria-label` on all tabs. 2 new tests.
+10. **Metrics unavailability banner** — Amber alert banner when all data hooks return no data (not loading). 3 new tests.
+
+**Test totals:** Frontend 1,630 tests (204 files). CRM + Security Go tests passing. 118 E2E assertions. All green.
+
+**Next session starter:** `docs/sessions/2026-03-19-enhancements-backlog-starter.md` — covers background job infrastructure, security event enhancements, and issue management SLA/notifications.
+
+---
+
+## API Consistency — Shared apiresponse Package (2026-03-18)
+
+**Branch:** `claude/eager-fermat` → PR #99
+**Goal:** Extract duplicated API response helpers into a shared package, standardize `requestId` (camelCase).
+
+**What was built:**
+
+1. **`platform/apiresponse/`** (NEW) — Shared response envelope package with `WriteSuccess`, `WriteError`, `WritePaginated`, `WriteJSON`, `BuildSuccess`, `BuildPaginated`. 8 unit tests.
+2. **10 platform services wired** — dataaccess, intelligence, crm, correspondence, dataquality, knowledgebase, casemanagement, issues, preferences, security. ~460 lines of duplicated local helpers removed.
+3. **`requestId` standardized** — All Go services and frontend types/mocks changed from `request_id` (snake_case) to `requestId` (camelCase). 32 frontend test files updated.
+4. **CI matrix expanded** — Added apiresponse, casemanagement, issues, preferences, security to the platform-services CI job (6 → 11 services).
+
+**Cleanup:** Closed PR #79 (unmergeable `nostalgic-moser` branch), deleted worktree and branch.
+
+**Test totals:** Frontend 1,610 tests (202 files). All 11 Go service test suites passing. 14/14 CI jobs green.
+
+---
+
 ## CI Fix + Session Cleanup (2026-03-18)
 
 **Branch:** `main` (direct commit)

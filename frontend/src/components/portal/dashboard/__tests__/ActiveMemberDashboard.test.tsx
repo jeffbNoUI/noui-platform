@@ -109,21 +109,21 @@ describe('ActiveMemberDashboard', () => {
     });
   });
 
-  it('shows quick link cards', async () => {
+  it('shows navigation cards', async () => {
     renderWithProviders(<ActiveMemberDashboard {...defaultProps} />);
     await waitFor(() => {
-      expect(screen.getByTestId('quick-link-projections')).toBeInTheDocument();
+      expect(screen.getByTestId('card-profile')).toBeInTheDocument();
     });
-    expect(screen.getByTestId('quick-link-profile')).toBeInTheDocument();
+    expect(screen.getByTestId('card-calculator')).toBeInTheDocument();
   });
 
-  it('calls onNavigate when quick link is clicked', async () => {
+  it('calls onNavigate when card is clicked', async () => {
     renderWithProviders(<ActiveMemberDashboard {...defaultProps} />);
     await waitFor(() => {
-      expect(screen.getByTestId('quick-link-projections')).toBeInTheDocument();
+      expect(screen.getByTestId('card-profile')).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByTestId('quick-link-projections'));
-    expect(defaultProps.onNavigate).toHaveBeenCalledWith('projections');
+    fireEvent.click(screen.getByTestId('card-profile'));
+    expect(defaultProps.onNavigate).toHaveBeenCalledWith('profile');
   });
 
   it('shows loading state while member data loads', () => {

@@ -105,13 +105,13 @@ describe('MemberPortal — Error Resilience & Empty States', () => {
       expect(screen.getByText('Loading member data...')).toBeInTheDocument();
     });
 
-    it('does not render sidebar or main content during loading', () => {
+    it('does not render shell or main content during loading', () => {
       memberLoading = true;
       memberData = undefined;
       renderWithProviders(<MemberPortal {...defaultProps} />);
 
       expect(screen.queryByTestId('member-portal-shell')).not.toBeInTheDocument();
-      expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('card-grid')).not.toBeInTheDocument();
     });
   });
 
@@ -140,10 +140,10 @@ describe('MemberPortal — Error Resilience & Empty States', () => {
     it('allows navigation to profile on fallback', async () => {
       renderWithProviders(<MemberPortal {...defaultProps} />);
       await waitFor(() => {
-        expect(screen.getByTestId('member-portal-shell')).toBeInTheDocument();
+        expect(screen.getByTestId('card-profile')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByTestId('nav-profile'));
+      fireEvent.click(screen.getByTestId('card-profile'));
       expect(screen.getByTestId('profile-section')).toBeInTheDocument();
     });
   });

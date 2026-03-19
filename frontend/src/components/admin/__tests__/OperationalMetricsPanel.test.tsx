@@ -124,4 +124,41 @@ describe('OperationalMetricsPanel', () => {
     renderWithProviders(<OperationalMetricsPanel />);
     expect(screen.getByText('Active Cases')).toBeInTheDocument();
   });
+
+  it('shows unavailability banner when all hooks return no data', () => {
+    mockCaseStats.mockReturnValue({ data: undefined, isLoading: false });
+    mockSLAStats.mockReturnValue({ data: undefined, isLoading: false });
+    mockVolumeStats.mockReturnValue({ data: undefined, isLoading: false });
+    mockCommitmentStats.mockReturnValue({ data: undefined, isLoading: false });
+    mockDQScore.mockReturnValue({ data: undefined, isLoading: false });
+    renderWithProviders(<OperationalMetricsPanel />);
+    expect(screen.getByRole('alert')).toHaveTextContent(/unavailable/i);
+  });
+
+  it('does NOT show banner while loading', () => {
+    mockCaseStats.mockReturnValue({ data: undefined, isLoading: true });
+    mockSLAStats.mockReturnValue({ data: undefined, isLoading: true });
+    mockVolumeStats.mockReturnValue({ data: undefined, isLoading: false });
+    mockCommitmentStats.mockReturnValue({ data: undefined, isLoading: false });
+    mockDQScore.mockReturnValue({ data: undefined, isLoading: false });
+    renderWithProviders(<OperationalMetricsPanel />);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('formats DQ Score to 1 decimal place', () => {
+    mockDQScore.mockReturnValue({ data: { overallScore: 98.61538461538461 }, isLoading: false });
+    renderWithProviders(<OperationalMetricsPanel />);
+    expect(screen.getByText('98.6%')).toBeInTheDocument();
+    expect(screen.queryByText(/98\.615/)).not.toBeInTheDocument();
+  });
+
+  it('does NOT show banner when any data is available', () => {
+    mockCaseStats.mockReturnValue({ data: CASE_STATS, isLoading: false });
+    mockSLAStats.mockReturnValue({ data: undefined, isLoading: false });
+    mockVolumeStats.mockReturnValue({ data: undefined, isLoading: false });
+    mockCommitmentStats.mockReturnValue({ data: undefined, isLoading: false });
+    mockDQScore.mockReturnValue({ data: undefined, isLoading: false });
+    renderWithProviders(<OperationalMetricsPanel />);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
 });

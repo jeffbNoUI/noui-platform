@@ -13,7 +13,7 @@ const baseMember = {
   dob: '1968-07-15',
   hire_date: '2000-03-15',
   tier_code: 1,
-  status_code: 'A',
+  status_code: 'active',
   marital_status: 'M',
 };
 
@@ -75,7 +75,7 @@ vi.mock('@/hooks/useMemberPreferences', () => ({
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 
-describe('MemberPortal — Cross-Section Navigation', () => {
+describe('MemberPortal — Card-Based Navigation', () => {
   const defaultProps = {
     memberID: 10001,
     retirementDate: '2030-07-15',
@@ -85,7 +85,6 @@ describe('MemberPortal — Cross-Section Navigation', () => {
   };
 
   beforeEach(() => {
-    // resolveMemberPersona checks full words: 'active', 'inactive', 'retired'
     memberData = { ...baseMember, status_code: 'active' };
     memberLoading = false;
     memberError = null;
@@ -94,54 +93,57 @@ describe('MemberPortal — Cross-Section Navigation', () => {
   // ── Active member navigation ──────────────────────────────────────────────
 
   describe('active member navigation', () => {
-    it('navigates from dashboard → profile → calculator → documents → messages → preferences', async () => {
+    it('shows navigation cards on dashboard', async () => {
       renderWithProviders(<MemberPortal {...defaultProps} />);
       await waitFor(() => {
-        expect(screen.getByTestId('dashboard-router')).toBeInTheDocument();
+        expect(screen.getByTestId('card-grid')).toBeInTheDocument();
       });
-
-      // Profile
-      fireEvent.click(screen.getByTestId('nav-profile'));
-      expect(screen.getByTestId('profile-section')).toBeInTheDocument();
-      expect(screen.queryByTestId('dashboard-router')).not.toBeInTheDocument();
-
-      // Calculator
-      fireEvent.click(screen.getByTestId('nav-calculator'));
-      expect(screen.getByTestId('calculator-section')).toBeInTheDocument();
-      expect(screen.queryByTestId('profile-section')).not.toBeInTheDocument();
-
-      // Documents
-      fireEvent.click(screen.getByTestId('nav-documents'));
-      expect(screen.getByTestId('documents-section')).toBeInTheDocument();
-
-      // Messages
-      fireEvent.click(screen.getByTestId('nav-messages'));
-      expect(screen.getByTestId('messages-section')).toBeInTheDocument();
-
-      // Preferences
-      fireEvent.click(screen.getByTestId('nav-preferences'));
-      expect(screen.getByTestId('preferences-section')).toBeInTheDocument();
+      expect(screen.getByTestId('card-profile')).toBeInTheDocument();
+      expect(screen.getByTestId('card-calculator')).toBeInTheDocument();
+      expect(screen.getByTestId('card-documents')).toBeInTheDocument();
+      expect(screen.getByTestId('card-messages')).toBeInTheDocument();
     });
 
-    it('navigates to retirement application section', async () => {
+    it('navigates to profile via card click', async () => {
       renderWithProviders(<MemberPortal {...defaultProps} />);
       await waitFor(() => {
-        expect(screen.getByTestId('nav-retirement-app')).toBeInTheDocument();
+        expect(screen.getByTestId('card-profile')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByTestId('nav-retirement-app'));
+      fireEvent.click(screen.getByTestId('card-profile'));
+      expect(screen.getByTestId('profile-section')).toBeInTheDocument();
+      expect(screen.queryByTestId('dashboard-router')).not.toBeInTheDocument();
+    });
+
+    it('navigates to calculator via card click', async () => {
+      renderWithProviders(<MemberPortal {...defaultProps} />);
+      await waitFor(() => {
+        expect(screen.getByTestId('card-calculator')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByTestId('card-calculator'));
+      expect(screen.getByTestId('calculator-section')).toBeInTheDocument();
+    });
+
+    it('navigates to retirement application via card click', async () => {
+      renderWithProviders(<MemberPortal {...defaultProps} />);
+      await waitFor(() => {
+        expect(screen.getByTestId('card-retirement-app')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByTestId('card-retirement-app'));
       expect(screen.getByTestId('application-section')).toBeInTheDocument();
     });
 
-    it('does not show retiree-only nav items for active member', async () => {
+    it('does not show retiree-only cards for active member', async () => {
       renderWithProviders(<MemberPortal {...defaultProps} />);
       await waitFor(() => {
-        expect(screen.getByTestId('member-portal-shell')).toBeInTheDocument();
+        expect(screen.getByTestId('card-grid')).toBeInTheDocument();
       });
 
-      expect(screen.queryByTestId('nav-benefit')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('nav-tax-documents')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('nav-refund')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('card-benefit')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('card-tax-documents')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('card-refund')).not.toBeInTheDocument();
     });
   });
 
@@ -152,32 +154,32 @@ describe('MemberPortal — Cross-Section Navigation', () => {
       memberData = { ...baseMember, status_code: 'retired' };
     });
 
-    it('shows benefit and tax-documents nav items', async () => {
+    it('shows benefit and tax-documents cards', async () => {
       renderWithProviders(<MemberPortal {...defaultProps} />);
       await waitFor(() => {
-        expect(screen.getByTestId('nav-benefit')).toBeInTheDocument();
+        expect(screen.getByTestId('card-benefit')).toBeInTheDocument();
       });
-      expect(screen.getByTestId('nav-tax-documents')).toBeInTheDocument();
+      expect(screen.getByTestId('card-tax-documents')).toBeInTheDocument();
     });
 
-    it('does not show active-only items', async () => {
+    it('does not show active-only cards', async () => {
       renderWithProviders(<MemberPortal {...defaultProps} />);
       await waitFor(() => {
-        expect(screen.getByTestId('member-portal-shell')).toBeInTheDocument();
+        expect(screen.getByTestId('card-grid')).toBeInTheDocument();
       });
 
-      expect(screen.queryByTestId('nav-calculator')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('nav-retirement-app')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('nav-refund')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('card-calculator')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('card-retirement-app')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('card-refund')).not.toBeInTheDocument();
     });
 
-    it('navigates to benefit section', async () => {
+    it('navigates to benefit section via card click', async () => {
       renderWithProviders(<MemberPortal {...defaultProps} />);
       await waitFor(() => {
-        expect(screen.getByTestId('nav-benefit')).toBeInTheDocument();
+        expect(screen.getByTestId('card-benefit')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByTestId('nav-benefit'));
+      fireEvent.click(screen.getByTestId('card-benefit'));
       expect(screen.getByTestId('benefit-section')).toBeInTheDocument();
     });
   });
@@ -189,66 +191,74 @@ describe('MemberPortal — Cross-Section Navigation', () => {
       memberData = { ...baseMember, status_code: 'inactive' };
     });
 
-    it('shows refund and calculator nav items', async () => {
+    it('shows refund and calculator cards', async () => {
       renderWithProviders(<MemberPortal {...defaultProps} />);
       await waitFor(() => {
-        expect(screen.getByTestId('nav-refund')).toBeInTheDocument();
+        expect(screen.getByTestId('card-refund')).toBeInTheDocument();
       });
-      expect(screen.getByTestId('nav-calculator')).toBeInTheDocument();
+      expect(screen.getByTestId('card-calculator')).toBeInTheDocument();
     });
 
-    it('does not show active-only or retiree-only items', async () => {
+    it('does not show active-only or retiree-only cards', async () => {
       renderWithProviders(<MemberPortal {...defaultProps} />);
       await waitFor(() => {
-        expect(screen.getByTestId('member-portal-shell')).toBeInTheDocument();
+        expect(screen.getByTestId('card-grid')).toBeInTheDocument();
       });
 
-      expect(screen.queryByTestId('nav-retirement-app')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('nav-benefit')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('nav-tax-documents')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('card-retirement-app')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('card-benefit')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('card-tax-documents')).not.toBeInTheDocument();
     });
 
-    it('navigates to refund estimate section', async () => {
+    it('navigates to refund estimate section via card', async () => {
       renderWithProviders(<MemberPortal {...defaultProps} />);
       await waitFor(() => {
-        expect(screen.getByTestId('nav-refund')).toBeInTheDocument();
+        expect(screen.getByTestId('card-refund')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByTestId('nav-refund'));
+      fireEvent.click(screen.getByTestId('card-refund'));
       expect(screen.getByTestId('refund-estimate')).toBeInTheDocument();
     });
   });
 
-  // ── Beneficiary navigation ────────────────────────────────────────────────
+  // ── Breadcrumb navigation ─────────────────────────────────────────────────
 
-  describe('beneficiary navigation', () => {
-    beforeEach(() => {
-      memberData = { ...baseMember, status_code: 'retired' };
-    });
-
-    it('shows benefit section for retiree/beneficiary persona', async () => {
+  describe('breadcrumb navigation', () => {
+    it('shows breadcrumb when navigated away from home', async () => {
       renderWithProviders(<MemberPortal {...defaultProps} />);
       await waitFor(() => {
-        expect(screen.getByTestId('nav-benefit')).toBeInTheDocument();
+        expect(screen.getByTestId('card-profile')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByTestId('nav-benefit'));
-      expect(screen.getByTestId('benefit-section')).toBeInTheDocument();
+      fireEvent.click(screen.getByTestId('card-profile'));
+      expect(screen.getByTestId('breadcrumb')).toBeInTheDocument();
     });
-  });
 
-  // ── Fallback section ──────────────────────────────────────────────────────
-
-  describe('unmapped sections', () => {
-    it('shows "coming soon" fallback for letters section', async () => {
+    it('breadcrumb shows Home > Section Name', async () => {
       renderWithProviders(<MemberPortal {...defaultProps} />);
       await waitFor(() => {
-        expect(screen.getByTestId('nav-letters')).toBeInTheDocument();
+        expect(screen.getByTestId('card-documents')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByTestId('nav-letters'));
-      expect(screen.getByTestId('section-letters')).toBeInTheDocument();
-      expect(screen.getByText(/letters.*coming soon/i)).toBeInTheDocument();
+      fireEvent.click(screen.getByTestId('card-documents'));
+
+      const breadcrumb = screen.getByTestId('breadcrumb');
+      expect(breadcrumb).toHaveTextContent('Home');
+      expect(breadcrumb).toHaveTextContent('Documents');
+    });
+
+    it('clicking Home in breadcrumb returns to dashboard', async () => {
+      renderWithProviders(<MemberPortal {...defaultProps} />);
+      await waitFor(() => {
+        expect(screen.getByTestId('card-profile')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByTestId('card-profile'));
+      expect(screen.getByTestId('profile-section')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId('breadcrumb-dashboard'));
+      expect(screen.getByTestId('dashboard-router')).toBeInTheDocument();
+      expect(screen.queryByTestId('breadcrumb')).not.toBeInTheDocument();
     });
   });
 
@@ -262,26 +272,6 @@ describe('MemberPortal — Cross-Section Navigation', () => {
       });
 
       expect(screen.getByTestId('notification-bell')).toBeInTheDocument();
-      expect(screen.getByTestId('bell-button')).toBeInTheDocument();
-    });
-  });
-
-  // ── Back-to-dashboard navigation ──────────────────────────────────────────
-
-  describe('section back navigation', () => {
-    it('returns to dashboard from any section', async () => {
-      renderWithProviders(<MemberPortal {...defaultProps} />);
-      await waitFor(() => {
-        expect(screen.getByTestId('dashboard-router')).toBeInTheDocument();
-      });
-
-      // Go to profile
-      fireEvent.click(screen.getByTestId('nav-profile'));
-      expect(screen.getByTestId('profile-section')).toBeInTheDocument();
-
-      // Return to dashboard
-      fireEvent.click(screen.getByTestId('nav-dashboard'));
-      expect(screen.getByTestId('dashboard-router')).toBeInTheDocument();
     });
   });
 });
