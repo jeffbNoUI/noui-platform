@@ -1,5 +1,34 @@
 # noui-platform — Build History
 
+## E2E Test Gaps + Platform Polish (2026-03-19)
+
+**Branch:** `claude/sweet-mahavira`
+**Goal:** Fill E2E integration test gaps, wire tests into CI, and complete medium-priority visual/backend polish.
+
+**What was built:**
+
+### E2E Integration Tests
+1. **Shared test libraries** (`tests/e2e/lib/`) — 4 files: colors, assertions, JWT generation, HTTP helpers. Eliminated ~120 lines of duplication across scripts.
+2. **Refactored existing scripts** — `services_hub_e2e.sh` and `correspondence_e2e.sh` now source shared libs. Added JWT auth to correspondence tests (was missing).
+3. **`negative_paths_e2e.sh`** (NEW) — 21 assertions: auth failures (401 — no auth, malformed token, expired), validation errors (400 — empty body, field overflow, missing required), not found (404), pagination edge cases.
+4. **`workflows_e2e.sh`** (NEW) — 20 assertions: case lifecycle (create→note→advance→history→stats), correspondence→CRM audit trail, issue lifecycle with comments.
+5. **CI wiring** — New `e2e` job in `.github/workflows/ci.yml`: boots Docker Compose stack, waits for health, runs all 4 E2E scripts, collects logs on failure, tears down. `continue-on-error: true` initially.
+6. **Total: ~118 E2E assertions across 4 scripts** (was ~65 across 2).
+
+### Backend Polish
+7. **Audit Trail filtering** — Added `agent_id`, `date_from`, `date_to` query params to `GET /api/v1/crm/audit`. Introduced `AuditFilter` struct in `platform/crm/db/audit.go`.
+8. **Clerk webhook signature validation** — Replaced TODO with Svix HMAC-SHA256 signature checking. Skips validation in dev mode (no `CLERK_WEBHOOK_SECRET`). 4 new tests.
+
+### Frontend Polish
+9. **Tab bar responsive icons** — Added `lucide-react` dependency with 7 icons (Heart, Database, ScrollText, BarChart3, Shield, AlertCircle, Settings). Icon-only mode on mobile (<640px), icon+text on desktop. `aria-label` on all tabs. 2 new tests.
+10. **Metrics unavailability banner** — Amber alert banner when all data hooks return no data (not loading). 3 new tests.
+
+**Test totals:** Frontend 1,630 tests (204 files). CRM + Security Go tests passing. 118 E2E assertions. All green.
+
+**Next session starter:** `docs/sessions/2026-03-19-enhancements-backlog-starter.md` — covers background job infrastructure, security event enhancements, and issue management SLA/notifications.
+
+---
+
 ## API Consistency — Shared apiresponse Package (2026-03-18)
 
 **Branch:** `claude/eager-fermat` → PR #99

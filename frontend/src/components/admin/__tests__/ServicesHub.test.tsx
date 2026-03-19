@@ -10,6 +10,24 @@ vi.mock('../OperationalMetricsPanel', () => ({ default: () => <div>MetricsPanel<
 vi.mock('../SecurityAccessPanel', () => ({ default: () => <div>SecurityPanel</div> }));
 vi.mock('../IssueManagementPanel', () => ({ default: () => <div>IssuesPanel</div> }));
 vi.mock('../ConfigRulesPanel', () => ({ default: () => <div>ConfigPanel</div> }));
+vi.mock('lucide-react', () => {
+  const icon = (name: string) => {
+    const Icon = (props: Record<string, unknown>) => (
+      <svg data-testid={`icon-${name}`} {...props} />
+    );
+    Icon.displayName = name;
+    return Icon;
+  };
+  return {
+    Heart: icon('Heart'),
+    Database: icon('Database'),
+    ScrollText: icon('ScrollText'),
+    BarChart3: icon('BarChart3'),
+    Shield: icon('Shield'),
+    AlertCircle: icon('AlertCircle'),
+    Settings: icon('Settings'),
+  };
+});
 
 describe('ServicesHub', () => {
   it('renders all 7 tab buttons', () => {
@@ -52,5 +70,26 @@ describe('ServicesHub', () => {
     fireEvent.click(screen.getByRole('tab', { name: /issues/i }));
     const panel = screen.getByRole('tabpanel');
     expect(panel).toHaveAttribute('aria-labelledby', 'hub-tab-issues');
+  });
+
+  it('all tabs have aria-label for accessibility', () => {
+    renderWithProviders(<ServicesHub />);
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs).toHaveLength(7);
+    tabs.forEach((tab) => {
+      expect(tab).toHaveAttribute('aria-label');
+      expect(tab.getAttribute('aria-label')).not.toBe('');
+    });
+  });
+
+  it('renders icons on all tabs', () => {
+    renderWithProviders(<ServicesHub />);
+    expect(screen.getByTestId('icon-Heart')).toBeInTheDocument();
+    expect(screen.getByTestId('icon-Database')).toBeInTheDocument();
+    expect(screen.getByTestId('icon-ScrollText')).toBeInTheDocument();
+    expect(screen.getByTestId('icon-BarChart3')).toBeInTheDocument();
+    expect(screen.getByTestId('icon-Shield')).toBeInTheDocument();
+    expect(screen.getByTestId('icon-AlertCircle')).toBeInTheDocument();
+    expect(screen.getByTestId('icon-Settings')).toBeInTheDocument();
   });
 });
