@@ -1,5 +1,15 @@
 # noui-platform — Build History
 
+## CI Fix + Session Cleanup (2026-03-18)
+
+**Branch:** `main` (direct commit)
+
+- Fixed CI workflow: added `-short` flag to platform service test job so RLS integration tests (which need live PostgreSQL) are skipped in CI. Connector job already had `-short`.
+- PR #79 (`claude/nostalgic-moser`) identified as unmergeable — too many rebase conflicts from portal redesign sessions. Session starter created at `docs/sessions/2026-03-18-api-consistency-reimplementation-starter.md` for fresh re-implementation next session.
+- Original implementation plan saved to `docs/plans/2026-03-16-api-consistency-final-regression.md`.
+
+---
+
 ## Member Portal Redesign — Phase 11: Polish & E2E Testing (2026-03-18)
 
 **Branch:** `claude/confident-aryabhata`
