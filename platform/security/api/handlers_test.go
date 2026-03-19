@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
@@ -14,6 +15,7 @@ import (
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
 	"github.com/noui/platform/apiresponse"
+	secdb "github.com/noui/platform/security/db"
 	"github.com/noui/platform/security/models"
 )
 
@@ -570,7 +572,7 @@ func TestListActiveSessions_Empty(t *testing.T) {
 	h, mock := newTestHandler(t)
 
 	mock.ExpectQuery("SELECT").
-		WithArgs(defaultTenantID).
+		WithArgs(defaultTenantID, 30).
 		WillReturnRows(sqlmock.NewRows(sessionCols))
 
 	w := serve(h, "GET", "/api/v1/security/sessions", nil)
@@ -909,5 +911,28 @@ func TestClerkWebhook_InvalidSignature(t *testing.T) {
 	if w.Code != http.StatusUnauthorized {
 		t.Errorf("ClerkWebhook(bad sig) status = %d, want %d\nbody: %s",
 			w.Code, http.StatusUnauthorized, w.Body.String())
+	}
+}
+
+// --- Session Cleanup ---
+
+func TestCleanupExpiredSessions(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	store := secdb.NewStore(db)
+
+	mock.ExpectExec("DELETE FROM active_sessions").
+		WillReturnResult(sqlmock.NewResult(0, 3))
+
+	count, err := store.CleanupExpiredSessions(context.Background(), 30, 8)
+	if err != nil {
+		t.Fatalf("CleanupExpiredSessions error: %v", err)
+	}
+	if count != 3 {
+		t.Errorf("cleaned = %d, want 3", count)
 	}
 }

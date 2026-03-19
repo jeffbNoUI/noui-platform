@@ -49,14 +49,19 @@ func (s *Store) UpsertSession(ctx context.Context, tenantID string, req models.C
 	return scanSession(row)
 }
 
-// ListActiveSessions returns sessions that have been seen within the last 30 minutes.
-func (s *Store) ListActiveSessions(ctx context.Context, tenantID string) ([]models.ActiveSession, error) {
+// ListActiveSessions returns sessions seen within the given idle timeout.
+func (s *Store) ListActiveSessions(ctx context.Context, tenantID string, idleTimeoutMin ...int) ([]models.ActiveSession, error) {
+	timeout := 30
+	if len(idleTimeoutMin) > 0 && idleTimeoutMin[0] > 0 {
+		timeout = idleTimeoutMin[0]
+	}
+
 	query := fmt.Sprintf(
-		"SELECT %s FROM active_sessions s WHERE s.tenant_id = $1 AND s.last_seen_at > NOW() - INTERVAL '30 minutes' ORDER BY s.last_seen_at DESC",
+		"SELECT %s FROM active_sessions s WHERE s.tenant_id = $1 AND s.last_seen_at > NOW() - ($2 || ' minutes')::INTERVAL ORDER BY s.last_seen_at DESC",
 		sessionColumns,
 	)
 
-	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, query, tenantID)
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, query, tenantID, timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -72,6 +77,21 @@ func (s *Store) ListActiveSessions(ctx context.Context, tenantID string) ([]mode
 	}
 
 	return sessions, rows.Err()
+}
+
+// CleanupExpiredSessions deletes sessions that are idle or exceeded max lifetime.
+// Returns the number of sessions deleted.
+func (s *Store) CleanupExpiredSessions(ctx context.Context, idleTimeoutMin, maxLifetimeHr int) (int64, error) {
+	result, err := s.DB.ExecContext(ctx,
+		`DELETE FROM active_sessions
+		 WHERE last_seen_at < NOW() - ($1 || ' minutes')::INTERVAL
+		    OR started_at < NOW() - ($2 || ' hours')::INTERVAL`,
+		idleTimeoutMin, maxLifetimeHr,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 // DeleteSession removes an active session by session_id, scoped to tenant.

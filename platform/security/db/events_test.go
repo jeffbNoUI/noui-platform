@@ -264,7 +264,7 @@ func TestListActiveSessions_Empty(t *testing.T) {
 	s, mock := newStore(t)
 
 	mock.ExpectQuery("SELECT").
-		WithArgs("tenant-1").
+		WithArgs("tenant-1", 30).
 		WillReturnRows(sqlmock.NewRows(sessionCols))
 
 	sessions, err := s.ListActiveSessions(context.Background(), "tenant-1")
@@ -285,7 +285,7 @@ func TestListActiveSessions_WithResults(t *testing.T) {
 		AddRow(2, "tenant-1", "user-2", "sess-2", "user2@example.com", "viewer", "10.0.0.2", "Firefox", now, now)
 
 	mock.ExpectQuery("SELECT").
-		WithArgs("tenant-1").
+		WithArgs("tenant-1", 30).
 		WillReturnRows(rows)
 
 	sessions, err := s.ListActiveSessions(context.Background(), "tenant-1")
