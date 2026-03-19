@@ -145,6 +145,13 @@ describe('OperationalMetricsPanel', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
+  it('formats DQ Score to 1 decimal place', () => {
+    mockDQScore.mockReturnValue({ data: { overallScore: 98.61538461538461 }, isLoading: false });
+    renderWithProviders(<OperationalMetricsPanel />);
+    expect(screen.getByText('98.6%')).toBeInTheDocument();
+    expect(screen.queryByText(/98\.615/)).not.toBeInTheDocument();
+  });
+
   it('does NOT show banner when any data is available', () => {
     mockCaseStats.mockReturnValue({ data: CASE_STATS, isLoading: false });
     mockSLAStats.mockReturnValue({ data: undefined, isLoading: false });
