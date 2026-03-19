@@ -164,7 +164,7 @@ Customer Service (Domain 7) enhances existing `platform/casemanagement/` and `pl
 
 | Migration File | Tables | Domain |
 |---|---|---|
-| 020_employer_shared.sql | employer_portal_user, employer_division, contribution_rate_table, employer_alert | Shared + Portal |
+| 020_employer_shared.sql | employer_portal_user, employer_division, contribution_rate_table (keyed: division × safety_officer × effective_date), late_interest_rate, employer_alert | Shared + Portal |
 | 021_employer_reporting.sql | contribution_file, contribution_record, contribution_exception, contribution_payment, late_interest_accrual | Reporting |
 | 022_employer_enrollment.sql | enrollment_submission, enrollment_duplicate_flag, perachoice_election | Enrollment |
 | 023_employer_terminations.sql | termination_certification, certification_hold, refund_application | Terminations |
@@ -224,18 +224,62 @@ New API client in `frontend/src/lib/`:
 
 ---
 
-## Data Dependencies (User Must Source)
+## Data Status — Sourced vs. Gaps
+
+### Sourced (Available in `docs/copera-contribution-rates-jan2026.md`)
+
+| Data | Source | Key Detail |
+|---|---|---|
+| Member contribution rates (5 divisions + Safety Officers) | COPERA fact sheet REV 1-26 | State/School/DPS/Judicial: 11.00%, Local Gov: 9.00%, Safety: 13.00% |
+| Employer base rates (all divisions, Jan 2025 + Jan 2026) | Same | Varies by division: 7.40% (DPS) to 13.91% (Judicial) |
+| AED rates by division | Same | 5.00% (State/Judicial), 4.50% (School/DPS), 2.70% (Local Gov Jan 2026) |
+| SAED rates by division | Same | 5.00% (State/Judicial), 5.50% (School/DPS), 2.00% (Local Gov Jan 2026) |
+| AAP (Auto Adjustment Provision) | Same | 1.00% all divisions currently |
+| DC Supplement | Same | State: 0.25%, Local Gov: 0.10%, others: none |
+| Safety Officer definition + membership date criteria | Same | Role and date criteria per division |
+| AED/SAED payroll basis | Same | **Total payroll** including ORP-eligible employees |
+| Member contribution interest rate | Same | **3% compounded annually** (board-set) |
+| Rate change triggers (funded status thresholds) | Same | 103% funded → decrease; below 90% → increase |
+
+### Rate Table Key (Corrected from Design)
+
+The rate table key is **division × safety_officer_flag × effective_date** — NOT division × plan_type × tier. Tiers affect benefit formula multipliers, not contribution rates. The schema must be updated accordingly.
+
+### Gaps — Flagged for Configurability
+
+| Item | Status | What to Build Now | Resolution Source | Blocking Phase |
+|---|---|---|---|---|
+| Late contribution interest rate | Gap — no value | Versioned rate table schema, configurable by pay period and division; minimum charge floor field per employer | C.R.S. §24-51-411 or COPERA Employer Contribution Reporting and Adjustments Guide | Phase 2 (late interest feature only — core validation works without this) |
+| Late contribution minimum charge | Gap — no value | Same schema as above | Same source | Phase 2 (same) |
+| Payment setup discrepancy threshold | Gap — no value | Configurable threshold field (dollar and/or percentage) in employer config table | COPERA Business Rules team | Phase 2 (payment setup only) |
+| ORP member contribution rate | Gap — not a COPERA concern | ORP flag on member record; ORP payroll line in contribution file. ORP member contributions go to ORP provider, not COPERA. | copera.org/employers/orp or COPERA Employer Manual | Phase 2 (ORP validation path) |
+| ORP employer AED/SAED on ORP payroll | **Confirmed** — standard AED/SAED rates apply | No additional schema; apply existing AED/SAED rate for the division to ORP payroll | Already in rate doc | N/A |
+| Statutory rate caps/floors per component | Gap — 0.5%/year AAP limit known, absolute caps unknown | AAP 0.5%/year limit in validation; defer absolute cap validation until statute retrieved | C.R.S. Title 24, Article 51 | Phase 2 (bound validation only) |
+| Complete mandatory enrollment field set | Gap | Build with confirmed fields (SSN, hire_date, plan_code, division_code, name); add fields when COPERA confirms | COPERA Business Rules / R&I team | Phase 3 |
+| PERAChoice eligible employer/position categories | Gap | Build 60-day window logic; defer employer/position eligibility filter | COPERA DC Team BPI | Phase 3 |
+| Separation waiting period statute + exceptions | Gap | Build configurable waiting period; default 0 until statute confirmed | CRS Title 24 / COPERA Legal | Phase 4 |
+| Board-set interest rate history | **Partially sourced** — 3% current rate confirmed | Build versioned rate table; seed with 3% current rate | COPERA Finance for historical rates | Phase 4 |
+| CRS statute citations for WARET day/hour limits | Gap | Build with day/hour limits from spec (110/720, 140/960); cite statute when confirmed | CRS Title 24 / COPERA Legal | Phase 5 |
+| COPERA SCP BPI document | **Major gap** — entire domain incomplete | Build framework + cost factor schema; defer implementation details | PRISM project files | Phase 6 |
+
+### ORP Validation Architecture Note
+
+ORP validation is a **separate code path** from DB validation:
+- **DB records:** Validate member_rate × salary AND employer_rate × salary against rate table
+- **ORP records:** Validate (a) AED/SAED correctly applied to ORP-eligible payroll using standard division rates, and (b) ORP-elected member is NOT also receiving DB contributions
+- The validator must branch on ORP flag, not use a single generic path with different rate lookups
+
+### Data Dependencies Still Needed (User Must Source)
 
 | Data | Needed By | Phase |
 |---|---|---|
-| AED/SAED rate tables by division + effective date | employer-reporting validation | Phase 2 |
-| Contribution rate matrix (plan x tier x salary → rate) | employer-reporting validation | Phase 2 |
-| Payment setup discrepancy threshold value(s) | employer-reporting payment | Phase 2 |
-| Complete mandatory enrollment field set | employer-enrollment validation | Phase 3 |
+| Late interest rate + minimum charge | employer-reporting late interest | Phase 2 |
+| Payment discrepancy threshold | employer-reporting payment setup | Phase 2 |
+| Complete enrollment mandatory field set | employer-enrollment validation | Phase 3 |
 | PERAChoice eligible employer/position categories | employer-enrollment PERAChoice | Phase 3 |
-| Separation waiting period statute citation + exceptions | employer-terminations eligibility | Phase 4 |
-| Board-set interest rate history table | employer-terminations refund calc | Phase 4 |
-| CRS statute citations for WARET day/hour limits | employer-waret rules | Phase 5 |
+| Separation waiting period statute | employer-terminations eligibility | Phase 4 |
+| Historical board-set interest rates | employer-terminations refund calc | Phase 4 |
+| CRS statute citations for WARET | employer-waret rules | Phase 5 |
 | COPERA SCP BPI document | employer-scp (entire domain) | Phase 6 |
 
 ---
