@@ -1,0 +1,8 @@
+{"Time":"2026-03-19T10:00:00Z","Action":"run","Package":"github.com/noui/platform/intelligence","Test":"TestEvaluateEligibility/Rule_of_75_Robert"}
+{"Time":"2026-03-19T10:00:01Z","Action":"pass","Package":"github.com/noui/platform/intelligence","Test":"TestEvaluateEligibility/Rule_of_75_Robert","Elapsed":0.512}
+{"Time":"2026-03-19T10:00:01Z","Action":"run","Package":"github.com/noui/platform/intelligence","Test":"TestCalculateBenefit/Tier2_Early_Retirement"}
+{"Time":"2026-03-19T10:00:02Z","Action":"pass","Package":"github.com/noui/platform/intelligence","Test":"TestCalculateBenefit/Tier2_Early_Retirement","Elapsed":0.320}
+{"Time":"2026-03-19T10:00:02Z","Action":"run","Package":"github.com/noui/platform/intelligence","Test":"TestDeathBenefit/Tier3_Under65"}
+{"Time":"2026-03-19T10:00:03Z","Action":"fail","Package":"github.com/noui/platform/intelligence","Test":"TestDeathBenefit/Tier3_Under65","Elapsed":0.150}
+{"Time":"2026-03-19T10:00:03Z","Action":"run","Package":"github.com/noui/platform/intelligence","Test":"TestIPR/Skip_Purchased_Service"}
+{"Time":"2026-03-19T10:00:03Z","Action":"skip","Package":"github.com/noui/platform/intelligence","Test":"TestIPR/Skip_Purchased_Service","Elapsed":0.001}

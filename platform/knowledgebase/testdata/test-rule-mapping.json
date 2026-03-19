@@ -1,0 +1,6 @@
+{
+  "TestEvaluateEligibility/Rule_of_75_Robert": "RULE-RULE-OF-75",
+  "TestCalculateBenefit/Tier2_Early_Retirement": "RULE-EARLY-RETIREMENT",
+  "TestDeathBenefit/Tier3_Under65": "RULE-DEATH-BENEFIT",
+  "TestIPR/Skip_Purchased_Service": "RULE-IPR-CALC"
+}
