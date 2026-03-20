@@ -848,3 +848,178 @@ func TestGetIssueStats(t *testing.T) {
 		t.Error("meta.requestId should not be empty")
 	}
 }
+
+// --- ReportError ---
+
+func TestReportError_NewError(t *testing.T) {
+	h, mock := newTestHandler(t)
+
+	report := models.ErrorReport{
+		RequestID:    "req-abc-123",
+		URL:          "/api/v1/members",
+		HTTPStatus:   500,
+		ErrorCode:    "DB_ERROR",
+		ErrorMessage: "connection refused",
+		Portal:       "staff",
+		Route:        "/members",
+	}
+	reqBody, _ := json.Marshal(report)
+
+	// FindByFingerprint: no existing issue
+	mock.ExpectQuery("SELECT id FROM issues").
+		WillReturnError(sql.ErrNoRows)
+
+	// CreateIssue transaction: BEGIN, INSERT, UPDATE issue_id, COMMIT
+	mock.ExpectBegin()
+	mock.ExpectQuery("INSERT INTO issues").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+	mock.ExpectExec("UPDATE issues SET issue_id").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
+
+	// Re-fetch after create
+	mock.ExpectQuery("SELECT").
+		WithArgs(1, defaultTenantID).
+		WillReturnRows(newIssueRows(1, "ISS-001"))
+
+	w := serve(h, "POST", "/api/v1/errors/report", reqBody)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("ReportError(new) status = %d, want %d\nbody: %s",
+			w.Code, http.StatusCreated, w.Body.String())
+	}
+}
+
+func TestReportError_ExistingError(t *testing.T) {
+	h, mock := newTestHandler(t)
+
+	report := models.ErrorReport{
+		RequestID:    "req-abc-456",
+		URL:          "/api/v1/members",
+		HTTPStatus:   500,
+		ErrorCode:    "DB_ERROR",
+		ErrorMessage: "connection refused",
+		Portal:       "staff",
+		Route:        "/members",
+	}
+	reqBody, _ := json.Marshal(report)
+
+	// FindByFingerprint: existing issue found
+	mock.ExpectQuery("SELECT id FROM issues").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(42))
+
+	// IncrementErrorOccurrence: fetch title
+	mock.ExpectQuery("SELECT title FROM issues").
+		WillReturnRows(sqlmock.NewRows([]string{"title"}).
+			AddRow("[Auto] DB_ERROR: GET /api/v1/members"))
+
+	// Update title
+	mock.ExpectExec("UPDATE issues SET title").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	// Insert comment
+	now := time.Now().UTC()
+	mock.ExpectQuery("INSERT INTO issue_comments").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "issue_id", "author", "content", "created_at"}).
+			AddRow(1, 42, "system:error-reporter", "details", now))
+
+	w := serve(h, "POST", "/api/v1/errors/report", reqBody)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("ReportError(existing) status = %d, want %d\nbody: %s",
+			w.Code, http.StatusOK, w.Body.String())
+	}
+}
+
+func TestReportError_MissingRequestID(t *testing.T) {
+	h, _ := newTestHandler(t)
+
+	report := models.ErrorReport{
+		URL:        "/api/v1/members",
+		HTTPStatus: 500,
+	}
+	reqBody, _ := json.Marshal(report)
+
+	w := serve(h, "POST", "/api/v1/errors/report", reqBody)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("ReportError(no requestId) status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestReportError_ReactCrash(t *testing.T) {
+	h, mock := newTestHandler(t)
+
+	report := models.ErrorReport{
+		RequestID:      "req-crash-001",
+		URL:            "",
+		HTTPStatus:     0,
+		ErrorCode:      "REACT_CRASH",
+		ErrorMessage:   "Cannot read properties of null",
+		Portal:         "member",
+		Route:          "/dashboard",
+		ComponentStack: "at MemberDashboard\nat ErrorBoundary",
+	}
+	reqBody, _ := json.Marshal(report)
+
+	// FindByFingerprint: no existing issue
+	mock.ExpectQuery("SELECT id FROM issues").
+		WillReturnError(sql.ErrNoRows)
+
+	// CreateIssue transaction
+	mock.ExpectBegin()
+	mock.ExpectQuery("INSERT INTO issues").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(5))
+	mock.ExpectExec("UPDATE issues SET issue_id").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
+
+	// Re-fetch
+	mock.ExpectQuery("SELECT").
+		WithArgs(5, defaultTenantID).
+		WillReturnRows(newIssueRows(5, "ISS-005"))
+
+	w := serve(h, "POST", "/api/v1/errors/report", reqBody)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("ReportError(react crash) status = %d, want %d\nbody: %s",
+			w.Code, http.StatusCreated, w.Body.String())
+	}
+}
+
+// --- ListRecentErrors ---
+
+func TestListRecentErrors_Empty(t *testing.T) {
+	h, mock := newTestHandler(t)
+
+	mock.ExpectQuery("SELECT COUNT").
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
+	mock.ExpectQuery("SELECT").
+		WillReturnRows(sqlmock.NewRows(issueCols))
+
+	w := serve(h, "GET", "/api/v1/errors/recent", nil)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("ListRecentErrors status = %d, want %d\nbody: %s",
+			w.Code, http.StatusOK, w.Body.String())
+	}
+}
+
+func TestListRecentErrors_WithSinceParam(t *testing.T) {
+	h, mock := newTestHandler(t)
+
+	mock.ExpectQuery("SELECT COUNT").
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+
+	dataRows := sqlmock.NewRows(issueCols)
+	addIssueRow(dataRows, 1, "ISS-001")
+	mock.ExpectQuery("SELECT").
+		WillReturnRows(dataRows)
+
+	w := serve(h, "GET", "/api/v1/errors/recent?since=2026-03-01T00:00:00Z", nil)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("ListRecentErrors(since) status = %d, want %d\nbody: %s",
+			w.Code, http.StatusOK, w.Body.String())
+	}
+}

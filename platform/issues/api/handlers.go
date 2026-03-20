@@ -2,11 +2,15 @@
 package api
 
 import (
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/noui/platform/apiresponse"
 	"github.com/noui/platform/auth"
@@ -30,6 +34,10 @@ func NewHandler(database *sql.DB) *Handler {
 // RegisterRoutes sets up all issue management API routes.
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /healthz", h.HealthCheck)
+
+	// Error reporting
+	mux.HandleFunc("POST /api/v1/errors/report", h.ReportError)
+	mux.HandleFunc("GET /api/v1/errors/recent", h.ListRecentErrors)
 
 	// Issues
 	mux.HandleFunc("GET /api/v1/issues", h.ListIssues)
@@ -292,6 +300,124 @@ func (h *Handler) GetIssueStats(w http.ResponseWriter, r *http.Request) {
 	apiresponse.WriteSuccess(w, http.StatusOK, "issues", stats)
 }
 
+// --- Error Reporting ---
+
+// ReportError receives frontend error reports, deduplicates via fingerprint,
+// and creates or updates an Issue.
+func (h *Handler) ReportError(w http.ResponseWriter, r *http.Request) {
+	var report models.ErrorReport
+	if err := decodeJSON(r, &report); err != nil {
+		apiresponse.WriteError(w, http.StatusBadRequest, "issues", "INVALID_REQUEST", err.Error())
+		return
+	}
+
+	var errs validation.Errors
+	errs.Required("requestId", report.RequestID)
+	if report.ErrorCode != "REACT_CRASH" {
+		errs.Required("url", report.URL)
+	}
+	if errs.HasErrors() {
+		apiresponse.WriteError(w, http.StatusBadRequest, "issues", "INVALID_REQUEST", errs.Error())
+		return
+	}
+
+	tenantID := tenantID(r)
+	fingerprint := errorFingerprint(report.ErrorCode, report.URL, report.HTTPStatus)
+
+	existingID, err := h.store.FindByFingerprint(r.Context(), tenantID, fingerprint)
+	if err != nil {
+		apiresponse.WriteError(w, http.StatusInternalServerError, "issues", "DB_ERROR", err.Error())
+		return
+	}
+
+	if existingID > 0 {
+		if err := h.store.IncrementErrorOccurrence(r.Context(), tenantID, existingID, report.RequestID, report.Portal, report.Route); err != nil {
+			apiresponse.WriteError(w, http.StatusInternalServerError, "issues", "DB_ERROR", err.Error())
+			return
+		}
+		apiresponse.WriteSuccess(w, http.StatusOK, "issues", map[string]any{
+			"action":  "updated",
+			"issueId": existingID,
+		})
+		return
+	}
+
+	severity := "medium"
+	if report.HTTPStatus >= 500 {
+		severity = "high"
+	}
+	if report.ErrorCode == "REACT_CRASH" {
+		severity = "critical"
+	}
+
+	description := fmt.Sprintf(
+		"Error Code: %s\nHTTP Status: %d\nURL: %s\nMessage: %s\nPortal: %s\nRoute: %s\nRequest ID: %s\nfingerprint:%s",
+		report.ErrorCode, report.HTTPStatus, report.URL, report.ErrorMessage,
+		report.Portal, report.Route, report.RequestID, fingerprint,
+	)
+	if report.ComponentStack != "" {
+		description += fmt.Sprintf("\n\nComponent Stack:\n%s", report.ComponentStack)
+	}
+
+	title := fmt.Sprintf("[Auto] %s: %s", report.ErrorCode, report.URL)
+	if len(title) > 500 {
+		title = title[:497] + "..."
+	}
+
+	issue, err := h.store.CreateIssue(r.Context(), tenantID, models.CreateIssueRequest{
+		Title:           title,
+		Description:     description,
+		Severity:        severity,
+		Category:        "error-report",
+		AffectedService: parseServiceFromURL(report.URL),
+		ReportedBy:      "system:error-reporter",
+	})
+	if err != nil {
+		apiresponse.WriteError(w, http.StatusInternalServerError, "issues", "DB_ERROR", err.Error())
+		return
+	}
+
+	apiresponse.WriteSuccess(w, http.StatusCreated, "issues", issue)
+}
+
+// ListRecentErrors returns error-report issues, optionally filtered by a since timestamp.
+func (h *Handler) ListRecentErrors(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantID(r)
+
+	limit, offset := validation.Pagination(intParam(r, "limit", 25), intParam(r, "offset", 0), 100)
+
+	filter := models.IssueFilter{
+		Status:   r.URL.Query().Get("status"),
+		Category: "error-report",
+		Limit:    limit,
+		Offset:   offset,
+	}
+	if filter.Status == "" {
+		filter.Status = "open"
+	}
+
+	issues, total, err := h.store.ListIssues(r.Context(), tenantID, filter)
+	if err != nil {
+		apiresponse.WriteError(w, http.StatusInternalServerError, "issues", "DB_ERROR", err.Error())
+		return
+	}
+
+	if since := r.URL.Query().Get("since"); since != "" {
+		if sinceTime, err := time.Parse(time.RFC3339, since); err == nil {
+			var filtered []models.Issue
+			for _, iss := range issues {
+				if iss.ReportedAt.After(sinceTime) {
+					filtered = append(filtered, iss)
+				}
+			}
+			issues = filtered
+			total = len(filtered)
+		}
+	}
+
+	apiresponse.WritePaginated(w, "issues", issues, total, filter.Limit, filter.Offset)
+}
+
 // --- Helper Functions ---
 
 const defaultTenantID = "00000000-0000-0000-0000-000000000001"
@@ -321,4 +447,37 @@ func intParam(r *http.Request, name string, defaultVal int) int {
 		return defaultVal
 	}
 	return v
+}
+
+// errorFingerprint generates a dedup key from error attributes.
+func errorFingerprint(errorCode, url string, httpStatus int) string {
+	raw := fmt.Sprintf("%s:%s:%d", errorCode, url, httpStatus)
+	h := sha256.Sum256([]byte(raw))
+	return hex.EncodeToString(h[:16])
+}
+
+// parseServiceFromURL extracts a service name from a URL path.
+func parseServiceFromURL(url string) string {
+	serviceMap := map[string]string{
+		"members": "dataaccess", "salary": "dataaccess", "employment": "dataaccess",
+		"crm": "crm", "organizations": "crm", "contacts": "crm",
+		"correspondence": "correspondence", "templates": "correspondence",
+		"dataquality": "dataquality", "dq": "dataquality",
+		"knowledgebase": "knowledgebase", "articles": "knowledgebase",
+		"cases":    "casemanagement",
+		"issues":   "issues",
+		"employer": "crm",
+	}
+
+	parts := strings.Split(strings.TrimPrefix(url, "/"), "/")
+	for _, part := range parts {
+		if part == "api" || part == "v1" || part == "" {
+			continue
+		}
+		if svc, ok := serviceMap[part]; ok {
+			return svc
+		}
+		return part
+	}
+	return "unknown"
 }
