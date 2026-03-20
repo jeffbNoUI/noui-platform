@@ -2,6 +2,7 @@
 // React Query hooks for Phase 8 cross-service employer endpoints.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { useMemo } from 'react';
 import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   fetchEmployerRoster,
@@ -21,6 +22,7 @@ import {
 import type {
   EmployerAlert,
   AlertSeverity,
+  ActivityEvent,
   CreateEmployerInteractionRequest,
   GenerateEmployerLetterRequest,
   CreateEmployerCaseRequest,
@@ -268,4 +270,83 @@ export function useEmployerAlerts(orgIds: string[], orgNames: Record<string, str
   });
 
   return { alerts, isLoading };
+}
+
+// ─── Unified Activity Feed hook ───────────────────────────────────────────
+
+export function useEmployerActivity(orgId: string): { events: ActivityEvent[] } {
+  const { data: interactionsData } = useOrgInteractions(orgId);
+  const { data: casesData } = useEmployerCases(orgId);
+  const { data: issuesData } = useEmployerDQIssues(orgId);
+
+  const events = useMemo(() => {
+    const result: ActivityEvent[] = [];
+
+    // ── Interactions → ActivityEvent ──────────────────────────────────
+    for (const ix of interactionsData?.items ?? []) {
+      const channel = String(ix?.channel ?? '');
+      let icon = '\u{1F4AC}'; // 💬
+      if (channel.startsWith('phone'))
+        icon = '\u{1F4DE}'; // 📞
+      else if (channel.startsWith('email') || channel === 'secure_message')
+        icon = '\u{2709}\u{FE0F}'; // ✉️
+
+      result.push({
+        id: ix?.interactionId ?? '',
+        type: 'interaction',
+        timestamp: ix?.startedAt ?? ix?.endedAt ?? '',
+        summary: ix?.summary ?? `${channel} interaction`,
+        icon,
+      });
+    }
+
+    // ── Cases → ActivityEvent ────────────────────────────────────────
+    for (const c of casesData?.items ?? []) {
+      const status = c?.status ?? '';
+      let icon = '\u{1F4CB}'; // 📋
+      if (c?.sla === 'at-risk' || c?.sla === 'urgent')
+        icon = '\u{1F534}'; // 🔴
+      else if (status === 'completed' || status === 'closed') icon = '\u{2705}'; // ✅
+
+      result.push({
+        id: c?.caseId ?? '',
+        type: 'case_change',
+        timestamp: c?.updatedAt ?? c?.createdAt ?? '',
+        summary: `${c?.caseType ?? 'Case'} — ${c?.stage ?? status}`,
+        icon,
+        severity: c?.sla === 'at-risk' || c?.sla === 'urgent' ? 'warning' : undefined,
+      });
+    }
+
+    // ── DQ Issues → ActivityEvent ────────────────────────────────────
+    for (const dq of issuesData?.items ?? []) {
+      const status = dq?.status ?? '';
+      const icon = status === 'resolved' ? '\u{2705}' : '\u{1F4CB}'; // ✅ or 📋
+
+      result.push({
+        id: dq?.issueId ?? '',
+        type: 'dq_issue',
+        timestamp: dq?.createdAt ?? '',
+        summary: dq?.description ?? 'Data quality issue',
+        icon,
+        severity:
+          dq?.severity === 'critical'
+            ? 'critical'
+            : dq?.severity === 'warning'
+              ? 'warning'
+              : undefined,
+      });
+    }
+
+    // Sort newest-first
+    result.sort((a, b) => {
+      const ta = a.timestamp || '';
+      const tb = b.timestamp || '';
+      return tb.localeCompare(ta);
+    });
+
+    return result;
+  }, [interactionsData, casesData, issuesData]);
+
+  return { events };
 }
