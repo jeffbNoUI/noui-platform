@@ -1,3 +1,4 @@
+// frontend/src/components/rules/__tests__/RuleCard.test.tsx
 import { describe, it, expect, vi } from 'vitest';
 import { screen, fireEvent } from '@testing-library/react';
 import { renderWithProviders } from '@/test/helpers';
@@ -9,7 +10,8 @@ function makeRule(overrides: Partial<RuleDefinition> = {}): RuleDefinition {
     id: 'RULE-ELG-01',
     name: 'Normal Retirement Eligibility',
     domain: 'eligibility',
-    description: 'Age >= 65 and vested',
+    description:
+      'Determines if a member is eligible for normal retirement based on age and vesting status',
     sourceReference: { document: 'RMC', section: '§18-401', lastVerified: '2026-01-01' },
     appliesTo: { tiers: ['tier_1'], memberTypes: ['active'] },
     inputs: [{ name: 'age', type: 'number', description: 'Age in years' }],
@@ -33,29 +35,50 @@ function makeRule(overrides: Partial<RuleDefinition> = {}): RuleDefinition {
 }
 
 describe('RuleCard', () => {
-  it('renders rule ID and name', () => {
+  it('renders full rule name without truncation', () => {
+    renderWithProviders(<RuleCard rule={makeRule()} onClick={() => {}} />);
+    const name = screen.getByText('Normal Retirement Eligibility');
+    expect(name).toBeInTheDocument();
+    expect(name.className).not.toContain('truncate');
+  });
+
+  it('renders full description text', () => {
+    renderWithProviders(<RuleCard rule={makeRule()} onClick={() => {}} />);
+    const desc = screen.getByText(/Determines if a member is eligible/);
+    expect(desc).toBeInTheDocument();
+    expect(desc.className).not.toContain('truncate');
+  });
+
+  it('renders rule ID', () => {
     renderWithProviders(<RuleCard rule={makeRule()} onClick={() => {}} />);
     expect(screen.getByText('RULE-ELG-01')).toBeInTheDocument();
-    expect(screen.getByText('Normal Retirement Eligibility')).toBeInTheDocument();
   });
 
-  it('shows pass status icon when all tests pass', () => {
-    renderWithProviders(<RuleCard rule={makeRule()} onClick={() => {}} />);
-    expect(screen.getByLabelText('Passing')).toBeInTheDocument();
+  it('shows green left border when all tests pass', () => {
+    const { container } = renderWithProviders(<RuleCard rule={makeRule()} onClick={() => {}} />);
+    const card = container.firstElementChild as HTMLElement;
+    expect(card.className).toContain('border-l-green');
   });
 
-  it('shows fail status icon when tests fail', () => {
+  it('shows red left border when tests fail', () => {
     const rule = makeRule({
       testStatus: { total: 3, passing: 2, failing: 1, skipped: 0, lastRun: '2026-03-19T14:30:00Z' },
     });
-    renderWithProviders(<RuleCard rule={rule} onClick={() => {}} />);
-    expect(screen.getByLabelText('Failing')).toBeInTheDocument();
+    const { container } = renderWithProviders(<RuleCard rule={rule} onClick={() => {}} />);
+    const card = container.firstElementChild as HTMLElement;
+    expect(card.className).toContain('border-l-red');
   });
 
-  it('shows no-tests icon when testStatus is undefined', () => {
+  it('shows gray left border when no tests', () => {
     const rule = makeRule({ testStatus: undefined });
-    renderWithProviders(<RuleCard rule={rule} onClick={() => {}} />);
-    expect(screen.getByLabelText('No tests')).toBeInTheDocument();
+    const { container } = renderWithProviders(<RuleCard rule={rule} onClick={() => {}} />);
+    const card = container.firstElementChild as HTMLElement;
+    expect(card.className).toContain('border-l-gray');
+  });
+
+  it('renders test count badge', () => {
+    renderWithProviders(<RuleCard rule={makeRule()} onClick={() => {}} />);
+    expect(screen.getByText('3/3')).toBeInTheDocument();
   });
 
   it('calls onClick when clicked', () => {
@@ -63,10 +86,5 @@ describe('RuleCard', () => {
     renderWithProviders(<RuleCard rule={makeRule()} onClick={handleClick} />);
     fireEvent.click(screen.getByRole('button'));
     expect(handleClick).toHaveBeenCalledOnce();
-  });
-
-  it('renders test count badge', () => {
-    renderWithProviders(<RuleCard rule={makeRule()} onClick={() => {}} />);
-    expect(screen.getByText('3/3')).toBeInTheDocument();
   });
 });
