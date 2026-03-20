@@ -3,6 +3,7 @@ interface RulesSummaryBarProps {
   passingRules: number;
   failingRules: number;
   lastRun?: string;
+  label?: string;
 }
 
 function relativeTime(dateStr: string): string {
@@ -24,6 +25,7 @@ export default function RulesSummaryBar({
   passingRules,
   failingRules,
   lastRun,
+  label,
 }: RulesSummaryBarProps) {
   const allPassing = failingRules === 0;
 
@@ -40,6 +42,7 @@ export default function RulesSummaryBar({
               {passingRules}/{totalRules}
             </span>
             <span className="text-sm text-gray-600">passing</span>
+            {label && <span className="text-sm text-gray-600">{label}</span>}
           </div>
           {failingRules > 0 && (
             <div className="flex items-center gap-2">
