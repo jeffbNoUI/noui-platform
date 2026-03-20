@@ -1,5 +1,38 @@
 # noui-platform — Build History
 
+## Error Self-Reporting Pipeline (2026-03-20)
+
+**Branch:** `claude/wizardly-benz`
+**PR:** #116 (merged)
+**Goal:** Auto-report user-facing runtime errors to the Issues service for Claude Code triage at session start.
+
+**What was built:**
+
+### Backend — Issues Service (`platform/issues/`)
+- `POST /api/v1/errors/report` — receives error reports from frontend, deduplicates via SHA-256 fingerprint (`errorCode:url:httpStatus`), creates new Issue or updates existing with occurrence count + comment
+- `GET /api/v1/errors/recent` — queries open error-report issues, supports `since` and `status` filters for session-start triage
+- `FindByFingerprint` DB method — looks up open issues by fingerprint embedded in description
+- `IncrementErrorOccurrence` DB method — parses occurrence count from title, increments, adds comment with details
+- `error-report` category added to Issue enum
+- `ErrorReport` request type added to models
+
+### Frontend
+- `errorReporter.ts` — fire-and-forget module with client-side dedup (1-minute window), infinite loop guard (skips self-reporting), silent failure
+- Wired into `apiClient.ts` — all API errors (4xx/5xx after retry exhaustion) auto-report
+- Wired into `ErrorBoundary.tsx` — React crashes auto-report with component stack
+- `error-report` added to Issue category type
+
+### Session-Start
+- `.claude/commands/session-start.md` updated to query `GET /api/v1/errors/recent` and display unresolved errors in a table
+
+**Tests:** Issues service 44 passing, Frontend 1794/1794 passing
+
+**Design docs:**
+- `docs/plans/2026-03-20-error-self-reporting-design.md`
+- `docs/plans/2026-03-20-error-self-reporting-plan.md`
+
+---
+
 ## Rules Explorer Card Drill-Down Redesign (2026-03-20)
 
 **Branch:** `claude/mystifying-jones`
