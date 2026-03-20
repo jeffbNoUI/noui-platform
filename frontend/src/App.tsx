@@ -25,6 +25,8 @@ const CRMWorkspace = lazy(() => import('@/components/CRMWorkspace'));
 const EmployerPortalApp = lazy(() => import('@/components/employer-portal/EmployerPortalApp'));
 const VendorPortal = lazy(() => import('@/components/portal/VendorPortal'));
 const EmployerOpsDesktop = lazy(() => import('@/components/employer-ops/EmployerOpsDesktop'));
+const RulesExplorer = lazy(() => import('@/pages/RulesExplorer'));
+const DemoCasesPage = lazy(() => import('@/pages/DemoCases'));
 
 function PortalLoading() {
   return (
@@ -182,6 +184,10 @@ function AppInner() {
   const [crmInitialMemberId, setCrmInitialMemberId] = useState<number | undefined>(undefined);
   const [crmBackView, setCrmBackView] = useState<ViewMode | undefined>(undefined);
 
+  // Rules Explorer / Demo Cases cross-navigation state
+  const [selectedRuleId, setSelectedRuleId] = useState<string | null>(null);
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+
   const handleOpenCase = useCallback(
     (caseId: string, memberId: number, retDate: string, flags?: string[], droId?: number) => {
       if (!canAccess('retirement-app')) {
@@ -225,8 +231,27 @@ function AppInner() {
         setCrmInitialMemberId(undefined);
         setCrmBackView(undefined);
       }
+      // Clear cross-nav state when leaving rules/demo-cases views
+      if (mode !== 'rules-explorer') setSelectedRuleId(null);
+      if (mode !== 'demo-cases') setSelectedCaseId(null);
     },
     [viewMode, canAccess, user.role],
+  );
+
+  const handleNavigateToRule = useCallback(
+    (ruleId: string) => {
+      setSelectedRuleId(ruleId);
+      handleChangeView('rules-explorer');
+    },
+    [handleChangeView],
+  );
+
+  const handleNavigateToDemoCase = useCallback(
+    (caseId: string) => {
+      setSelectedCaseId(caseId);
+      handleChangeView('demo-cases');
+    },
+    [handleChangeView],
   );
 
   // Reset viewMode when role changes (user might be on a view they no longer have access to)
@@ -488,6 +513,47 @@ function AppInner() {
         <ErrorBoundary portalName="Employer Ops">
           <Suspense fallback={<PortalLoading />}>
             <EmployerOpsDesktop />
+          </Suspense>
+        </ErrorBoundary>
+        <DevRoleSwitcher />
+      </>
+    );
+  }
+
+  // ── Rules Explorer view ──────────────────────────────────────────────
+
+  if (viewMode === 'rules-explorer') {
+    return (
+      <>
+        {cmdPalette}
+        <ErrorBoundary portalName="Rules Explorer">
+          <Suspense fallback={<PortalLoading />}>
+            <RulesExplorer
+              onNavigateToRule={handleNavigateToRule}
+              onNavigateToDemoCase={handleNavigateToDemoCase}
+              onChangeView={handleChangeView}
+              initialRuleId={selectedRuleId ?? undefined}
+            />
+          </Suspense>
+        </ErrorBoundary>
+        <DevRoleSwitcher />
+      </>
+    );
+  }
+
+  // ── Demo Cases view ──────────────────────────────────────────────
+
+  if (viewMode === 'demo-cases') {
+    return (
+      <>
+        {cmdPalette}
+        <ErrorBoundary portalName="Demo Cases">
+          <Suspense fallback={<PortalLoading />}>
+            <DemoCasesPage
+              onNavigateToRule={handleNavigateToRule}
+              onChangeView={handleChangeView}
+              initialCaseId={selectedCaseId}
+            />
           </Suspense>
         </ErrorBoundary>
         <DevRoleSwitcher />

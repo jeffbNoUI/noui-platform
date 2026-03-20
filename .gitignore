@@ -47,3 +47,6 @@ monitor-history/
 
 # Schema manifests (generated output, not source)
 targets/*/schema-manifest/
+
+# Generated test reports
+test-results/intelligence-report.json
