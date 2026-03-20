@@ -2,18 +2,18 @@
 
 ## What This Is
 
-DERP (Denver Employees Retirement Plan) pension domain data. Contains database schemas, seed data, business rules, and acceptance test fixtures for the pension line of business.
+Pension domain data. Contains database schemas, seed data, business rules, and acceptance test fixtures for the pension line of business.
 
 ## Contents
 
 - `schema/` — PostgreSQL DDL scripts (5 schemas: legacy, CRM, KB, DQ, correspondence)
 - `seed/` — SQL seed data + Python generators
-- `rules/definitions/` — 9 YAML files encoding DERP plan provisions
+- `rules/definitions/` — 9 YAML files encoding plan provisions
 - `demo-cases/` — 4 mandatory acceptance test cases with expected results
 
 ## Rules Source
 
-All rules are derived from Denver Municipal Code and DERP Governing Documents — NOT from legacy database inference. Rules follow full SDLC (review, test, approve).
+All rules are derived from governing plan documents — NOT from legacy database inference. Rules follow full SDLC (review, test, approve).
 
 ## AI Boundary
 

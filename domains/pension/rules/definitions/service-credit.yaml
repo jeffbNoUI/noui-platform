@@ -1,21 +1,21 @@
 # =============================================================================
-# DERP Service Credit Rules
+# Service Credit Rules
 # =============================================================================
 # Domain: service-credit
 # Rules: RULE-SVC-EARNED, RULE-SVC-PURCHASED, RULE-SVC-SEPARATION
-# Authority: DERP Restated Master Contract (RMC)
+# Authority: Restated Master Contract (RMC)
 # =============================================================================
 
 metadata:
   domain: "service-credit"
   version: "1.0.0"
   effective_date: "2026-03-02"
-  authority: "DERP Restated Master Contract (RMC)"
+  authority: "Restated Master Contract (RMC)"
   description: >
     Defines how service credit is earned, how purchased service is treated,
     and how service is calculated upon separation from employment.
   governance:
-    owner: "DERP Rules Committee"
+    owner: "Rules Committee"
     approved_by: "Plan Administrator"
     approval_date: "2026-03-02"
     review_cycle: "annual"
@@ -25,7 +25,7 @@ metadata:
       - version: "1.0.0"
         date: "2026-03-02"
         author: "Rules Committee"
-        description: "Initial service credit rule definitions for DERP NoUI POC"
+        description: "Initial service credit rule definitions for NoUI POC"
 
 rules:
   # ===========================================================================

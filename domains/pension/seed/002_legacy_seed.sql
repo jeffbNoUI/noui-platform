@@ -1,5 +1,5 @@
 -- =============================================================================
--- Legacy DERP Seed Data — Demo Members
+-- Legacy Seed Data — Demo Members
 -- Matches schema from 001_legacy_schema.sql
 -- =============================================================================
 

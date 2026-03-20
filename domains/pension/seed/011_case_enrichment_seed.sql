@@ -28,7 +28,7 @@ INSERT INTO case_note (case_id, author, content, category, created_at) VALUES
 ('DRO-2026-0031', 'Sarah Chen', 'DRO case opened per court order received 2026-02-18. Assigned urgent priority.', 'general', '2026-02-20 08:15:00-07'),
 ('DRO-2026-0031', 'Mike Torres', 'Court order reviewed. Marriage period: 1998-2020 (22 years). Service during marriage to be calculated.', 'decision', '2026-02-22 14:00:00-07'),
 ('DRO-2026-0031', 'Sarah Chen', 'Employment verification complete. Marital share calculation in progress.', 'review', '2026-03-01 10:30:00-07'),
-('DRO-2026-0031', 'Legal Dept', 'External counsel confirmed court order meets DERP requirements for qualified domestic relations order.', 'external', '2026-03-03 16:00:00-07')
+('DRO-2026-0031', 'Legal Dept', 'External counsel confirmed court order meets plan requirements for qualified domestic relations order.', 'external', '2026-03-03 16:00:00-07')
 ON CONFLICT DO NOTHING;
 
 -- 2. Document metadata for demo cases (metadata only — no blob storage)

@@ -1,23 +1,23 @@
 # =============================================================================
-# DERP Rule Definition Schema
+# Rule Definition Schema
 # =============================================================================
-# This file defines the canonical YAML schema for all DERP rule definitions.
+# This file defines the canonical YAML schema for all rule definitions.
 # Every rule file in this directory MUST conform to this schema.
 #
 # Schema Version: 1.0.0
 # Effective Date: 2026-03-02
-# Authority: DERP Plan Document & Restated Master Contract (RMC)
+# Authority: Plan Document & Restated Master Contract (RMC)
 # =============================================================================
 
 schema:
   version: "1.0.0"
-  name: "DERP Rule Definition Schema"
+  name: "Rule Definition Schema"
   description: >
     Defines the structure, required fields, and validation constraints for
-    all DERP pension rule definitions used by the NoUI DERP POC engine.
+    all pension rule definitions used by the NoUI engine.
 
   governance:
-    owner: "DERP Rules Committee"
+    owner: "Plan Rules Committee"
     approved_by: "Plan Administrator"
     approval_date: "2026-03-02"
     review_cycle: "annual"

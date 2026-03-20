@@ -1,24 +1,24 @@
 # =============================================================================
-# DERP Benefit Calculation Rules
+# Benefit Calculation Rules
 # =============================================================================
 # Domain: benefit-calculation
 # Rules: RULE-AMS-WINDOW, RULE-AMS-CALC, RULE-LEAVE-PAYOUT, RULE-FURLOUGH,
 #        RULE-BENEFIT-T1, RULE-BENEFIT-T2, RULE-BENEFIT-T3,
 #        RULE-REDUCTION-APPLY, RULE-ROUNDING
-# Authority: DERP Restated Master Contract (RMC)
+# Authority: Restated Master Contract (RMC)
 # =============================================================================
 
 metadata:
   domain: "benefit-calculation"
   version: "1.0.0"
   effective_date: "2026-03-02"
-  authority: "DERP Restated Master Contract (RMC)"
+  authority: "Restated Master Contract (RMC)"
   description: >
     Defines benefit calculation rules including Average Monthly Salary (AMS),
     leave payout, furlough adjustments, tier-specific benefit formulas,
     reduction application, and rounding.
   governance:
-    owner: "DERP Rules Committee"
+    owner: "Plan Rules Committee"
     approved_by: "Plan Administrator"
     approval_date: "2026-03-02"
     review_cycle: "annual"
@@ -28,7 +28,7 @@ metadata:
       - version: "1.0.0"
         date: "2026-03-02"
         author: "Rules Committee"
-        description: "Initial benefit calculation rule definitions for DERP NoUI POC"
+        description: "Initial benefit calculation rule definitions for NoUI POC"
 
 rules:
   # ===========================================================================

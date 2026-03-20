@@ -1,5 +1,5 @@
 -- Knowledge Base schema — contextual help articles and business rule references.
--- Part of the NoUI DERP POC platform services.
+-- Part of the NoUI platform services.
 
 BEGIN;
 

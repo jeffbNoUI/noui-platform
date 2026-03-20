@@ -1,23 +1,23 @@
 # =============================================================================
-# DERP Payment Options Rules
+# Payment Options Rules
 # =============================================================================
 # Domain: payment-options
 # Rules: RULE-PAY-MAXIMUM, RULE-JS-100, RULE-JS-75, RULE-JS-50,
 #        RULE-JS-DEFAULT, RULE-SPOUSAL-CONSENT, RULE-BENEFICIARY-PREDECEASE
-# Authority: DERP Restated Master Contract (RMC)
+# Authority: Restated Master Contract (RMC)
 # =============================================================================
 
 metadata:
   domain: "payment-options"
   version: "1.0.0"
   effective_date: "2026-03-02"
-  authority: "DERP Restated Master Contract (RMC)"
+  authority: "Restated Master Contract (RMC)"
   description: >
     Defines payment option rules including Maximum (single life), Joint and
     Survivor options (100%, 75%, 50%), default payment rules, spousal consent,
     and beneficiary predecease provisions.
   governance:
-    owner: "DERP Rules Committee"
+    owner: "Rules Committee"
     approved_by: "Plan Administrator"
     approval_date: "2026-03-02"
     review_cycle: "annual"
@@ -27,7 +27,7 @@ metadata:
       - version: "1.0.0"
         date: "2026-03-02"
         author: "Rules Committee"
-        description: "Initial payment options rule definitions for DERP NoUI POC"
+        description: "Initial payment options rule definitions for NoUI POC"
 
 rules:
   # ===========================================================================

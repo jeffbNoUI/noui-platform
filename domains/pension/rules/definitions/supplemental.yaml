@@ -1,23 +1,23 @@
 # =============================================================================
-# DERP Supplemental Benefits Rules
+# Supplemental Benefits Rules
 # =============================================================================
 # Domain: supplemental
 # Rules: RULE-IPR, RULE-DEATH-NORMAL, RULE-DEATH-EARLY-T12,
 #        RULE-DEATH-EARLY-T3, RULE-DEATH-ELECTION, RULE-DEATH-REEMPLOY
-# Authority: DERP Restated Master Contract (RMC)
+# Authority: Restated Master Contract (RMC)
 # =============================================================================
 
 metadata:
   domain: "supplemental"
   version: "1.0.0"
   effective_date: "2026-03-02"
-  authority: "DERP Restated Master Contract (RMC)"
+  authority: "Restated Master Contract (RMC)"
   description: >
     Defines supplemental benefit rules including Insurance Premium
     Reimbursement (IPR), death benefit amounts by tier (using statutory
     lookup tables), death benefit election, and reemployment provisions.
   governance:
-    owner: "DERP Rules Committee"
+    owner: "Rules Committee"
     approved_by: "Plan Administrator"
     approval_date: "2026-03-02"
     review_cycle: "annual"
@@ -27,7 +27,7 @@ metadata:
       - version: "1.0.0"
         date: "2026-03-02"
         author: "Rules Committee"
-        description: "Initial supplemental benefit rule definitions for DERP NoUI POC"
+        description: "Initial supplemental benefit rule definitions for NoUI POC"
 
 rules:
   # ===========================================================================

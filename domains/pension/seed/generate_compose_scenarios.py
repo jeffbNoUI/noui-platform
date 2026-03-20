@@ -2,7 +2,7 @@
 """
 generate_compose_scenarios.py — 10,000 Composition Scenario Generator
 
-Generates deterministic JSONL training data for the NoUI DERP POC AI compose
+Generates deterministic JSONL training data for the NoUI AI compose
 layer. Each scenario pairs a member profile + CRM context with the expected
 rendering decisions (panels shown/hidden, alerts triggered, data fetches).
 
@@ -23,7 +23,7 @@ from datetime import date, timedelta
 from typing import Optional
 
 # ---------------------------------------------------------------------------
-# Constants matching generate_derp_data.py
+# Constants matching generate_seed_data.py
 # ---------------------------------------------------------------------------
 TODAY = date(2026, 3, 2)
 TIER_1_CUTOFF = date(2006, 1, 1)
@@ -917,7 +917,7 @@ def print_coverage_summary(scenarios, file=sys.stderr):
 # ---------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate deterministic composition scenarios for NoUI DERP POC"
+        description="Generate deterministic composition scenarios for NoUI"
     )
     parser.add_argument("--count", type=int, default=10000,
                         help="Number of scenarios to generate (default: 10000)")

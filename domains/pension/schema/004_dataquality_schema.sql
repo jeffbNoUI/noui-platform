@@ -1,5 +1,5 @@
 -- Data Quality Engine schema — check definitions, results, and issues.
--- Part of the NoUI DERP POC platform services.
+-- Part of the NoUI platform services.
 
 BEGIN;
 
