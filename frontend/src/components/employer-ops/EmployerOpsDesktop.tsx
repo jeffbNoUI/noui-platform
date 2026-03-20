@@ -7,6 +7,7 @@ import OrgBanner from './OrgBanner';
 import HealthTab from './tabs/HealthTab';
 import CasesTab from './tabs/CasesTab';
 import CRMTab from './tabs/CRMTab';
+import CorrespondenceTab from './tabs/CorrespondenceTab';
 
 const TABS: { key: EmployerOpsTab; label: string }[] = [
   { key: 'health', label: 'Health' },
@@ -254,11 +255,15 @@ export default function EmployerOpsDesktop() {
               {activeTab === 'health' && <HealthTab orgId={selectedOrgId} />}
               {activeTab === 'cases' && <CasesTab orgId={selectedOrgId} />}
               {activeTab === 'crm' && <CRMTab orgId={selectedOrgId} />}
-              {activeTab !== 'health' && activeTab !== 'cases' && activeTab !== 'crm' && (
-                <div style={{ padding: 24, color: C.textTertiary }}>
-                  Tab content for &ldquo;{activeTab}&rdquo; goes here
-                </div>
-              )}
+              {activeTab === 'correspondence' && <CorrespondenceTab orgId={selectedOrgId} />}
+              {activeTab !== 'health' &&
+                activeTab !== 'cases' &&
+                activeTab !== 'crm' &&
+                activeTab !== 'correspondence' && (
+                  <div style={{ padding: 24, color: C.textTertiary }}>
+                    Tab content for &ldquo;{activeTab}&rdquo; goes here
+                  </div>
+                )}
             </div>
           </>
         )}
