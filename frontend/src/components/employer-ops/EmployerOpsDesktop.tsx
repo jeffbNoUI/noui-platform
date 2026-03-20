@@ -130,7 +130,11 @@ export default function EmployerOpsDesktop() {
 
         {view === 'profile' && selectedOrgId && (
           <div key={selectedOrgId} className="space-y-6">
-            <OrgBanner orgId={selectedOrgId} onBack={handleShowAlerts} />
+            <OrgBanner
+              orgId={selectedOrgId}
+              orgName={orgNames[selectedOrgId] ?? selectedOrgId}
+              onBack={handleShowAlerts}
+            />
 
             <SummaryCardGrid>
               {/* 1. DQ Health */}
@@ -143,7 +147,11 @@ export default function EmployerOpsDesktop() {
                     color: dqScore != null ? `text-[${dqScoreColor(dqScore)}]` : undefined,
                   },
                   { label: 'Open Issues', value: openIssues },
-                  { label: 'Critical', value: criticalIssues, color: criticalIssues > 0 ? 'text-red-600' : undefined },
+                  {
+                    label: 'Critical',
+                    value: criticalIssues,
+                    color: criticalIssues > 0 ? 'text-red-600' : undefined,
+                  },
                 ]}
                 linkLabel="View Details"
                 onLink={() => {}}
@@ -154,7 +162,11 @@ export default function EmployerOpsDesktop() {
                 title="Cases"
                 metrics={[
                   { label: 'Active', value: activeCases },
-                  { label: 'At Risk', value: atRiskCases, color: atRiskCases > 0 ? 'text-amber-600' : undefined },
+                  {
+                    label: 'At Risk',
+                    value: atRiskCases,
+                    color: atRiskCases > 0 ? 'text-amber-600' : undefined,
+                  },
                   { label: 'Completed', value: completedCases },
                 ]}
                 linkLabel="View All Cases"
@@ -177,9 +189,7 @@ export default function EmployerOpsDesktop() {
               {/* 4. Contacts & Users */}
               <SummaryCard
                 title="Contacts & Users"
-                metrics={[
-                  { label: 'Contacts', value: contactCount },
-                ]}
+                metrics={[{ label: 'Contacts', value: contactCount }]}
                 linkLabel="View Contacts"
                 onLink={() => {}}
               />
@@ -187,26 +197,16 @@ export default function EmployerOpsDesktop() {
               {/* 5. Correspondence */}
               <SummaryCard
                 title="Correspondence"
-                metrics={[
-                  { label: 'Recent', value: 0 },
-                ]}
+                metrics={[{ label: 'Recent', value: 0 }]}
                 linkLabel="View Letters"
                 onLink={() => {}}
               />
 
               {/* 6. Contributions */}
-              <SummaryCard
-                title="Contributions"
-                metrics={[]}
-                comingSoon
-              />
+              <SummaryCard title="Contributions" metrics={[]} comingSoon />
 
               {/* 7. Balances */}
-              <SummaryCard
-                title="Balances"
-                metrics={[]}
-                comingSoon
-              />
+              <SummaryCard title="Balances" metrics={[]} comingSoon />
 
               {/* 8. Actions */}
               <SummaryCard title="Actions" metrics={[]}>

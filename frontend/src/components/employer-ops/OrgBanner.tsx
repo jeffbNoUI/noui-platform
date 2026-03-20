@@ -9,10 +9,11 @@ import { dqScoreColor } from '@/lib/employerOpsConfig';
 
 interface OrgBannerProps {
   orgId: string;
+  orgName: string;
   onBack: () => void;
 }
 
-export default function OrgBanner({ orgId, onBack }: OrgBannerProps) {
+export default function OrgBanner({ orgId, orgName: nameProp, onBack }: OrgBannerProps) {
   const { data: org, isLoading: orgLoading } = usePortalOrganization(orgId);
   const { data: dq } = useEmployerDQScore(orgId);
   const { data: members } = useEmployerMemberSummary(orgId);
@@ -28,7 +29,7 @@ export default function OrgBanner({ orgId, onBack }: OrgBannerProps) {
     );
   }
 
-  const orgName = org?.orgName ?? orgId;
+  const orgName = org?.orgName ?? nameProp;
   const ein = org?.ein;
   const city = org?.city;
   const stateCode = org?.stateCode;
