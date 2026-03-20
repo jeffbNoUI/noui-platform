@@ -5,6 +5,7 @@ import { useEmployerAlerts } from '@/hooks/useEmployerOps';
 import type { EmployerOpsTab, EmployerAlert } from '@/types/EmployerOps';
 import OrgBanner from './OrgBanner';
 import HealthTab from './tabs/HealthTab';
+import CasesTab from './tabs/CasesTab';
 
 const TABS: { key: EmployerOpsTab; label: string }[] = [
   { key: 'health', label: 'Health' },
@@ -250,7 +251,8 @@ export default function EmployerOpsDesktop() {
             {/* Tab content */}
             <div style={{ flex: 1, padding: 24 }}>
               {activeTab === 'health' && <HealthTab orgId={selectedOrgId} />}
-              {activeTab !== 'health' && (
+              {activeTab === 'cases' && <CasesTab orgId={selectedOrgId} />}
+              {activeTab !== 'health' && activeTab !== 'cases' && (
                 <div style={{ padding: 24, color: C.textTertiary }}>
                   Tab content for &ldquo;{activeTab}&rdquo; goes here
                 </div>
