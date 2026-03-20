@@ -58,6 +58,7 @@ func main() {
 			TenantID: auth.TenantID(r.Context()),
 			MemberID: auth.MemberID(r.Context()),
 			UserRole: auth.UserRole(r.Context()),
+			UserID:   auth.UserID(r.Context()),
 		}
 	}
 
