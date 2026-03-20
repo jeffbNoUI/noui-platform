@@ -78,11 +78,23 @@ type CreateCommentRequest struct {
 	Content string `json:"content"`
 }
 
+// ErrorReport is the JSON body for the frontend error reporter.
+type ErrorReport struct {
+	RequestID      string `json:"requestId"`
+	URL            string `json:"url"`
+	HTTPStatus     int    `json:"httpStatus"`
+	ErrorCode      string `json:"errorCode"`
+	ErrorMessage   string `json:"errorMessage"`
+	Portal         string `json:"portal"`
+	Route          string `json:"route"`
+	ComponentStack string `json:"componentStack,omitempty"`
+}
+
 // Severity enum values.
 var SeverityValues = []string{"critical", "high", "medium", "low"}
 
 // Category enum values.
-var CategoryValues = []string{"defect", "incident", "enhancement", "question"}
+var CategoryValues = []string{"defect", "incident", "enhancement", "question", "error-report"}
 
 // Status enum values.
 var StatusValues = []string{"open", "triaged", "in-work", "resolved", "closed"}
