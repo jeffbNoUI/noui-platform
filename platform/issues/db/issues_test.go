@@ -293,3 +293,68 @@ func TestUpdateIssue_MultipleFields(t *testing.T) {
 		t.Errorf("UpdateIssue error: %v", err)
 	}
 }
+
+// --- FindByFingerprint ---
+
+func TestFindByFingerprint_Found(t *testing.T) {
+	s, mock := newStore(t)
+
+	mock.ExpectQuery("SELECT id FROM issues").
+		WithArgs("tenant-1", "error-report", "%fingerprint:abc123%").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(42))
+
+	id, err := s.FindByFingerprint(context.Background(), "tenant-1", "abc123")
+	if err != nil {
+		t.Fatalf("FindByFingerprint error: %v", err)
+	}
+	if id != 42 {
+		t.Errorf("id = %d, want 42", id)
+	}
+}
+
+func TestFindByFingerprint_NotFound(t *testing.T) {
+	s, mock := newStore(t)
+
+	mock.ExpectQuery("SELECT id FROM issues").
+		WithArgs("tenant-1", "error-report", "%fingerprint:missing%").
+		WillReturnError(sql.ErrNoRows)
+
+	id, err := s.FindByFingerprint(context.Background(), "tenant-1", "missing")
+	if err != nil {
+		t.Fatalf("FindByFingerprint error: %v, want nil", err)
+	}
+	if id != 0 {
+		t.Errorf("id = %d, want 0", id)
+	}
+}
+
+// --- IncrementErrorOccurrence ---
+
+func TestIncrementErrorOccurrence(t *testing.T) {
+	s, mock := newStore(t)
+
+	// Mock: fetch title with existing occurrence count
+	mock.ExpectQuery("SELECT title FROM issues").
+		WithArgs(7, "tenant-1").
+		WillReturnRows(sqlmock.NewRows([]string{"title"}).
+			AddRow("[Auto] DB_ERROR: GET /api/v1/members — 2 occurrences"))
+
+	// Mock: UPDATE title
+	mock.ExpectExec("UPDATE issues SET").
+		WithArgs("[Auto] DB_ERROR: GET /api/v1/members — 3 occurrences", 7, "tenant-1").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	// Mock: INSERT comment (CreateComment returns a row via RETURNING)
+	mock.ExpectQuery("INSERT INTO issue_comments").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "issue_id", "author", "content", "created_at"}).
+			AddRow(1, 7, "system:error-reporter", "occurrence", time.Now().UTC()))
+
+	err := s.IncrementErrorOccurrence(context.Background(), "tenant-1", 7, "req-abc", "staff", "/members")
+	if err != nil {
+		t.Fatalf("IncrementErrorOccurrence error: %v", err)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unmet expectations: %v", err)
+	}
+}

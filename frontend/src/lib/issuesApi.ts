@@ -14,7 +14,7 @@ export interface Issue {
   title: string;
   description: string;
   severity: 'critical' | 'high' | 'medium' | 'low';
-  category: 'defect' | 'incident' | 'enhancement' | 'question';
+  category: 'defect' | 'incident' | 'enhancement' | 'question' | 'error-report';
   status: 'open' | 'triaged' | 'in-work' | 'resolved' | 'closed';
   affectedService: string;
   reportedBy: string;

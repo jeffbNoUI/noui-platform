@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from 'react';
+import { reportError } from '@/lib/errorReporter';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -24,6 +25,19 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
       error,
       info.componentStack,
     );
+    reportError({
+      requestId:
+        typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      url: '',
+      httpStatus: 0,
+      errorCode: 'REACT_CRASH',
+      errorMessage: error.message,
+      portal: this.props.portalName?.toLowerCase() || 'unknown',
+      route: typeof window !== 'undefined' ? window.location.pathname : '',
+      componentStack: info.componentStack || '',
+    });
   }
 
   handleRetry = () => {
