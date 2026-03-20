@@ -1,4 +1,4 @@
-// Package models defines domain types for the DERP intelligence service.
+// Package models defines domain types for the intelligence service.
 // The intelligence service implements all business rules as deterministic code.
 // AI does NOT execute business rules — per Governing Principle 1.
 package models

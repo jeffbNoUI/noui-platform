@@ -1,4 +1,4 @@
-// Case Management service — manages retirement case workflow for the NoUI DERP POC.
+// Case Management service — manages retirement case workflow for NoUI.
 // Tracks cases through 7 workflow stages from Application Intake to Certification.
 package main
 

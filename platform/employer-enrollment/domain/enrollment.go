@@ -57,7 +57,7 @@ func ValidateSubmission(ssnHash, firstName, lastName, dob, hireDate, planCode, d
 }
 
 // AssignTier determines the benefit tier based on hire date and division.
-// Tier assignment follows DERP rules:
+// Tier assignment follows plan rules:
 //   - T1: Hired before September 1, 2004
 //   - T2: Hired September 1, 2004 through June 30, 2011
 //   - T3: Hired on or after July 1, 2011

@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: noui/derp-intelligence
+  repository: noui/intelligence
   tag: "0.1.0"
   pullPolicy: IfNotPresent
 
@@ -10,7 +10,7 @@ service:
   port: 8082
 
 env:
-  CONNECTOR_URL: "http://derp-connector:8081"
+  CONNECTOR_URL: "http://noui-dataaccess:8081"
   CORS_ORIGIN: "http://localhost:3000"
 
 resources:

@@ -1,5 +1,5 @@
 // Preferences Service — user and system preferences management
-// for the NoUI DERP POC.
+// for NoUI.
 package main
 
 import (

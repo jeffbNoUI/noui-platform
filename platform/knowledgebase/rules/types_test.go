@@ -11,7 +11,7 @@ func TestRuleTypeInstantiation(t *testing.T) {
 	r := Rule{
 		ID:          "RULE-VESTING",
 		Name:        "Vesting Requirement",
-		Description: "All DERP members vest after 5 years of EARNED service credit.",
+		Description: "All members vest after 5 years of EARNED service credit.",
 		SourceReference: SourceRef{
 			Document:     "RMC",
 			Section:      "Section 5.01 - Vesting",

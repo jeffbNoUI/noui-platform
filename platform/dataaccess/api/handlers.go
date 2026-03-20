@@ -1,4 +1,4 @@
-// Package api implements HTTP handlers for the DERP data connector service.
+// Package api implements HTTP handlers for the data connector service.
 // All data access goes through this service — no other service queries the database directly.
 package api
 

@@ -1,4 +1,4 @@
-// Connector service — the data access layer for the NoUI DERP POC.
+// Connector service — the data access layer for NoUI.
 // All database access flows through this service. No other service queries the database directly.
 // Source: BUILD_PLAN Day 4
 package main
