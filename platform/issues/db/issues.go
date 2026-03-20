@@ -241,3 +241,22 @@ func (s *Store) UpdateIssue(ctx context.Context, tenantID string, id int, req mo
 	_, err := dbcontext.DB(ctx, s.DB).ExecContext(ctx, query, args...)
 	return err
 }
+
+// FindByFingerprint looks for an open error-report issue with a matching fingerprint.
+// Returns the issue's integer ID, or 0 if not found.
+func (s *Store) FindByFingerprint(ctx context.Context, tenantID, fingerprint string) (int, error) {
+	var id int
+	err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, `
+		SELECT id FROM issues
+		WHERE tenant_id = $1
+		  AND category = $2
+		  AND description LIKE $3
+		  AND status NOT IN ('resolved', 'closed')
+		LIMIT 1
+	`, tenantID, "error-report", "%fingerprint:"+fingerprint+"%").Scan(&id)
+
+	if err == sql.ErrNoRows {
+		return 0, nil
+	}
+	return id, err
+}

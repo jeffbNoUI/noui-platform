@@ -293,3 +293,37 @@ func TestUpdateIssue_MultipleFields(t *testing.T) {
 		t.Errorf("UpdateIssue error: %v", err)
 	}
 }
+
+// --- FindByFingerprint ---
+
+func TestFindByFingerprint_Found(t *testing.T) {
+	s, mock := newStore(t)
+
+	mock.ExpectQuery("SELECT id FROM issues").
+		WithArgs("tenant-1", "error-report", "%fingerprint:abc123%").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(42))
+
+	id, err := s.FindByFingerprint(context.Background(), "tenant-1", "abc123")
+	if err != nil {
+		t.Fatalf("FindByFingerprint error: %v", err)
+	}
+	if id != 42 {
+		t.Errorf("id = %d, want 42", id)
+	}
+}
+
+func TestFindByFingerprint_NotFound(t *testing.T) {
+	s, mock := newStore(t)
+
+	mock.ExpectQuery("SELECT id FROM issues").
+		WithArgs("tenant-1", "error-report", "%fingerprint:missing%").
+		WillReturnError(sql.ErrNoRows)
+
+	id, err := s.FindByFingerprint(context.Background(), "tenant-1", "missing")
+	if err != nil {
+		t.Fatalf("FindByFingerprint error: %v, want nil", err)
+	}
+	if id != 0 {
+		t.Errorf("id = %d, want 0", id)
+	}
+}
