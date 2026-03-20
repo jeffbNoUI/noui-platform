@@ -13,7 +13,7 @@
 //
 //	go run ./service/ \
 //	  --driver postgres \
-//	  --dsn "postgres://derp:derp@127.0.0.1:5432/derp?sslmode=disable" \
+//	  --dsn "postgres://noui:noui@127.0.0.1:5432/noui?sslmode=disable" \
 //	  --manifest manifest-tagged.json \
 //	  --port 8095
 //
@@ -21,7 +21,7 @@
 //
 //	go run ./service/ \
 //	  --driver postgres \
-//	  --dsn "postgres://derp:derp@127.0.0.1:5432/derp?sslmode=disable" \
+//	  --dsn "postgres://noui:noui@127.0.0.1:5432/noui?sslmode=disable" \
 //	  --auto-tag \
 //	  --port 8095
 package main

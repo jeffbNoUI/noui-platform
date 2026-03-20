@@ -1,5 +1,5 @@
 // Knowledge Base service — contextual help and business rule references
-// for the NoUI DERP POC. Serves stage-indexed help articles and rule
+// for NoUI. Serves stage-indexed help articles and rule
 // definitions to replace hardcoded frontend help content.
 package main
 

@@ -40,7 +40,7 @@ export default function MemberPortalRecentMessages({
             Recent Messages
           </h3>
           <p style={{ fontSize: 12, color: C.textTertiary }}>
-            Your latest conversations with DERP staff
+            Your latest conversations with plan staff
           </p>
         </div>
         <button

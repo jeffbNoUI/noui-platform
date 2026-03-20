@@ -1,4 +1,4 @@
--- NoUI DERP POC — Legacy Database Schema
+-- NoUI — Legacy Database Schema
 -- Simulates a real-world legacy pension administration system
 -- Deliberately messy: inconsistent naming, missing FKs, nullable fields that shouldn't be
 -- Source: BUILD_PLAN Day 1 Step 1.1

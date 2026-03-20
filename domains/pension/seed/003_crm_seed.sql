@@ -3,7 +3,7 @@
 -- NoUI Platform — Demo data for CRM module
 -- =============================================================================
 -- Populates CRM tables from 002_crm_schema.sql with realistic demo data
--- tied to the four demo cases from the legacy DERP seed generator.
+-- tied to the four demo cases from the legacy seed generator.
 --
 -- All records use tenant_id = '00000000-0000-0000-0000-000000000001'.
 -- UUIDs follow a predictable sequential pattern for easy cross-referencing.
@@ -735,7 +735,7 @@ INSERT INTO crm_interaction (
     NULL, NULL, NULL, 'PUBLIC',
     '2026-02-10 11:00:00-07', 'hr@ccd'
 ),
--- 11. DERP staff reply to CCD contribution question (Conv 5)
+-- 11. Staff reply to CCD contribution question (Conv 5)
 (
     '00000000-0000-0000-7000-000000000011',
     '00000000-0000-0000-0000-000000000001',
@@ -765,7 +765,7 @@ INSERT INTO crm_interaction (
     NULL, NULL, NULL, 'PUBLIC',
     '2026-02-05 14:00:00-07', 'hr@ccd'
 ),
--- 13. DERP staff reply confirming enrollment processing (Conv 6)
+-- 13. Staff reply confirming enrollment processing (Conv 6)
 (
     '00000000-0000-0000-7000-000000000013',
     '00000000-0000-0000-0000-000000000001',

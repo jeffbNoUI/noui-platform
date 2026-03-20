@@ -1,23 +1,23 @@
 # =============================================================================
-# DERP Domestic Relations Order (DRO) Rules
+# Domestic Relations Order (DRO) Rules
 # =============================================================================
 # Domain: dro
 # Rules: RULE-DRO-MARITAL-SHARE, RULE-DRO-SEQUENCE, RULE-DRO-METHODS,
 #        RULE-DRO-NO-IPR, RULE-DRO-NO-HEALTH, RULE-DRO-COLA
-# Authority: DERP Restated Master Contract (RMC)
+# Authority: Restated Master Contract (RMC)
 # =============================================================================
 
 metadata:
   domain: "dro"
   version: "1.0.0"
   effective_date: "2026-03-02"
-  authority: "DERP Restated Master Contract (RMC)"
+  authority: "Restated Master Contract (RMC)"
   description: >
     Defines rules governing Domestic Relations Orders including marital
     share calculation, processing sequence, division methods, and
     exclusions for IPR and health benefits.
   governance:
-    owner: "DERP Rules Committee"
+    owner: "Rules Committee"
     approved_by: "Plan Administrator"
     approval_date: "2026-03-02"
     review_cycle: "annual"
@@ -27,7 +27,7 @@ metadata:
       - version: "1.0.0"
         date: "2026-03-02"
         author: "Rules Committee"
-        description: "Initial DRO rule definitions for DERP NoUI POC"
+        description: "Initial DRO rule definitions for NoUI POC"
 
 rules:
   # ===========================================================================

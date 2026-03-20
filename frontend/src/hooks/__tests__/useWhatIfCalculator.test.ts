@@ -59,7 +59,7 @@ const mockBenefit = {
     total_reduction_pct: 9,
     reduction_factor: 0.91,
     reduced_benefit: 4641,
-    source_reference: 'DERP Tier 1',
+    source_reference: 'Tier 1',
   },
   maximum_benefit: 5100,
   payment_options: {
@@ -75,13 +75,13 @@ const mockBenefit = {
     installment_50: 50,
     installment_100: 100,
     retirement_type: 'EARLY',
-    source_reference: 'DERP',
+    source_reference: 'Plan',
   },
   ipr: {
     earned_service_years: 30,
     non_medicare_monthly: 0,
     medicare_monthly: 0,
-    source_reference: 'DERP',
+    source_reference: 'Plan',
   },
 };
 

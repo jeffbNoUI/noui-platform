@@ -1,13 +1,12 @@
-# DERP — Denver Employees Retirement Plan
 # Plan Profile Configuration — drives all plan-specific portal behavior
 
 identity:
-  plan_name: "Denver Employees Retirement Plan"
-  plan_short_name: "DERP"
-  administrator_name: "Denver Employees Retirement Plan"
-  phone: "(303) 555-0100"
-  email: "memberservices@derp.example.gov"
-  address: "777 Grant Street, Suite 400, Denver, CO 80203"
+  plan_name: "Retirement Plan"
+  plan_short_name: "the Plan"
+  administrator_name: "Retirement Plan Administration"
+  phone: "(555) 555-0100"
+  email: "memberservices@example.gov"
+  address: "123 Main Street, Suite 400, Anytown, ST 00000"
 
 benefit_structure:
   type: "defined_benefit"
@@ -195,19 +194,19 @@ notification_templates:
   application_received:
     email_subject: "Your retirement application has been received"
     email_body: "Dear {member_name}, we have received your retirement application. Your application ID is {case_id}. We will review your application and contact you if additional information is needed."
-    sms_body: "DERP: Your retirement application {case_id} has been received. Check your portal for details."
+    sms_body: "{plan_short_name}: Your retirement application {case_id} has been received. Check your portal for details."
     in_portal_title: "Application Received"
     in_portal_body: "Your retirement application has been received and is being reviewed."
   application_status_change:
     email_subject: "Update on your retirement application"
     email_body: "Dear {member_name}, your application {case_id} has been updated to: {new_status}. {status_message}"
-    sms_body: "DERP: Your application {case_id} status changed to {new_status}. Check your portal."
+    sms_body: "{plan_short_name}: Your application {case_id} status changed to {new_status}. Check your portal."
     in_portal_title: "Application Update"
     in_portal_body: "Your application status has changed to {new_status}. {status_message}"
   document_needed:
     email_subject: "Document needed for your application"
     email_body: "Dear {member_name}, we need {document_type} for your application {case_id}. Please upload it through your member portal."
-    sms_body: "DERP: A document is needed for your application. Check your portal."
+    sms_body: "{plan_short_name}: A document is needed for your application. Check your portal."
     in_portal_title: "Document Needed"
     in_portal_body: "Please upload {document_type} for your application."
 

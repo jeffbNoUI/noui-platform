@@ -1,4 +1,4 @@
-// Package api implements HTTP handlers for the DERP intelligence service.
+// Package api implements HTTP handlers for the intelligence service.
 // The intelligence service is the deterministic rules engine.
 // AI does NOT execute business rules — all calculations are deterministic code.
 package api

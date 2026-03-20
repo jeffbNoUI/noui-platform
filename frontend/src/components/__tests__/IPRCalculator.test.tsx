@@ -7,7 +7,7 @@ const baseIPR: IPRDetail = {
   earned_service_years: 28,
   non_medicare_monthly: 350.0,
   medicare_monthly: 175.0,
-  source_reference: 'DERP §24-51-1201',
+  source_reference: 'RMC §24-51-1201',
 };
 
 describe('IPRCalculator', () => {
@@ -25,7 +25,7 @@ describe('IPRCalculator', () => {
 
   it('shows source reference', () => {
     render(<IPRCalculator ipr={baseIPR} />);
-    expect(screen.getByText('DERP §24-51-1201')).toBeInTheDocument();
+    expect(screen.getByText('RMC §24-51-1201')).toBeInTheDocument();
   });
 
   it('highlights non-medicare amount when member is not on Medicare', () => {

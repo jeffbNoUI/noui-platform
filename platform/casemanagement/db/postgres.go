@@ -43,9 +43,9 @@ func ConfigFromEnv() Config {
 	return Config{
 		Host:         envutil.GetEnv("DB_HOST", "localhost"),
 		Port:         envutil.GetEnv("DB_PORT", "5432"),
-		User:         envutil.GetEnv("DB_USER", "derp"),
-		Password:     envutil.GetEnv("DB_PASSWORD", "derp"),
-		DBName:       envutil.GetEnv("DB_NAME", "derp"),
+		User:         envutil.GetEnv("DB_USER", "noui"),
+		Password:     envutil.GetEnv("DB_PASSWORD", "noui"),
+		DBName:       envutil.GetEnv("DB_NAME", "noui"),
 		SSLMode:      envutil.GetEnv("DB_SSLMODE", "disable"),
 		MaxOpenConns: envutil.GetEnvInt("DB_MAX_OPEN_CONNS", 8),
 		MaxIdleConns: envutil.GetEnvInt("DB_MAX_IDLE_CONNS", 3),

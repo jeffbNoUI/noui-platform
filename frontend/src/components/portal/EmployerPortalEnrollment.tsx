@@ -171,7 +171,7 @@ export default function EmployerPortalEnrollment({ org }: EmployerPortalEnrollme
           textAlign: 'center',
         }}
       >
-        Enrollment submissions are reviewed by DERP staff within 2 business days.
+        Enrollment submissions are reviewed by plan staff within 2 business days.
       </div>
     </div>
   );

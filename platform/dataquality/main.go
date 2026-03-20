@@ -1,5 +1,5 @@
 // Data Quality Engine — configurable data quality checks, scoring, and
-// issue tracking for the NoUI DERP POC.
+// issue tracking for NoUI.
 package main
 
 import (

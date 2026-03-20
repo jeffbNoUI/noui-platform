@@ -20,7 +20,7 @@ describe('planProfile', () => {
     expect(profile.benefit_structure.type).toBe('defined_benefit');
   });
 
-  it('has 3 DERP tiers', () => {
+  it('has 3 tiers', () => {
     const profile = getPlanProfile();
     expect(profile.benefit_structure.tiers).toHaveLength(3);
     expect(profile.benefit_structure.tiers.map((t) => t.id)).toEqual([

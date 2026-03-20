@@ -204,7 +204,7 @@ INSERT INTO case_note (case_id, author, content, category, created_at) VALUES
 ('RET-2026-0204', 'Sarah Chen', 'Eligibility confirmed under Tier 2 early retirement provisions. Proceeding with benefit calculation using 3% per year reduction.', 'decision', NOW() - INTERVAL '3 days'),
 
 -- DRO case
-('DRO-2026-0032', 'Sarah Chen', 'Court order received and reviewed. Marriage period overlaps 15 years of service. Calculating marital share per DERP DRO policy.', 'review', NOW() - INTERVAL '5 days'),
+('DRO-2026-0032', 'Sarah Chen', 'Court order received and reviewed. Marriage period overlaps 15 years of service. Calculating marital share per plan DRO policy.', 'review', NOW() - INTERVAL '5 days'),
 
 -- Thomas O'Brien at-risk
 ('RET-2026-0207', 'James Wilson', 'Eligibility review delayed pending clarification of deferred vesting status. Contacted member for additional information.', 'external', NOW() - INTERVAL '15 days'),

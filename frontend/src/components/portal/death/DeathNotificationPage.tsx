@@ -69,7 +69,7 @@ export default function DeathNotificationPage() {
             color: C.sage,
           }}
         >
-          1-800-555-DERP (3377)
+          1-800-555-0100
         </div>
         <div style={{ fontSize: 13, color: C.textSecondary, marginTop: 4 }}>
           Monday – Friday, 8:00 AM – 5:00 PM MT

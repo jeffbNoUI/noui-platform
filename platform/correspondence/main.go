@@ -1,5 +1,5 @@
 // Correspondence service — template-driven letter generation and
-// correspondence history for the NoUI DERP POC.
+// correspondence history for NoUI.
 package main
 
 import (

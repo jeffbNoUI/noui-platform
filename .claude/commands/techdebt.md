@@ -21,7 +21,7 @@ cd ../..
 echo "=== Large files (>300 lines) ==="
 find connector/ platform/ frontend/src/ -name "*.go" -o -name "*.ts" -o -name "*.tsx" | xargs wc -l 2>/dev/null | sort -rn | head -20
 
-# Check for any assumption markers that need DERP confirmation
+# Check for any open assumption markers
 echo "=== Open Assumptions ==="
 grep -rn "ASSUMPTION:" --include="*.go" connector/ platform/ | head -20
 ```

@@ -24,7 +24,7 @@ const (
 
 func rlsTestDB(t *testing.T) *sql.DB {
 	t.Helper()
-	dsn := "host=localhost port=5432 user=derp password=derp dbname=derp sslmode=disable"
+	dsn := "host=localhost port=5432 user=noui password=noui dbname=noui sslmode=disable"
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)

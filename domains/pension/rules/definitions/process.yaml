@@ -1,23 +1,23 @@
 # =============================================================================
-# DERP Process & Administrative Rules
+# Process & Administrative Rules
 # =============================================================================
 # Domain: process
 # Rules: RULE-APP-DEADLINE, RULE-NOTARIZATION, RULE-PAYMENT-CUTOFF,
 #        RULE-EFFECTIVE-DATE, RULE-IRREVOCABILITY, RULE-COLA
-# Authority: DERP Restated Master Contract (RMC)
+# Authority: Restated Master Contract (RMC)
 # =============================================================================
 
 metadata:
   domain: "process"
   version: "1.0.0"
   effective_date: "2026-03-02"
-  authority: "DERP Restated Master Contract (RMC)"
+  authority: "Restated Master Contract (RMC)"
   description: >
     Defines administrative and process rules including application deadlines,
     notarization requirements, payment cutoff dates, benefit effective dates,
     irrevocability of elections, and COLA provisions.
   governance:
-    owner: "DERP Rules Committee"
+    owner: "Rules Committee"
     approved_by: "Plan Administrator"
     approval_date: "2026-03-02"
     review_cycle: "annual"
@@ -27,7 +27,7 @@ metadata:
       - version: "1.0.0"
         date: "2026-03-02"
         author: "Rules Committee"
-        description: "Initial process rule definitions for DERP NoUI POC"
+        description: "Initial process rule definitions for NoUI POC"
 
 rules:
   # ===========================================================================

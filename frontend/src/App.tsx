@@ -93,7 +93,7 @@ function TopNav({
               <div>
                 <div className="text-sm font-bold text-iw-navy font-display leading-none">NoUI</div>
                 <div className="text-[9px] text-gray-400 tracking-widest uppercase font-semibold">
-                  DERP POC
+                  Platform
                 </div>
               </div>
             </div>

@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: noui/derp-dataaccess
+  repository: noui/dataaccess
   tag: "0.1.0"
   pullPolicy: IfNotPresent
 
@@ -12,8 +12,8 @@ service:
 env:
   DB_HOST: postgres
   DB_PORT: "5432"
-  DB_USER: derp
-  DB_NAME: derp
+  DB_USER: noui
+  DB_NAME: noui
   DB_SSLMODE: disable
   CORS_ORIGIN: "http://localhost:3000"
 

@@ -8,7 +8,7 @@ const testHint = {
   cardKey: 'calculator',
   personas: ['active' as const],
   teaser: 'Each additional year increases your benefit.',
-  expanded: 'Your DERP benefit is calculated as years of service times multiplier times salary.',
+  expanded: 'Your benefit is calculated as years of service times multiplier times salary.',
 };
 
 describe('LearningHint', () => {
@@ -36,7 +36,7 @@ describe('LearningHint', () => {
 
     fireEvent.click(screen.getByTestId('hint-toggle-benefit-growth'));
 
-    expect(screen.getByText(/Your DERP benefit is calculated/)).toBeInTheDocument();
+    expect(screen.getByText(/Your benefit is calculated/)).toBeInTheDocument();
     expect(screen.getByTestId('hint-toggle-benefit-growth')).toHaveTextContent('Show less');
   });
 

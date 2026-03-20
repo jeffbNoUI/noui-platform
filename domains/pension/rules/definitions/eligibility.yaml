@@ -1,24 +1,24 @@
 # =============================================================================
-# DERP Eligibility Rules
+# Eligibility Rules
 # =============================================================================
 # Domain: eligibility
 # Rules: RULE-VESTING, RULE-NORMAL-RET, RULE-RULE-OF-75, RULE-RULE-OF-85,
 #        RULE-EARLY-RET-T12, RULE-EARLY-RET-T3, RULE-EARLY-REDUCE-T12,
 #        RULE-EARLY-REDUCE-T3, RULE-DEFERRED, RULE-ELIG-HIERARCHY
-# Authority: DERP Restated Master Contract (RMC)
+# Authority: Restated Master Contract (RMC)
 # =============================================================================
 
 metadata:
   domain: "eligibility"
   version: "1.0.0"
   effective_date: "2026-03-02"
-  authority: "DERP Restated Master Contract (RMC)"
+  authority: "Restated Master Contract (RMC)"
   description: >
     Defines all eligibility rules including vesting, normal retirement,
     Rule of 75/85, early retirement with statutory reduction tables,
     deferred retirement, and the eligibility hierarchy.
   governance:
-    owner: "DERP Rules Committee"
+    owner: "Plan Rules Committee"
     approved_by: "Plan Administrator"
     approval_date: "2026-03-02"
     review_cycle: "annual"
@@ -28,7 +28,7 @@ metadata:
       - version: "1.0.0"
         date: "2026-03-02"
         author: "Rules Committee"
-        description: "Initial eligibility rule definitions for DERP NoUI POC"
+        description: "Initial eligibility rule definitions for NoUI POC"
 
 rules:
   # ===========================================================================
@@ -37,7 +37,7 @@ rules:
   - id: "RULE-VESTING"
     name: "Vesting Requirement"
     description: >
-      All DERP members vest after 5 years of EARNED service credit.
+      All plan members vest after 5 years of EARNED service credit.
       Purchased service does NOT count toward vesting. Vesting is a
       prerequisite for any retirement benefit.
     source_reference:

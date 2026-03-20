@@ -1,21 +1,21 @@
 # =============================================================================
-# DERP Membership Rules
+# Membership Rules
 # =============================================================================
 # Domain: membership
 # Rules: RULE-TIER-1, RULE-TIER-2, RULE-TIER-3, RULE-CONTRIB-EE, RULE-CONTRIB-ER
-# Authority: DERP Restated Master Contract (RMC)
+# Authority: Restated Master Contract (RMC)
 # =============================================================================
 
 metadata:
   domain: "membership"
   version: "1.0.0"
   effective_date: "2026-03-02"
-  authority: "DERP Restated Master Contract (RMC)"
+  authority: "Restated Master Contract (RMC)"
   description: >
     Defines tier classification based on hire date and contribution rates
-    for employees and employers in the DERP plan.
+    for employees and employers in the plan.
   governance:
-    owner: "DERP Rules Committee"
+    owner: "Plan Rules Committee"
     approved_by: "Plan Administrator"
     approval_date: "2026-03-02"
     review_cycle: "annual"
@@ -25,7 +25,7 @@ metadata:
       - version: "1.0.0"
         date: "2026-03-02"
         author: "Rules Committee"
-        description: "Initial rule definitions for DERP NoUI POC"
+        description: "Initial rule definitions for NoUI POC"
 
 rules:
   # ===========================================================================
@@ -339,7 +339,7 @@ rules:
   - id: "RULE-CONTRIB-EE"
     name: "Employee Contribution Rate"
     description: >
-      All DERP members contribute 8.45% of their gross pensionable salary
+      All plan members contribute 8.45% of their gross pensionable salary
       as the employee contribution. This rate is uniform across all tiers.
     source_reference:
       document: "RMC"

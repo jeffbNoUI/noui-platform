@@ -94,9 +94,9 @@ func TestConfigFromEnv_Defaults(t *testing.T) {
 	expect := map[string]string{
 		"Host":     "localhost",
 		"Port":     "5432",
-		"User":     "derp",
-		"Password": "derp",
-		"DBName":   "derp",
+		"User":     "noui",
+		"Password": "noui",
+		"DBName":   "noui",
 		"SSLMode":  "disable",
 	}
 

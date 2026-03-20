@@ -1,8 +1,14 @@
-// Package rules implements the deterministic rules engine for DERP benefit calculations.
+// Package rules implements the deterministic rules engine for benefit calculations.
 // ALL business rules are implemented as deterministic, auditable code executing
 // certified rule configurations. AI does NOT execute business rules.
 // Source: Governing Principle 1 (noui-architecture-decisions.docx)
 package rules
+
+import (
+	"time"
+
+	"github.com/noui/platform/intelligence/config"
+)
 
 // Statutory lookup tables — use tables from the RMC, NOT formulas.
 // Per CLAUDE_CODE_PROTOCOL.md: "The statute defines tables, not formulas."
@@ -102,7 +108,7 @@ var EarlyRetMinAge = map[int]int{
 	3: 60,
 }
 
-// ASSUMPTION: [Q-CALC-04] Illustrative J&S factors. Actual factors from DERP actuarial tables.
+// ASSUMPTION: [Q-CALC-04] Illustrative J&S factors. Actual factors from plan actuarial tables.
 // These placeholders are labeled as illustrative per BUILD_HISTORY Decision 17/19.
 var JSFactors = map[int]float64{
 	100: 0.8850,
@@ -110,12 +116,53 @@ var JSFactors = map[int]float64{
 	50:  0.9450,
 }
 
-// Contribution rates
-const (
-	EmployeeContribRate = 0.0845  // 8.45% — RMC §18-407(c)
-	EmployerContribRate = 0.1795  // 17.95% — DERP Handbook Jan 2024
-	VestingYears        = 5.0     // 5 years all tiers — RMC §18-403
-	NormalRetAge        = 65      // Age 65 all tiers — RMC §18-409(a)(1)
-	IPRNonMedicare      = 12.50   // $12.50/year of earned service
-	IPRMedicare         = 6.25    // $6.25/year of earned service
+// Contribution rates and plan constants — initialized with defaults, overridden by InitFromConfig.
+var (
+	EmployeeContribRate float64 = 0.0845 // 8.45% — RMC §18-407(c)
+	EmployerContribRate float64 = 0.1795 // 17.95% — Plan Handbook
+	VestingYears        float64 = 5.0    // 5 years all tiers — RMC §18-403
+	NormalRetAge        int     = 65     // Age 65 all tiers — RMC §18-409(a)(1)
+	IPRNonMedicare      float64 = 12.50  // $12.50/year of earned service
+	IPRMedicare         float64 = 6.25   // $6.25/year of earned service
 )
+
+// Tier cutoff dates — initialized by InitFromConfig.
+var (
+	Tier2Start time.Time // Tier 1 hire_date_before — start of Tier 2
+	Tier3Start time.Time // Tier 2 hire_date_before — start of Tier 3
+)
+
+// InitFromConfig populates all package-level vars from the loaded plan config.
+// This replaces hardcoded values with config-driven values while keeping the
+// same variable names so all downstream code continues to work unchanged.
+func InitFromConfig(cfg *config.PlanConfig) error {
+	// Lookup tables
+	EarlyRetReductionT12 = cfg.EarlyRetirement.ReductionTables.Tiers12
+	EarlyRetReductionT3 = cfg.EarlyRetirement.ReductionTables.Tier3
+	DeathBenefitT12 = cfg.DeathBenefits.Tiers12
+	DeathBenefitT3 = cfg.DeathBenefits.Tier3
+	TierMultiplier = cfg.BenefitMultipliers
+	AMSWindowMonths = cfg.AMSWindowMonths
+	RuleOfNThreshold = cfg.RuleOfN.Thresholds
+	RuleOfNMinAge = cfg.RuleOfN.MinAges
+	EarlyRetMinAge = cfg.EarlyRetirement.MinAges
+	JSFactors = cfg.JSFactors
+
+	// Scalar constants
+	EmployeeContribRate = cfg.Contributions.EmployeeRate
+	EmployerContribRate = cfg.Contributions.EmployerRate
+	VestingYears = cfg.VestingYears
+	NormalRetAge = cfg.NormalRetirementAge
+	IPRNonMedicare = cfg.IPR.NonMedicare
+	IPRMedicare = cfg.IPR.Medicare
+
+	// Tier cutoff dates
+	tier2, tier3, err := cfg.TierCutoffDates()
+	if err != nil {
+		return err
+	}
+	Tier2Start = tier2
+	Tier3Start = tier3
+
+	return nil
+}

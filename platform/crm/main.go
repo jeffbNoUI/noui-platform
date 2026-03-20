@@ -1,4 +1,4 @@
-// CRM service — customer relationship management for the NoUI DERP POC.
+// CRM service — customer relationship management for NoUI.
 // Manages contacts, interactions, conversations, commitments, outreach,
 // and organizations. This is a NoUI platform-native service — it reads/writes
 // its own CRM tables directly, not through the Data Connector.

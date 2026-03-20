@@ -30,7 +30,7 @@ spec:
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: derp-db-credentials
+                  name: noui-db-credentials
                   key: password
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}

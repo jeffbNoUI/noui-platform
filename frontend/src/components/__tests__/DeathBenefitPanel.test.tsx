@@ -8,7 +8,7 @@ const makeDeathBenefit = (): DeathBenefitDetail => ({
   installment_50: 115.4,
   installment_100: 63.21,
   retirement_type: 'Normal',
-  source_reference: 'DERP Plan Document §8.3',
+  source_reference: 'Plan Document §8.3',
 });
 
 describe('DeathBenefitPanel', () => {
@@ -29,7 +29,7 @@ describe('DeathBenefitPanel', () => {
   it('shows retirement type and source reference', () => {
     render(<DeathBenefitPanel deathBenefit={makeDeathBenefit()} />);
     expect(screen.getByText(/Retirement type: Normal/)).toBeInTheDocument();
-    expect(screen.getByText(/DERP Plan Document §8\.3/)).toBeInTheDocument();
+    expect(screen.getByText(/Plan Document §8\.3/)).toBeInTheDocument();
   });
 
   it('formats all currency values correctly', () => {

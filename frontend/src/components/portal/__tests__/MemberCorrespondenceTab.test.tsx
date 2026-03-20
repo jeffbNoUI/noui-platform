@@ -72,17 +72,17 @@ describe('MemberCorrespondenceTab', () => {
           sentAt: '2026-01-15',
           createdAt: '2026-01-15',
           sentVia: 'email',
-          bodyRendered: 'Welcome to DERP, your pension fund.',
+          bodyRendered: 'Welcome to the Plan, your pension fund.',
         },
       ],
       isLoading: false,
     } as unknown as ReturnType<typeof useSentCorrespondence>);
     renderWithProviders(<MemberCorrespondenceTab memberId={10001} />);
 
-    expect(screen.queryByText('Welcome to DERP, your pension fund.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Welcome to the Plan, your pension fund.')).not.toBeInTheDocument();
     fireEvent.click(screen.getByText('Welcome Letter'));
-    expect(screen.getByText('Welcome to DERP, your pension fund.')).toBeInTheDocument();
+    expect(screen.getByText('Welcome to the Plan, your pension fund.')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Welcome Letter'));
-    expect(screen.queryByText('Welcome to DERP, your pension fund.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Welcome to the Plan, your pension fund.')).not.toBeInTheDocument();
   });
 });

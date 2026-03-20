@@ -1,10 +1,10 @@
-// Package models defines domain types for the DERP data connector service.
+// Package models defines domain types for the data connector service.
 // These models map legacy database schema to clean domain representations.
 package models
 
 import "time"
 
-// Member represents a DERP plan member with demographics and employment info.
+// Member represents a plan member with demographics and employment info.
 type Member struct {
 	MemberID     int        `json:"member_id"`
 	FirstName    string     `json:"first_name"`

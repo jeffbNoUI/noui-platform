@@ -14,13 +14,20 @@ import (
 // Tier 2: Hired Sep 1, 2004 through Jun 30, 2011
 // Tier 3: Hired on or after Jul 1, 2011
 func DetermineTier(hireDate time.Time) int {
-	tier2Start := time.Date(2004, 9, 1, 0, 0, 0, 0, time.UTC)
-	tier3Start := time.Date(2011, 7, 1, 0, 0, 0, 0, time.UTC)
+	// Use config-loaded tier cutoff dates if available, otherwise fall back to defaults.
+	t2 := Tier2Start
+	t3 := Tier3Start
+	if t2.IsZero() {
+		t2 = time.Date(2004, 9, 1, 0, 0, 0, 0, time.UTC)
+	}
+	if t3.IsZero() {
+		t3 = time.Date(2011, 7, 1, 0, 0, 0, 0, time.UTC)
+	}
 
-	if hireDate.Before(tier2Start) {
+	if hireDate.Before(t2) {
 		return 1
 	}
-	if hireDate.Before(tier3Start) {
+	if hireDate.Before(t3) {
 		return 2
 	}
 	return 3
@@ -48,7 +55,7 @@ func CalculateAge(dob, atDate time.Time) models.AgeAtRetirement {
 }
 
 // ASSUMPTION: [Q-CALC-02] Using year-month method (months/12) for partial service years.
-// DERP may use exact-day method. See RULE-SVC-EARNED.
+// The plan may use exact-day method. See RULE-SVC-EARNED.
 func CalculateEarnedService(hireDate time.Time, endDate time.Time) float64 {
 	years := endDate.Year() - hireDate.Year()
 	months := int(endDate.Month()) - int(hireDate.Month())

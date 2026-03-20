@@ -1,5 +1,5 @@
 -- Correspondence schema — letter templates and generated correspondence history.
--- Part of the NoUI DERP POC platform services.
+-- Part of the NoUI platform services.
 
 BEGIN;
 
