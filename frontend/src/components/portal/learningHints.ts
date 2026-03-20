@@ -15,7 +15,7 @@ const LEARNING_HINTS: LearningHint[] = [
     personas: ['active'],
     teaser: 'Each additional year of service increases your monthly benefit.',
     expanded:
-      'Your DERP benefit is calculated as: years of service \u00d7 tier multiplier \u00d7 average monthly salary. Running scenarios with different retirement dates helps you see exactly how additional years affect your benefit.',
+      'Your retirement benefit is calculated as: years of service \u00d7 tier multiplier \u00d7 average monthly salary. Running scenarios with different retirement dates helps you see exactly how additional years affect your benefit.',
   },
   {
     id: 'vesting',

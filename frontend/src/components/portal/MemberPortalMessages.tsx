@@ -113,7 +113,7 @@ export default function MemberMessageCenter({ memberID }: MemberMessageCenterPro
                 New Conversation
               </h3>
               <p style={{ fontSize: 12, color: C.textTertiary, marginTop: 2 }}>
-                Send a secure message to DERP staff
+                Send a secure message to plan staff
               </p>
             </div>
             <div style={{ flex: 1 }} />

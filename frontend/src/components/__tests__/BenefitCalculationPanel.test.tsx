@@ -33,14 +33,14 @@ function makeCalc(overrides?: Partial<BenefitCalcResult>): BenefitCalcResult {
           rule_name: 'Vesting (5yr)',
           met: true,
           details: '28 >= 5',
-          source_reference: 'DERP §24-51-601',
+          source_reference: 'RMC §24-51-601',
         },
         {
           rule_id: 'R75',
           rule_name: 'Rule of 75',
           met: true,
           details: '90.33 >= 75',
-          source_reference: 'DERP §24-51-602',
+          source_reference: 'RMC §24-51-602',
         },
       ],
       best_eligible_type: 'RULE_OF_75',
@@ -74,7 +74,7 @@ function makeCalc(overrides?: Partial<BenefitCalcResult>): BenefitCalcResult {
       total_reduction_pct: 0,
       reduction_factor: 1.0,
       reduced_benefit: 2962.01,
-      source_reference: 'DERP §24-51-604',
+      source_reference: 'RMC §24-51-604',
     },
     payment_options: {
       base_amount: 2962.01,
@@ -90,13 +90,13 @@ function makeCalc(overrides?: Partial<BenefitCalcResult>): BenefitCalcResult {
       installment_50: 2500,
       installment_100: 5000,
       retirement_type: 'RULE_OF_75',
-      source_reference: 'DERP §24-51-609',
+      source_reference: 'RMC §24-51-609',
     },
     ipr: {
       earned_service_years: 28,
       non_medicare_monthly: 350,
       medicare_monthly: 175,
-      source_reference: 'DERP §24-51-1201',
+      source_reference: 'RMC §24-51-1201',
     },
     ...overrides,
   };
@@ -148,7 +148,7 @@ describe('BenefitCalculationPanel', () => {
         total_reduction_pct: 27.0,
         reduction_factor: 0.73,
         reduced_benefit: 2162.27,
-        source_reference: 'DERP §24-51-604',
+        source_reference: 'RMC §24-51-604',
       },
     });
     render(<BenefitCalculationPanel calculation={calc} />);
