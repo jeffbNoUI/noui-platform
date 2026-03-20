@@ -4,6 +4,7 @@ import { usePortalOrganizations } from '@/hooks/useCRM';
 import { useEmployerAlerts } from '@/hooks/useEmployerOps';
 import type { EmployerOpsTab, EmployerAlert } from '@/types/EmployerOps';
 import OrgBanner from './OrgBanner';
+import HealthTab from './tabs/HealthTab';
 
 const TABS: { key: EmployerOpsTab; label: string }[] = [
   { key: 'health', label: 'Health' },
@@ -45,8 +46,6 @@ export default function EmployerOpsDesktop() {
     }
     return counts;
   }, [alerts]);
-
-  const selectedOrgName = selectedOrgId ? (orgNames[selectedOrgId] ?? selectedOrgId) : '';
 
   return (
     <div
@@ -248,22 +247,14 @@ export default function EmployerOpsDesktop() {
               ))}
             </div>
 
-            {/* Tab content placeholder */}
+            {/* Tab content */}
             <div style={{ flex: 1, padding: 24 }}>
-              <div
-                style={{
-                  background: C.cardBg,
-                  borderRadius: 8,
-                  border: `1px solid ${C.border}`,
-                  padding: 32,
-                  textAlign: 'center',
-                }}
-              >
-                <p style={{ fontSize: 14, color: C.textTertiary }}>
-                  {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} tab content for{' '}
-                  {selectedOrgName} will appear here.
-                </p>
-              </div>
+              {activeTab === 'health' && <HealthTab orgId={selectedOrgId} />}
+              {activeTab !== 'health' && (
+                <div style={{ padding: 24, color: C.textTertiary }}>
+                  Tab content for &ldquo;{activeTab}&rdquo; goes here
+                </div>
+              )}
             </div>
           </>
         )}
