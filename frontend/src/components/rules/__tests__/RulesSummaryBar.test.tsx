@@ -33,4 +33,11 @@ describe('RulesSummaryBar', () => {
     );
     expect(screen.getByText(/Last tested/)).toBeInTheDocument();
   });
+
+  it('renders domain label when provided', () => {
+    renderWithProviders(
+      <RulesSummaryBar totalRules={10} passingRules={4} failingRules={6} label="in Eligibility" />,
+    );
+    expect(screen.getByText('in Eligibility')).toBeInTheDocument();
+  });
 });
