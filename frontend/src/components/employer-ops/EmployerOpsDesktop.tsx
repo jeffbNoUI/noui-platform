@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { C, BODY, DISPLAY } from '@/lib/designSystem';
 import { usePortalOrganizations } from '@/hooks/useCRM';
 import { useEmployerAlerts } from '@/hooks/useEmployerOps';
@@ -28,7 +28,7 @@ export default function EmployerOpsDesktop() {
   const [selectedOrgId, setSelectedOrgId] = useState('');
   const [activeTab, setActiveTab] = useState<EmployerOpsTab>('health');
 
-  const { data: orgs } = usePortalOrganizations();
+  const { data: orgs, isLoading: orgsLoading } = usePortalOrganizations();
 
   const orgIds = useMemo(() => (orgs ?? []).map((o) => o.orgId), [orgs]);
   const orgNames = useMemo(
@@ -50,6 +50,32 @@ export default function EmployerOpsDesktop() {
     }
     return counts;
   }, [alerts]);
+
+  // ── Keyboard navigation ──────────────────────────────────────────────────
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (!orgs?.length) return;
+      const currentIdx = orgs.findIndex((o) => o.orgId === selectedOrgId);
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const nextIdx = currentIdx < orgs.length - 1 ? currentIdx + 1 : 0;
+        setSelectedOrgId(orgs[nextIdx].orgId);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const prevIdx = currentIdx > 0 ? currentIdx - 1 : orgs.length - 1;
+        setSelectedOrgId(orgs[prevIdx].orgId);
+      } else if (e.key === 'Escape') {
+        setSelectedOrgId('');
+      }
+    },
+    [orgs, selectedOrgId],
+  );
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
 
   return (
     <div
@@ -154,47 +180,67 @@ export default function EmployerOpsDesktop() {
           >
             All Employers
           </div>
-          {(orgs ?? []).map((org) => {
-            const count = alertCountByOrg[org.orgId] ?? 0;
-            return (
-              <button
-                key={org.orgId}
-                onClick={() => setSelectedOrgId(org.orgId)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  width: '100%',
-                  textAlign: 'left',
-                  padding: '8px 12px',
-                  marginBottom: 2,
-                  borderRadius: 6,
-                  border: 'none',
-                  cursor: 'pointer',
-                  background: selectedOrgId === org.orgId ? C.sageLight : 'transparent',
-                  transition: 'background 0.15s',
-                }}
-              >
-                <span style={{ fontSize: 13, color: C.text }}>{org.orgName}</span>
-                {count > 0 && (
-                  <span
+          {orgsLoading
+            ? Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="animate-pulse"
+                  style={{
+                    padding: '8px 12px',
+                    marginBottom: 2,
+                  }}
+                >
+                  <div
                     style={{
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: C.coral,
-                      background: C.coralMuted,
-                      borderRadius: 10,
-                      padding: '2px 7px',
-                      minWidth: 20,
-                      textAlign: 'center',
+                      height: 14,
+                      borderRadius: 4,
+                      background: C.border,
+                      width: `${60 + (i % 3) * 15}%`,
+                    }}
+                  />
+                </div>
+              ))
+            : (orgs ?? []).map((org) => {
+                const count = alertCountByOrg[org.orgId] ?? 0;
+                return (
+                  <button
+                    key={org.orgId}
+                    onClick={() => setSelectedOrgId(org.orgId)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      width: '100%',
+                      textAlign: 'left',
+                      padding: '8px 12px',
+                      marginBottom: 2,
+                      borderRadius: 6,
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: selectedOrgId === org.orgId ? C.sageLight : 'transparent',
+                      transition: 'background 0.15s',
                     }}
                   >
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+                    <span style={{ fontSize: 13, color: C.text }}>{org.orgName}</span>
+                    {count > 0 && (
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: C.coral,
+                          background: C.coralMuted,
+                          borderRadius: 10,
+                          padding: '2px 7px',
+                          minWidth: 20,
+                          textAlign: 'center',
+                        }}
+                      >
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
         </div>
       </div>
 
@@ -205,12 +251,31 @@ export default function EmployerOpsDesktop() {
             style={{
               flex: 1,
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
+              gap: 12,
             }}
           >
-            <p style={{ fontSize: 15, color: C.textTertiary }}>
+            <div
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: 16,
+                background: C.sageLight,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 28,
+              }}
+            >
+              🏢
+            </div>
+            <p style={{ fontSize: 15, color: C.textSecondary, fontWeight: 500, margin: 0 }}>
               Select an employer from the left panel
+            </p>
+            <p style={{ fontSize: 13, color: C.textTertiary, margin: 0 }}>
+              Use arrow keys to navigate, Escape to deselect
             </p>
           </div>
         ) : (
