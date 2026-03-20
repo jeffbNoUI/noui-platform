@@ -1,0 +1,121 @@
+# Test fixture with 2 rules: one conditional, one formula.
+# Used by loader_test.go.
+
+metadata:
+  domain: "test-domain"
+  version: "1.0.0"
+  effective_date: "2026-03-19"
+  authority: "Test Authority"
+  description: "Test rule file for loader unit tests"
+  governance:
+    owner: "Test Owner"
+    approved_by: "Test Approver"
+    approval_date: "2026-03-19"
+    review_cycle: "annual"
+    next_review_date: "2027-03-19"
+    audit_trail: true
+    change_log:
+      - version: "1.0.0"
+        date: "2026-03-19"
+        author: "Test Author"
+        description: "Initial test rules"
+
+rules:
+  - id: "TEST-CONDITIONAL"
+    name: "Test Conditional Rule"
+    description: "A simple conditional rule for testing the loader."
+    source_reference:
+      document: "Test Doc"
+      section: "Section 1"
+      last_verified: "2026-03-19"
+    applies_to:
+      tiers: ["tier_1", "tier_2"]
+      member_types: ["active"]
+    inputs:
+      - name: "score"
+        type: "integer"
+        required: true
+        description: "A score value"
+        constraints:
+          min: 0
+          max: 100
+    logic:
+      type: "conditional"
+      conditions:
+        - condition: "score >= 70"
+          result:
+            status: "pass"
+        - condition: "score < 70"
+          result:
+            status: "fail"
+      critical_note: "70 is the minimum passing score."
+    output:
+      name: "result"
+      type: "object"
+      fields:
+        - name: "status"
+          type: "string"
+    dependencies: []
+    tags: ["test", "conditional"]
+    test_cases:
+      - name: "Passing score"
+        type: "happy_path"
+        inputs:
+          score: 85
+        expected:
+          status: "pass"
+      - name: "Failing score"
+        type: "negative"
+        inputs:
+          score: 50
+        expected:
+          status: "fail"
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-19"
+      reviewed_by: "Test Reviewer"
+      effective_date: "2026-03-19"
+
+  - id: "TEST-FORMULA"
+    name: "Test Formula Rule"
+    description: "A simple formula rule for testing the loader."
+    source_reference:
+      document: "Test Doc"
+      section: "Section 2"
+      last_verified: "2026-03-19"
+    applies_to:
+      tiers: ["tier_1", "tier_2", "tier_3"]
+      member_types: ["active", "terminated"]
+    inputs:
+      - name: "base_amount"
+        type: "decimal"
+        required: true
+        description: "The base monetary amount"
+      - name: "multiplier"
+        type: "decimal"
+        required: true
+        description: "The multiplier to apply"
+    logic:
+      type: "formula"
+      expression: "result = base_amount * multiplier"
+      variables:
+        default_multiplier: 1.5
+    output:
+      name: "calculated_amount"
+      type: "decimal"
+      precision: 2
+    dependencies: ["TEST-CONDITIONAL"]
+    tags: ["test", "formula"]
+    test_cases:
+      - name: "Standard calculation"
+        type: "happy_path"
+        inputs:
+          base_amount: 1000.00
+          multiplier: 1.5
+        expected:
+          calculated_amount: 1500.00
+    governance:
+      status: "approved"
+      last_reviewed: "2026-03-19"
+      reviewed_by: "Test Reviewer"
+      effective_date: "2026-03-19"

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -39,6 +40,16 @@ func main() {
 	handler := api.NewHandler(database)
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
+
+	// File-backed rules handler
+	rulesDir := envOr("RULES_DIR", "/data/rules")
+	casesDir := envOr("DEMO_CASES_DIR", "/data/demo-cases")
+	reportPath := envOr("TEST_REPORT_PATH", "/data/test-results/intelligence-report.json")
+	mappingPath := envOr("TEST_MAPPING_PATH", "/data/test-results/test-rule-mapping.json")
+	cacheTTLMin := envOrInt("RULES_CACHE_TTL_MIN", 5)
+
+	rulesHandler := api.NewRulesHandler(rulesDir, casesDir, reportPath, mappingPath, time.Duration(cacheTTLMin)*time.Minute)
+	rulesHandler.RegisterRoutes(mux)
 	mux.HandleFunc("GET /health/detail", healthutil.NewDetailHandler("knowledgebase", "0.1.0", startedAt, database, counters))
 	mux.HandleFunc("GET /ready", healthutil.NewReadyHandler("knowledgebase", database))
 
@@ -96,6 +107,25 @@ func main() {
 	}
 
 	slog.Info("Knowledge Base service stopped")
+}
+
+func envOr(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}
+
+func envOrInt(key string, fallback int) int {
+	s := os.Getenv(key)
+	if s == "" {
+		return fallback
+	}
+	v, err := strconv.Atoi(s)
+	if err != nil {
+		return fallback
+	}
+	return v
 }
 
 func corsMiddleware(next http.Handler) http.Handler {

@@ -16,7 +16,10 @@ require (
 	github.com/noui/platform/validation v0.0.0
 )
 
-require golang.org/x/time v0.9.0 // indirect
+require (
+	golang.org/x/time v0.9.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
+)
 
 replace (
 	github.com/noui/platform/apiresponse => ../apiresponse
