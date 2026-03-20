@@ -1,270 +1,260 @@
 import { useState, useMemo } from 'react';
-import { C, BODY, DISPLAY } from '@/lib/designSystem';
 import { usePortalOrganizations } from '@/hooks/useCRM';
-import { useEmployerAlerts } from '@/hooks/useEmployerOps';
-import type { EmployerAlert } from '@/types/EmployerOps';
+import {
+  useEmployerAlerts,
+  useEmployerDQScore,
+  useEmployerCaseSummary,
+  useEmployerMemberSummary,
+  useOrgContacts,
+  useEmployerActivity,
+  useEmployerTemplates,
+} from '@/hooks/useEmployerOps';
+import { dqScoreColor } from '@/lib/employerOpsConfig';
 
-/** @deprecated Will be removed in desktop redesign */
-type EmployerOpsTab = 'health' | 'cases' | 'crm' | 'correspondence' | 'members';
+import AlertTable from './AlertTable';
+import AllEmployersList from './AllEmployersList';
+import EmployerSearch from './EmployerSearch';
 import OrgBanner from './OrgBanner';
-import HealthTab from './tabs/HealthTab';
-import CasesTab from './tabs/CasesTab';
-import CRMTab from './tabs/CRMTab';
-import CorrespondenceTab from './tabs/CorrespondenceTab';
-import MembersTab from './tabs/MembersTab';
+import SummaryCard from './SummaryCard';
+import SummaryCardGrid from './SummaryCardGrid';
+import ActivityFeed from './ActivityFeed';
+import CreateCaseDialog from './actions/CreateCaseDialog';
+import LogInteractionDialog from './actions/LogInteractionDialog';
+import GenerateLetterDialog from './actions/GenerateLetterDialog';
 
-const TABS: { key: EmployerOpsTab; label: string }[] = [
-  { key: 'health', label: 'Health' },
-  { key: 'cases', label: 'Cases' },
-  { key: 'crm', label: 'CRM' },
-  { key: 'correspondence', label: 'Correspondence' },
-  { key: 'members', label: 'Members' },
-];
-
-const SEVERITY_BORDER: Record<EmployerAlert['severity'], string> = {
-  critical: C.coral,
-  warning: C.gold,
-  info: C.sky,
-};
+type ViewState = 'triage' | 'profile';
+type DialogState = 'none' | 'case' | 'interaction' | 'letter';
 
 export default function EmployerOpsDesktop() {
-  const [selectedOrgId, setSelectedOrgId] = useState('');
-  const [activeTab, setActiveTab] = useState<EmployerOpsTab>('health');
+  const [view, setView] = useState<ViewState>('triage');
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<DialogState>('none');
 
+  // ── Global data ───────────────────────────────────────────────────────
   const { data: orgs } = usePortalOrganizations();
+  const orgList = orgs ?? [];
 
-  const orgIds = useMemo(() => (orgs ?? []).map((o) => o.orgId), [orgs]);
+  const orgIds = useMemo(() => orgList.map((o) => o.orgId), [orgList]);
   const orgNames = useMemo(
     () =>
-      (orgs ?? []).reduce<Record<string, string>>((acc, o) => {
+      orgList.reduce<Record<string, string>>((acc, o) => {
         acc[o.orgId] = o.orgName;
         return acc;
       }, {}),
-    [orgs],
+    [orgList],
   );
 
-  const { alerts } = useEmployerAlerts(orgIds, orgNames);
+  const { alerts, isLoading: alertsLoading } = useEmployerAlerts(orgIds, orgNames);
 
-  // Count alerts per org for badges
-  const alertCountByOrg = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const a of alerts) {
-      counts[a.orgId] = (counts[a.orgId] ?? 0) + 1;
-    }
-    return counts;
-  }, [alerts]);
+  // ── Search data ───────────────────────────────────────────────────────
+  const searchOrgs = useMemo(
+    () =>
+      orgList.map((o) => ({
+        orgId: o.orgId,
+        name: o.orgName,
+        memberCount: o.memberCount,
+      })),
+    [orgList],
+  );
+
+  // ── Org-scoped data (safe to call with '' — hooks have enabled: !!orgId) ──
+  const activeOrgId = selectedOrgId ?? '';
+  const { data: dq } = useEmployerDQScore(activeOrgId);
+  const { data: cases } = useEmployerCaseSummary(activeOrgId);
+  const { data: members } = useEmployerMemberSummary(activeOrgId);
+  const { data: contactsData } = useOrgContacts(activeOrgId);
+  // DQ issues and cases are fetched by useEmployerActivity internally
+  const { events: activityEvents } = useEmployerActivity(activeOrgId);
+  const { data: templates } = useEmployerTemplates();
+
+  // ── Derived metrics ───────────────────────────────────────────────────
+  const dqScore = dq?.overallScore;
+  const dqScoreStr = dqScore != null ? `${dqScore}%` : '--';
+  const openIssues = dq?.openIssues ?? 0;
+  const criticalIssues = dq?.criticalIssues ?? 0;
+
+  const activeCases = cases?.activeCases ?? 0;
+  const atRiskCases = cases?.atRiskCases ?? 0;
+  const completedCases = cases?.completedCases ?? 0;
+
+  const totalMembers = members?.active_count ?? 0;
+  const tier1 = members?.tier1_count ?? 0;
+  const tier2 = members?.tier2_count ?? 0;
+  const tier3 = members?.tier3_count ?? 0;
+
+  const contactCount = contactsData?.items?.length ?? 0;
+
+  // ── Handlers ──────────────────────────────────────────────────────────
+  function handleSelectEmployer(orgId: string) {
+    setSelectedOrgId(orgId);
+    setView('profile');
+    setDialog('none');
+  }
+
+  function handleShowAlerts() {
+    setView('triage');
+    setSelectedOrgId(null);
+    setDialog('none');
+  }
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        minHeight: '100vh',
-        background: C.pageBg,
-        fontFamily: BODY,
-      }}
-    >
-      {/* ── Left Panel: Alert Queue ─────────────────────────────────────── */}
-      <div
-        style={{
-          width: 280,
-          flexShrink: 0,
-          borderRight: `1px solid ${C.border}`,
-          background: C.cardBg,
-          overflowY: 'auto',
-        }}
-      >
-        {/* Title */}
-        <div style={{ padding: '20px 16px 12px' }}>
-          <h1
-            style={{
-              fontFamily: DISPLAY,
-              fontSize: 20,
-              fontWeight: 700,
-              color: C.navy,
-              margin: 0,
-            }}
-          >
-            Employer Ops
-          </h1>
-        </div>
-
-        {/* Alerts section */}
-        <div style={{ padding: '0 16px 16px' }}>
-          <div
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              color: C.textTertiary,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              marginBottom: 8,
-            }}
-          >
-            Alerts ({alerts.length})
-          </div>
-          {alerts.length === 0 && (
-            <div style={{ fontSize: 13, color: C.textTertiary, padding: '8px 0' }}>
-              No active alerts
-            </div>
-          )}
-          {alerts.map((alert, i) => (
-            <button
-              key={`${alert.orgId}-${alert.type}-${i}`}
-              onClick={() => setSelectedOrgId(alert.orgId)}
-              style={{
-                display: 'block',
-                width: '100%',
-                textAlign: 'left',
-                padding: '10px 12px',
-                marginBottom: 4,
-                borderRadius: 6,
-                border: 'none',
-                cursor: 'pointer',
-                borderLeft: `3px solid ${SEVERITY_BORDER[alert.severity]}`,
-                background: selectedOrgId === alert.orgId ? C.sageLight : 'transparent',
-                transition: 'background 0.15s',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: C.text,
-                  marginBottom: 2,
-                }}
-              >
-                {alert.orgName}
-              </div>
-              <div style={{ fontSize: 12, color: C.textSecondary }}>{alert.message}</div>
-            </button>
-          ))}
-        </div>
-
-        {/* Divider */}
-        <div style={{ height: 1, background: C.border, margin: '0 16px' }} />
-
-        {/* All Employers section */}
-        <div style={{ padding: '16px' }}>
-          <div
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              color: C.textTertiary,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              marginBottom: 8,
-            }}
-          >
-            All Employers
-          </div>
-          {(orgs ?? []).map((org) => {
-            const count = alertCountByOrg[org.orgId] ?? 0;
-            return (
-              <button
-                key={org.orgId}
-                onClick={() => setSelectedOrgId(org.orgId)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  width: '100%',
-                  textAlign: 'left',
-                  padding: '8px 12px',
-                  marginBottom: 2,
-                  borderRadius: 6,
-                  border: 'none',
-                  cursor: 'pointer',
-                  background: selectedOrgId === org.orgId ? C.sageLight : 'transparent',
-                  transition: 'background 0.15s',
-                }}
-              >
-                <span style={{ fontSize: 13, color: C.text }}>{org.orgName}</span>
-                {count > 0 && (
-                  <span
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: C.coral,
-                      background: C.coralMuted,
-                      borderRadius: 10,
-                      padding: '2px 7px',
-                      minWidth: 20,
-                      textAlign: 'center',
-                    }}
-                  >
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* ── Search bar — always visible ─────────────────────────────── */}
+      <div className="sticky top-0 z-40 bg-white border-b border-gray-200 px-6 py-3">
+        <EmployerSearch
+          orgs={searchOrgs}
+          contacts={[]}
+          alertCount={alerts.length}
+          onSelectEmployer={handleSelectEmployer}
+          onShowAlerts={handleShowAlerts}
+        />
       </div>
 
-      {/* ── Right Panel: Content ────────────────────────────────────────── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        {!selectedOrgId ? (
-          <div
-            style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <p style={{ fontSize: 15, color: C.textTertiary }}>
-              Select an employer from the left panel
-            </p>
+      {/* ── Main content ────────────────────────────────────────────── */}
+      <main className="mx-auto max-w-7xl px-6 py-6">
+        {view === 'triage' && (
+          <div className="space-y-6">
+            <h1 className="text-xl font-bold text-gray-900">Employer Ops</h1>
+            <AlertTable
+              alerts={alerts}
+              isLoading={alertsLoading}
+              onSelectEmployer={handleSelectEmployer}
+            />
+            <AllEmployersList
+              orgs={orgList.map((o) => ({ orgId: o.orgId, name: o.orgName }))}
+              alerts={alerts}
+              onSelectEmployer={handleSelectEmployer}
+            />
           </div>
-        ) : (
-          <>
-            {/* Org banner */}
-            <OrgBanner orgId={selectedOrgId} />
-
-            {/* Tab bar */}
-            <div
-              style={{
-                display: 'flex',
-                gap: 0,
-                borderBottom: `1px solid ${C.border}`,
-                background: C.cardBg,
-                padding: '0 24px',
-              }}
-            >
-              {TABS.map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
-                  style={{
-                    padding: '10px 16px',
-                    fontSize: 13,
-                    fontWeight: 500,
-                    fontFamily: BODY,
-                    color: activeTab === tab.key ? C.navy : C.textSecondary,
-                    background: 'transparent',
-                    border: 'none',
-                    borderBottom:
-                      activeTab === tab.key ? `2px solid ${C.sage}` : '2px solid transparent',
-                    cursor: 'pointer',
-                    transition: 'color 0.15s, border-color 0.15s',
-                  }}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Tab content — key by orgId to reset local state on org switch */}
-            <div key={selectedOrgId} style={{ flex: 1, padding: 24 }}>
-              {activeTab === 'health' && <HealthTab orgId={selectedOrgId} />}
-              {activeTab === 'cases' && <CasesTab orgId={selectedOrgId} />}
-              {activeTab === 'crm' && <CRMTab orgId={selectedOrgId} />}
-              {activeTab === 'correspondence' && <CorrespondenceTab orgId={selectedOrgId} />}
-              {activeTab === 'members' && <MembersTab orgId={selectedOrgId} />}
-            </div>
-          </>
         )}
-      </div>
+
+        {view === 'profile' && selectedOrgId && (
+          <div key={selectedOrgId} className="space-y-6">
+            <OrgBanner orgId={selectedOrgId} onBack={handleShowAlerts} />
+
+            <SummaryCardGrid>
+              {/* 1. DQ Health */}
+              <SummaryCard
+                title="DQ Health"
+                metrics={[
+                  {
+                    label: 'Score',
+                    value: dqScoreStr,
+                    color: dqScore != null ? `text-[${dqScoreColor(dqScore)}]` : undefined,
+                  },
+                  { label: 'Open Issues', value: openIssues },
+                  { label: 'Critical', value: criticalIssues, color: criticalIssues > 0 ? 'text-red-600' : undefined },
+                ]}
+                linkLabel="View Details"
+                onLink={() => {}}
+              />
+
+              {/* 2. Cases */}
+              <SummaryCard
+                title="Cases"
+                metrics={[
+                  { label: 'Active', value: activeCases },
+                  { label: 'At Risk', value: atRiskCases, color: atRiskCases > 0 ? 'text-amber-600' : undefined },
+                  { label: 'Completed', value: completedCases },
+                ]}
+                linkLabel="View All Cases"
+                onLink={() => {}}
+              />
+
+              {/* 3. Members */}
+              <SummaryCard
+                title="Members"
+                metrics={[
+                  { label: 'Total', value: totalMembers.toLocaleString() },
+                  { label: 'Tier 1', value: tier1.toLocaleString() },
+                  { label: 'Tier 2', value: tier2.toLocaleString() },
+                  { label: 'Tier 3', value: tier3.toLocaleString() },
+                ]}
+                linkLabel="View Roster"
+                onLink={() => {}}
+              />
+
+              {/* 4. Contacts & Users */}
+              <SummaryCard
+                title="Contacts & Users"
+                metrics={[
+                  { label: 'Contacts', value: contactCount },
+                ]}
+                linkLabel="View Contacts"
+                onLink={() => {}}
+              />
+
+              {/* 5. Correspondence */}
+              <SummaryCard
+                title="Correspondence"
+                metrics={[
+                  { label: 'Recent', value: 0 },
+                ]}
+                linkLabel="View Letters"
+                onLink={() => {}}
+              />
+
+              {/* 6. Contributions */}
+              <SummaryCard
+                title="Contributions"
+                metrics={[]}
+                comingSoon
+              />
+
+              {/* 7. Balances */}
+              <SummaryCard
+                title="Balances"
+                metrics={[]}
+                comingSoon
+              />
+
+              {/* 8. Actions */}
+              <SummaryCard title="Actions" metrics={[]}>
+                <div className="flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDialog('interaction')}
+                    className="w-full text-left text-sm px-3 py-1.5 rounded bg-gray-50 hover:bg-gray-100 transition-colors text-gray-700"
+                  >
+                    {'\u{1F4DE}'} Log Interaction
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDialog('case')}
+                    className="w-full text-left text-sm px-3 py-1.5 rounded bg-gray-50 hover:bg-gray-100 transition-colors text-gray-700"
+                  >
+                    {'\u{1F4CB}'} Create Case
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDialog('letter')}
+                    className="w-full text-left text-sm px-3 py-1.5 rounded bg-gray-50 hover:bg-gray-100 transition-colors text-gray-700"
+                  >
+                    {'\u{2709}\u{FE0F}'} Send Letter
+                  </button>
+                </div>
+              </SummaryCard>
+            </SummaryCardGrid>
+
+            <ActivityFeed events={activityEvents} />
+          </div>
+        )}
+      </main>
+
+      {/* ── Action dialogs ──────────────────────────────────────────── */}
+      {dialog === 'case' && selectedOrgId && (
+        <CreateCaseDialog orgId={selectedOrgId} onClose={() => setDialog('none')} />
+      )}
+      {dialog === 'interaction' && selectedOrgId && (
+        <LogInteractionDialog orgId={selectedOrgId} onClose={() => setDialog('none')} />
+      )}
+      {dialog === 'letter' && selectedOrgId && templates?.items?.[0] && (
+        <GenerateLetterDialog
+          orgId={selectedOrgId}
+          template={templates.items[0]}
+          onClose={() => setDialog('none')}
+        />
+      )}
     </div>
   );
 }
