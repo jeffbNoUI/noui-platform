@@ -2,7 +2,10 @@ import { useState, useMemo } from 'react';
 import { C, BODY, DISPLAY } from '@/lib/designSystem';
 import { usePortalOrganizations } from '@/hooks/useCRM';
 import { useEmployerAlerts } from '@/hooks/useEmployerOps';
-import type { EmployerOpsTab, EmployerAlert } from '@/types/EmployerOps';
+import type { EmployerAlert } from '@/types/EmployerOps';
+
+/** @deprecated Will be removed in desktop redesign */
+type EmployerOpsTab = 'health' | 'cases' | 'crm' | 'correspondence' | 'members';
 import OrgBanner from './OrgBanner';
 import HealthTab from './tabs/HealthTab';
 import CasesTab from './tabs/CasesTab';

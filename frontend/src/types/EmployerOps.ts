@@ -164,4 +164,15 @@ export interface EmployerAlert {
   value: number;
 }
 
-export type EmployerOpsTab = 'health' | 'cases' | 'crm' | 'correspondence' | 'members';
+// ── Unified Activity Feed ────────────────────────────────────────
+export type ActivityEventType = 'interaction' | 'correspondence' | 'case_change' | 'dq_issue';
+
+export interface ActivityEvent {
+  id: string;
+  type: ActivityEventType;
+  timestamp: string; // ISO 8601
+  summary: string; // One-line description
+  icon: string; // Emoji icon for timeline
+  severity?: AlertSeverity; // Optional severity for color-coding
+  linkTo?: string; // Optional deep-link target
+}
