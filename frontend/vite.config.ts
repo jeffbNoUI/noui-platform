@@ -2,9 +2,47 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import yaml from '@rollup/plugin-yaml';
 import path from 'path';
+import http from 'node:http';
 
 export default defineConfig({
-  plugins: [react(), yaml()],
+  plugins: [
+    {
+      name: 'employer-cross-service-proxy',
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          const url = req.url ?? '';
+          let target: string | null = null;
+
+          if (/^\/api\/v1\/employer\/[^/]+\/members/.test(url)) {
+            target = 'http://localhost:8081'; // dataaccess
+          } else if (
+            /^\/api\/v1\/employer\/[^/]+\/cases/.test(url) ||
+            /^\/api\/v1\/employer\/cases$/.test(url)
+          ) {
+            target = 'http://localhost:8088'; // casemanagement
+          }
+
+          if (!target) return next();
+
+          const proxyReq = http.request(
+            target + url,
+            { method: req.method, headers: { ...req.headers, host: new URL(target).host } },
+            (proxyRes) => {
+              res.writeHead(proxyRes.statusCode!, proxyRes.headers);
+              proxyRes.pipe(res);
+            },
+          );
+          proxyReq.on('error', () => {
+            res.writeHead(502);
+            res.end('Proxy error');
+          });
+          req.pipe(proxyReq);
+        });
+      },
+    },
+    react(),
+    yaml(),
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
