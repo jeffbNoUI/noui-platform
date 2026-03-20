@@ -1,4 +1,4 @@
-"""DERP-specific system prompt for the AI composition engine."""
+"""System prompt for the AI composition engine."""
 
 from __future__ import annotations
 
