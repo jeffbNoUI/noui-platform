@@ -125,6 +125,7 @@ export default function StaffPortal({ onOpenCase, onViewMember, onChangeView }: 
               { key: 'workspace', label: 'Agent Workspace', icon: '\ud83e\uddee' },
               { key: 'crm', label: 'CRM', icon: '\ud83d\udcac' },
               { key: 'employer', label: 'Employer Portal', icon: '\ud83c\udfe2' },
+              { key: 'employer-ops', label: 'Employer Ops', icon: '\ud83d\udcca' },
               { key: 'vendor', label: 'Vendor Portal', icon: '\ud83c\udfe5' },
             ] as const
           ).map((item) => (
