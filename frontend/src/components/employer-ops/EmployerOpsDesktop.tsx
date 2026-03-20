@@ -3,6 +3,7 @@ import { C, BODY, DISPLAY } from '@/lib/designSystem';
 import { usePortalOrganizations } from '@/hooks/useCRM';
 import { useEmployerAlerts } from '@/hooks/useEmployerOps';
 import type { EmployerOpsTab, EmployerAlert } from '@/types/EmployerOps';
+import OrgBanner from './OrgBanner';
 
 const TABS: { key: EmployerOpsTab; label: string }[] = [
   { key: 'health', label: 'Health' },
@@ -211,26 +212,8 @@ export default function EmployerOpsDesktop() {
           </div>
         ) : (
           <>
-            {/* Org banner placeholder */}
-            <div
-              style={{
-                padding: '16px 24px',
-                borderBottom: `1px solid ${C.border}`,
-                background: C.cardBg,
-              }}
-            >
-              <h2
-                style={{
-                  fontFamily: DISPLAY,
-                  fontSize: 18,
-                  fontWeight: 700,
-                  color: C.navy,
-                  margin: 0,
-                }}
-              >
-                {selectedOrgName}
-              </h2>
-            </div>
+            {/* Org banner */}
+            <OrgBanner orgId={selectedOrgId} />
 
             {/* Tab bar */}
             <div
