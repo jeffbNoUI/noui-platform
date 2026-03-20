@@ -1,6 +1,8 @@
 // Shared API client — single source for fetch helpers, retry, request tracing.
 // All per-service API modules (api.ts, crmApi.ts, etc.) delegate to this.
 
+import { reportError } from './errorReporter';
+
 // Auth token for API requests — set by AuthContext
 let _authToken = '';
 export function setAuthToken(token: string) {
@@ -132,11 +134,21 @@ async function rawRequest(
 
         const errBody = await res.json().catch(() => ({ error: { message: res.statusText } }));
         const message = errBody.error?.message || `API error: ${res.status}`;
+        const errorCode = errBody.error?.code || `HTTP_${res.status}`;
         const apiError = new APIError(message, res.status, requestId, url);
         console.error(`[api] ${init.method ?? 'GET'} ${url} → ${res.status}`, {
           requestId,
           status: res.status,
           message,
+        });
+        reportError({
+          requestId,
+          url,
+          httpStatus: res.status,
+          errorCode,
+          errorMessage: message,
+          portal: detectPortal(),
+          route: typeof window !== 'undefined' ? window.location.pathname : '',
         });
         throw apiError;
       }
@@ -267,4 +279,13 @@ export function toQueryString(params: object): string {
     }
   }
   return parts.length > 0 ? `?${parts.join('&')}` : '';
+}
+
+function detectPortal(): string {
+  if (typeof window === 'undefined') return 'unknown';
+  const path = window.location.pathname;
+  if (path.startsWith('/employer')) return 'employer';
+  if (path.startsWith('/member')) return 'member';
+  if (path.startsWith('/retirement')) return 'retirement';
+  return 'staff';
 }
