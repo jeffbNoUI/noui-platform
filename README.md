@@ -17,14 +17,14 @@ AI-composed workspace software for benefits administration. Connects to legacy s
 │  introspect → tagger → monitor → dashboard  │
 ├─────────────────────────────────────────────┤
 │  Domains                                    │
-│  pension (DERP) │ [future domains]          │
+│  pension        │ [future domains]          │
 └─────────────────────────────────────────────┘
 ```
 
 ## Quick Start
 
 ```bash
-# Start the full DERP stack
+# Start the full stack
 docker compose up --build
 
 # Access
@@ -57,7 +57,7 @@ cd frontend && npm test -- --run
 |-----------|---------|
 | `connector/` | Generic schema introspection, concept tagging, monitoring (Go 1.26) |
 | `platform/` | Shared backend services (Go 1.22) |
-| `domains/pension/` | DERP pension schemas, rules, seed data, test cases |
+| `domains/pension/` | Pension schemas, rules, seed data, test cases |
 | `frontend/` | React UI with Tailwind CSS |
 | `targets/` | Test target databases (ERPNext, PostgreSQL, MSSQL) |
 | `infrastructure/` | Helm charts for Kubernetes deployment |

@@ -28,7 +28,7 @@ noui-platform/
 │   └── knowledgebase/      #   Articles, stage help, search
 │
 ├── domains/                # Layer 3: Domain-Specific
-│   └── pension/            #   DERP pension domain
+│   └── pension/            #   Pension domain
 │       ├── schema/         #     Database schema definitions
 │       ├── seed/           #     Seed data + generators
 │       ├── rules/          #     Business rules (YAML)
@@ -56,7 +56,7 @@ These rules are **non-negotiable** and prevent the tangling that caused the prev
 | Directory | Purpose | Port |
 |-----------|---------|------|
 | `connector/` | Generic schema introspection, concept tagging, monitoring engine | 8090 (service mode) |
-| `platform/dataaccess/` | DERP-specific PostgreSQL data access for member/salary/benefit queries | 8081 |
+| `platform/dataaccess/` | PostgreSQL data access for member/salary/benefit queries | 8081 |
 | `platform/intelligence/` | Eligibility, benefit calculation, DRO, scenario analysis | 8082 |
 | `platform/crm/` | Contact management, interaction history | 8083 (host: 8084) |
 | `platform/correspondence/` | Template rendering, merge fields, letter history | 8085 |
@@ -316,23 +316,8 @@ Every Claude mistake becomes a rule. If something breaks:
 4. Add a test that would have caught this failure
 5. If the mistake pattern is repeatable, add a rule to this file or a hook to settings.json so it can't happen again
 
-## DERP Quick Reference
+## Plan Configuration Reference
 
-| Provision | Tier 1 | Tier 2 | Tier 3 |
-|-----------|--------|--------|--------|
-| Hire Date | Before Sept 1, 2004 | Sept 1, 2004 - June 30, 2011 | On/after July 1, 2011 |
-| Multiplier | 2.0% | 1.5% | 1.5% |
-| AMS Window | 36 consecutive months | 36 consecutive months | 60 consecutive months |
-| Rule of N | 75 (min age 55) | 75 (min age 55) | 85 (min age 60) |
-| Early Ret Age | 55 | 55 | 60 |
-| Reduction | **3%/yr under 65** | **3%/yr under 65** | 6%/yr under 65 |
-| Leave Payout | If hired <2010 | If hired <2010 | No (hired >2010) |
-| Death Benefit (Normal) | $5,000 | $5,000 | $5,000 |
-| Death Benefit (Early) | $5K - $250/yr under 65 | $5K - $250/yr under 65 | $5K - $500/yr under 65 |
-
-Vesting: 5 years all tiers
-Employee contribution: 8.45%
-Employer contribution: 17.95%
-Normal retirement: Age 65, 5 years service, all tiers
+Plan-specific parameters (tier definitions, multipliers, contribution rates, reduction tables, etc.) are defined in `domains/pension/plan-config.yaml`. The rules engine loads this configuration at startup.
 
 **CRITICAL:** Early retirement reduction for Tiers 1 & 2 is 3% per year, NOT 6%. See CRITICAL-001-resolution.md.
