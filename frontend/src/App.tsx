@@ -24,6 +24,7 @@ const RetirementApplication = lazy(() => import('@/components/RetirementApplicat
 const CRMWorkspace = lazy(() => import('@/components/CRMWorkspace'));
 const EmployerPortalApp = lazy(() => import('@/components/employer-portal/EmployerPortalApp'));
 const VendorPortal = lazy(() => import('@/components/portal/VendorPortal'));
+const EmployerOpsDesktop = lazy(() => import('@/components/employer-ops/EmployerOpsDesktop'));
 
 function PortalLoading() {
   return (
@@ -73,6 +74,7 @@ function TopNav({
     { key: 'workspace', label: 'Agent Workspace', description: 'Benefit calculations' },
     { key: 'crm', label: 'CRM', description: 'Contact management' },
     { key: 'employer', label: 'Employer Portal', description: 'Employer self-service' },
+    { key: 'employer-ops', label: 'Employer Ops', description: 'Employer operations & monitoring' },
   ];
 
   const visibleTabs = tabs.filter((t) => canAccess(t.key));
@@ -469,6 +471,22 @@ function AppInner() {
         <ErrorBoundary portalName="Employer Portal">
           <Suspense fallback={<PortalLoading />}>
             <EmployerPortalApp />
+          </Suspense>
+        </ErrorBoundary>
+        <DevRoleSwitcher />
+      </>
+    );
+  }
+
+  // ── Employer Ops Desktop view ─────────────────────────────────────
+
+  if (viewMode === 'employer-ops') {
+    return (
+      <>
+        {cmdPalette}
+        <ErrorBoundary portalName="Employer Ops">
+          <Suspense fallback={<PortalLoading />}>
+            <EmployerOpsDesktop />
           </Suspense>
         </ErrorBoundary>
         <DevRoleSwitcher />

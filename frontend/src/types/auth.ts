@@ -6,6 +6,7 @@ export type ViewMode =
   | 'workspace'
   | 'crm'
   | 'employer'
+  | 'employer-ops'
   | 'vendor'
   | 'retirement-app'
   | 'member-dashboard';
@@ -26,6 +27,7 @@ export const ROLE_ACCESS: Record<UserRole, ViewMode[]> = {
     'workspace',
     'crm',
     'employer',
+    'employer-ops',
     'vendor',
     'retirement-app',
     'member-dashboard',
@@ -38,6 +40,7 @@ export const ROLE_ACCESS: Record<UserRole, ViewMode[]> = {
     'retirement-app',
     'member-dashboard',
     'employer',
+    'employer-ops',
     'vendor',
   ],
   member: ['portal', 'member-dashboard'],
