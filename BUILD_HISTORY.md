@@ -1,5 +1,59 @@
 # noui-platform — Build History
 
+## Employer Ops Agent Desktop (2026-03-19)
+
+**Branch:** `claude/strange-cori`
+**Goal:** Staff-facing two-panel operational desktop aggregating all 13 Phase 8 cross-service employer endpoints into an alert-first workspace.
+
+**What was built:**
+
+### Design & Planning
+- `docs/plans/2026-03-19-employer-ops-desktop-design.md` — Full design document
+- `docs/plans/2026-03-19-employer-ops-desktop-plan.md` — 12-task implementation plan
+
+### Types & Config (`frontend/src/types/EmployerOps.ts`, `lib/employerOpsConfig.ts`)
+- TypeScript types for all 13 Phase 8 response shapes + frontend alert types
+- Build-time configurable thresholds via `import.meta.env.VITE_*` (DQ score critical/warning, SLA overdue, case volume)
+- Shared `dqScoreColor()` helper
+
+### API Layer (`frontend/src/lib/employerOpsApi.ts`)
+- 13 fetch functions for all Phase 8 endpoints using shared `apiClient.ts` helpers
+- Custom Vite proxy plugin (`vite.config.ts`) routing `/api/v1/employer/{orgId}/members*` → 8081 and `/api/v1/employer/{orgId}/cases*` → 8088 before the catch-all → 8094
+
+### React Query Hooks (`frontend/src/hooks/useEmployerOps.ts`)
+- 10 query hooks, 3 mutation hooks (create case, log interaction, generate letter)
+- `useEmployerAlerts` — `useQueries` fan-out across all orgs with 60s refetch for alert aggregation
+
+### Navigation Integration
+- `ViewMode` type extended with `'employer-ops'` (admin + staff roles)
+- `App.tsx` — lazy-loaded route with TopNav + ErrorBoundary + Suspense
+- `StaffPortal.tsx` — sidebar link for cross-view navigation
+
+### Main Container (`EmployerOpsDesktop.tsx`)
+- Two-panel layout: 280px left (alert queue + org list) + flex-1 right (OrgBanner + tabs)
+- Key-based component remounting (`key={selectedOrgId}`) to reset pagination/filter state on org switch
+
+### 5 Detail Tabs
+- **Health** — DQ score gauge, issues table with "Create Case" per row, check results with color-coded pass rates
+- **Cases** — Summary cards (total/active/completed/at-risk), case table, "New Case" button
+- **CRM** — Interaction timeline with category filter, contacts table, "Log Interaction" button
+- **Correspondence** — Template card grid with "Generate" button per card
+- **Members** — Tier/status summary cards, paginated roster (25 per page)
+
+### 3 Action Dialogs
+- `CreateCaseDialog` — trigger type, reference ID, member ID, priority, assigned to
+- `LogInteractionDialog` — category, channel, direction, summary, outcome
+- `GenerateLetterDialog` — auto-populated org fields, editable merge fields, contact ID
+
+### Bug Fixes
+- Null guard on `dqScore.categoryScores` (backend returns null when no DQ data)
+- Extracted duplicate `dqScoreColor()` to shared config
+- Key-based remount prevents stale pagination/filter state across org switches
+
+**Test results:** 1,709 frontend tests (212 files) passing, typecheck clean. No unit tests for Employer Ops hooks/components yet (Task 12 deferred).
+
+---
+
 ## Employer Domain Phase 8: Cross-Service Enhancement (2026-03-19)
 
 **Branch:** `claude/brave-mendel`
