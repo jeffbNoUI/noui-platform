@@ -1,5 +1,26 @@
 # noui-platform — Build History
 
+## Fix pgbouncer RLS: transaction-scoped set_config + app.user_id (2026-03-20)
+
+**PR:** #119 (merged)
+**Bug:** Preferences 500 errors on save + intermittent empty results under pgbouncer
+
+**Root causes:**
+1. **Missing `app.user_id`** — RLS policies on preferences table check `app.user_id` but `dbcontext.Params` never included `UserID`. INSERT/UPDATE blocked by WITH CHECK policy.
+2. **pgbouncer transaction pooling** — `set_config(..., false)` sets session-level vars, but pgbouncer releases backend connections between auto-committed statements. The `set_config()` and actual query could execute on different PostgreSQL backends.
+
+**What changed (18 files, 170 insertions):**
+- `platform/dbcontext/dbcontext.go` — Added `UserID` to `Params`, added `WithTx()`/`Tx()` context helpers, `DB()` now prefers tx over conn. `DBMiddleware` wraps each request in `BEGIN...COMMIT` with `set_config(..., true)` (local to transaction).
+- All 15 service `main.go` files — Added `UserID: auth.UserID(r.Context())` to claimsExtractor.
+- `platform/dbcontext/dbcontext_test.go` — New tests: `TestDBMiddleware_TxHasSessionVars`, `TestTx_NilWithoutMiddleware`, `TestDB_FallbackOrder`. Updated existing tests for UserID field.
+- `infrastructure/pgbouncer/pgbouncer.ini` — Corrected comment to match actual pattern.
+
+**Tests:** All 17 platform services build + pass short tests. All 1838 frontend tests pass.
+
+**Next:** Docker E2E verification of Rules Explorer (deferred task in memory). Also investigate knowledgebase stages/intake 500 errors if they persist after this fix (may have been caused by the same pgbouncer issue).
+
+---
+
 ## Employer Ops Agent Desktop (2026-03-19)
 
 **Branch:** `claude/strange-cori`
