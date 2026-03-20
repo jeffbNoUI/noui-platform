@@ -1,5 +1,5 @@
 import { C, BODY } from '@/lib/designSystem';
-import { OPS_THRESHOLDS } from '@/lib/employerOpsConfig';
+import { dqScoreColor } from '@/lib/employerOpsConfig';
 import {
   useEmployerDQScore,
   useEmployerDQIssues,
@@ -8,12 +8,6 @@ import {
 } from '@/hooks/useEmployerOps';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-
-function dqScoreColor(score: number): string {
-  if (score < OPS_THRESHOLDS.dqScoreCritical) return C.coral;
-  if (score < OPS_THRESHOLDS.dqScoreWarning) return C.gold;
-  return C.sage;
-}
 
 function passRateColor(rate: number): string {
   if (rate > 95) return C.sage;

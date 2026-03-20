@@ -1,16 +1,10 @@
 import { C, DISPLAY, BODY } from '@/lib/designSystem';
 import { usePortalOrganization } from '@/hooks/useCRM';
 import { useEmployerDQScore, useEmployerMemberSummary } from '@/hooks/useEmployerOps';
-import { OPS_THRESHOLDS } from '@/lib/employerOpsConfig';
+import { dqScoreColor } from '@/lib/employerOpsConfig';
 
 interface OrgBannerProps {
   orgId: string;
-}
-
-function dqScoreColor(score: number): string {
-  if (score < OPS_THRESHOLDS.dqScoreCritical) return C.coral;
-  if (score < OPS_THRESHOLDS.dqScoreWarning) return C.gold;
-  return C.sage;
 }
 
 export default function OrgBanner({ orgId }: OrgBannerProps) {

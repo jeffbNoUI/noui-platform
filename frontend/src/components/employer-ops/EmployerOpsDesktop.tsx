@@ -251,8 +251,8 @@ export default function EmployerOpsDesktop() {
               ))}
             </div>
 
-            {/* Tab content */}
-            <div style={{ flex: 1, padding: 24 }}>
+            {/* Tab content — key by orgId to reset local state on org switch */}
+            <div key={selectedOrgId} style={{ flex: 1, padding: 24 }}>
               {activeTab === 'health' && <HealthTab orgId={selectedOrgId} />}
               {activeTab === 'cases' && <CasesTab orgId={selectedOrgId} />}
               {activeTab === 'crm' && <CRMTab orgId={selectedOrgId} />}
