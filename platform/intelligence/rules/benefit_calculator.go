@@ -92,12 +92,12 @@ func CalculateBenefit(
 		Tier:           tier,
 		Eligibility:    eligibility,
 		AMS: models.AMSCalcDetail{
-			WindowMonths:      ams.WindowMonths,
-			WindowStart:       ams.WindowStart,
-			WindowEnd:         ams.WindowEnd,
-			Amount:            ams.Amount,
-			LeavePayoutIncl:   ams.LeavePayoutIncl,
-			LeavePayoutAmt:    ams.LeavePayoutAmt,
+			WindowMonths:    ams.WindowMonths,
+			WindowStart:     ams.WindowStart,
+			WindowEnd:       ams.WindowEnd,
+			Amount:          ams.Amount,
+			LeavePayoutIncl: ams.LeavePayoutIncl,
+			LeavePayoutAmt:  ams.LeavePayoutAmt,
 		},
 		Formula: models.FormulaDetail{
 			AMS:            ams.Amount,
@@ -111,9 +111,9 @@ func CalculateBenefit(
 		Reduction:      reduction,
 		MaximumBenefit: maximumBenefit,
 		PaymentOptions: paymentOptions,
-		DRO:           droResult,
+		DRO:            droResult,
 		DeathBenefit:   deathBenefit,
-		IPR:           ipr,
+		IPR:            ipr,
 	}
 }
 
@@ -141,7 +141,7 @@ func CalculatePaymentOptions(baseAmount float64) models.PaymentOptions {
 			SurvivorPct:    50,
 			Factor:         JSFactors[50],
 		},
-		Disclaimer: "ILLUSTRATIVE — Actual J&S factors from DERP actuarial tables based on member and beneficiary ages at retirement.",
+		Disclaimer: "ILLUSTRATIVE — Actual J&S factors from plan actuarial tables based on member and beneficiary ages at retirement.",
 	}
 }
 
@@ -278,7 +278,7 @@ func CalculateScenarios(
 }
 
 // roundToCents rounds a float64 to 2 decimal places using banker's rounding.
-// ASSUMPTION: [Q-CALC-01] Using banker's rounding. DERP's actual method unconfirmed.
+// ASSUMPTION: [Q-CALC-01] Using banker's rounding. The plan's actual method unconfirmed.
 func roundToCents(amount float64) float64 {
 	return math.Round(amount*100) / 100
 }

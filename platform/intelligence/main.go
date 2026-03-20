@@ -1,4 +1,4 @@
-// Intelligence service — the deterministic rules engine for the NoUI DERP POC.
+// Intelligence service — the deterministic rules engine for the NoUI platform.
 // All business rules, benefit calculations, and eligibility determinations are
 // implemented as deterministic, auditable code. AI does NOT execute business rules.
 // Source: BUILD_PLAN Day 5, Governing Principle 1
@@ -17,7 +17,9 @@ import (
 	"github.com/noui/platform/auth"
 	"github.com/noui/platform/healthutil"
 	"github.com/noui/platform/intelligence/api"
+	"github.com/noui/platform/intelligence/config"
 	"github.com/noui/platform/intelligence/db"
+	"github.com/noui/platform/intelligence/rules"
 	"github.com/noui/platform/logging"
 	"github.com/noui/platform/ratelimit"
 )
@@ -27,6 +29,22 @@ func main() {
 	logger := logging.Setup("intelligence", nil)
 	slog.SetDefault(logger)
 	slog.Info("starting intelligence service v0.1.0")
+
+	// Load plan configuration from YAML
+	configPath := os.Getenv("PLAN_CONFIG_PATH")
+	if configPath == "" {
+		configPath = "/data/plan-config.yaml"
+	}
+	planCfg, err := config.LoadPlanConfig(configPath)
+	if err != nil {
+		slog.Warn("plan config not loaded, using built-in defaults", "path", configPath, "error", err)
+	} else {
+		if err := rules.InitFromConfig(planCfg); err != nil {
+			slog.Error("failed to initialize rules from config", "error", err)
+			os.Exit(1)
+		}
+		slog.Info("plan config loaded", "path", configPath, "plan", planCfg.Plan.Name)
+	}
 
 	var database *sql.DB
 	if os.Getenv("DB_HOST") != "" {
