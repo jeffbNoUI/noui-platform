@@ -260,3 +260,48 @@ func (s *Store) FindByFingerprint(ctx context.Context, tenantID, fingerprint str
 	}
 	return id, err
 }
+
+// IncrementErrorOccurrence updates an existing error-report issue's title with an
+// incremented occurrence count and adds a comment with occurrence details.
+func (s *Store) IncrementErrorOccurrence(ctx context.Context, tenantID string, issueID int, requestID, portal, route string) error {
+	// Fetch current title to parse occurrence count
+	var title string
+	err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx,
+		"SELECT title FROM issues WHERE id = $1 AND tenant_id = $2",
+		issueID, tenantID,
+	).Scan(&title)
+	if err != nil {
+		return err
+	}
+
+	// Parse current count from title (format: "... — N occurrences")
+	count := 1
+	if idx := strings.LastIndex(title, " — "); idx != -1 {
+		part := title[idx+len(" — "):]
+		if n, scanErr := fmt.Sscanf(part, "%d occurrences", &count); n == 1 && scanErr == nil {
+			// parsed successfully
+		}
+		title = title[:idx]
+	}
+	count++
+
+	newTitle := fmt.Sprintf("%s — %d occurrences", title, count)
+
+	_, err = dbcontext.DB(ctx, s.DB).ExecContext(ctx,
+		"UPDATE issues SET title = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3",
+		newTitle, issueID, tenantID,
+	)
+	if err != nil {
+		return err
+	}
+
+	// Add occurrence comment
+	comment := fmt.Sprintf("Occurrence at %s\nRequest ID: %s\nPortal: %s\nRoute: %s",
+		time.Now().UTC().Format(time.RFC3339), requestID, portal, route)
+
+	_, err = s.CreateComment(ctx, issueID, models.CreateCommentRequest{
+		Author:  "system:error-reporter",
+		Content: comment,
+	})
+	return err
+}
