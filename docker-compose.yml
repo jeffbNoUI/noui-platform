@@ -92,6 +92,8 @@ services:
       dockerfile: intelligence/Dockerfile
     ports:
       - "8082:8082"
+    volumes:
+      - ./domains/pension/plan-config.yaml:/data/plan-config.yaml:ro
     environment:
       PORT: "8082"
       CONNECTOR_URL: "http://dataaccess:8081"
