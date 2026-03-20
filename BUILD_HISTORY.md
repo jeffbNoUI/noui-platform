@@ -1,5 +1,41 @@
 # noui-platform — Build History
 
+## Rules Explorer Card Drill-Down Redesign (2026-03-20)
+
+**Branch:** `claude/mystifying-jones`
+**Goal:** Replace flat-list Rules Explorer with a visually appealing three-level card drill-down.
+
+**What was built:**
+
+### Level 1 — Domain Cards
+- 9 semantic domain categories (Eligibility, Benefits, Salary & AMS, Service Credit, Payment Options, DRO, Tiers & Contributions, Death Benefits, Process & Compliance)
+- `DomainCard.tsx` — Card with domain name, description, rule count, SVG progress ring
+- `DomainCardGrid.tsx` — Responsive 3-column grid (1 col mobile, 2 tablet, 3 desktop)
+- `ProgressRing.tsx` — 36px SVG circular indicator showing % rules passing
+- `domainMapping.ts` — Static mapping of 52 rule IDs → 9 domain categories
+
+### Level 2 — Rule Cards
+- `RuleCard.tsx` — Redesigned from flat row to card with full name (no truncation), full description, rule ID, test badge, colored left border (green/red/gray)
+- `RuleCardGrid.tsx` — Responsive 3-column grid of rule cards
+- Search filters rules by name, ID, or description within the domain
+
+### Level 3 — Rule Detail
+- Existing `RuleDetail.tsx` (4-tab: Logic, I/O, Tests, Governance) — unchanged
+- `Breadcrumb.tsx` — Clickable navigation: Rules Explorer > Domain > Rule ID
+- `RulesSummaryBar.tsx` — Added `label` prop for domain-scoped display ("4/10 passing in Eligibility")
+
+### Navigation & State
+- `RulesExplorer.tsx` — Three-level state machine (domain → rule → detail)
+- Breadcrumb navigation at every level with clickable segments
+- Contextual search at each level (domains at L1, rules at L2)
+- Removed `DomainFilter.tsx` and `RulesList.tsx` (replaced by card grids)
+
+**Tests:** 1789/1789 passing (54 rules-related tests across 10 test files)
+
+**Design doc:** `docs/plans/2026-03-20-rules-explorer-redesign-design.md`
+
+---
+
 ## Employer Domain Phase 8: Cross-Service Enhancement (2026-03-19)
 
 **Branch:** `claude/brave-mendel`
