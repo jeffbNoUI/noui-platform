@@ -29,7 +29,7 @@ fi
 
 echo ""
 echo "=== PostgreSQL ==="
-docker exec derp-postgres pg_isready 2>/dev/null && echo "✅ PostgreSQL — ready" || echo "❌ PostgreSQL — not ready"
+docker exec noui-postgres pg_isready 2>/dev/null && echo "✅ PostgreSQL — ready" || echo "❌ PostgreSQL — not ready"
 
 echo ""
 echo "=== Recent Logs (errors only) ==="

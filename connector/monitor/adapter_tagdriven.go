@@ -10,8 +10,8 @@ import (
 
 // TagDrivenAdapter implements MonitorAdapter by resolving table and column
 // names from a tagged SchemaManifest at runtime. This enables monitoring
-// against any schema that the tagger can understand — ERPNext HR, DERP
-// pension, or any future target.
+// against any schema that the tagger can understand — ERPNext HR, pension
+// databases, or any future target.
 //
 // When a required concept tag is absent from the manifest, query methods
 // return an empty result set rather than failing, allowing checks to
@@ -332,19 +332,19 @@ func (a *TagDrivenAdapter) QueryMissingTerminations(db *sql.DB) (*sql.Rows, erro
 
 	// Determine the "terminated" status value and separation filter
 	// ERPNext: status = 'Left', employment-timeline has separation records as separate table rows
-	// DERP pension: status_cd = 'T', employment_hist has event_type = 'SEPARATION'
+	// Pension DB: status_cd = 'T', employment_hist has event_type = 'SEPARATION'
 	statusValue := "'Left'"
 	sepFilter := ""
 
 	// If there's a separation type column, filter on separation events
 	if sepTypeCol != "" {
 		qSepType := a.quote(sepTypeCol)
-		// Check if the separation column looks like event_type (DERP style)
+		// Check if the separation column looks like event_type (pension style)
 		if strings.Contains(strings.ToLower(sepTypeCol), "event_type") {
 			statusValue = "'T'"
 			sepFilter = fmt.Sprintf("AND es.%s = 'SEPARATION'", qSepType)
 		} else if strings.Contains(strings.ToLower(sepTypeCol), "separation") {
-			// DERP: separation_cd is non-null for separation events
+			// Pension: separation_cd is non-null for separation events
 			statusValue = "'T'"
 			sepFilter = fmt.Sprintf("AND es.%s IS NOT NULL", qSepType)
 		}
