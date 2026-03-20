@@ -12,11 +12,16 @@ import ManageTab from './ManageTab';
 export interface BenefitSectionProps {
   memberId: number;
   personas: MemberPersona[];
+  retirementDate: string;
 }
 
 // ── Component ───────────────────────────────────────────────────────────────
 
-export default function BenefitSection({ memberId, personas }: BenefitSectionProps) {
+export default function BenefitSection({
+  memberId,
+  personas,
+  retirementDate,
+}: BenefitSectionProps) {
   const visibleTabs = BENEFIT_TABS.filter((tab) => tab.personas.some((p) => personas.includes(p)));
   const [activeTab, setActiveTab] = useState(visibleTabs[0]?.key ?? 'payments');
 
@@ -49,7 +54,9 @@ export default function BenefitSection({ memberId, personas }: BenefitSectionPro
       <div data-testid={`benefit-tab-content-${activeTab}`}>
         {activeTab === 'payments' && <PaymentsTab memberId={memberId} />}
         {activeTab === 'tax-documents' && <TaxDocumentsTab memberId={memberId} />}
-        {activeTab === 'benefit-details' && <BenefitDetailsTab memberId={memberId} />}
+        {activeTab === 'benefit-details' && (
+          <BenefitDetailsTab memberId={memberId} retirementDate={retirementDate} />
+        )}
         {activeTab === 'manage' && <ManageTab memberId={memberId} />}
       </div>
     </div>

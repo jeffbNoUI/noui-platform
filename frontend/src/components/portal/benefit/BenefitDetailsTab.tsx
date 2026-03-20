@@ -1,56 +1,25 @@
-import { useQuery } from '@tanstack/react-query';
 import { C, BODY, DISPLAY } from '@/lib/designSystem';
 import { formatCurrency, formatDate } from '../MemberPortalUtils';
-import { fetchAPI } from '@/lib/apiClient';
+import { useBenefitCalculation } from '@/hooks/useBenefitCalculation';
 import type { WhatIfResult } from '@/hooks/useWhatIfCalculator';
 import FormulaBreakdown from '../calculator/FormulaBreakdown';
-
-// ── Types ───────────────────────────────────────────────────────────────────
-
-interface FinalizedBenefit {
-  effective_date: string;
-  retirement_type: 'EARLY' | 'NORMAL';
-  monthly_benefit: number;
-  payment_option: string;
-  payment_option_label: string;
-  survivor_amount?: number;
-  ams: number;
-  base_benefit: number;
-  service_years: number;
-  multiplier_pct: string;
-  reduction_pct: number;
-  reduction_applies: boolean;
-  reduction_years_under_65: number;
-  reduction_rate_per_year: number;
-  formula_display: string;
-  finalized_at: string;
-}
-
-// ── Hook ────────────────────────────────────────────────────────────────────
-
-function useFinalizedBenefit(memberId: number) {
-  return useQuery<FinalizedBenefit>({
-    queryKey: ['finalized-benefit', memberId],
-    queryFn: () => fetchAPI<FinalizedBenefit>(`/api/v1/members/${memberId}/finalized-benefit`),
-    enabled: !!memberId,
-  });
-}
 
 // ── Props ───────────────────────────────────────────────────────────────────
 
 interface BenefitDetailsTabProps {
   memberId: number;
+  retirementDate: string;
 }
 
 // ── Component ───────────────────────────────────────────────────────────────
 
-export default function BenefitDetailsTab({ memberId }: BenefitDetailsTabProps) {
-  const { data: benefit, isLoading, error } = useFinalizedBenefit(memberId);
+export default function BenefitDetailsTab({ memberId, retirementDate }: BenefitDetailsTabProps) {
+  const { data: benefit, isLoading, error } = useBenefitCalculation(memberId, retirementDate);
 
   if (isLoading) {
     return (
       <div data-testid="benefit-details-tab" style={{ fontFamily: BODY, color: C.textSecondary }}>
-        Loading benefit details…
+        Calculating benefit details...
       </div>
     );
   }
@@ -58,42 +27,61 @@ export default function BenefitDetailsTab({ memberId }: BenefitDetailsTabProps) 
   if (error || !benefit) {
     return (
       <div data-testid="benefit-details-tab" style={{ fontFamily: BODY, color: C.textSecondary }}>
-        Benefit details are not yet available. They will appear here once your retirement has been
-        finalized.
+        Unable to calculate benefit details. Please try again later.
       </div>
     );
   }
 
-  // Adapt finalized benefit to WhatIfResult for FormulaBreakdown reuse
+  const monthlyBenefit = benefit.reduction.applies
+    ? benefit.reduction.reduced_benefit
+    : benefit.maximum_benefit;
+
+  // Adapt BenefitCalcResult to WhatIfResult for FormulaBreakdown reuse
   const formulaResult: WhatIfResult = {
-    monthly_benefit: benefit.monthly_benefit,
-    eligibility_type: benefit.retirement_type,
-    reduction_pct: benefit.reduction_pct,
-    ams: benefit.ams,
-    base_benefit: benefit.base_benefit,
-    service_years: benefit.service_years,
-    formula_display: benefit.formula_display,
+    monthly_benefit: monthlyBenefit,
+    eligibility_type: benefit.eligibility.best_eligible_type as 'EARLY' | 'NORMAL' | 'INELIGIBLE',
+    reduction_pct: benefit.eligibility.reduction_pct,
+    ams: benefit.ams.amount,
+    base_benefit: benefit.formula.gross_benefit,
+    service_years: benefit.formula.service_years,
+    formula_display: benefit.formula.formula_display,
     reduction_detail: {
-      applies: benefit.reduction_applies,
-      years_under_65: benefit.reduction_years_under_65,
-      rate_per_year: benefit.reduction_rate_per_year,
+      applies: benefit.reduction.applies,
+      years_under_65: benefit.reduction.years_under_65,
+      rate_per_year: benefit.reduction.rate_per_year,
     },
-    payment_options: [],
-    raw_benefit: {
-      formula: {
-        multiplier_pct: benefit.multiplier_pct,
-        gross_benefit: benefit.base_benefit,
-        service_years: benefit.service_years,
-        formula_display: benefit.formula_display,
-      },
-      ams: { amount: benefit.ams },
-      reduction: {
-        applies: benefit.reduction_applies,
-        years_under_65: benefit.reduction_years_under_65,
-        rate_per_year: benefit.reduction_rate_per_year,
-        reduction_factor: benefit.reduction_applies ? 1 - benefit.reduction_pct / 100 : 1,
-      },
-    } as WhatIfResult['raw_benefit'],
+    payment_options: [
+      { option_id: 'maximum', member_amount: benefit.payment_options.maximum, survivor_amount: 0 },
+      ...(benefit.payment_options.js_100
+        ? [
+            {
+              option_id: 'js_100' as const,
+              member_amount: benefit.payment_options.js_100.member_amount,
+              survivor_amount: benefit.payment_options.js_100.survivor_amount,
+            },
+          ]
+        : []),
+      ...(benefit.payment_options.js_75
+        ? [
+            {
+              option_id: 'js_75' as const,
+              member_amount: benefit.payment_options.js_75.member_amount,
+              survivor_amount: benefit.payment_options.js_75.survivor_amount,
+            },
+          ]
+        : []),
+      ...(benefit.payment_options.js_50
+        ? [
+            {
+              option_id: 'js_50' as const,
+              member_amount: benefit.payment_options.js_50.member_amount,
+              survivor_amount: benefit.payment_options.js_50.survivor_amount,
+            },
+          ]
+        : []),
+    ],
+    raw_benefit: benefit,
+    raw_eligibility: benefit.eligibility,
   };
 
   return (
@@ -122,7 +110,7 @@ export default function BenefitDetailsTab({ memberId }: BenefitDetailsTabProps) 
             marginBottom: 4,
           }}
         >
-          Your Monthly Benefit
+          Estimated Monthly Benefit
         </div>
         <div
           style={{
@@ -133,20 +121,19 @@ export default function BenefitDetailsTab({ memberId }: BenefitDetailsTabProps) 
             marginBottom: 16,
           }}
         >
-          {formatCurrency(benefit.monthly_benefit)}/mo
+          {formatCurrency(monthlyBenefit)}/mo
         </div>
 
         <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
-          <DetailItem label="Effective Date" value={formatDate(benefit.effective_date)} />
-          <DetailItem label="Retirement Type" value={benefit.retirement_type} />
-          <DetailItem label="Payment Option" value={benefit.payment_option_label} />
-          {benefit.survivor_amount != null && benefit.survivor_amount > 0 && (
+          <DetailItem label="Retirement Date" value={formatDate(benefit.retirement_date)} />
+          <DetailItem label="Retirement Type" value={benefit.eligibility.best_eligible_type} />
+          <DetailItem label="Tier" value={`Tier ${benefit.tier}`} />
+          {benefit.reduction.applies && (
             <DetailItem
-              label="Survivor Benefit"
-              value={`${formatCurrency(benefit.survivor_amount)}/mo`}
+              label="Early Reduction"
+              value={`${benefit.reduction.total_reduction_pct.toFixed(1)}%`}
             />
           )}
-          <DetailItem label="Finalized" value={formatDate(benefit.finalized_at)} />
         </div>
       </div>
 
@@ -161,7 +148,7 @@ export default function BenefitDetailsTab({ memberId }: BenefitDetailsTabProps) 
             margin: '0 0 12px',
           }}
         >
-          Calculation Record
+          Calculation Breakdown
         </h2>
         <p
           style={{
@@ -171,7 +158,8 @@ export default function BenefitDetailsTab({ memberId }: BenefitDetailsTabProps) 
             margin: '0 0 16px',
           }}
         >
-          This is the permanent record of how your benefit was calculated at retirement.
+          This shows how your benefit is calculated based on your service, salary, and retirement
+          date.
         </p>
         <FormulaBreakdown result={formulaResult} />
       </div>

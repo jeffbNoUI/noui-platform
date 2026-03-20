@@ -78,13 +78,15 @@ func (h *Handler) EvaluateEligibility(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	member, err := h.fetchMember(req.MemberID)
+	authHeader := r.Header.Get("Authorization")
+
+	member, err := h.fetchMember(req.MemberID, authHeader)
 	if err != nil {
 		apiresponse.WriteError(w, http.StatusBadGateway, "intelligence", "CONNECTOR_ERROR", err.Error())
 		return
 	}
 
-	svcCredit, err := h.fetchServiceCredit(req.MemberID)
+	svcCredit, err := h.fetchServiceCredit(req.MemberID, authHeader)
 	if err != nil {
 		apiresponse.WriteError(w, http.StatusBadGateway, "intelligence", "CONNECTOR_ERROR", err.Error())
 		return
@@ -117,20 +119,21 @@ func (h *Handler) CalculateBenefit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	retDate, _ := time.Parse("2006-01-02", req.RetirementDate)
+	authHeader := r.Header.Get("Authorization")
 
-	member, err := h.fetchMember(req.MemberID)
+	member, err := h.fetchMember(req.MemberID, authHeader)
 	if err != nil {
 		apiresponse.WriteError(w, http.StatusBadGateway, "intelligence", "CONNECTOR_ERROR", err.Error())
 		return
 	}
 
-	svcCredit, err := h.fetchServiceCredit(req.MemberID)
+	svcCredit, err := h.fetchServiceCredit(req.MemberID, authHeader)
 	if err != nil {
 		apiresponse.WriteError(w, http.StatusBadGateway, "intelligence", "CONNECTOR_ERROR", err.Error())
 		return
 	}
 
-	ams, err := h.fetchAMS(req.MemberID)
+	ams, err := h.fetchAMS(req.MemberID, authHeader)
 	if err != nil {
 		apiresponse.WriteError(w, http.StatusBadGateway, "intelligence", "CONNECTOR_ERROR", err.Error())
 		return
@@ -139,7 +142,7 @@ func (h *Handler) CalculateBenefit(w http.ResponseWriter, r *http.Request) {
 	// Only fetch DRO when the case explicitly links to one
 	var dro *models.DROData
 	if req.DROID != nil {
-		droData, err := h.fetchDRO(req.MemberID)
+		droData, err := h.fetchDRO(req.MemberID, authHeader)
 		if err == nil && droData != nil {
 			dro = droData
 		}
@@ -170,20 +173,21 @@ func (h *Handler) CalculatePaymentOptions(w http.ResponseWriter, r *http.Request
 	}
 
 	retDate, _ := time.Parse("2006-01-02", req.RetirementDate)
+	authHeader := r.Header.Get("Authorization")
 
-	member, err := h.fetchMember(req.MemberID)
+	member, err := h.fetchMember(req.MemberID, authHeader)
 	if err != nil {
 		apiresponse.WriteError(w, http.StatusBadGateway, "intelligence", "CONNECTOR_ERROR", err.Error())
 		return
 	}
 
-	svcCredit, err := h.fetchServiceCredit(req.MemberID)
+	svcCredit, err := h.fetchServiceCredit(req.MemberID, authHeader)
 	if err != nil {
 		apiresponse.WriteError(w, http.StatusBadGateway, "intelligence", "CONNECTOR_ERROR", err.Error())
 		return
 	}
 
-	ams, err := h.fetchAMS(req.MemberID)
+	ams, err := h.fetchAMS(req.MemberID, authHeader)
 	if err != nil {
 		apiresponse.WriteError(w, http.StatusBadGateway, "intelligence", "CONNECTOR_ERROR", err.Error())
 		return
@@ -192,7 +196,7 @@ func (h *Handler) CalculatePaymentOptions(w http.ResponseWriter, r *http.Request
 	// Only fetch DRO when the case explicitly links to one
 	var dro *models.DROData
 	if req.DROID != nil {
-		droData, err := h.fetchDRO(req.MemberID)
+		droData, err := h.fetchDRO(req.MemberID, authHeader)
 		if err == nil && droData != nil {
 			dro = droData
 		}
@@ -220,19 +224,21 @@ func (h *Handler) CalculateScenario(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	member, err := h.fetchMember(req.MemberID)
+	authHeader := r.Header.Get("Authorization")
+
+	member, err := h.fetchMember(req.MemberID, authHeader)
 	if err != nil {
 		apiresponse.WriteError(w, http.StatusBadGateway, "intelligence", "CONNECTOR_ERROR", err.Error())
 		return
 	}
 
-	svcCredit, err := h.fetchServiceCredit(req.MemberID)
+	svcCredit, err := h.fetchServiceCredit(req.MemberID, authHeader)
 	if err != nil {
 		apiresponse.WriteError(w, http.StatusBadGateway, "intelligence", "CONNECTOR_ERROR", err.Error())
 		return
 	}
 
-	ams, err := h.fetchAMS(req.MemberID)
+	ams, err := h.fetchAMS(req.MemberID, authHeader)
 	if err != nil {
 		apiresponse.WriteError(w, http.StatusBadGateway, "intelligence", "CONNECTOR_ERROR", err.Error())
 		return
@@ -241,7 +247,7 @@ func (h *Handler) CalculateScenario(w http.ResponseWriter, r *http.Request) {
 	// Only fetch DRO when the case explicitly links to one
 	var dro *models.DROData
 	if req.DROID != nil {
-		droData, err := h.fetchDRO(req.MemberID)
+		droData, err := h.fetchDRO(req.MemberID, authHeader)
 		if err == nil && droData != nil {
 			dro = droData
 		}
@@ -275,26 +281,27 @@ func (h *Handler) CalculateDRO(w http.ResponseWriter, r *http.Request) {
 	}
 
 	retDate, _ := time.Parse("2006-01-02", req.RetirementDate)
+	authHeader := r.Header.Get("Authorization")
 
-	droData, err := h.fetchDRO(req.MemberID)
+	droData, err := h.fetchDRO(req.MemberID, authHeader)
 	if err != nil || droData == nil || !droData.HasDRO {
 		apiresponse.WriteError(w, http.StatusNotFound, "intelligence", "NO_DRO", "No DRO records found for this member")
 		return
 	}
 
-	member, err := h.fetchMember(req.MemberID)
+	member, err := h.fetchMember(req.MemberID, authHeader)
 	if err != nil {
 		apiresponse.WriteError(w, http.StatusBadGateway, "intelligence", "CONNECTOR_ERROR", err.Error())
 		return
 	}
 
-	svcCredit, err := h.fetchServiceCredit(req.MemberID)
+	svcCredit, err := h.fetchServiceCredit(req.MemberID, authHeader)
 	if err != nil {
 		apiresponse.WriteError(w, http.StatusBadGateway, "intelligence", "CONNECTOR_ERROR", err.Error())
 		return
 	}
 
-	ams, err := h.fetchAMS(req.MemberID)
+	ams, err := h.fetchAMS(req.MemberID, authHeader)
 	if err != nil {
 		apiresponse.WriteError(w, http.StatusBadGateway, "intelligence", "CONNECTOR_ERROR", err.Error())
 		return
@@ -354,33 +361,40 @@ func (h *Handler) LogSummary(w http.ResponseWriter, r *http.Request) {
 
 // --- Connector service client methods ---
 
-func (h *Handler) fetchMember(memberID int) (*models.MemberData, error) {
+func (h *Handler) fetchMember(memberID int, authHeader string) (*models.MemberData, error) {
 	url := fmt.Sprintf("%s/api/v1/members/%d", h.ConnectorURL, memberID)
-	return fetchFromConnector[models.MemberData](url)
+	return fetchFromConnector[models.MemberData](url, authHeader)
 }
 
-func (h *Handler) fetchServiceCredit(memberID int) (*models.ServiceCreditData, error) {
+func (h *Handler) fetchServiceCredit(memberID int, authHeader string) (*models.ServiceCreditData, error) {
 	url := fmt.Sprintf("%s/api/v1/members/%d/service-credit", h.ConnectorURL, memberID)
 
 	type svcCreditResp struct {
 		Summary models.ServiceCreditData `json:"summary"`
 	}
-	resp, err := fetchFromConnector[svcCreditResp](url)
+	resp, err := fetchFromConnector[svcCreditResp](url, authHeader)
 	if err != nil {
 		return nil, err
 	}
 	return &resp.Summary, nil
 }
 
-func (h *Handler) fetchAMS(memberID int) (*models.AMSData, error) {
+func (h *Handler) fetchAMS(memberID int, authHeader string) (*models.AMSData, error) {
 	url := fmt.Sprintf("%s/api/v1/members/%d/salary/ams", h.ConnectorURL, memberID)
-	return fetchFromConnector[models.AMSData](url)
+	return fetchFromConnector[models.AMSData](url, authHeader)
 }
 
-func (h *Handler) fetchDRO(memberID int) (*models.DROData, error) {
+func (h *Handler) fetchDRO(memberID int, authHeader string) (*models.DROData, error) {
 	url := fmt.Sprintf("%s/api/v1/members/%d/dro", h.ConnectorURL, memberID)
 
-	resp, err := http.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create DRO request: %w", err)
+	}
+	if authHeader != "" {
+		req.Header.Set("Authorization", authHeader)
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch DRO: %w", err)
 	}
@@ -453,8 +467,15 @@ func parseFlexDate(s string) (time.Time, error) {
 	return time.Parse(time.RFC3339, s)
 }
 
-func fetchFromConnector[T any](url string) (*T, error) {
-	resp, err := http.Get(url)
+func fetchFromConnector[T any](url string, authHeader string) (*T, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request for %s: %w", url, err)
+	}
+	if authHeader != "" {
+		req.Header.Set("Authorization", authHeader)
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch %s: %w", url, err)
 	}

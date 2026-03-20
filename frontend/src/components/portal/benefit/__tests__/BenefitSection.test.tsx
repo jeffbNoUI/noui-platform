@@ -18,14 +18,18 @@ vi.mock('@/lib/memberPortalApi', () => ({
 
 describe('BenefitSection', () => {
   it('renders the section with heading and tab navigation', () => {
-    renderWithProviders(<BenefitSection memberId={10001} personas={['retiree']} />);
+    renderWithProviders(
+      <BenefitSection memberId={10001} personas={['retiree']} retirementDate="2026-04-01" />,
+    );
     expect(screen.getByTestId('benefit-section')).toBeInTheDocument();
     expect(screen.getByText('My Benefit')).toBeInTheDocument();
     expect(screen.getByTestId('benefit-tab-nav')).toBeInTheDocument();
   });
 
   it('shows all 4 tabs for retiree persona', () => {
-    renderWithProviders(<BenefitSection memberId={10001} personas={['retiree']} />);
+    renderWithProviders(
+      <BenefitSection memberId={10001} personas={['retiree']} retirementDate="2026-04-01" />,
+    );
     expect(screen.getByTestId('benefit-tab-payments')).toBeInTheDocument();
     expect(screen.getByTestId('benefit-tab-tax-documents')).toBeInTheDocument();
     expect(screen.getByTestId('benefit-tab-benefit-details')).toBeInTheDocument();
@@ -33,7 +37,9 @@ describe('BenefitSection', () => {
   });
 
   it('shows only 3 tabs for beneficiary persona (no Manage)', () => {
-    renderWithProviders(<BenefitSection memberId={10001} personas={['beneficiary']} />);
+    renderWithProviders(
+      <BenefitSection memberId={10001} personas={['beneficiary']} retirementDate="2026-04-01" />,
+    );
     expect(screen.getByTestId('benefit-tab-payments')).toBeInTheDocument();
     expect(screen.getByTestId('benefit-tab-tax-documents')).toBeInTheDocument();
     expect(screen.getByTestId('benefit-tab-benefit-details')).toBeInTheDocument();
@@ -41,20 +47,26 @@ describe('BenefitSection', () => {
   });
 
   it('defaults to payments tab', () => {
-    renderWithProviders(<BenefitSection memberId={10001} personas={['retiree']} />);
+    renderWithProviders(
+      <BenefitSection memberId={10001} personas={['retiree']} retirementDate="2026-04-01" />,
+    );
     expect(screen.getByTestId('benefit-tab-content-payments')).toBeInTheDocument();
     expect(screen.getByTestId('payments-tab')).toBeInTheDocument();
   });
 
   it('switches tabs when clicked', () => {
-    renderWithProviders(<BenefitSection memberId={10001} personas={['retiree']} />);
+    renderWithProviders(
+      <BenefitSection memberId={10001} personas={['retiree']} retirementDate="2026-04-01" />,
+    );
     fireEvent.click(screen.getByTestId('benefit-tab-tax-documents'));
     expect(screen.getByTestId('benefit-tab-content-tax-documents')).toBeInTheDocument();
     expect(screen.getByTestId('tax-documents-tab')).toBeInTheDocument();
   });
 
   it('marks active tab with aria-selected', () => {
-    renderWithProviders(<BenefitSection memberId={10001} personas={['retiree']} />);
+    renderWithProviders(
+      <BenefitSection memberId={10001} personas={['retiree']} retirementDate="2026-04-01" />,
+    );
     expect(screen.getByTestId('benefit-tab-payments')).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByTestId('benefit-tab-tax-documents')).toHaveAttribute(
       'aria-selected',
@@ -63,12 +75,16 @@ describe('BenefitSection', () => {
   });
 
   it('uses tablist role for navigation', () => {
-    renderWithProviders(<BenefitSection memberId={10001} personas={['retiree']} />);
+    renderWithProviders(
+      <BenefitSection memberId={10001} personas={['retiree']} retirementDate="2026-04-01" />,
+    );
     expect(screen.getByRole('tablist')).toBeInTheDocument();
   });
 
   it('shows subtitle text', () => {
-    renderWithProviders(<BenefitSection memberId={10001} personas={['retiree']} />);
+    renderWithProviders(
+      <BenefitSection memberId={10001} personas={['retiree']} retirementDate="2026-04-01" />,
+    );
     expect(
       screen.getByText('View your benefit payments, tax documents, and account details'),
     ).toBeInTheDocument();
