@@ -136,7 +136,9 @@ export default function MemberPortal({ memberID, retirementDate }: MemberPortalP
         {activeSection === 'retirement-app' && (
           <ApplicationSection memberId={memberID} personas={personas} />
         )}
-        {activeSection === 'benefit' && <BenefitSection memberId={memberID} personas={personas} />}
+        {activeSection === 'benefit' && (
+          <BenefitSection memberId={memberID} personas={personas} retirementDate={retirementDate} />
+        )}
         {activeSection === 'projections' && (
           <DeferredBenefitExplorer memberId={memberID} onBack={goHome} />
         )}
