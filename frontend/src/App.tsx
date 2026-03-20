@@ -484,6 +484,7 @@ function AppInner() {
     return (
       <>
         {cmdPalette}
+        <TopNav viewMode={viewMode} onChangeView={handleChangeView} canAccess={canAccess} />
         <ErrorBoundary portalName="Employer Ops">
           <Suspense fallback={<PortalLoading />}>
             <EmployerOpsDesktop />

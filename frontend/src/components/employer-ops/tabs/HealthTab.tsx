@@ -117,9 +117,9 @@ export default function HealthTab({ orgId }: HealthTabProps) {
             </div>
 
             {/* Category scores row */}
-            {Object.keys(dqScore.categoryScores).length > 0 && (
+            {Object.keys(dqScore.categoryScores ?? {}).length > 0 && (
               <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginTop: 8 }}>
-                {Object.entries(dqScore.categoryScores).map(([cat, score]) => (
+                {Object.entries(dqScore.categoryScores ?? {}).map(([cat, score]) => (
                   <div key={cat}>
                     <div
                       style={{
