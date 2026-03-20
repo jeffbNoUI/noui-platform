@@ -19,7 +19,7 @@ vi.mock('@/lib/helpContent', () => ({
         title: 'Case Intake',
         context: 'Review the initial case submission for completeness.',
         checklist: ['Verify member ID', 'Check retirement date'],
-        rules: [{ code: 'DERP-101', description: 'Minimum 5 years vesting' }],
+        rules: [{ code: 'RULE-101', description: 'Minimum 5 years vesting' }],
         nextAction: 'Proceed to employment verification',
       };
     }
@@ -70,7 +70,7 @@ describe('ContextualHelp', () => {
       <ContextualHelp stageId="intake" proficiency="guided" onClose={() => {}} />,
     );
     await waitFor(() => {
-      expect(screen.getByText('DERP-101')).toBeInTheDocument();
+      expect(screen.getByText('RULE-101')).toBeInTheDocument();
     });
   });
 

@@ -186,7 +186,7 @@ export default function EmployerPortalCommunications({
                 New Thread
               </h3>
               <p style={{ fontSize: 12, color: EC.textTertiary, marginTop: 2 }}>
-                Send a message to DERP employer services
+                Send a message to plan employer services
               </p>
             </div>
             <div style={{ flex: 1 }} />

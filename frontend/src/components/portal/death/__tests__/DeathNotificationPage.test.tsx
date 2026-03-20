@@ -10,7 +10,7 @@ describe('DeathNotificationPage', () => {
     renderWithProviders(<DeathNotificationPage />);
     expect(screen.getByTestId('phone-callout')).toBeInTheDocument();
     expect(screen.getByTestId('phone-number')).toBeInTheDocument();
-    expect(screen.getByText(/1-800-555-DERP/)).toBeInTheDocument();
+    expect(screen.getByText(/1-800-555-0100/)).toBeInTheDocument();
   });
 
   it('uses compassionate language in heading', () => {

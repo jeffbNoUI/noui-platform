@@ -33,8 +33,8 @@ const SYSTEM_PARAMETERS = [
     value: '10 seconds',
     notes: 'Service health check frequency',
   },
-  { parameter: 'Employee Contribution', value: '8.45%', notes: 'DERP plan provision' },
-  { parameter: 'Employer Contribution', value: '17.95%', notes: 'DERP plan provision' },
+  { parameter: 'Employee Contribution', value: '8.45%', notes: 'Plan provision' },
+  { parameter: 'Employer Contribution', value: '17.95%', notes: 'Plan provision' },
   { parameter: 'Vesting Period', value: '5 years', notes: 'All tiers' },
   { parameter: 'Normal Retirement Age', value: '65', notes: 'All tiers, with 5 years service' },
 ];

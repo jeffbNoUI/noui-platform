@@ -21,7 +21,7 @@ const SAMPLE_ITEMS: VerificationItem[] = [
   {
     field_name: 'employer',
     label: 'Employer',
-    current_value: 'DERP',
+    current_value: 'Retirement Plan',
     category: 'employment',
     verified: null,
   },
