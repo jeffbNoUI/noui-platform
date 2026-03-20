@@ -5,6 +5,7 @@ FROM golang:1.22-alpine AS builder
 WORKDIR /app
 
 # Copy shared packages (required by replace directives in go.mod)
+COPY apiresponse/ apiresponse/
 COPY auth/ auth/
 COPY cache/ cache/
 COPY dbcontext/ dbcontext/
