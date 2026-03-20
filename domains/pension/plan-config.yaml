@@ -1,0 +1,102 @@
+# Plan Configuration — all plan-specific parameters
+# This file is the single source of truth for plan rules.
+# The rules engine loads these values at startup.
+
+plan:
+  name: "Retirement Plan"
+  short_name: "the Plan"
+
+tiers:
+  - id: 1
+    hire_date_before: "2004-09-01"    # Tier 1: hired before this date
+  - id: 2
+    hire_date_before: "2011-07-01"    # Tier 2: hired before this date
+  - id: 3
+    hire_date_before: null             # Tier 3: everyone else
+
+benefit_multipliers:
+  1: 0.020   # 2.0%
+  2: 0.015   # 1.5%
+  3: 0.015   # 1.5%
+
+ams_window_months:
+  1: 36
+  2: 36
+  3: 60
+
+rule_of_n:
+  thresholds:
+    1: 75.0
+    2: 75.0
+    3: 85.0
+  min_ages:
+    1: 55
+    2: 55
+    3: 60
+
+early_retirement:
+  min_ages:
+    1: 55
+    2: 55
+    3: 60
+  reduction_tables:
+    tiers_1_2:   # 3% per year under 65
+      55: 0.70
+      56: 0.73
+      57: 0.76
+      58: 0.79
+      59: 0.82
+      60: 0.85
+      61: 0.88
+      62: 0.91
+      63: 0.94
+      64: 0.97
+      65: 1.00
+    tier_3:      # 6% per year under 65
+      60: 0.70
+      61: 0.76
+      62: 0.82
+      63: 0.88
+      64: 0.94
+      65: 1.00
+  reduction_rate_per_year:
+    1: 3.0
+    2: 3.0
+    3: 6.0
+
+death_benefits:
+  tiers_1_2:     # $250/year reduction under 65
+    55: 2500
+    56: 2750
+    57: 3000
+    58: 3250
+    59: 3500
+    60: 3750
+    61: 4000
+    62: 4250
+    63: 4500
+    64: 4750
+    65: 5000
+  tier_3:        # $500/year reduction under 65
+    60: 2500
+    61: 3000
+    62: 3500
+    63: 4000
+    64: 4500
+    65: 5000
+
+contributions:
+  employee_rate: 0.0845   # 8.45%
+  employer_rate: 0.1795   # 17.95%
+
+vesting_years: 5.0
+normal_retirement_age: 65
+
+ipr:
+  non_medicare: 12.50    # $/year of earned service
+  medicare: 6.25         # $/year of earned service
+
+js_factors:              # Illustrative — actual from plan actuarial tables
+  100: 0.8850
+  75: 0.9150
+  50: 0.9450
