@@ -43,6 +43,7 @@ services:
       - ./domains/pension/schema/023_employer_terminations.sql:/docker-entrypoint-initdb.d/032_employer_terminations.sql
       - ./domains/pension/schema/024_employer_waret.sql:/docker-entrypoint-initdb.d/033_employer_waret.sql
       - ./domains/pension/schema/025_employer_scp.sql:/docker-entrypoint-initdb.d/034_employer_scp.sql
+      - ./db/migrations/030_migration_schema.sql:/docker-entrypoint-initdb.d/035_migration_schema.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U noui"]
       interval: 5s
@@ -425,6 +426,36 @@ services:
       PORT: "8090"
       CORS_ORIGIN: "http://localhost:3000"
 
+  migration:
+    build:
+      context: ./platform
+      dockerfile: migration/Dockerfile
+    ports:
+      - "8100:8100"
+    environment:
+      PORT: "8100"
+      DB_HOST: pgbouncer
+      DB_PORT: "6432"
+      DB_USER: noui
+      DB_PASSWORD: noui
+      DB_NAME: noui
+      DB_SSLMODE: disable
+      DB_MAX_OPEN_CONNS: "8"
+      DB_MAX_IDLE_CONNS: "3"
+      CORS_ORIGIN: "http://localhost:3000"
+      INTELLIGENCE_URL: "http://migration-intelligence:8101"
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+
+  migration-intelligence:
+    build:
+      context: ./migration-intelligence
+    ports:
+      - "8101:8101"
+    environment:
+      PORT: "8101"
+
   healthagg:
     build:
       context: ./platform
@@ -433,7 +464,7 @@ services:
       - "8091:8091"
     environment:
       PORT: "8091"
-      HEALTH_SERVICES: "dataaccess:http://dataaccess:8081,intelligence:http://intelligence:8082,crm:http://crm:8083,correspondence:http://correspondence:8085,dataquality:http://dataquality:8086,knowledgebase:http://knowledgebase:8087,casemanagement:http://casemanagement:8088,preferences:http://preferences:8089,connector:http://connector:8090:/healthz,issues:http://issues:8092,security:http://security:8093,employer-portal:http://employer-portal:8094,employer-reporting:http://employer-reporting:8095,employer-enrollment:http://employer-enrollment:8096,employer-terminations:http://employer-terminations:8097,employer-waret:http://employer-waret:8098,employer-scp:http://employer-scp:8099"
+      HEALTH_SERVICES: "dataaccess:http://dataaccess:8081,intelligence:http://intelligence:8082,crm:http://crm:8083,correspondence:http://correspondence:8085,dataquality:http://dataquality:8086,knowledgebase:http://knowledgebase:8087,casemanagement:http://casemanagement:8088,preferences:http://preferences:8089,connector:http://connector:8090:/healthz,issues:http://issues:8092,security:http://security:8093,employer-portal:http://employer-portal:8094,employer-reporting:http://employer-reporting:8095,employer-enrollment:http://employer-enrollment:8096,employer-terminations:http://employer-terminations:8097,employer-waret:http://employer-waret:8098,employer-scp:http://employer-scp:8099,migration:http://migration:8100,migration-intelligence:http://migration-intelligence:8101"
       CORS_ORIGIN: "http://localhost:3000"
     depends_on:
       - dataaccess
@@ -453,6 +484,8 @@ services:
       - employer-terminations
       - employer-waret
       - employer-scp
+      - migration
+      - migration-intelligence
 
   frontend:
     build:
