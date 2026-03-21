@@ -7,12 +7,14 @@ import (
 
 	"github.com/noui/platform/apiresponse"
 	"github.com/noui/platform/migration/intelligence"
+	"github.com/noui/platform/migration/ws"
 )
 
 // Handler holds dependencies for API handlers.
 type Handler struct {
 	DB          *sql.DB
 	IntelClient intelligence.Scorer // nil-safe: handlers degrade to template-only if nil
+	Hub         *ws.Hub             // WebSocket hub for broadcasting events (nil-safe)
 }
 
 // NewHandler creates a Handler with the given database connection.
@@ -54,6 +56,34 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/migration/batches/{id}/reconcile", h.ReconcileBatch)
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/reconciliation", h.GetReconciliation)
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/reconciliation/p1", h.GetP1Issues)
+
+	// Dashboard
+	mux.HandleFunc("GET /api/v1/migration/dashboard/summary", h.DashboardSummary)
+	mux.HandleFunc("GET /api/v1/migration/dashboard/system-health", h.SystemHealth)
+
+	// Risks
+	mux.HandleFunc("GET /api/v1/migration/risks", h.ListRisks)
+	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/risks", h.CreateRisk)
+	mux.HandleFunc("PUT /api/v1/migration/risks/{id}", h.UpdateRisk)
+	mux.HandleFunc("DELETE /api/v1/migration/risks/{id}", h.DeleteRisk)
+
+	// Exception clusters
+	mux.HandleFunc("GET /api/v1/migration/batches/{id}/exception-clusters", h.ListExceptionClusters)
+	mux.HandleFunc("POST /api/v1/migration/exception-clusters/{id}/apply", h.ApplyCluster)
+
+	// Reconciliation detail
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/reconciliation/summary", h.ReconciliationSummary)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/reconciliation/tier/{n}", h.ReconciliationByTier)
+
+	// Compare
+	mux.HandleFunc("GET /api/v1/migration/compare", h.CompareEngagements)
+
+	// Source database
+	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/source", h.ConfigureSource)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/source/tables", h.DiscoverTables)
+
+	// Events
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/events", h.ListEvents)
 }
 
 // HealthCheck returns service status information.

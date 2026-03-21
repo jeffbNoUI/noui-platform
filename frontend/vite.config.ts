@@ -129,6 +129,15 @@ export default defineConfig({
         target: 'http://localhost:8081',
         changeOrigin: true,
       },
+      // Migration service
+      '/api/v1/migration': {
+        target: 'http://localhost:8100',
+        changeOrigin: true,
+      },
+      '/ws/migration': {
+        target: 'ws://localhost:8100',
+        ws: true,
+      },
       // Employer domain services (ports 8094-8099)
       '/api/v1/employer': {
         target: 'http://localhost:8094',

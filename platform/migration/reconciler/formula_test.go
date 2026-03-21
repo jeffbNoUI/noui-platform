@@ -10,7 +10,8 @@ import (
 )
 
 // fixtureFile is the path to the shared YAML test fixtures.
-const fixtureFile = "testdata/reconciliation_fixtures.yaml"
+// Both Go and Python test suites read from this single canonical file.
+const fixtureFile = "../../../migration-simulation/fixtures/reconciliation_fixtures.yaml"
 
 type fixtureDoc struct {
 	TestCases []fixtureCase `yaml:"test_cases"`

@@ -41,7 +41,7 @@ func ConfigFromEnv() Config {
 // Connect establishes a database connection with retry logic.
 func Connect(cfg Config) (*sql.DB, error) {
 	connStr := fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s binary_parameters=yes",
 		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.DBName, cfg.SSLMode,
 	)
 

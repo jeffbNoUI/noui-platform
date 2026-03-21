@@ -8,10 +8,10 @@ import (
 	"github.com/noui/platform/migration/models"
 )
 
-// engagementCols matches the 8-column RETURNING clause used by engagement queries.
+// engagementCols matches the 9-column RETURNING clause used by engagement queries.
 var engagementCols = []string{
 	"engagement_id", "tenant_id", "source_system_name", "canonical_schema_version",
-	"status", "quality_baseline_approved_at", "created_at", "updated_at",
+	"status", "quality_baseline_approved_at", "source_connection", "created_at", "updated_at",
 }
 
 func TestCreateEngagement(t *testing.T) {
@@ -26,7 +26,7 @@ func TestCreateEngagement(t *testing.T) {
 		WithArgs("tenant-1", "LegacyPAS").
 		WillReturnRows(sqlmock.NewRows(engagementCols).AddRow(
 			"eng-001", "tenant-1", "LegacyPAS", "1.0",
-			"PROFILING", nil, now, now,
+			"PROFILING", nil, nil, now, now,
 		))
 
 	e, err := CreateEngagement(db, "tenant-1", "LegacyPAS")
@@ -59,7 +59,7 @@ func TestGetEngagement(t *testing.T) {
 		WithArgs("eng-001").
 		WillReturnRows(sqlmock.NewRows(engagementCols).AddRow(
 			"eng-001", "tenant-1", "LegacyPAS", "1.0",
-			"MAPPING", nil, now, now,
+			"MAPPING", nil, nil, now, now,
 		))
 
 	e, err := GetEngagement(db, "eng-001")
@@ -115,7 +115,7 @@ func TestUpdateEngagementStatus(t *testing.T) {
 		WithArgs("eng-001", "MAPPING").
 		WillReturnRows(sqlmock.NewRows(engagementCols).AddRow(
 			"eng-001", "tenant-1", "LegacyPAS", "1.0",
-			"MAPPING", nil, now, now,
+			"MAPPING", nil, nil, now, now,
 		))
 
 	e, err := UpdateEngagementStatus(db, "eng-001", models.StatusMapping)
@@ -139,8 +139,8 @@ func TestListEngagements(t *testing.T) {
 
 	now := time.Now().UTC()
 	rows := sqlmock.NewRows(engagementCols).
-		AddRow("eng-002", "tenant-1", "SystemB", "1.0", "PROFILING", nil, now, now).
-		AddRow("eng-001", "tenant-1", "SystemA", "1.0", "MAPPING", nil, now.Add(-time.Hour), now)
+		AddRow("eng-002", "tenant-1", "SystemB", "1.0", "PROFILING", nil, nil, now, now).
+		AddRow("eng-001", "tenant-1", "SystemA", "1.0", "MAPPING", nil, nil, now.Add(-time.Hour), now)
 
 	mock.ExpectQuery("SELECT .+ FROM migration.engagement").
 		WithArgs("tenant-1").
