@@ -1,5 +1,48 @@
 # noui-platform — Build History
 
+## Migration Engine Phase 3: Reconciliation + Feedback (2026-03-21)
+
+**Branch:** `claude/great-gould`
+**PR:** #124 (merged to main)
+**Goal:** Three-tier reconciliation system with weighted scoring gate, mismatch analysis, and corpus abstraction.
+
+**What was built:**
+
+### Go — Reconciler Package (`platform/migration/reconciler/`)
+- `engine.go` — Shared types (VarianceCategory, ReconciliationTier, MemberStatus, ReconciliationResult), ClassifyVariance with thresholds at $0.50 (MATCH) and $25.00 (MINOR/MAJOR boundary)
+- `formula.go` — Benefit formula using `math/big.Rat` exclusively. CalcRetirementBenefit, RecomputeFromStoredInputs, RoundHalfUp (HALF_UP to 2dp). Plan registry: DB_MAIN (multiplier=0.20), DB_T2 (multiplier=0.18)
+- `tier1.go` — ReconcileTier1: queries stored legacy calculations, recomputes benefit, compares vs stored value, classifies variance
+- `tier2.go` — ReconcileTier2: reverse-engineers benefit from payment history (most recent REGULAR payment), ±2% tolerance gate for COLA/tax variability
+- `tier3.go` — ReconcileTier3: aggregate statistical validation — salary outliers (>2σ from batch mean), contribution totals ($0.01 threshold), service credit vs employment span (>10% discrepancy), member counts by status
+- `scoring.go` — ComputeGate (weighted_score = (match×1.0 + minor×0.5) / (tier1+tier2 total)), AssignPriority (P1/P2/P3), PrioritizeResults. Gate: score ≥ 0.95 AND P1 unresolved == 0
+- YAML test fixtures: 5 cases for cross-language verification
+
+### Go — API Endpoints (`platform/migration/api/`)
+- POST `/api/v1/migration/batches/{id}/reconcile` — runs Tier 1+2, returns GateResult
+- GET `/api/v1/migration/engagements/{id}/reconciliation` — placeholder
+- GET `/api/v1/migration/engagements/{id}/reconciliation/p1` — placeholder
+
+### Python — Mismatch Analysis (`migration-intelligence/reconciliation/`)
+- `analysis.py` — detect_systematic_patterns: groups by (domain, plan_code, direction), flags systematic if ≥5 members + same direction + CV<0.3
+- `corrections.py` — suggest_corrections: MAPPING_FIX (tight CV≤0.1) or DATA_FIX (higher CV), confidence based on member count and CV
+
+### Python — Corpus Abstraction (`migration-intelligence/corpus/`)
+- `store.py` — DecisionStore with tenant-isolated in-memory storage
+- `abstractor.py` — FeatureAbstractor strips all identifiers (tenant_id, table/column names), keeps only quantized statistical features
+- `anonymizer.py` — k-anonymity: quantize_null_rate (nearest 0.05), quantize_cardinality (LOW/MED/HIGH/UNIQUE), categorize_data_type
+
+### Key Decisions
+- Formula multiplier set to 0.20 (plan comment said 0.02 but that produces 229.17, not 2291.67 — spec typo)
+- Tier 3 salary outlier detection uses peer-based mean (batch data), not benchmark values — benchmark map gates which years to check
+- Tier 3 contribution query uses `::TEXT` cast for PostgreSQL driver compatibility
+- Zero-canonical amounts in Tier 2 routed through error handler for populated Details field
+
+**Tests:** Go: 10 packages, ~165 tests. Python: 81 tests. Zero regressions.
+
+**Next:** Task 25 (cross-language fixtures), Migration Management Frontend, Task 26 (two-source proof E2E). Starter prompt at `docs/plans/2026-03-21-migration-phase3-completion-starter.md`.
+
+---
+
 ## Employer Ops Agent Desktop (2026-03-19)
 
 **Branch:** `claude/strange-cori`
