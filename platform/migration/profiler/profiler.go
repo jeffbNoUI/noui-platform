@@ -35,9 +35,13 @@ type ProfileConfig struct {
 // and returns the aggregate profile. The overall score is the arithmetic mean
 // of all six dimension scores.
 func ProfileTable(db *sql.DB, cfg ProfileConfig) (*TableProfile, error) {
-	// Get row count
+	// Get row count — validate table name first
+	quotedTable, err := quoteIdent(cfg.TableName)
+	if err != nil {
+		return nil, fmt.Errorf("invalid table name %q: %w", cfg.TableName, err)
+	}
 	var rowCount int
-	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", cfg.TableName)
+	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", quotedTable)
 	if err := db.QueryRow(query).Scan(&rowCount); err != nil {
 		return nil, fmt.Errorf("count rows for %s: %w", cfg.TableName, err)
 	}

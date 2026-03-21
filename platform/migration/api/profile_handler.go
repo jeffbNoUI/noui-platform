@@ -54,7 +54,7 @@ func (h *Handler) ProfileEngagement(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			slog.Error("failed to profile table", "error", err, "table", cfg.TableName, "engagement_id", id)
 			apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "PROFILE_ERROR",
-				fmt.Sprintf("failed to profile table %s: %v", cfg.TableName, err))
+				fmt.Sprintf("failed to profile table %s", cfg.TableName))
 			return
 		}
 

@@ -452,6 +452,60 @@ func TestProfileUniqueness_NoKeys(t *testing.T) {
 	}
 }
 
+func TestQuoteIdent_ValidIdentifiers(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"members", `"members"`},
+		{"first_name", `"first_name"`},
+		{"src_pas.member", `"src_pas.member"`},
+		{"BIRTH_DT", `"BIRTH_DT"`},
+		{"col1", `"col1"`},
+	}
+	for _, tt := range tests {
+		got, err := quoteIdent(tt.input)
+		if err != nil {
+			t.Errorf("quoteIdent(%q) error: %v", tt.input, err)
+			continue
+		}
+		if got != tt.want {
+			t.Errorf("quoteIdent(%q) = %q, want %q", tt.input, got, tt.want)
+		}
+	}
+}
+
+func TestQuoteIdent_UnsafeIdentifiers(t *testing.T) {
+	unsafe := []string{
+		"",
+		"table; DROP TABLE members",
+		"col' OR 1=1--",
+		"col\"; DROP TABLE x;--",
+		"table name with spaces",
+		"table()",
+		"1startswithnumber",
+	}
+	for _, id := range unsafe {
+		_, err := quoteIdent(id)
+		if err == nil {
+			t.Errorf("quoteIdent(%q) should have returned error for unsafe identifier", id)
+		}
+	}
+}
+
+func TestProfileCompleteness_UnsafeTableName(t *testing.T) {
+	db, _, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock.New() error: %v", err)
+	}
+	defer db.Close()
+
+	_, err = ProfileCompleteness(db, "table; DROP TABLE x", []string{"col1"})
+	if err == nil {
+		t.Error("expected error for unsafe table name, got nil")
+	}
+}
+
 func TestProfileTable_Integration(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {
@@ -459,8 +513,8 @@ func TestProfileTable_Integration(t *testing.T) {
 	}
 	defer db.Close()
 
-	// Row count
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM members").
+	// Row count — table name is now quoted
+	mock.ExpectQuery(`SELECT COUNT\(\*\) FROM "members"`).
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(500))
 
 	// Completeness: 500 rows, 10 nulls in col1

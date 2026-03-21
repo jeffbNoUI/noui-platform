@@ -6,8 +6,27 @@ import (
 	"database/sql"
 	"fmt"
 	"math"
+	"regexp"
+	"strings"
 	"time"
 )
+
+// validIdentifier matches safe SQL identifiers: letters, digits, underscores.
+// Used to prevent SQL injection when interpolating table/column names.
+var validIdentifier = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_.]*$`)
+
+// quoteIdent validates and double-quotes a SQL identifier to prevent injection.
+// Returns an error if the identifier contains unsafe characters.
+func quoteIdent(id string) (string, error) {
+	if id == "" {
+		return "", fmt.Errorf("empty identifier")
+	}
+	if !validIdentifier.MatchString(id) {
+		return "", fmt.Errorf("unsafe SQL identifier: %q", id)
+	}
+	// Double-quote to handle reserved words and ensure safety
+	return `"` + strings.ReplaceAll(id, `"`, `""`) + `"`, nil
+}
 
 // PatternCheck defines a regex pattern to validate against a column's values.
 type PatternCheck struct {
@@ -38,16 +57,21 @@ func ProfileCompleteness(db *sql.DB, table string, requiredColumns []string) (Qu
 		return dim, nil
 	}
 
+	quotedTable, err := quoteIdent(table)
+	if err != nil {
+		return dim, fmt.Errorf("profile completeness: %w", err)
+	}
+
 	// Build a query that counts nulls for each required column in one pass.
-	// SELECT COUNT(*) AS total,
-	//        SUM(CASE WHEN col1 IS NULL THEN 1 ELSE 0 END) AS null_col1,
-	//        ...
-	// FROM table
 	query := "SELECT COUNT(*)"
 	for _, col := range requiredColumns {
-		query += fmt.Sprintf(", SUM(CASE WHEN %s IS NULL THEN 1 ELSE 0 END)", col)
+		qc, err := quoteIdent(col)
+		if err != nil {
+			return dim, fmt.Errorf("profile completeness: %w", err)
+		}
+		query += fmt.Sprintf(", SUM(CASE WHEN %s IS NULL THEN 1 ELSE 0 END)", qc)
 	}
-	query += fmt.Sprintf(" FROM %s", table)
+	query += " FROM " + quotedTable
 
 	row := db.QueryRow(query)
 
@@ -91,11 +115,20 @@ func ProfileAccuracy(db *sql.DB, table string, patternChecks []PatternCheck) (Qu
 		return dim, nil
 	}
 
+	quotedTable, err := quoteIdent(table)
+	if err != nil {
+		return dim, fmt.Errorf("profile accuracy: %w", err)
+	}
+
 	var totalMatchRate float64
 	for _, pc := range patternChecks {
+		qc, err := quoteIdent(pc.Column)
+		if err != nil {
+			return dim, fmt.Errorf("profile accuracy: %w", err)
+		}
 		query := fmt.Sprintf(
 			"SELECT COUNT(*), SUM(CASE WHEN %s ~ $1 THEN 1 ELSE 0 END) FROM %s WHERE %s IS NOT NULL",
-			pc.Column, table, pc.Column,
+			qc, quotedTable, qc,
 		)
 		var total, matched int64
 		if err := db.QueryRow(query, pc.Pattern).Scan(&total, &matched); err != nil {
@@ -124,13 +157,30 @@ func ProfileConsistency(db *sql.DB, table string, fkRefs []FKReference) (Quality
 		return dim, nil
 	}
 
+	quotedTable, err := quoteIdent(table)
+	if err != nil {
+		return dim, fmt.Errorf("profile consistency: %w", err)
+	}
+
 	var totalValidRate float64
 	for _, fk := range fkRefs {
+		qCol, err := quoteIdent(fk.Column)
+		if err != nil {
+			return dim, fmt.Errorf("profile consistency: %w", err)
+		}
+		qRefCol, err := quoteIdent(fk.ReferencedColumn)
+		if err != nil {
+			return dim, fmt.Errorf("profile consistency: %w", err)
+		}
+		qRefTable, err := quoteIdent(fk.ReferencedTable)
+		if err != nil {
+			return dim, fmt.Errorf("profile consistency: %w", err)
+		}
 		query := fmt.Sprintf(
 			`SELECT COUNT(*),
 			        SUM(CASE WHEN %s IN (SELECT %s FROM %s) THEN 1 ELSE 0 END)
 			 FROM %s WHERE %s IS NOT NULL`,
-			fk.Column, fk.ReferencedColumn, fk.ReferencedTable, table, fk.Column,
+			qCol, qRefCol, qRefTable, quotedTable, qCol,
 		)
 		var total, valid int64
 		if err := db.QueryRow(query).Scan(&total, &valid); err != nil {
@@ -161,12 +211,21 @@ func ProfileTimeliness(db *sql.DB, table string, dateColumns []string) (QualityD
 		return dim, nil
 	}
 
+	quotedTable, err := quoteIdent(table)
+	if err != nil {
+		return dim, fmt.Errorf("profile timeliness: %w", err)
+	}
+
 	// Find the most recent date across all date columns
 	var mostRecent time.Time
 	found := false
 
 	for _, col := range dateColumns {
-		query := fmt.Sprintf("SELECT MAX(%s) FROM %s", col, table)
+		qc, err := quoteIdent(col)
+		if err != nil {
+			return dim, fmt.Errorf("profile timeliness: %w", err)
+		}
+		query := fmt.Sprintf("SELECT MAX(%s) FROM %s", qc, quotedTable)
 		var maxDate sql.NullTime
 		if err := db.QueryRow(query).Scan(&maxDate); err != nil {
 			return dim, fmt.Errorf("profile timeliness for column %s: %w", col, err)
@@ -207,11 +266,20 @@ func ProfileValidity(db *sql.DB, table string, rules []BusinessRule) (QualityDim
 		return dim, nil
 	}
 
+	quotedTable, err := quoteIdent(table)
+	if err != nil {
+		return dim, fmt.Errorf("profile validity: %w", err)
+	}
+
 	var totalPassRate float64
 	for _, rule := range rules {
+		// NOTE: rule.Condition is a SQL boolean expression (e.g. "salary > 0").
+		// It cannot be parameterized. This function MUST only be called with
+		// system-defined rules, never with user-supplied conditions. The API
+		// handler is responsible for validating or restricting conditions.
 		query := fmt.Sprintf(
 			"SELECT COUNT(*), SUM(CASE WHEN %s THEN 1 ELSE 0 END) FROM %s",
-			rule.Condition, table,
+			rule.Condition, quotedTable,
 		)
 		var total, passed int64
 		if err := db.QueryRow(query).Scan(&total, &passed); err != nil {
@@ -240,15 +308,25 @@ func ProfileUniqueness(db *sql.DB, table string, keyColumns []string) (QualityDi
 		return dim, nil
 	}
 
-	// Build column list for GROUP BY
-	colList := keyColumns[0]
-	for _, col := range keyColumns[1:] {
-		colList += ", " + col
+	quotedTable, err := quoteIdent(table)
+	if err != nil {
+		return dim, fmt.Errorf("profile uniqueness: %w", err)
 	}
+
+	// Build quoted column list for COUNT(DISTINCT (col1, col2)) — PostgreSQL row-value syntax
+	quotedCols := make([]string, len(keyColumns))
+	for i, col := range keyColumns {
+		qc, err := quoteIdent(col)
+		if err != nil {
+			return dim, fmt.Errorf("profile uniqueness: %w", err)
+		}
+		quotedCols[i] = qc
+	}
+	colList := strings.Join(quotedCols, ", ")
 
 	query := fmt.Sprintf(
 		"SELECT COUNT(*), COUNT(DISTINCT (%s)) FROM %s",
-		colList, table,
+		colList, quotedTable,
 	)
 
 	var total, distinct int64
