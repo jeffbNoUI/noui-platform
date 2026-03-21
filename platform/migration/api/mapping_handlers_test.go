@@ -82,7 +82,7 @@ func TestGenerateMappings_Success(t *testing.T) {
 		WithArgs("eng-001").
 		WillReturnRows(sqlmock.NewRows(engagementCols).AddRow(
 			"eng-001", "tenant-1", "LegacyPAS", "1.0",
-			"MAPPING", &approvedAt, now, now,
+			"MAPPING", &approvedAt, nil, now, now,
 		))
 
 	// Transaction: BEGIN + INSERTs + COMMIT
@@ -155,7 +155,7 @@ func TestGenerateMappings_QualityGateNotApproved(t *testing.T) {
 		WithArgs("eng-001").
 		WillReturnRows(sqlmock.NewRows(engagementCols).AddRow(
 			"eng-001", "tenant-1", "LegacyPAS", "1.0",
-			"PROFILING", nil, now, now,
+			"PROFILING", nil, nil, now, now,
 		))
 
 	body, _ := json.Marshal(GenerateMappingsRequest{
@@ -214,7 +214,7 @@ func TestGenerateMappings_UnknownConceptTag(t *testing.T) {
 		WithArgs("eng-001").
 		WillReturnRows(sqlmock.NewRows(engagementCols).AddRow(
 			"eng-001", "tenant-1", "LegacyPAS", "1.0",
-			"MAPPING", &approvedAt, now, now,
+			"MAPPING", &approvedAt, nil, now, now,
 		))
 
 	// Transaction begins before table loop; rolled back on error.
@@ -244,7 +244,7 @@ func TestGenerateMappings_NoIntelClient(t *testing.T) {
 		WithArgs("eng-001").
 		WillReturnRows(sqlmock.NewRows(engagementCols).AddRow(
 			"eng-001", "tenant-1", "LegacyPAS", "1.0",
-			"MAPPING", &approvedAt, now, now,
+			"MAPPING", &approvedAt, nil, now, now,
 		))
 
 	// Transaction: BEGIN + INSERT + COMMIT
@@ -291,7 +291,7 @@ func TestGenerateMappings_InvalidBody(t *testing.T) {
 		WithArgs("eng-001").
 		WillReturnRows(sqlmock.NewRows(engagementCols).AddRow(
 			"eng-001", "tenant-1", "LegacyPAS", "1.0",
-			"MAPPING", &approvedAt, now, now,
+			"MAPPING", &approvedAt, nil, now, now,
 		))
 
 	w := serveMux(h, "POST", "/api/v1/migration/engagements/eng-001/generate-mappings", []byte("{bad"))

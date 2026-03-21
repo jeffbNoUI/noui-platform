@@ -1,5 +1,46 @@
 # noui-platform — Build History
 
+## Migration Management Frontend + Source DB Connection (2026-03-21)
+
+**Branch:** `claude/laughing-nash`
+
+### What Was Built
+- **Migration Management UI** — Full frontend with dashboard, engagement detail, batch detail views
+  - Dashboard: 4 summary cards (live API), engagement list, risk panel, system health bar
+  - Engagement Detail: 6-phase stepper, 5 tab panels, activity log sidebar
+  - 3 Recharts visualizations: RadarChart (ISO 8000), GateScoreGauge, TierFunnel
+  - 4 dialogs: Create Engagement, Add Risk, Configure Source, Run Quality Profile
+- **Backend: 16 new API endpoints** — Dashboard summary, system health, risk CRUD, exception clusters, reconciliation detail, compare, events, source connection, table discovery
+- **WebSocket hub** — Per-engagement channels with gorilla/websocket, polling fallback in frontend
+- **Source DB connection** — SQL Server + PostgreSQL drivers, test connection, table discovery via INFORMATION_SCHEMA
+- **Integration wiring** — ViewMode, App.tsx lazy route, Vite proxy (REST + WS)
+
+### New Dependencies
+- `github.com/microsoft/go-mssqldb v1.7.2` — SQL Server source DB support
+- `github.com/gorilla/websocket v1.5.3` — WebSocket hub
+- Dockerfile Go version: 1.22 → 1.25
+
+### DB Migrations
+- `031_migration_risk_event.sql` — risk, event, exception_cluster tables
+- `032_source_connection.sql` — source_connection JSONB on engagement
+
+### Key Decisions
+- SQL Server listed first in driver selector (most common PAS database)
+- Oracle deferred — requires CGO + Oracle Instant Client
+- `binary_parameters=yes` in postgres DSN for pgbouncer compatibility
+- JSONB writes use `$2::text::jsonb` cast to avoid pgbouncer binary encoding issue
+
+### Tests
+- Go: 12 packages, all passing
+- Frontend: 231 test files, 1838 tests passing
+
+### What's Next
+- Complete Quality Profile flow (table selection → profile → radar chart)
+- Full Mapping Panel (agreement status, approve/reject, code tables)
+- Exception triage UI (P1 individual, P2/P3 clusters)
+- Reconciliation panel (gate score gauge, tier funnel)
+- Design polish (header truncation, stepper scroll position)
+
 ## Employer Ops Agent Desktop (2026-03-19)
 
 **Branch:** `claude/strange-cori`

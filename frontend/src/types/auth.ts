@@ -11,7 +11,8 @@ export type ViewMode =
   | 'retirement-app'
   | 'member-dashboard'
   | 'rules-explorer'
-  | 'demo-cases';
+  | 'demo-cases'
+  | 'migration-management';
 
 export interface AuthUser {
   id: string;
@@ -35,6 +36,7 @@ export const ROLE_ACCESS: Record<UserRole, ViewMode[]> = {
     'member-dashboard',
     'rules-explorer',
     'demo-cases',
+    'migration-management',
   ],
   staff: [
     'staff',
@@ -48,6 +50,7 @@ export const ROLE_ACCESS: Record<UserRole, ViewMode[]> = {
     'vendor',
     'rules-explorer',
     'demo-cases',
+    'migration-management',
   ],
   member: ['portal', 'member-dashboard'],
   employer: ['employer'],

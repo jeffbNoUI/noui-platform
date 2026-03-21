@@ -17,6 +17,7 @@ import (
 	"github.com/noui/platform/logging"
 	"github.com/noui/platform/migration/api"
 	"github.com/noui/platform/migration/db"
+	"github.com/noui/platform/migration/ws"
 	"github.com/noui/platform/ratelimit"
 )
 
@@ -34,9 +35,19 @@ func main() {
 	}
 	defer database.Close()
 
+	hub := ws.NewHub()
+	go hub.Run()
+
 	counters := healthutil.NewRequestCounters()
 	handler := api.NewHandler(database)
+	handler.Hub = hub
 	mux := http.NewServeMux()
+
+	// WebSocket route on bare mux — bypasses auth/ratelimit/dbcontext middleware chain.
+	mux.HandleFunc("GET /ws/migration/{engagementId}", func(w http.ResponseWriter, r *http.Request) {
+		ws.ServeWS(hub, w, r)
+	})
+
 	handler.RegisterRoutes(mux)
 	mux.HandleFunc("GET /health/detail", healthutil.NewDetailHandler("migration", "0.1.0", startedAt, database, counters))
 	mux.HandleFunc("GET /ready", healthutil.NewReadyHandler("migration", database))

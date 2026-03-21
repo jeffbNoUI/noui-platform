@@ -127,6 +127,7 @@ export default function StaffPortal({ onOpenCase, onViewMember, onChangeView }: 
               { key: 'employer', label: 'Employer Portal', icon: '\ud83c\udfe2' },
               { key: 'employer-ops', label: 'Employer Ops', icon: '\ud83d\udcca' },
               { key: 'vendor', label: 'Vendor Portal', icon: '\ud83c\udfe5' },
+              { key: 'migration-management', label: 'Migration', icon: '\ud83d\udd04' },
             ] as const
           ).map((item) => (
             <button

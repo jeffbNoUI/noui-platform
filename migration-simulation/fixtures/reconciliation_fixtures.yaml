@@ -1,0 +1,63 @@
+# Cross-language verification fixtures for benefit formula.
+# Both Go (math/big.Rat) and Python (decimal.Decimal) must produce
+# identical results on every case — $0.00 variance.
+#
+# Plan registry:
+#   DB_MAIN: multiplier=0.20, FAS=60mo, ERY=0.06/yr, max_penalty=0.30, NRA=65, floor=$800
+#   DB_T2:   multiplier=0.18, FAS=36mo, ERY=0.06/yr, max_penalty=0.30, NRA=65, floor=$800
+
+test_cases:
+  - name: standard_retirement_65
+    inputs:
+      yos: "25.0000"
+      fas: "5500.00"
+      age_at_retirement: 65
+      plan_code: "DB_MAIN"
+    expected:
+      gross_monthly: "2291.67"
+      penalty_pct: "0.00"
+      final_monthly: "2291.67"
+
+  - name: early_retirement_60
+    inputs:
+      yos: "20.0000"
+      fas: "4800.00"
+      age_at_retirement: 60
+      plan_code: "DB_MAIN"
+    expected:
+      gross_monthly: "1600.00"
+      penalty_pct: "0.30"
+      final_monthly: "1120.00"
+
+  - name: penalty_cap_at_30pct
+    inputs:
+      yos: "15.0000"
+      fas: "6000.00"
+      age_at_retirement: 55
+      plan_code: "DB_MAIN"
+    expected:
+      gross_monthly: "1500.00"
+      penalty_pct: "0.30"
+      final_monthly: "1050.00"
+
+  - name: benefit_floor_800
+    inputs:
+      yos: "5.0000"
+      fas: "2000.00"
+      age_at_retirement: 65
+      plan_code: "DB_MAIN"
+    expected:
+      gross_monthly: "166.67"
+      penalty_pct: "0.00"
+      final_monthly: "800.00"
+
+  - name: tier2_lower_multiplier
+    inputs:
+      yos: "25.0000"
+      fas: "5500.00"
+      age_at_retirement: 65
+      plan_code: "DB_T2"
+    expected:
+      gross_monthly: "2062.50"
+      penalty_pct: "0.00"
+      final_monthly: "2062.50"
