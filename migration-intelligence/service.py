@@ -1,6 +1,7 @@
 import os
 from fastapi import FastAPI
 from pydantic import BaseModel
+from scorer.signal import CANONICAL_COLUMNS, score_column
 
 app = FastAPI(title="Migration Intelligence Service", version="0.1.0")
 
@@ -70,8 +71,39 @@ async def health():
 @app.post("/intelligence/score-columns", response_model=ScoreColumnsResponse)
 async def score_columns(request: ScoreColumnsRequest) -> ScoreColumnsResponse:
     """Score source columns against canonical columns using multiple signals."""
-    # Stub - returns empty mappings until Task 8 implements the scorer
-    return ScoreColumnsResponse(mappings=[])
+    canonical = CANONICAL_COLUMNS.get(request.concept_tag, {})
+    if not canonical:
+        return ScoreColumnsResponse(mappings=[])
+
+    mappings: list[ScoredMapping] = []
+
+    for col in request.columns:
+        candidates: list[tuple[float, str, dict[str, float]]] = []
+
+        for canon_name, canon_info in canonical.items():
+            conf, signals = score_column(
+                source_name=col.column_name,
+                source_type=col.data_type,
+                null_rate=col.null_rate,
+                cardinality=col.cardinality,
+                row_count=col.row_count,
+                canonical_column=canon_name,
+                canonical_info=canon_info,
+            )
+            if conf > 0.3:
+                candidates.append((conf, canon_name, signals))
+
+        # Sort by score descending, take top 3
+        candidates.sort(key=lambda x: x[0], reverse=True)
+        for conf, canon_name, signals in candidates[:3]:
+            mappings.append(ScoredMapping(
+                source_column=col.column_name,
+                canonical_column=canon_name,
+                confidence=round(conf, 4),
+                signals={k: round(v, 4) for k, v in signals.items()},
+            ))
+
+    return ScoreColumnsResponse(mappings=mappings)
 
 @app.post("/intelligence/record-decision")
 async def record_decision(request: RecordDecisionRequest):
