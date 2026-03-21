@@ -668,6 +668,11 @@ func TestResumeBatch_FromCheckpoint(t *testing.T) {
 		WithArgs("batch-001").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
+	// Count prior errors for threshold restoration.
+	mock.ExpectQuery("SELECT exception_type, COUNT").
+		WithArgs("batch-001").
+		WillReturnRows(sqlmock.NewRows([]string{"exception_type", "count"}))
+
 	mock.ExpectBegin()
 
 	// Process row-3 and row-4.

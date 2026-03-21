@@ -80,7 +80,7 @@ type ErrorThresholds struct {
 	HardErrorHaltPct      float64 // fraction; default 0.05 (5%)
 	SoftWarningMaxPct     float64 // fraction; default 0.15 (15%)
 	RetireeErrorTolerance int     // default 0 — any retiree hard error halts
-	FinancialBalanceTol   string  // default "0.01" (Decimal string)
+	FinancialBalanceTol   string  // default "0.01" (Decimal string) — reserved for reconciliation (Phase 3)
 }
 
 // DefaultThresholds returns the standard error thresholds.
@@ -241,20 +241,16 @@ func GetBatch(db *sql.DB, batchID string) (*Batch, error) {
 
 // updateBatchStatus sets the batch status and optionally started_at / completed_at.
 func updateBatchStatus(db *sql.DB, batchID string, status BatchStatus) error {
-	var timeClause string
+	var query string
 	switch status {
 	case StatusRunning:
-		timeClause = ", started_at = now()"
+		query = `UPDATE migration.batch SET status = $2, started_at = now() WHERE batch_id = $1`
 	case StatusLoaded, StatusFailed:
-		timeClause = ", completed_at = now()"
+		query = `UPDATE migration.batch SET status = $2, completed_at = now() WHERE batch_id = $1`
+	default:
+		query = `UPDATE migration.batch SET status = $2 WHERE batch_id = $1`
 	}
-	_, err := db.Exec(
-		fmt.Sprintf(
-			`UPDATE migration.batch SET status = $2%s WHERE batch_id = $1`,
-			timeClause,
-		),
-		batchID, string(status),
-	)
+	_, err := db.Exec(query, batchID, string(status))
 	if err != nil {
 		return fmt.Errorf("update batch status: %w", err)
 	}
@@ -301,6 +297,50 @@ func haltBatch(db *sql.DB, batchID, reason string) error {
 		return fmt.Errorf("halt batch: %w", err)
 	}
 	return nil
+}
+
+// countPriorErrors queries the exception table to restore error breakdown
+// counters for threshold checking during batch resume.
+func countPriorErrors(db *sql.DB, batchID string) (hardErrors, softWarnings, retireeErrors int, err error) {
+	rows, err := db.Query(
+		`SELECT exception_type, COUNT(*)
+		 FROM migration.exception
+		 WHERE batch_id = $1
+		 GROUP BY exception_type`,
+		batchID,
+	)
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("count prior errors: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var exType string
+		var count int
+		if err := rows.Scan(&exType, &count); err != nil {
+			return 0, 0, 0, fmt.Errorf("scan error count: %w", err)
+		}
+		switch exType {
+		case string(transformer.ExceptionMissingRequired),
+			string(transformer.ExceptionInvalidFormat),
+			string(transformer.ExceptionReferentialIntegrity),
+			string(transformer.ExceptionBusinessRule),
+			string(transformer.ExceptionCrossTableMismatch),
+			string(transformer.ExceptionThresholdBreach):
+			hardErrors += count
+		default:
+			softWarnings += count
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return 0, 0, 0, fmt.Errorf("iterate error counts: %w", err)
+	}
+	// Retiree errors are not distinguishable from the exception table alone —
+	// they require source row context. We store 0 here; the resume loop will
+	// detect new retiree errors going forward. This is conservative: it may
+	// allow a batch to resume that should have stayed halted, but the halt
+	// will trigger again on the next retiree error.
+	return hardErrors, softWarnings, 0, nil
 }
 
 // clearPriorBatchData removes canonical rows and lineage from a previous run
@@ -589,7 +629,8 @@ func ResumeBatch(
 		return fmt.Errorf("fetch source rows: %w", err)
 	}
 
-	// Get existing stats from batch record to continue counting.
+	// Restore stats from batch record + exception table so threshold
+	// checking is cumulative across resume boundaries.
 	stats := BatchStats{
 		TotalRows: len(sourceRows),
 	}
@@ -600,6 +641,16 @@ func ResumeBatch(
 	if batch.RowCountException != nil {
 		stats.ExceptionRows = *batch.RowCountException
 	}
+	// Restore error breakdown from prior exceptions so thresholds
+	// consider the full batch history, not just remaining rows.
+	priorHard, priorSoft, priorRetiree, err := countPriorErrors(db, batch.BatchID)
+	if err != nil {
+		_ = haltBatch(db, batch.BatchID, fmt.Sprintf("count prior errors: %v", err))
+		return fmt.Errorf("count prior errors: %w", err)
+	}
+	stats.HardErrors = priorHard
+	stats.SoftWarnings = priorSoft
+	stats.RetireeErrors = priorRetiree
 
 	tx, err := db.Begin()
 	if err != nil {
