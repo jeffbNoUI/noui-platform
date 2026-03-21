@@ -42,6 +42,13 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/generate-mappings", h.GenerateMappings)
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/mappings", h.ListMappings)
 	mux.HandleFunc("PUT /api/v1/migration/engagements/{id}/mappings/{mapping_id}", h.UpdateMapping)
+
+	// Code mappings
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/code-mappings", h.ListCodeMappings)
+	mux.HandleFunc("PUT /api/v1/migration/engagements/{id}/code-mappings/{mapping_id}", h.UpdateCodeMapping)
+
+	// Retransform
+	mux.HandleFunc("POST /api/v1/migration/batches/{id}/retransform", h.RetransformBatch)
 }
 
 // HealthCheck returns service status information.
