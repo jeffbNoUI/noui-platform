@@ -1,0 +1,167 @@
+package intelligence
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+)
+
+func TestScoreColumns_Success(t *testing.T) {
+	// Set up a mock Python intelligence server.
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("expected POST, got %s", r.Method)
+		}
+		if r.URL.Path != "/intelligence/score-columns" {
+			t.Errorf("expected /intelligence/score-columns, got %s", r.URL.Path)
+		}
+		if ct := r.Header.Get("Content-Type"); ct != "application/json" {
+			t.Errorf("expected Content-Type application/json, got %s", ct)
+		}
+
+		// Verify the request body is well-formed.
+		var req ScoreColumnsRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("failed to decode request: %v", err)
+		}
+		if len(req.Columns) != 2 {
+			t.Errorf("expected 2 columns, got %d", len(req.Columns))
+		}
+		if req.ConceptTag != "employee-master" {
+			t.Errorf("expected concept_tag employee-master, got %s", req.ConceptTag)
+		}
+		if req.CanonicalTable != "member" {
+			t.Errorf("expected canonical_table member, got %s", req.CanonicalTable)
+		}
+		if req.TenantID != "test-tenant" {
+			t.Errorf("expected tenant_id test-tenant, got %s", req.TenantID)
+		}
+
+		// Return a mock response.
+		resp := ScoreColumnsResponse{
+			Mappings: []ScoredMapping{
+				{
+					SourceColumn:    "MBR_NBR",
+					CanonicalColumn: "member_id",
+					Confidence:      0.85,
+					Signals:         map[string]float64{"name": 0.7, "type": 1.0},
+				},
+				{
+					SourceColumn:    "BIRTH_DT",
+					CanonicalColumn: "birth_date",
+					Confidence:      0.90,
+					Signals:         map[string]float64{"name": 0.8, "type": 1.0},
+				},
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	resp, err := client.ScoreColumns(context.Background(), ScoreColumnsRequest{
+		Columns: []ColumnInfo{
+			{ColumnName: "MBR_NBR", DataType: "INTEGER", NullRate: 0.0, Cardinality: 500, RowCount: 500},
+			{ColumnName: "BIRTH_DT", DataType: "VARCHAR(10)", NullRate: 0.0, Cardinality: 480, RowCount: 500},
+		},
+		ConceptTag:     "employee-master",
+		CanonicalTable: "member",
+		TenantID:       "test-tenant",
+	})
+	if err != nil {
+		t.Fatalf("ScoreColumns error: %v", err)
+	}
+
+	if len(resp.Mappings) != 2 {
+		t.Fatalf("expected 2 mappings, got %d", len(resp.Mappings))
+	}
+	if resp.Mappings[0].SourceColumn != "MBR_NBR" {
+		t.Errorf("mapping[0].source_column = %s, want MBR_NBR", resp.Mappings[0].SourceColumn)
+	}
+	if resp.Mappings[0].CanonicalColumn != "member_id" {
+		t.Errorf("mapping[0].canonical_column = %s, want member_id", resp.Mappings[0].CanonicalColumn)
+	}
+	if resp.Mappings[0].Confidence != 0.85 {
+		t.Errorf("mapping[0].confidence = %f, want 0.85", resp.Mappings[0].Confidence)
+	}
+	if resp.Mappings[1].SourceColumn != "BIRTH_DT" {
+		t.Errorf("mapping[1].source_column = %s, want BIRTH_DT", resp.Mappings[1].SourceColumn)
+	}
+}
+
+func TestScoreColumns_ServerError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"error": "model unavailable"}`))
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	_, err := client.ScoreColumns(context.Background(), ScoreColumnsRequest{
+		Columns:        []ColumnInfo{{ColumnName: "X", DataType: "INT"}},
+		ConceptTag:     "employee-master",
+		CanonicalTable: "member",
+		TenantID:       "test-tenant",
+	})
+	if err == nil {
+		t.Fatal("expected error for 500 response, got nil")
+	}
+}
+
+func TestScoreColumns_InvalidJSON(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{invalid json`))
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	_, err := client.ScoreColumns(context.Background(), ScoreColumnsRequest{
+		Columns:        []ColumnInfo{{ColumnName: "X", DataType: "INT"}},
+		ConceptTag:     "employee-master",
+		CanonicalTable: "member",
+		TenantID:       "test-tenant",
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid JSON response, got nil")
+	}
+}
+
+func TestScoreColumns_ConnectionRefused(t *testing.T) {
+	// Point at a port that's not listening.
+	client := NewClient("http://127.0.0.1:19999")
+	_, err := client.ScoreColumns(context.Background(), ScoreColumnsRequest{
+		Columns:        []ColumnInfo{{ColumnName: "X", DataType: "INT"}},
+		ConceptTag:     "employee-master",
+		CanonicalTable: "member",
+		TenantID:       "test-tenant",
+	})
+	if err == nil {
+		t.Fatal("expected error for connection refused, got nil")
+	}
+}
+
+func TestScoreColumns_EmptyMappings(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(ScoreColumnsResponse{Mappings: []ScoredMapping{}})
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	resp, err := client.ScoreColumns(context.Background(), ScoreColumnsRequest{
+		Columns:        []ColumnInfo{{ColumnName: "UNKNOWN_COL", DataType: "INT"}},
+		ConceptTag:     "employee-master",
+		CanonicalTable: "member",
+		TenantID:       "test-tenant",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(resp.Mappings) != 0 {
+		t.Errorf("expected 0 mappings, got %d", len(resp.Mappings))
+	}
+}
