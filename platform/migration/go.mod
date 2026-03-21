@@ -3,6 +3,7 @@ module github.com/noui/platform/migration
 go 1.22.0
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/lib/pq v1.11.2
 	github.com/noui/platform/apiresponse v0.0.0
 	github.com/noui/platform/auth v0.0.0

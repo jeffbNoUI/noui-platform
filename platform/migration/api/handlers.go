@@ -21,7 +21,12 @@ func NewHandler(db *sql.DB) *Handler {
 // RegisterRoutes sets up all API routes on the given mux.
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /healthz", h.HealthCheck)
-	// Migration endpoints will be added in subsequent tasks
+
+	// Engagement CRUD
+	mux.HandleFunc("POST /api/v1/migration/engagements", h.CreateEngagement)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}", h.GetEngagement)
+	mux.HandleFunc("PATCH /api/v1/migration/engagements/{id}", h.UpdateEngagement)
+	mux.HandleFunc("GET /api/v1/migration/engagements", h.ListEngagements)
 }
 
 // HealthCheck returns service status information.
