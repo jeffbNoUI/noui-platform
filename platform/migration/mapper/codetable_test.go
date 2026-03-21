@@ -48,9 +48,9 @@ func TestDiscoverCodeColumns(t *testing.T) {
 	// Table has 10000 rows, threshold = 100.
 	rowCount := 10000
 
-	// Return two columns.
+	// Return two columns (schema defaults to "public" when not qualified).
 	mock.ExpectQuery("SELECT column_name FROM information_schema.columns").
-		WithArgs("members").
+		WithArgs("public", "members").
 		WillReturnRows(sqlmock.NewRows([]string{"column_name"}).
 			AddRow("member_id").
 			AddRow("status_cd"))
@@ -121,7 +121,7 @@ func TestDiscoverCodeColumns_CardinalityAt50(t *testing.T) {
 
 	// Row count = 100000, threshold = 1000. Cardinality = 50 should be excluded (>= 50).
 	mock.ExpectQuery("SELECT column_name FROM information_schema.columns").
-		WithArgs("big_table").
+		WithArgs("public", "big_table").
 		WillReturnRows(sqlmock.NewRows([]string{"column_name"}).AddRow("code_col"))
 
 	mock.ExpectQuery(`SELECT COUNT\(DISTINCT "code_col"\)`).
@@ -149,7 +149,7 @@ func TestDiscoverCodeColumns_CardinalityAboveThreshold(t *testing.T) {
 
 	// Row count = 500, threshold = 5. Cardinality = 10 is < 50 but >= threshold (5).
 	mock.ExpectQuery("SELECT column_name FROM information_schema.columns").
-		WithArgs("small_table").
+		WithArgs("public", "small_table").
 		WillReturnRows(sqlmock.NewRows([]string{"column_name"}).AddRow("category"))
 
 	mock.ExpectQuery(`SELECT COUNT\(DISTINCT "category"\)`).

@@ -26,12 +26,12 @@ func TestRetransform_Success(t *testing.T) {
 	// Step 1: Lookup correction — approved
 	mock.ExpectQuery("SELECT c.affected_mapping_id").
 		WithArgs("corr-001").
-		WillReturnRows(sqlmock.NewRows([]string{"affected_mapping_id", "mapping_version", "status"}).
-			AddRow("map-001", "v1.0", "APPROVED"))
+		WillReturnRows(sqlmock.NewRows([]string{"affected_mapping_id", "mapping_version", "status", "source_table", "canonical_table"}).
+			AddRow("map-001", "v1.0", "APPROVED", "source_members", "migration.member"))
 
-	// Step 2: Find affected rows
+	// Step 2: Find affected rows (scoped by source_table + canonical_table)
 	mock.ExpectQuery("SELECT lineage_id, batch_id, source_table, source_id").
-		WithArgs("v1.0").
+		WithArgs("v1.0", "source_members", "migration.member").
 		WillReturnRows(sqlmock.NewRows([]string{
 			"lineage_id", "batch_id", "source_table", "source_id",
 			"canonical_table", "canonical_id", "mapping_version",
@@ -44,13 +44,13 @@ func TestRetransform_Success(t *testing.T) {
 	mock.ExpectBegin()
 
 	// Fetch source row
-	sourceMock.ExpectQuery("SELECT \\* FROM source_members").
+	sourceMock.ExpectQuery(`SELECT \* FROM "source_members" WHERE "id"`).
 		WithArgs("src-001").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "STATUS_CD"}).
 			AddRow("src-001", "A"))
 
 	// Step 4: Update canonical row (columns sorted: member_status)
-	mock.ExpectExec("UPDATE migration.member SET member_status").
+	mock.ExpectExec(`UPDATE "migration"\."member" SET "member_status"`).
 		WithArgs("ACTIVE", "uuid-001").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
@@ -135,7 +135,7 @@ func TestRetransform_CorrectionNotFound(t *testing.T) {
 
 	mock.ExpectQuery("SELECT c.affected_mapping_id").
 		WithArgs("nonexistent").
-		WillReturnRows(sqlmock.NewRows([]string{"affected_mapping_id", "mapping_version", "status"}))
+		WillReturnRows(sqlmock.NewRows([]string{"affected_mapping_id", "mapping_version", "status", "source_table", "canonical_table"}))
 
 	pipeline := transformer.NewPipeline(nil)
 
@@ -163,8 +163,8 @@ func TestRetransform_CorrectionNotApproved(t *testing.T) {
 
 	mock.ExpectQuery("SELECT c.affected_mapping_id").
 		WithArgs("corr-proposed").
-		WillReturnRows(sqlmock.NewRows([]string{"affected_mapping_id", "mapping_version", "status"}).
-			AddRow("map-001", "v1.0", "PROPOSED"))
+		WillReturnRows(sqlmock.NewRows([]string{"affected_mapping_id", "mapping_version", "status", "source_table", "canonical_table"}).
+			AddRow("map-001", "v1.0", "PROPOSED", "source_members", "migration.member"))
 
 	pipeline := transformer.NewPipeline(nil)
 
@@ -193,12 +193,12 @@ func TestRetransform_NoAffectedRows(t *testing.T) {
 	// Correction exists and is approved
 	mock.ExpectQuery("SELECT c.affected_mapping_id").
 		WithArgs("corr-empty").
-		WillReturnRows(sqlmock.NewRows([]string{"affected_mapping_id", "mapping_version", "status"}).
-			AddRow("map-001", "v2.0", "APPROVED"))
+		WillReturnRows(sqlmock.NewRows([]string{"affected_mapping_id", "mapping_version", "status", "source_table", "canonical_table"}).
+			AddRow("map-001", "v2.0", "APPROVED", "source_members", "migration.member"))
 
 	// No affected rows
 	mock.ExpectQuery("SELECT lineage_id, batch_id, source_table, source_id").
-		WithArgs("v2.0").
+		WithArgs("v2.0", "source_members", "migration.member").
 		WillReturnRows(sqlmock.NewRows([]string{
 			"lineage_id", "batch_id", "source_table", "source_id",
 			"canonical_table", "canonical_id", "mapping_version",
@@ -240,12 +240,12 @@ func TestRetransform_MultipleAffectedRows(t *testing.T) {
 	// Correction lookup
 	mock.ExpectQuery("SELECT c.affected_mapping_id").
 		WithArgs("corr-multi").
-		WillReturnRows(sqlmock.NewRows([]string{"affected_mapping_id", "mapping_version", "status"}).
-			AddRow("map-001", "v1.0", "APPROVED"))
+		WillReturnRows(sqlmock.NewRows([]string{"affected_mapping_id", "mapping_version", "status", "source_table", "canonical_table"}).
+			AddRow("map-001", "v1.0", "APPROVED", "source_members", "migration.member"))
 
 	// Two affected rows
 	mock.ExpectQuery("SELECT lineage_id, batch_id, source_table, source_id").
-		WithArgs("v1.0").
+		WithArgs("v1.0", "source_members", "migration.member").
 		WillReturnRows(sqlmock.NewRows([]string{
 			"lineage_id", "batch_id", "source_table", "source_id",
 			"canonical_table", "canonical_id", "mapping_version",
@@ -256,10 +256,10 @@ func TestRetransform_MultipleAffectedRows(t *testing.T) {
 	mock.ExpectBegin()
 
 	// Row 1: source fetch + update + lineage + supersede
-	sourceMock.ExpectQuery("SELECT \\* FROM source_members").
+	sourceMock.ExpectQuery(`SELECT \* FROM "source_members" WHERE "id"`).
 		WithArgs("src-001").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).AddRow("src-001", "Alice"))
-	mock.ExpectExec("UPDATE migration.member SET").
+	mock.ExpectExec(`UPDATE "migration"\."member" SET`).
 		WithArgs("Alice", "uuid-001").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("INSERT INTO migration.lineage").
@@ -270,10 +270,10 @@ func TestRetransform_MultipleAffectedRows(t *testing.T) {
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	// Row 2: source fetch + update + lineage + supersede
-	sourceMock.ExpectQuery("SELECT \\* FROM source_members").
+	sourceMock.ExpectQuery(`SELECT \* FROM "source_members" WHERE "id"`).
 		WithArgs("src-002").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).AddRow("src-002", "Bob"))
-	mock.ExpectExec("UPDATE migration.member SET").
+	mock.ExpectExec(`UPDATE "migration"\."member" SET`).
 		WithArgs("Bob", "uuid-002").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("INSERT INTO migration.lineage").
@@ -332,11 +332,11 @@ func TestRetransform_SourceRowNotFound(t *testing.T) {
 
 	mock.ExpectQuery("SELECT c.affected_mapping_id").
 		WithArgs("corr-missing-src").
-		WillReturnRows(sqlmock.NewRows([]string{"affected_mapping_id", "mapping_version", "status"}).
-			AddRow("map-001", "v1.0", "APPROVED"))
+		WillReturnRows(sqlmock.NewRows([]string{"affected_mapping_id", "mapping_version", "status", "source_table", "canonical_table"}).
+			AddRow("map-001", "v1.0", "APPROVED", "source_members", "migration.member"))
 
 	mock.ExpectQuery("SELECT lineage_id, batch_id, source_table, source_id").
-		WithArgs("v1.0").
+		WithArgs("v1.0", "source_members", "migration.member").
 		WillReturnRows(sqlmock.NewRows([]string{
 			"lineage_id", "batch_id", "source_table", "source_id",
 			"canonical_table", "canonical_id", "mapping_version",
@@ -345,7 +345,7 @@ func TestRetransform_SourceRowNotFound(t *testing.T) {
 	mock.ExpectBegin()
 
 	// Source row not found (empty result set)
-	sourceMock.ExpectQuery("SELECT \\* FROM source_members").
+	sourceMock.ExpectQuery(`SELECT \* FROM "source_members" WHERE "id"`).
 		WithArgs("src-gone").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "name"}))
 
@@ -384,7 +384,7 @@ func TestUpdateCanonicalRow(t *testing.T) {
 	tx, _ := db.Begin()
 
 	// Sorted columns: first_name, last_name
-	mock.ExpectExec("UPDATE migration.member SET first_name").
+	mock.ExpectExec(`UPDATE "migration"\."member" SET "first_name"`).
 		WithArgs("Jane", "Doe", "uuid-001").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
@@ -426,7 +426,7 @@ func TestUpdateCanonicalRow_DBError(t *testing.T) {
 	mock.ExpectBegin()
 	tx, _ := db.Begin()
 
-	mock.ExpectExec("UPDATE migration.member SET").
+	mock.ExpectExec(`UPDATE "migration"\."member" SET`).
 		WithArgs("John", "uuid-001").
 		WillReturnError(fmt.Errorf("row not found"))
 

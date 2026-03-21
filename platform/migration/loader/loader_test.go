@@ -21,7 +21,7 @@ func TestWriteCanonicalRow_SingleColumn(t *testing.T) {
 	mock.ExpectBegin()
 	tx, _ := db.Begin()
 
-	mock.ExpectQuery("INSERT INTO migration.member").
+	mock.ExpectQuery(`INSERT INTO "migration"\."member"`).
 		WithArgs("John").
 		WillReturnRows(sqlmock.NewRows([]string{"canonical_id"}).AddRow("uuid-001"))
 
@@ -50,7 +50,7 @@ func TestWriteCanonicalRow_MultipleColumns(t *testing.T) {
 	tx, _ := db.Begin()
 
 	// Columns are sorted alphabetically: dob, first_name, last_name, ssn
-	mock.ExpectQuery("INSERT INTO migration.member").
+	mock.ExpectQuery(`INSERT INTO "migration"\."member"`).
 		WithArgs("1990-01-15", "Jane", "Doe", "123-45-6789").
 		WillReturnRows(sqlmock.NewRows([]string{"canonical_id"}).AddRow("uuid-002"))
 
@@ -82,7 +82,7 @@ func TestWriteCanonicalRow_DifferentTable(t *testing.T) {
 	tx, _ := db.Begin()
 
 	// salary table: amount, effective_date, member_id (sorted)
-	mock.ExpectQuery("INSERT INTO migration.salary").
+	mock.ExpectQuery(`INSERT INTO "migration"\."salary"`).
 		WithArgs("75000.00", "2024-01-01", "mem-001").
 		WillReturnRows(sqlmock.NewRows([]string{"canonical_id"}).AddRow("uuid-sal-001"))
 
@@ -131,7 +131,7 @@ func TestWriteCanonicalRow_DBError(t *testing.T) {
 	mock.ExpectBegin()
 	tx, _ := db.Begin()
 
-	mock.ExpectQuery("INSERT INTO migration.member").
+	mock.ExpectQuery(`INSERT INTO "migration"\."member"`).
 		WithArgs("John").
 		WillReturnError(fmt.Errorf("unique constraint violation"))
 
@@ -456,7 +456,7 @@ func TestWriteBatchToCanonical_SingleRow(t *testing.T) {
 	sourceIDs := []string{"src-001"}
 
 	// Expect canonical row INSERT (columns sorted: first_name, last_name)
-	mock.ExpectQuery("INSERT INTO migration.member").
+	mock.ExpectQuery(`INSERT INTO "migration"\."member"`).
 		WithArgs("Alice", "Smith").
 		WillReturnRows(sqlmock.NewRows([]string{"canonical_id"}).AddRow("uuid-001"))
 
@@ -518,7 +518,7 @@ func TestWriteBatchToCanonical_MultipleRows(t *testing.T) {
 	sourceIDs := []string{"src-010", "src-011"}
 
 	// Row 1
-	mock.ExpectQuery("INSERT INTO migration.member").
+	mock.ExpectQuery(`INSERT INTO "migration"\."member"`).
 		WithArgs("Bob").
 		WillReturnRows(sqlmock.NewRows([]string{"canonical_id"}).AddRow("uuid-010"))
 	mock.ExpectExec("INSERT INTO migration.lineage").
@@ -530,7 +530,7 @@ func TestWriteBatchToCanonical_MultipleRows(t *testing.T) {
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	// Row 2
-	mock.ExpectQuery("INSERT INTO migration.member").
+	mock.ExpectQuery(`INSERT INTO "migration"\."member"`).
 		WithArgs("Carol").
 		WillReturnRows(sqlmock.NewRows([]string{"canonical_id"}).AddRow("uuid-011"))
 	mock.ExpectExec("INSERT INTO migration.lineage").
@@ -589,7 +589,7 @@ func TestWriteBatchToCanonical_WithExceptions(t *testing.T) {
 	sourceIDs := []string{"src-020"}
 
 	// Canonical row
-	mock.ExpectQuery("INSERT INTO migration.member").
+	mock.ExpectQuery(`INSERT INTO "migration"\."member"`).
 		WithArgs("Dave").
 		WillReturnRows(sqlmock.NewRows([]string{"canonical_id"}).AddRow("uuid-020"))
 
@@ -683,7 +683,7 @@ func TestWriteBatchToCanonical_CanonicalRowError(t *testing.T) {
 	}
 	sourceIDs := []string{"src-fail"}
 
-	mock.ExpectQuery("INSERT INTO migration.member").
+	mock.ExpectQuery(`INSERT INTO "migration"\."member"`).
 		WithArgs("Fail").
 		WillReturnError(fmt.Errorf("table does not exist"))
 
@@ -699,25 +699,51 @@ func TestWriteBatchToCanonical_CanonicalRowError(t *testing.T) {
 	}
 }
 
-// --- sanitizeIdentifier tests ---
+// --- quoteIdent tests ---
 
-func TestSanitizeIdentifier(t *testing.T) {
+func TestQuoteIdent(t *testing.T) {
 	tests := []struct {
 		input string
 		want  string
 	}{
-		{"migration.member", "migration.member"},
-		{"simple_table", "simple_table"},
-		{"schema.table_name", "schema.table_name"},
-		{"bad;table--name", "badtablename"},
-		{`"quoted"`, `"quoted"`},
-		{"DROP TABLE foo", "DROPTABLEfoo"},
+		{"simple_table", `"simple_table"`},
+		{"migration.member", `"migration"."member"`},
+		{"schema.table_name", `"schema"."table_name"`},
+		{`has"quote`, `"has""quote"`},
+		{"DROP TABLE foo", `"DROP TABLE foo"`},
 	}
 	for _, tt := range tests {
-		got := sanitizeIdentifier(tt.input)
+		got := quoteIdent(tt.input)
 		if got != tt.want {
-			t.Errorf("sanitizeIdentifier(%q) = %q, want %q", tt.input, got, tt.want)
+			t.Errorf("quoteIdent(%q) = %q, want %q", tt.input, got, tt.want)
 		}
+	}
+}
+
+// --- confidence level validation test ---
+
+func TestWriteLineage_InvalidConfidence(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock.New() error: %v", err)
+	}
+	defer db.Close()
+
+	mock.ExpectBegin()
+	tx, _ := db.Begin()
+
+	err = WriteLineage(tx, LineageEntry{
+		BatchID:         "batch-001",
+		SourceTable:     "src",
+		SourceID:        "1",
+		CanonicalTable:  "migration.member",
+		CanonicalID:     "uuid-001",
+		MappingVersion:  "v1.0",
+		ConfidenceLevel: "INVALID_LEVEL",
+		Transformations: []TransformAction{},
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid confidence level, got nil")
 	}
 }
 

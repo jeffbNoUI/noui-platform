@@ -76,8 +76,8 @@ func WriteCanonicalRow(tx *sql.Tx, table string, row map[string]interface{}) (st
 
 	query := fmt.Sprintf(
 		"INSERT INTO %s (%s) VALUES (%s) RETURNING canonical_id",
-		sanitizeIdentifier(table),
-		strings.Join(sanitizeIdentifiers(columns), ", "),
+		quoteIdent(table),
+		strings.Join(quoteIdents(columns), ", "),
 		strings.Join(placeholders, ", "),
 	)
 
@@ -90,8 +90,16 @@ func WriteCanonicalRow(tx *sql.Tx, table string, row map[string]interface{}) (st
 
 // --- Lineage writer ---
 
+// validConfidenceLevels matches the CHECK constraint on migration.lineage.confidence_level.
+var validConfidenceLevels = map[string]bool{
+	"ACTUAL": true, "DERIVED": true, "ESTIMATED": true, "ROLLED_UP": true,
+}
+
 // WriteLineage inserts a lineage record with transformations stored as JSONB.
 func WriteLineage(tx *sql.Tx, entry LineageEntry) error {
+	if !validConfidenceLevels[entry.ConfidenceLevel] {
+		return fmt.Errorf("invalid confidence level %q: must be ACTUAL, DERIVED, ESTIMATED, or ROLLED_UP", entry.ConfidenceLevel)
+	}
 	transformJSON, err := json.Marshal(entry.Transformations)
 	if err != nil {
 		return fmt.Errorf("marshal transformations: %w", err)
@@ -211,25 +219,22 @@ func WriteBatchToCanonical(tx *sql.Tx, cfg BatchWriteConfig, results []transform
 
 // --- identifier sanitization ---
 
-// sanitizeIdentifier ensures a SQL identifier contains only safe characters.
-// It allows schema-qualified names (e.g. "migration.member") and quoted names.
-func sanitizeIdentifier(id string) string {
-	// Allow alphanumeric, underscore, dot (for schema.table), and double quotes.
-	var b strings.Builder
-	for _, r := range id {
-		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') ||
-			(r >= '0' && r <= '9') || r == '_' || r == '.' || r == '"' {
-			b.WriteRune(r)
-		}
+// quoteIdent wraps a SQL identifier in double quotes with proper escaping.
+// For schema-qualified names (e.g. "migration.member"), each part is quoted
+// separately: "migration"."member".
+func quoteIdent(name string) string {
+	parts := strings.Split(name, ".")
+	for i, p := range parts {
+		parts[i] = `"` + strings.ReplaceAll(p, `"`, `""`) + `"`
 	}
-	return b.String()
+	return strings.Join(parts, ".")
 }
 
-// sanitizeIdentifiers applies sanitizeIdentifier to each element.
-func sanitizeIdentifiers(ids []string) []string {
+// quoteIdents applies quoteIdent to each element.
+func quoteIdents(ids []string) []string {
 	out := make([]string, len(ids))
 	for i, id := range ids {
-		out[i] = sanitizeIdentifier(id)
+		out[i] = quoteIdent(id)
 	}
 	return out
 }

@@ -28,16 +28,25 @@ type CodeMapping struct {
 
 // DiscoverCodeColumns identifies columns with low cardinality that likely need value mapping.
 // Heuristic: columns with cardinality < 50 AND cardinality < (rowCount * 0.01) are likely code columns.
+// The table parameter may be schema-qualified (e.g., "public.members"); if no schema is specified,
+// defaults to "public".
 func DiscoverCodeColumns(db *sql.DB, table string, rowCount int) ([]CodeColumnCandidate, error) {
 	if rowCount <= 0 {
 		return nil, nil
 	}
 
-	// Get column names from information_schema.
+	// Split schema-qualified table name.
+	schema, tableName := "public", table
+	if parts := strings.SplitN(table, ".", 2); len(parts) == 2 {
+		schema, tableName = parts[0], parts[1]
+	}
+
+	// Get column names from information_schema, filtered by schema to avoid
+	// cross-schema collisions.
 	colRows, err := db.Query(
 		`SELECT column_name FROM information_schema.columns
-		 WHERE table_name = $1
-		 ORDER BY ordinal_position`, table)
+		 WHERE table_schema = $1 AND table_name = $2
+		 ORDER BY ordinal_position`, schema, tableName)
 	if err != nil {
 		return nil, fmt.Errorf("query columns for table %s: %w", table, err)
 	}
@@ -88,6 +97,10 @@ func DiscoverCodeColumns(db *sql.DB, table string, rowCount int) ([]CodeColumnCa
 				break
 			}
 			values = append(values, v)
+		}
+		if err := valRows.Err(); err != nil {
+			valRows.Close()
+			continue
 		}
 		valRows.Close()
 

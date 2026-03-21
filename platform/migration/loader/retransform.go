@@ -62,17 +62,19 @@ func Retransform(
 	newMappings []transformer.FieldMapping,
 ) (*RetransformResult, error) {
 
-	// 1. Look up the correction.
+	// 1. Look up the correction and the affected mapping's scope.
 	var affectedMappingID string
 	var mappingVersion string
 	var status string
+	var sourceTable, canonicalTable string
 	err := db.QueryRow(
-		`SELECT c.affected_mapping_id, fm.mapping_version, c.status
+		`SELECT c.affected_mapping_id, fm.mapping_version, c.status,
+		        fm.source_table, fm.canonical_table
 		 FROM migration.correction c
 		 JOIN migration.field_mapping fm ON fm.mapping_id = c.affected_mapping_id
 		 WHERE c.correction_id = $1`,
 		correctionID,
-	).Scan(&affectedMappingID, &mappingVersion, &status)
+	).Scan(&affectedMappingID, &mappingVersion, &status, &sourceTable, &canonicalTable)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("correction %s not found", correctionID)
 	}
@@ -83,8 +85,8 @@ func Retransform(
 		return nil, fmt.Errorf("correction %s has status %s, expected APPROVED", correctionID, status)
 	}
 
-	// 2. Find affected rows via lineage.
-	affected, err := findAffectedRows(db, mappingVersion, affectedMappingID)
+	// 2. Find affected rows via lineage, scoped to the specific table mapping.
+	affected, err := findAffectedRows(db, mappingVersion, sourceTable, canonicalTable)
 	if err != nil {
 		return nil, fmt.Errorf("find affected rows: %w", err)
 	}
@@ -180,16 +182,18 @@ func Retransform(
 // --- Helper functions ---
 
 // findAffectedRows queries lineage for all rows produced by a specific
-// mapping version that are not yet superseded.
-func findAffectedRows(db *sql.DB, mappingVersion, mappingID string) ([]AffectedRow, error) {
+// mapping version and table pair that are not yet superseded.
+func findAffectedRows(db *sql.DB, mappingVersion, sourceTable, canonicalTable string) ([]AffectedRow, error) {
 	rows, err := db.Query(
 		`SELECT lineage_id, batch_id, source_table, source_id,
 		        canonical_table, canonical_id, mapping_version
 		 FROM migration.lineage
 		 WHERE mapping_version = $1
+		   AND source_table = $2
+		   AND canonical_table = $3
 		   AND superseded_by IS NULL
 		 ORDER BY created_at`,
-		mappingVersion,
+		mappingVersion, sourceTable, canonicalTable,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("query affected lineage: %w", err)
@@ -214,10 +218,14 @@ func findAffectedRows(db *sql.DB, mappingVersion, mappingID string) ([]AffectedR
 }
 
 // fetchSourceRow retrieves a single source row by table and ID.
+// TODO: The PK column is hardcoded to "id". When integrating with real source
+// databases (PRISM uses MEMBER_ID, etc.), this should accept the PK column
+// name from the profiler's quality_profile or field_mapping metadata.
 func fetchSourceRow(sourceDB *sql.DB, sourceTable, sourceID string) (map[string]interface{}, error) {
 	query := fmt.Sprintf(
-		"SELECT * FROM %s WHERE id = $1",
-		sanitizeIdentifier(sourceTable),
+		"SELECT * FROM %s WHERE %s = $1",
+		quoteIdent(sourceTable),
+		quoteIdent("id"),
 	)
 	rows, err := sourceDB.Query(query, sourceID)
 	if err != nil {
@@ -268,14 +276,14 @@ func updateCanonicalRow(tx *sql.Tx, table, canonicalID string, row map[string]in
 	setClauses := make([]string, len(columns))
 	values := make([]interface{}, len(columns)+1)
 	for i, col := range columns {
-		setClauses[i] = fmt.Sprintf("%s = $%d", sanitizeIdentifier(col), i+1)
+		setClauses[i] = fmt.Sprintf("%s = $%d", quoteIdent(col), i+1)
 		values[i] = row[col]
 	}
 	values[len(columns)] = canonicalID
 
 	query := fmt.Sprintf(
 		"UPDATE %s SET %s WHERE canonical_id = $%d",
-		sanitizeIdentifier(table),
+		quoteIdent(table),
 		strings.Join(setClauses, ", "),
 		len(columns)+1,
 	)
