@@ -1,7 +1,10 @@
 import os
+from decimal import Decimal
 from fastapi import FastAPI
 from pydantic import BaseModel
 from scorer.signal import CANONICAL_COLUMNS, score_column
+from reconciliation.analysis import ReconciliationResult, detect_systematic_patterns
+from reconciliation.corrections import FieldMapping, suggest_corrections
 
 app = FastAPI(title="Migration Intelligence Service", version="0.1.0")
 
@@ -40,9 +43,16 @@ class RecordDecisionRequest(BaseModel):
     column_profile: ColumnProfile
     outcome: str  # APPROVED or REJECTED
 
+class MappingInput(BaseModel):
+    source_field: str
+    canonical_field: str
+    domain: str
+    transform_type: str = "DIRECT"
+
 class AnalyzeMismatchesRequest(BaseModel):
     tenant_id: str
     reconciliation_results: list[dict]
+    field_mappings: list[MappingInput] = []
 
 class CorrectionSuggestion(BaseModel):
     correction_type: str
@@ -113,9 +123,66 @@ async def record_decision(request: RecordDecisionRequest):
 
 @app.post("/intelligence/analyze-mismatches", response_model=AnalyzeMismatchesResponse)
 async def analyze_mismatches(request: AnalyzeMismatchesRequest) -> AnalyzeMismatchesResponse:
-    """Detect systematic patterns in reconciliation results."""
-    # Stub - until Task 23 implements analysis
-    return AnalyzeMismatchesResponse(patterns=[], suggestions=[])
+    """Detect systematic patterns in reconciliation results and suggest corrections."""
+    # Parse reconciliation results into domain objects
+    recon_results: list[ReconciliationResult] = []
+    for r in request.reconciliation_results:
+        recon_results.append(
+            ReconciliationResult(
+                member_id=r.get("member_id", ""),
+                variance_amount=Decimal(str(r.get("variance_amount", "0"))),
+                variance_pct=float(r.get("variance_pct", 0.0)),
+                suspected_domain=r.get("suspected_domain", ""),
+                member_status=r.get("member_status", ""),
+                plan_code=r.get("plan_code", ""),
+                category=r.get("category", "MATCH"),
+            )
+        )
+
+    # Detect patterns
+    patterns = detect_systematic_patterns(recon_results)
+
+    # Build field mappings from request
+    mappings = [
+        FieldMapping(
+            source_field=m.source_field,
+            canonical_field=m.canonical_field,
+            domain=m.domain,
+            transform_type=m.transform_type,
+        )
+        for m in request.field_mappings
+    ]
+
+    # Suggest corrections if patterns found
+    suggestions = suggest_corrections(patterns, mappings) if patterns else []
+
+    return AnalyzeMismatchesResponse(
+        patterns=[
+            {
+                "pattern_id": p.pattern_id,
+                "suspected_domain": p.suspected_domain,
+                "plan_code": p.plan_code,
+                "direction": p.direction,
+                "member_count": p.member_count,
+                "mean_variance": str(p.mean_variance),
+                "cv": p.cv,
+                "affected_members": p.affected_members,
+            }
+            for p in patterns
+        ],
+        suggestions=[
+            CorrectionSuggestion(
+                correction_type=s.correction_type,
+                affected_field=s.affected_field,
+                current_mapping=s.current_mapping,
+                proposed_mapping=s.proposed_mapping,
+                confidence=s.confidence,
+                evidence=s.evidence,
+                affected_member_count=s.affected_member_count,
+            )
+            for s in suggestions
+        ],
+    )
 
 @app.get("/intelligence/corpus-stats", response_model=CorpusStats)
 async def corpus_stats() -> CorpusStats:
