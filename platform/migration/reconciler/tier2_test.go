@@ -227,6 +227,9 @@ func TestReconcileTier2_ZeroCanonicalAmount(t *testing.T) {
 	if r.Category != CategoryError {
 		t.Errorf("expected ERROR for zero canonical, got %s", r.Category)
 	}
+	if r.Details == "" {
+		t.Error("expected non-empty Details for zero canonical ERROR")
+	}
 }
 
 func TestReconcileTier2_InvalidGrossAmount(t *testing.T) {

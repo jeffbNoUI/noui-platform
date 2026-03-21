@@ -103,6 +103,10 @@ func reconcileTier2Row(r tier2Row, batchID string) (*ReconciliationResult, error
 		return nil, fmt.Errorf("invalid canonical_benefit %q for member %s", r.CanonicalAmount, r.MemberID)
 	}
 
+	if canonicalAmt.Sign() == 0 {
+		return nil, fmt.Errorf("zero canonical_benefit for member %s", r.MemberID)
+	}
+
 	category := classifyTier2Variance(paymentAmt, canonicalAmt)
 
 	// Compute absolute variance for the result

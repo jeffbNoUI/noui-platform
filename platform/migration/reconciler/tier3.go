@@ -19,7 +19,7 @@ type PlanBenchmarks struct {
 const (
 	tier3SalaryQuery = `SELECT member_id, salary_year, salary_amount FROM canonical_salaries WHERE batch_id = $1 ORDER BY salary_year, member_id`
 
-	tier3ContributionQuery = `SELECT COALESCE(SUM(contribution_amount), 0) FROM canonical_contributions WHERE batch_id = $1`
+	tier3ContributionQuery = `SELECT COALESCE(SUM(contribution_amount), 0)::TEXT FROM canonical_contributions WHERE batch_id = $1`
 
 	tier3ServiceCreditQuery = `SELECT member_id, service_credit_years, employment_start, employment_end FROM canonical_members WHERE batch_id = $1`
 
@@ -107,7 +107,9 @@ func checkSalaryOutliers(db *sql.DB, batchID string, benchmarks PlanBenchmarks) 
 
 	var results []ReconciliationResult
 
-	// For each year in benchmarks, compute stats and flag outliers
+	// For each year in benchmarks, compute stats and flag outliers.
+	// The benchmark map keys gate which years are checked; the outlier threshold
+	// is computed from the batch data itself (peer-based detection).
 	for year := range benchmarks.AvgSalaryByYear {
 		salaries, ok := byYear[year]
 		if !ok || len(salaries) == 0 {

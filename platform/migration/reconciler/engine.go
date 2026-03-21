@@ -51,7 +51,7 @@ type ReconciliationResult struct {
 	Details         string             `json:"details,omitempty"`
 }
 
-// variance thresholds as *big.Rat for comparison
+// variance thresholds as *big.Rat for comparison (read-only — never mutate)
 var (
 	thresholdMatch = new(big.Rat).SetFrac64(1, 2)  // 0.50
 	thresholdMajor = new(big.Rat).SetFrac64(25, 1) // 25.00
