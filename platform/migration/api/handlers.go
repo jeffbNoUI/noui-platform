@@ -49,6 +49,11 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 	// Retransform
 	mux.HandleFunc("POST /api/v1/migration/batches/{id}/retransform", h.RetransformBatch)
+
+	// Reconciliation
+	mux.HandleFunc("POST /api/v1/migration/batches/{id}/reconcile", h.ReconcileBatch)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/reconciliation", h.GetReconciliation)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/reconciliation/p1", h.GetP1Issues)
 }
 
 // HealthCheck returns service status information.
