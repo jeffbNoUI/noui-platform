@@ -56,7 +56,8 @@ func ComputeGate(results []ReconciliationResult) GateResult {
 		g.TotalMembers++
 
 		if r.Tier == Tier3Aggregate {
-			// Tier 3 results contribute to P3 count only.
+			// Tier 3 results are advisory — only non-MATCH outliers count as P3.
+			// Tier 3 MATCHes are not outliers and are excluded from all counts.
 			p := AssignPriority(r)
 			if p == PriorityP3 {
 				g.P3Count++
