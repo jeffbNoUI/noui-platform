@@ -85,7 +85,7 @@ func (c *Client) ScoreColumns(ctx context.Context, req ScoreColumnsRequest) (*Sc
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		respBody, _ := io.ReadAll(resp.Body)
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		return nil, fmt.Errorf("intelligence service returned %d: %s", resp.StatusCode, string(respBody))
 	}
 

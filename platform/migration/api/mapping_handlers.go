@@ -1,7 +1,9 @@
 package api
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -109,8 +111,16 @@ func (h *Handler) GenerateMappings(w http.ResponseWriter, r *http.Request) {
 	registry := mapper.NewRegistry()
 	tid := tenantID(r)
 
+	// Use a transaction to ensure all mappings are stored atomically.
+	tx, err := h.DB.Begin()
+	if err != nil {
+		slog.Error("failed to begin transaction", "error", err, "engagement_id", id)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to begin transaction")
+		return
+	}
+	defer tx.Rollback() // no-op if committed
+
 	var allResults []mapper.AgreementResult
-	var allCanonicalTables []string // parallel slice: canonical table per result
 
 	for _, tbl := range req.Tables {
 		// 3a. Look up template.
@@ -173,14 +183,10 @@ func (h *Handler) GenerateMappings(w http.ResponseWriter, r *http.Request) {
 		// 3d. Run agreement analysis.
 		results := mapper.AnalyzeTableMappings(templateMatches, signalMatches)
 
-		for range results {
-			allCanonicalTables = append(allCanonicalTables, template.CanonicalTable)
-		}
 		allResults = append(allResults, results...)
 
 		// 4. Store proposed mappings in migration.field_mapping.
-		for i, res := range results {
-			_ = i
+		for _, res := range results {
 			approvalStatus := "PROPOSED"
 			if res.AutoApproved {
 				approvalStatus = "APPROVED"
@@ -196,7 +202,7 @@ func (h *Handler) GenerateMappings(w http.ResponseWriter, r *http.Request) {
 				sigConf = &v
 			}
 
-			_, err := h.DB.Exec(
+			_, err := tx.Exec(
 				`INSERT INTO migration.field_mapping
 				 (engagement_id, source_table, source_column, canonical_table, canonical_column,
 				  template_confidence, signal_confidence, agreement_status, approval_status)
@@ -209,9 +215,16 @@ func (h *Handler) GenerateMappings(w http.ResponseWriter, r *http.Request) {
 					"engagement_id", id, "source_column", res.SourceColumn)
 				apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR",
 					"failed to store field mapping")
-				return
+				return // tx.Rollback() called by defer
 			}
 		}
+	}
+
+	// Commit the transaction — all mappings stored atomically.
+	if err := tx.Commit(); err != nil {
+		slog.Error("failed to commit mappings transaction", "error", err, "engagement_id", id)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to commit mappings")
+		return
 	}
 
 	// 5. Return summary.
@@ -313,13 +326,10 @@ func (h *Handler) UpdateMapping(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var m FieldMapping
-	var approvedAt *time.Time
-	var approvedBy *string
-	if req.ApprovalStatus == "APPROVED" {
-		now := time.Now().UTC()
-		approvedAt = &now
-		approvedBy = &req.ApprovedBy
-	}
+	// Record who and when for both approvals and rejections (audit trail).
+	now := time.Now().UTC()
+	approvedAt := &now
+	approvedBy := &req.ApprovedBy
 
 	err := h.DB.QueryRow(
 		`UPDATE migration.field_mapping
@@ -338,9 +348,13 @@ func (h *Handler) UpdateMapping(w http.ResponseWriter, r *http.Request) {
 		&m.ApprovedBy, &m.ApprovedAt,
 	)
 	if err != nil {
-		slog.Error("failed to update mapping", "error", err, "mapping_id", mappingID, "engagement_id", id)
-		apiresponse.WriteError(w, http.StatusNotFound, "migration", "NOT_FOUND",
-			fmt.Sprintf("mapping %s not found in engagement %s", mappingID, id))
+		if errors.Is(err, sql.ErrNoRows) {
+			apiresponse.WriteError(w, http.StatusNotFound, "migration", "NOT_FOUND",
+				fmt.Sprintf("mapping %s not found in engagement %s", mappingID, id))
+		} else {
+			slog.Error("failed to update mapping", "error", err, "mapping_id", mappingID, "engagement_id", id)
+			apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to update mapping")
+		}
 		return
 	}
 

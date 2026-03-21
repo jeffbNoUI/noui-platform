@@ -85,13 +85,15 @@ func TestGenerateMappings_Success(t *testing.T) {
 			"MAPPING", &approvedAt, now, now,
 		))
 
-	// Expect INSERT for each mapping result.
+	// Transaction: BEGIN + INSERTs + COMMIT
+	mock.ExpectBegin()
 	// MBR_NBR → member_id: template pattern match (0.9) + signal (0.85) = AGREED
 	mock.ExpectExec("INSERT INTO migration.field_mapping").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	// BIRTH_DT → birth_date: template pattern match (0.9) + signal (0.90) = AGREED
 	mock.ExpectExec("INSERT INTO migration.field_mapping").
 		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
 
 	body, _ := json.Marshal(GenerateMappingsRequest{
 		Tables: []GenerateMappingsTable{
@@ -215,6 +217,10 @@ func TestGenerateMappings_UnknownConceptTag(t *testing.T) {
 			"MAPPING", &approvedAt, now, now,
 		))
 
+	// Transaction begins before table loop; rolled back on error.
+	mock.ExpectBegin()
+	mock.ExpectRollback()
+
 	body, _ := json.Marshal(GenerateMappingsRequest{
 		Tables: []GenerateMappingsTable{
 			{SourceTable: "T", ConceptTag: "nonexistent-tag", Columns: []GenerateMappingsColumn{{Name: "X", DataType: "INT"}}},
@@ -241,9 +247,12 @@ func TestGenerateMappings_NoIntelClient(t *testing.T) {
 			"MAPPING", &approvedAt, now, now,
 		))
 
+	// Transaction: BEGIN + INSERT + COMMIT
+	mock.ExpectBegin()
 	// MBR_NBR matches member_id via pattern → TEMPLATE_ONLY
 	mock.ExpectExec("INSERT INTO migration.field_mapping").
 		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
 
 	body, _ := json.Marshal(GenerateMappingsRequest{
 		Tables: []GenerateMappingsTable{
@@ -422,12 +431,14 @@ func TestUpdateMapping_Reject(t *testing.T) {
 
 	tmplConf := 0.9
 
+	// Rejections now also record who rejected and when (audit trail).
+	rejectedBy := ""
 	mock.ExpectQuery("UPDATE migration.field_mapping").
-		WithArgs("REJECTED", nil, nil, "map-001", "eng-001").
+		WithArgs("REJECTED", &rejectedBy, sqlmock.AnyArg(), "map-001", "eng-001").
 		WillReturnRows(sqlmock.NewRows(mappingCols).AddRow(
 			"map-001", "eng-001", "v1.0", "SRC", "MBR_NBR",
 			"member", "member_id", &tmplConf, nil,
-			"TEMPLATE_ONLY", "REJECTED", nil, nil,
+			"TEMPLATE_ONLY", "REJECTED", &rejectedBy, timePtr(time.Now().UTC()),
 		))
 
 	body, _ := json.Marshal(UpdateMappingRequest{
