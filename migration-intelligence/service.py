@@ -5,8 +5,14 @@ from pydantic import BaseModel
 from scorer.signal import CANONICAL_COLUMNS, score_column
 from reconciliation.analysis import ReconciliationResult, detect_systematic_patterns
 from reconciliation.corrections import FieldMapping, suggest_corrections
+from corpus.store import AnalystDecision, DecisionStore
+from corpus.abstractor import FeatureAbstractor
 
 app = FastAPI(title="Migration Intelligence Service", version="0.1.0")
+
+# Module-level corpus instances
+_decision_store = DecisionStore()
+_feature_abstractor = FeatureAbstractor()
 
 # --- Request/Response Models ---
 
@@ -118,8 +124,27 @@ async def score_columns(request: ScoreColumnsRequest) -> ScoreColumnsResponse:
 @app.post("/intelligence/record-decision")
 async def record_decision(request: RecordDecisionRequest):
     """Record an analyst decision, extract features to shared corpus."""
-    # Stub - until Task 24 implements corpus
-    return {"status": "recorded"}
+    decision = AnalystDecision(
+        tenant_id=request.tenant_id,
+        engagement_id=request.engagement_id,
+        decision_type=request.decision_type,
+        source_table="",  # Not provided in request; would come from full context
+        source_column=request.source_column,
+        canonical_table="",  # Not provided in request
+        canonical_column=request.canonical_column,
+        concept_tag=request.concept_tag,
+        column_profile={
+            "null_rate": request.column_profile.null_rate,
+            "cardinality": request.column_profile.cardinality,
+            "row_count": request.column_profile.row_count,
+            "data_type": request.column_profile.data_type,
+        },
+        outcome=request.outcome,
+    )
+    _decision_store.record_decision(decision)
+    # Verify abstraction works (strips identifiers)
+    _feature_abstractor.abstract(decision)
+    return {"status": "recorded", "corpus_entry_created": True}
 
 @app.post("/intelligence/analyze-mismatches", response_model=AnalyzeMismatchesResponse)
 async def analyze_mismatches(request: AnalyzeMismatchesRequest) -> AnalyzeMismatchesResponse:
@@ -187,5 +212,8 @@ async def analyze_mismatches(request: AnalyzeMismatchesRequest) -> AnalyzeMismat
 @app.get("/intelligence/corpus-stats", response_model=CorpusStats)
 async def corpus_stats() -> CorpusStats:
     """Return shared corpus health metrics (no tenant data)."""
-    # Stub - until Task 24 implements corpus
-    return CorpusStats(total_entries=0, concepts_covered=[], avg_confidence=0.0)
+    return CorpusStats(
+        total_entries=_decision_store.count(),
+        concepts_covered=_decision_store.concepts_covered(),
+        avg_confidence=0.0,  # Placeholder — would be computed from corpus entries
+    )
