@@ -1,5 +1,65 @@
 # noui-platform — Build History
 
+## Migration Engine Phase 2: Transformation + Loading (2026-03-21)
+
+**Branch:** `claude/strange-dhawan` → merged via PR #123
+**Goal:** Implement Tasks 13–18 of the migration engine plan — transformation pipeline, batch processor, canonical loader, re-transformation, code table discovery, and E2E verification.
+
+**What was built:**
+
+### Transformation Pipeline (`platform/migration/transformer/`)
+- 12 ordered handlers: TypeCoerce, NormalizeSSN, ParseDate, ResolveCode, ResolveMemberKey, ResolveStatus, DetectGranularity, DeduplicateQDRO, ResolveAddress, MapHireDates, DeriveDefaults, ValidateConstraints
+- Confidence tagging (ACTUAL, DERIVED, ESTIMATED, ROLLED_UP) on every canonical record
+- 6 exception types matching DDL CHECK constraints
+- 61 tests (pipeline + handlers)
+
+### Batch Processor (`platform/migration/batch/`)
+- Idempotent execution with checkpoint/resume
+- Configurable error thresholds with retiree zero-tolerance
+- BatchEventEmitter interface for WebSocket integration
+- Resume restores error counters from exception table (correctness fix found in review)
+- 25 tests
+
+### Canonical Loader (`platform/migration/loader/`)
+- WriteCanonicalRow (dynamic INSERT), WriteLineage (JSONB), WriteException
+- WriteBatchToCanonical orchestrator
+- `quoteIdent` for PostgreSQL-standard identifier quoting (replaced `sanitizeIdentifier` after review)
+- Confidence level validation against CHECK constraint values
+- 20 tests
+
+### Re-transformation (`platform/migration/loader/retransform.go`)
+- Surgical retransform via lineage with proper scoping (source_table + canonical_table)
+- Old lineage marked superseded, never deleted — full audit trail
+- POST /api/v1/migration/batches/{id}/retransform
+- 12 tests
+
+### Code Table Discovery (`platform/migration/mapper/codetable.go`)
+- DiscoverCodeColumns with cardinality < 50 AND < 1% heuristic
+- Schema-qualified filtering to avoid cross-schema collisions
+- InferDomain, ListCodeMappings, UpdateCodeMapping, ResolveCode
+- GET/PUT API endpoints
+- 10 tests
+
+### E2E Verification (`migration-simulation/tests/test_phase2_e2e.py`)
+- Python integration tests for full pipeline against Docker services
+- Verifies both PRISM and PAS sources load to same canonical schema unchanged
+
+### Design Document
+- `docs/plans/2026-03-21-migration-frontend-design.md` — Full migration management frontend design (WebSocket events, tiered exception triage, comparative view)
+
+### Review Fixes (commit 4d548ff)
+- C1: `findAffectedRows` scoped by source_table + canonical_table (prevented data corruption)
+- C2: Replaced `sanitizeIdentifier` with `quoteIdent` (SQL injection prevention)
+- I5: Schema filter added to DiscoverCodeColumns
+- I6: Confidence level validation before DB insert
+- M6: Iterator error check in code table discovery
+
+**Stats:** 11 commits, 21 files, ~7,900 lines, 130+ tests across 10 packages
+
+**Next session:** Phase 3 — Reconciliation + Feedback (Tasks 19–24). Starter prompt at `docs/plans/2026-03-21-migration-phase3-starter.md`.
+
+---
+
 ## Employer Ops Agent Desktop (2026-03-19)
 
 **Branch:** `claude/strange-cori`
