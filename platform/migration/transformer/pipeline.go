@@ -146,16 +146,23 @@ func NewPipeline(handlers []TransformHandler) *Pipeline {
 func (p *Pipeline) Transform(sourceRows []map[string]interface{}, mappings []FieldMapping) []TransformResult {
 	results := make([]TransformResult, len(sourceRows))
 	for i, row := range sourceRows {
-		results[i] = p.transformRow(row, mappings)
+		results[i] = p.transformRow(row, mappings, nil)
 	}
 	return results
 }
 
 // transformRow runs the full handler chain on a single source row.
-func (p *Pipeline) transformRow(sourceRow map[string]interface{}, mappings []FieldMapping) TransformResult {
+// If sharedCtx is non-nil, EngagementID, MappingVersion, and CodeMappings
+// are copied into the per-row context.
+func (p *Pipeline) transformRow(sourceRow map[string]interface{}, mappings []FieldMapping, sharedCtx *TransformContext) TransformResult {
 	ctx := &TransformContext{
 		Lineage:    make([]LineageEntry, 0),
 		Exceptions: make([]ExceptionEntry, 0),
+	}
+	if sharedCtx != nil {
+		ctx.EngagementID = sharedCtx.EngagementID
+		ctx.MappingVersion = sharedCtx.MappingVersion
+		ctx.CodeMappings = sharedCtx.CodeMappings
 	}
 
 	canonical := make(map[string]interface{}, len(mappings))
@@ -206,60 +213,9 @@ func (p *Pipeline) transformRow(sourceRow map[string]interface{}, mappings []Fie
 func (p *Pipeline) TransformWithContext(sourceRows []map[string]interface{}, mappings []FieldMapping, sharedCtx *TransformContext) []TransformResult {
 	results := make([]TransformResult, len(sourceRows))
 	for i, row := range sourceRows {
-		results[i] = p.transformRowWithContext(row, mappings, sharedCtx)
+		results[i] = p.transformRow(row, mappings, sharedCtx)
 	}
 	return results
-}
-
-// transformRowWithContext runs the handler chain using a shared context (for
-// code mappings etc) but produces per-row lineage/exceptions.
-func (p *Pipeline) transformRowWithContext(sourceRow map[string]interface{}, mappings []FieldMapping, sharedCtx *TransformContext) TransformResult {
-	ctx := &TransformContext{
-		EngagementID:   sharedCtx.EngagementID,
-		MappingVersion: sharedCtx.MappingVersion,
-		CodeMappings:   sharedCtx.CodeMappings,
-		Lineage:        make([]LineageEntry, 0),
-		Exceptions:     make([]ExceptionEntry, 0),
-	}
-
-	canonical := make(map[string]interface{}, len(mappings))
-	confidence := ConfidenceActual
-
-	for _, m := range mappings {
-		value, exists := sourceRow[m.SourceColumn]
-		if !exists {
-			value = nil
-		}
-
-		for _, h := range p.handlers {
-			var err error
-			value, err = h.Apply(value, sourceRow, m, ctx)
-			if err != nil {
-				value = nil
-				break
-			}
-		}
-
-		canonical[m.CanonicalColumn] = value
-	}
-
-	for _, le := range ctx.Lineage {
-		if le.HandlerName == "DeriveDefaults" {
-			if confidence == ConfidenceActual {
-				confidence = ConfidenceDerived
-			}
-		}
-	}
-	if len(ctx.Exceptions) > 0 {
-		confidence = ConfidenceEstimated
-	}
-
-	return TransformResult{
-		CanonicalRow: canonical,
-		Lineage:      ctx.Lineage,
-		Exceptions:   ctx.Exceptions,
-		Confidence:   confidence,
-	}
 }
 
 // DefaultPipeline returns a Pipeline with all 12 standard handlers in the

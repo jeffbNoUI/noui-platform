@@ -266,9 +266,12 @@ func ResolveCodeHandler() TransformHandler {
 			}
 
 			// Look for a code mapping keyed on the canonical column.
-			// Try both bare column and qualified forms.
+			// Try both qualified (table.column) and bare column forms.
 			keys := []string{
 				mapping.CanonicalColumn,
+			}
+			if mapping.SourceColumn != "" {
+				keys = append([]string{mapping.SourceColumn + "." + mapping.CanonicalColumn}, keys...)
 			}
 			s := fmt.Sprintf("%v", value)
 
