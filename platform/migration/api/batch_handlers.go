@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -8,8 +9,10 @@ import (
 	"strings"
 
 	"github.com/noui/platform/apiresponse"
+	"github.com/noui/platform/migration/batch"
 	migrationdb "github.com/noui/platform/migration/db"
 	"github.com/noui/platform/migration/models"
+	"github.com/noui/platform/migration/transformer"
 )
 
 // ListBatches handles GET /api/v1/migration/engagements/{id}/batches.
@@ -121,4 +124,158 @@ func (h *Handler) ListExceptions(w http.ResponseWriter, r *http.Request) {
 		exceptions = []models.MigrationException{}
 	}
 	apiresponse.WriteSuccess(w, http.StatusOK, "migration", exceptions)
+}
+
+// ExecuteBatchHandler handles POST /api/v1/migration/batches/{id}/execute.
+// It starts batch execution asynchronously and returns 202 Accepted immediately.
+func (h *Handler) ExecuteBatchHandler(w http.ResponseWriter, r *http.Request) {
+	batchID := r.PathValue("id")
+	if batchID == "" {
+		apiresponse.WriteError(w, http.StatusBadRequest, "migration", "VALIDATION_ERROR", "batch id is required")
+		return
+	}
+
+	// Get batch record.
+	b, err := migrationdb.GetBatch(h.DB, batchID)
+	if err != nil {
+		slog.Error("failed to get batch for execute", "error", err, "batch_id", batchID)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to get batch")
+		return
+	}
+	if b == nil {
+		apiresponse.WriteError(w, http.StatusNotFound, "migration", "NOT_FOUND", fmt.Sprintf("batch %s not found", batchID))
+		return
+	}
+
+	// Get engagement for source connection info.
+	engagement, err := migrationdb.GetEngagement(h.DB, b.EngagementID)
+	if err != nil {
+		slog.Error("failed to get engagement for batch execute", "error", err, "engagement_id", b.EngagementID)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to get engagement")
+		return
+	}
+	if engagement == nil {
+		apiresponse.WriteError(w, http.StatusNotFound, "migration", "NOT_FOUND", fmt.Sprintf("engagement %s not found", b.EngagementID))
+		return
+	}
+	if engagement.SourceConnection == nil {
+		apiresponse.WriteError(w, http.StatusBadRequest, "migration", "VALIDATION_ERROR", "engagement has no source connection configured")
+		return
+	}
+
+	// Build source DSN.
+	dsn := migrationdb.BuildSourceDSN(engagement.SourceConnection)
+
+	// Get field mappings for this engagement.
+	mappings, err := queryFieldMappings(h.DB, engagement.EngagementID)
+	if err != nil {
+		slog.Error("failed to get field mappings for batch execute", "error", err, "engagement_id", engagement.EngagementID)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to get field mappings")
+		return
+	}
+
+	// Determine source table and key column from engagement source system.
+	tableName := resolveSourceTable(engagement.SourceSystemName, b.BatchScope)
+	keyColumn := resolvePrimaryKey(engagement.SourceSystemName)
+
+	provider := &batch.DBSourceRowProvider{
+		DSN:       dsn,
+		TableName: tableName,
+		KeyColumn: keyColumn,
+	}
+
+	// Build transformation pipeline and convert mappings.
+	pipeline := transformer.DefaultPipeline()
+	tmappings := toTransformerMappings(mappings)
+
+	// Execute async.
+	go func() {
+		batchObj := &batch.Batch{
+			BatchID:        b.BatchID,
+			EngagementID:   b.EngagementID,
+			BatchScope:     b.BatchScope,
+			MappingVersion: b.MappingVersion,
+		}
+		if err := batch.ExecuteBatch(h.DB, batchObj, provider, pipeline, tmappings, batch.DefaultThresholds(), nil); err != nil {
+			slog.Error("batch execution failed", "error", err, "batch_id", batchID)
+		}
+	}()
+
+	apiresponse.WriteSuccess(w, http.StatusAccepted, "migration", map[string]string{
+		"batch_id": batchID,
+		"status":   "RUNNING",
+	})
+}
+
+// resolveSourceTable maps source system name and batch scope to a schema-qualified table name.
+func resolveSourceTable(sourceSystem, scope string) string {
+	switch sourceSystem {
+	case "PRISM":
+		return "src_prism.prism_member"
+	case "PAS":
+		return "src_pas.member"
+	default:
+		return scope
+	}
+}
+
+// resolvePrimaryKey returns the primary key column for the given source system.
+func resolvePrimaryKey(sourceSystem string) string {
+	switch sourceSystem {
+	case "PRISM":
+		return "mbr_nbr"
+	case "PAS":
+		return "member_id"
+	default:
+		return "id"
+	}
+}
+
+// queryFieldMappings loads field mappings for an engagement from the database.
+func queryFieldMappings(db *sql.DB, engagementID string) ([]FieldMapping, error) {
+	rows, err := db.Query(
+		`SELECT mapping_id, engagement_id, mapping_version, source_table, source_column,
+		        canonical_table, canonical_column, template_confidence, signal_confidence,
+		        agreement_status, approval_status, approved_by, approved_at
+		 FROM migration.field_mapping
+		 WHERE engagement_id = $1
+		 ORDER BY source_table, source_column`,
+		engagementID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("query field mappings: %w", err)
+	}
+	defer rows.Close()
+
+	var mappings []FieldMapping
+	for rows.Next() {
+		var m FieldMapping
+		if err := rows.Scan(
+			&m.MappingID, &m.EngagementID, &m.MappingVersion,
+			&m.SourceTable, &m.SourceColumn,
+			&m.CanonicalTable, &m.CanonicalColumn,
+			&m.TemplateConfidence, &m.SignalConfidence,
+			&m.AgreementStatus, &m.ApprovalStatus,
+			&m.ApprovedBy, &m.ApprovedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan field mapping: %w", err)
+		}
+		mappings = append(mappings, m)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate field mappings: %w", err)
+	}
+	return mappings, nil
+}
+
+// toTransformerMappings converts API FieldMapping records to transformer.FieldMapping values.
+func toTransformerMappings(mappings []FieldMapping) []transformer.FieldMapping {
+	out := make([]transformer.FieldMapping, 0, len(mappings))
+	for _, m := range mappings {
+		out = append(out, transformer.FieldMapping{
+			SourceColumn:    m.SourceColumn,
+			CanonicalColumn: m.CanonicalColumn,
+		})
+	}
+	return out
 }

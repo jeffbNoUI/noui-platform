@@ -16,7 +16,7 @@ import (
 var validIdentifier = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_.]*$`)
 
 // quoteIdent validates and double-quotes a SQL identifier to prevent injection.
-// Returns an error if the identifier contains unsafe characters.
+// Supports schema-qualified names (e.g. "src_prism.prism_member" → "src_prism"."prism_member").
 func quoteIdent(id string) (string, error) {
 	if id == "" {
 		return "", fmt.Errorf("empty identifier")
@@ -24,8 +24,12 @@ func quoteIdent(id string) (string, error) {
 	if !validIdentifier.MatchString(id) {
 		return "", fmt.Errorf("unsafe SQL identifier: %q", id)
 	}
-	// Double-quote to handle reserved words and ensure safety
-	return `"` + strings.ReplaceAll(id, `"`, `""`) + `"`, nil
+	// Handle schema-qualified names: split on dot and quote each part
+	parts := strings.Split(id, ".")
+	for i, p := range parts {
+		parts[i] = `"` + strings.ReplaceAll(p, `"`, `""`) + `"`
+	}
+	return strings.Join(parts, "."), nil
 }
 
 // PatternCheck defines a regex pattern to validate against a column's values.

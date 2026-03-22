@@ -71,8 +71,14 @@ func buildDSN(conn *models.SourceConnection) (driverName string, dsn string, err
 	}
 }
 
-// openSourceDB opens a connection to the source database.
-func openSourceDB(conn *models.SourceConnection) (*sql.DB, error) {
+// BuildSourceDSN constructs a connection string for the given source connection.
+func BuildSourceDSN(conn *models.SourceConnection) string {
+	_, dsn, _ := buildDSN(conn)
+	return dsn
+}
+
+// OpenSourceDB opens a connection to the source database.
+func OpenSourceDB(conn *models.SourceConnection) (*sql.DB, error) {
 	driverName, dsn, err := buildDSN(conn)
 	if err != nil {
 		return nil, err
@@ -86,7 +92,7 @@ func openSourceDB(conn *models.SourceConnection) (*sql.DB, error) {
 
 // TestSourceConnection tries to connect to the source database and returns nil on success.
 func TestSourceConnection(conn *models.SourceConnection) error {
-	srcDB, err := openSourceDB(conn)
+	srcDB, err := OpenSourceDB(conn)
 	if err != nil {
 		return err
 	}
@@ -101,7 +107,7 @@ func TestSourceConnection(conn *models.SourceConnection) error {
 // DiscoverSourceTables connects to the source database and returns a list of tables
 // with row counts and column counts.
 func DiscoverSourceTables(conn *models.SourceConnection) ([]models.SourceTable, error) {
-	srcDB, err := openSourceDB(conn)
+	srcDB, err := OpenSourceDB(conn)
 	if err != nil {
 		return nil, err
 	}

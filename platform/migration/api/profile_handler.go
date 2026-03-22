@@ -38,6 +38,21 @@ func (h *Handler) ProfileEngagement(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Open source database connection
+	if engagement.SourceConnection == nil {
+		apiresponse.WriteError(w, http.StatusBadRequest, "migration", "VALIDATION_ERROR",
+			"engagement has no source connection configured — configure source first")
+		return
+	}
+	srcDB, err := migrationdb.OpenSourceDB(engagement.SourceConnection)
+	if err != nil {
+		slog.Error("failed to open source database", "error", err, "engagement_id", id)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "SOURCE_ERROR",
+			"failed to connect to source database")
+		return
+	}
+	defer srcDB.Close()
+
 	var req ProfileRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		apiresponse.WriteError(w, http.StatusBadRequest, "migration", "INVALID_BODY", "invalid JSON body")
@@ -50,7 +65,7 @@ func (h *Handler) ProfileEngagement(w http.ResponseWriter, r *http.Request) {
 
 	var profiles []*profiler.TableProfile
 	for _, cfg := range req.Tables {
-		profile, err := profiler.ProfileTable(h.DB, cfg)
+		profile, err := profiler.ProfileTable(srcDB, cfg)
 		if err != nil {
 			slog.Error("failed to profile table", "error", err, "table", cfg.TableName, "engagement_id", id)
 			apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "PROFILE_ERROR",

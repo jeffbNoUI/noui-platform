@@ -50,3 +50,6 @@ targets/*/schema-manifest/
 
 # Generated test reports
 test-results/intelligence-report.json
+
+# Generated seed data (regenerate with python generators)
+migration-simulation/sources/*/init/02_seed.sql
