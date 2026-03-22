@@ -126,10 +126,6 @@ TOTAL_COUNT=$((TOTAL_COUNT + 1))
 if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
   echo -e "  ${GREEN}✓${NC} POST /employer/alerts (create) (HTTP $HTTP_CODE)"
   PASS_COUNT=$((PASS_COUNT + 1))
-elif [ "$HTTP_CODE" = "500" ]; then
-  # Transient: stale DB connection from prior failed txn (portal user duplicate)
-  echo -e "  ${YELLOW}⊘${NC} POST /employer/alerts — skipped (stale DB conn, HTTP 500)"
-  PASS_COUNT=$((PASS_COUNT + 1))
 else
   echo -e "  ${RED}✗${NC} POST /employer/alerts — expected 200/201, got $HTTP_CODE"
   FAIL_COUNT=$((FAIL_COUNT + 1))
@@ -189,11 +185,6 @@ if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
   echo -e "  ${GREEN}✓${NC} POST /reporting/manual-entry (HTTP $HTTP_CODE)"
   PASS_COUNT=$((PASS_COUNT + 1))
   FILE_ID=$(echo "$BODY" | jq -r '.data.id // .data.fileId // .id // .fileId // empty' 2>/dev/null || echo "")
-elif [ "$HTTP_CODE" = "500" ]; then
-  # Known issue: uploaded_by UUID empty when auth context lacks user_id claim
-  echo -e "  ${YELLOW}⊘${NC} POST /reporting/manual-entry — skipped (auth context UUID, HTTP $HTTP_CODE)"
-  PASS_COUNT=$((PASS_COUNT + 1))
-  FILE_ID=""
 else
   echo -e "  ${RED}✗${NC} POST /reporting/manual-entry — expected 200/201, got $HTTP_CODE"
   echo "  Response: $(echo "$BODY" | head -c 200)"
@@ -408,10 +399,6 @@ if [ -n "$REFUND_ID" ] && [ "$REFUND_ID" != "null" ]; then
   TOTAL_COUNT=$((TOTAL_COUNT + 1))
   if [ "$HTTP_CODE" = "200" ]; then
     echo -e "  ${GREEN}✓${NC} POST /terminations/refunds/:id/calculate (HTTP $HTTP_CODE)"
-    PASS_COUNT=$((PASS_COUNT + 1))
-  elif [ "$HTTP_CODE" = "422" ]; then
-    # Known issue: hireDate stored as timestamp, calculator expects date-only
-    echo -e "  ${YELLOW}⊘${NC} POST /terminations/refunds/:id/calculate — skipped (date parse bug, HTTP 422)"
     PASS_COUNT=$((PASS_COUNT + 1))
   else
     echo -e "  ${RED}✗${NC} POST /terminations/refunds/:id/calculate — expected 200, got $HTTP_CODE"
