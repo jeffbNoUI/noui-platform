@@ -188,6 +188,9 @@ func (h *Handler) ExecuteBatchHandler(w http.ResponseWriter, r *http.Request) {
 	pipeline := transformer.DefaultPipeline()
 	tmappings := toTransformerMappings(mappings)
 
+	// Capture source info for reference data loading after batch execution.
+	sourceSystem := engagement.SourceSystemName
+
 	// Execute async.
 	go func() {
 		batchObj := &batch.Batch{
@@ -198,6 +201,12 @@ func (h *Handler) ExecuteBatchHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := batch.ExecuteBatch(h.DB, batchObj, provider, pipeline, tmappings, batch.DefaultThresholds(), nil); err != nil {
 			slog.Error("batch execution failed", "error", err, "batch_id", batchID)
+			return
+		}
+		// After successful batch execution, load source reference data
+		// (stored calculations and payment history) for reconciliation.
+		if err := batch.LoadSourceReferenceData(h.DB, batchID, sourceSystem, dsn); err != nil {
+			slog.Error("source reference data load failed", "error", err, "batch_id", batchID)
 		}
 	}()
 

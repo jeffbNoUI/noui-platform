@@ -256,7 +256,7 @@ if [ -n "$PRISM_BATCH_ID" ] && [ "$PRISM_BATCH_ID" != "null" ]; then
   while [ $POLL_ATTEMPTS -lt $MAX_POLL ]; do
     BATCH_RESP=$(api_get "/api/v1/migration/batches/${PRISM_BATCH_ID}")
     PRISM_BATCH_STATUS=$(echo "$BATCH_RESP" | jq -r '.data.status // .status // "UNKNOWN"' 2>/dev/null || echo "UNKNOWN")
-    if [ "$PRISM_BATCH_STATUS" = "COMPLETE" ] || [ "$PRISM_BATCH_STATUS" = "COMPLETED" ]; then
+    if [ "$PRISM_BATCH_STATUS" = "LOADED" ] || [ "$PRISM_BATCH_STATUS" = "COMPLETE" ] || [ "$PRISM_BATCH_STATUS" = "COMPLETED" ]; then
       pass "PRISM batch completed"
       break
     elif [ "$PRISM_BATCH_STATUS" = "FAILED" ] || [ "$PRISM_BATCH_STATUS" = "HALTED" ]; then
@@ -333,7 +333,7 @@ fi
 # Step 3: Profile source tables
 log "  Profiling PAS source tables..."
 PAS_PROFILE=$(api_post "/api/v1/migration/engagements/${PAS_ENG_ID}/profile" \
-  '{"tables":[{"table_name":"src_pas.member","required_columns":["member_id","last_name","first_name","date_of_birth","original_hire_date"],"key_columns":["member_id"]}]}')
+  '{"tables":[{"table_name":"src_pas.member","required_columns":["member_id","last_name","first_name","date_of_birth","original_membership_date"],"key_columns":["member_id"]}]}')
 
 if echo "$PAS_PROFILE" | jq -e '.data // empty' >/dev/null 2>&1; then
   pass "PAS source profiled"
@@ -398,7 +398,7 @@ if [ -n "$PAS_BATCH_ID" ] && [ "$PAS_BATCH_ID" != "null" ]; then
   while [ $POLL_ATTEMPTS -lt $MAX_POLL ]; do
     BATCH_RESP=$(api_get "/api/v1/migration/batches/${PAS_BATCH_ID}")
     PAS_BATCH_STATUS=$(echo "$BATCH_RESP" | jq -r '.data.status // .status // "UNKNOWN"' 2>/dev/null || echo "UNKNOWN")
-    if [ "$PAS_BATCH_STATUS" = "COMPLETE" ] || [ "$PAS_BATCH_STATUS" = "COMPLETED" ]; then
+    if [ "$PAS_BATCH_STATUS" = "LOADED" ] || [ "$PAS_BATCH_STATUS" = "COMPLETE" ] || [ "$PAS_BATCH_STATUS" = "COMPLETED" ]; then
       pass "PAS batch completed"
       break
     elif [ "$PAS_BATCH_STATUS" = "FAILED" ] || [ "$PAS_BATCH_STATUS" = "HALTED" ]; then
