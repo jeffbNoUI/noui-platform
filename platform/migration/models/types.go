@@ -10,6 +10,7 @@ import (
 type EngagementStatus string
 
 const (
+	StatusDiscovery    EngagementStatus = "DISCOVERY"
 	StatusProfiling    EngagementStatus = "PROFILING"
 	StatusMapping      EngagementStatus = "MAPPING"
 	StatusTransforming EngagementStatus = "TRANSFORMING"
@@ -18,8 +19,9 @@ const (
 	StatusComplete     EngagementStatus = "COMPLETE"
 )
 
-// ValidTransitions defines allowed status transitions for migration engagements.
+// ValidTransitions defines allowed forward status transitions for migration engagements.
 var ValidTransitions = map[EngagementStatus][]EngagementStatus{
+	StatusDiscovery:    {StatusProfiling},
 	StatusProfiling:    {StatusMapping},
 	StatusMapping:      {StatusTransforming},
 	StatusTransforming: {StatusReconciling},
@@ -196,4 +198,97 @@ type QualityScores struct {
 	Timeliness   float64 `json:"timeliness"`
 	Validity     float64 `json:"validity"`
 	Uniqueness   float64 `json:"uniqueness"`
+}
+
+// PhaseGateTransition records an audited phase transition.
+type PhaseGateTransition struct {
+	ID               string             `json:"id"`
+	EngagementID     string             `json:"engagement_id"`
+	FromPhase        string             `json:"from_phase"`
+	ToPhase          string             `json:"to_phase"`
+	Direction        string             `json:"direction"` // ADVANCE or REGRESS
+	GateMetrics      map[string]float64 `json:"gate_metrics"`
+	AIRecommendation string             `json:"ai_recommendation"`
+	Overrides        []string           `json:"overrides"`
+	AuthorizedBy     string             `json:"authorized_by"`
+	AuthorizedAt     time.Time          `json:"authorized_at"`
+	Notes            string             `json:"notes,omitempty"`
+}
+
+// AdvancePhaseRequest is the JSON body for advancing an engagement phase.
+type AdvancePhaseRequest struct {
+	Notes     string   `json:"notes,omitempty"`
+	Overrides []string `json:"overrides,omitempty"`
+}
+
+// RegressPhaseRequest is the JSON body for regressing an engagement phase.
+type RegressPhaseRequest struct {
+	TargetPhase string `json:"target_phase"`
+	Notes       string `json:"notes"`
+}
+
+// GateStatusResponse contains gate metrics and AI recommendation for a phase.
+type GateStatusResponse struct {
+	Metrics        map[string]float64 `json:"metrics"`
+	Recommendation *AIRecommendation  `json:"recommendation"`
+}
+
+// AIRecommendation contains a deterministic recommendation for a phase gate.
+type AIRecommendation struct {
+	Phase            string            `json:"phase"`
+	Type             string            `json:"type"`
+	Summary          string            `json:"summary"`
+	Detail           string            `json:"detail"`
+	Confidence       float64           `json:"confidence"`
+	Actionable       bool              `json:"actionable"`
+	SuggestedActions []SuggestedAction `json:"suggested_actions"`
+}
+
+// SuggestedAction describes an action the analyst can take.
+type SuggestedAction struct {
+	Label  string `json:"label"`
+	Action string `json:"action"`
+}
+
+// AttentionItem represents a unified item requiring analyst attention.
+type AttentionItem struct {
+	ID              string `json:"id"`
+	Source          string `json:"source"` // TRANSFORMATION, RECONCILIATION, RISK, QUALITY
+	Phase           string `json:"phase"`
+	Priority        string `json:"priority"` // P1, P2, P3
+	Summary         string `json:"summary"`
+	Detail          string `json:"detail"`
+	SuggestedAction string `json:"suggested_action,omitempty"`
+	BatchID         string `json:"batch_id,omitempty"`
+	EngagementID    string `json:"engagement_id"`
+	CreatedAt       string `json:"created_at"`
+	Resolved        bool   `json:"resolved"`
+}
+
+// AttentionSummary provides aggregate counts for attention items.
+type AttentionSummary struct {
+	Total        int            `json:"total"`
+	P1           int            `json:"p1"`
+	P2           int            `json:"p2"`
+	P3           int            `json:"p3"`
+	ByEngagement map[string]int `json:"by_engagement"`
+}
+
+// Notification represents a user-facing notification.
+type Notification struct {
+	ID             string    `json:"id"`
+	TenantID       string    `json:"tenant_id"`
+	EngagementID   string    `json:"engagement_id"`
+	EngagementName string    `json:"engagement_name"`
+	Type           string    `json:"type"`
+	Summary        string    `json:"summary"`
+	Read           bool      `json:"read"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+// RootCauseResponse contains a root-cause analysis for reconciliation mismatches.
+type RootCauseResponse struct {
+	Analysis      string  `json:"analysis"`
+	AffectedCount int     `json:"affected_count"`
+	Confidence    float64 `json:"confidence"`
 }
