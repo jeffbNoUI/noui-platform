@@ -292,3 +292,43 @@ type RootCauseResponse struct {
 	AffectedCount int     `json:"affected_count"`
 	Confidence    float64 `json:"confidence"`
 }
+
+// MigrationBatch represents a transformation batch.
+type MigrationBatch struct {
+	BatchID           string     `json:"batch_id"`
+	EngagementID      string     `json:"engagement_id"`
+	BatchScope        string     `json:"batch_scope"`
+	Status            string     `json:"status"`
+	MappingVersion    string     `json:"mapping_version"`
+	RowCountSource    *int       `json:"row_count_source"`
+	RowCountLoaded    *int       `json:"row_count_loaded"`
+	RowCountException *int       `json:"row_count_exception"`
+	ErrorRate         *float64   `json:"error_rate"`
+	HaltedReason      *string    `json:"halted_reason"`
+	CheckpointKey     *string    `json:"checkpoint_key"`
+	StartedAt         *time.Time `json:"started_at"`
+	CompletedAt       *time.Time `json:"completed_at"`
+}
+
+// MigrationException represents a single transformation exception.
+type MigrationException struct {
+	ExceptionID        string     `json:"exception_id"`
+	BatchID            string     `json:"batch_id"`
+	SourceTable        string     `json:"source_table"`
+	SourceID           string     `json:"source_id"`
+	CanonicalTable     *string    `json:"canonical_table"`
+	FieldName          string     `json:"field_name"`
+	ExceptionType      string     `json:"exception_type"`
+	AttemptedValue     *string    `json:"attempted_value"`
+	ConstraintViolated string     `json:"constraint_violated"`
+	Disposition        string     `json:"disposition"`
+	ResolutionNote     *string    `json:"resolution_note"`
+	ResolvedBy         *string    `json:"resolved_by"`
+	ResolvedAt         *time.Time `json:"resolved_at"`
+}
+
+// CreateBatchRequest is the JSON body for creating a transformation batch.
+type CreateBatchRequest struct {
+	BatchScope     string `json:"batch_scope"`
+	MappingVersion string `json:"mapping_version"`
+}

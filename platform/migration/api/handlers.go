@@ -51,6 +51,12 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/code-mappings", h.ListCodeMappings)
 	mux.HandleFunc("PUT /api/v1/migration/engagements/{id}/code-mappings/{mapping_id}", h.UpdateCodeMapping)
 
+	// Batch CRUD
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/batches", h.ListBatches)
+	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/batches", h.CreateBatch)
+	mux.HandleFunc("GET /api/v1/migration/batches/{id}", h.GetBatch)
+	mux.HandleFunc("GET /api/v1/migration/batches/{id}/exceptions", h.ListExceptions)
+
 	// Retransform
 	mux.HandleFunc("POST /api/v1/migration/batches/{id}/retransform", h.RetransformBatch)
 
