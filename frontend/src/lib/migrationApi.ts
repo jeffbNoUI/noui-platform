@@ -43,6 +43,8 @@ import type {
   RegressPhaseRequest,
   CorpusContext,
   MigrationException,
+  CoverageReport,
+  MappingSpecReport,
 } from '@/types/Migration';
 
 const BASE = '/api/v1/migration';
@@ -227,4 +229,12 @@ export const migrationAPI = {
   markNotificationRead: (id: string) => putAPI<void>(`${BASE}/notifications/${id}/read`, {}, RAW),
 
   markAllNotificationsRead: () => putAPI<void>(`${BASE}/notifications/read-all`, {}, RAW),
+
+  // ─── Coverage Report (Target-Anchored Profiling) ──────────────────────────
+  getCoverageReport: (engagementId: string) =>
+    fetchAPI<CoverageReport>(`${BASE}/engagements/${engagementId}/coverage-report`, RAW),
+
+  // ─── Mapping Specification Document ───────────────────────────────────────
+  getMappingSpec: (engagementId: string) =>
+    fetchAPI<MappingSpecReport>(`${BASE}/engagements/${engagementId}/reports/mapping-spec`, RAW),
 };

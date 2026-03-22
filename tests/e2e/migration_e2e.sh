@@ -311,6 +311,34 @@ extract_http "$RESPONSE"
 assert_status "GET /migration/events (list)" "200" "$HTTP_CODE"
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# Phase 10: Coverage Report & Mapping Specification
+# Target-anchored profiling and auditable mapping artifact
+# ═══════════════════════════════════════════════════════════════════════════════
+
+log_header "Phase 10: Coverage Report & Mapping Spec"
+
+# Coverage report — target-anchored canonical field satisfaction
+RESPONSE=$(do_get "/api/v1/migration/engagements/${ENGAGEMENT_ID}/coverage-report")
+extract_http "$RESPONSE"
+assert_status "GET /migration/coverage-report" "200" "$HTTP_CODE"
+
+# Verify coverage report structure
+TOTAL_CANONICAL=$(echo "$HTTP_BODY" | jq -r '.data.total_canonical // 0')
+TOTAL_COUNT=$((TOTAL_COUNT + 1))
+if [ "$TOTAL_CANONICAL" -gt "0" ]; then
+  echo -e "  ${GREEN}✓${NC} Coverage report: ${TOTAL_CANONICAL} canonical fields assessed"
+  PASS_COUNT=$((PASS_COUNT + 1))
+else
+  echo -e "  ${RED}✗${NC} Coverage report: total_canonical = 0, expected >0"
+  FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+
+# Mapping specification document — auditable artifact
+RESPONSE=$(do_get "/api/v1/migration/engagements/${ENGAGEMENT_ID}/reports/mapping-spec")
+extract_http "$RESPONSE"
+assert_status "GET /migration/reports/mapping-spec" "200" "$HTTP_CODE"
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # Summary
 # ═══════════════════════════════════════════════════════════════════════════════
 

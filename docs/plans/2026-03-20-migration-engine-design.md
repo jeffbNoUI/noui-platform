@@ -499,7 +499,100 @@ Verification: shared fixture file (YAML) with inputs, expected intermediate valu
 
 ---
 
-## 16. References
+## 16. Canonical Coverage Report
+
+Added 2026-03-22 based on data profiling research synthesis.
+
+Standard profiling answers "how clean is the source?" The coverage report inverts the question: "how well does this source satisfy each field in our canonical schema?" This is the defining output of the target-anchored model.
+
+### Output
+
+For each canonical field across all 18 concept tags:
+- **Status**: COVERED (confidence >0.7), TRANSFORMABLE (0.3–0.7), UNCOVERED (<0.3)
+- **Candidates**: ranked source columns with confidence scores
+- **RequiredGaps**: count of UNCOVERED + Required fields (blocks migration if >0)
+
+### Pattern Detection
+
+Pension-domain format patterns detected automatically during profiling:
+- CYYMMDD century-encoded dates (AS400)
+- YYYYMMDD packed dates
+- SSN formats (NNN-NN-NNNN, NNNNNNNNN)
+- Implicit decimal (cents in last 2 digits)
+- Alpha-prefixed member IDs (R=retiree, A=active)
+- Two-character status codes
+
+Pattern detection informs type compatibility: a VARCHAR column with CYYMMDD pattern is type-compatible with a canonical DATE field if a transformation is applied.
+
+### Python Migration Path
+
+The Go pattern detection (`profiler/patterns.go`) handles known deterministic patterns via regex matching. When the Python intelligence service (`migration-intelligence/`, port 8100) is deployed:
+
+1. ML-based pattern discovery (frequency analysis, n-gram clustering) moves to Python
+2. Go `DetectPatterns()` becomes the fallback via the existing nil-safe `intelligence.Scorer` interface
+3. The Go profiler calls Python via HTTP, falling back to local regex if unavailable
+
+This follows the same degradation pattern as the signal scorer: template matching (Go) is always available, signal scoring (Python) enhances when present.
+
+### Mapping Specification Document
+
+A read-only aggregation endpoint produces an auditable source-to-target mapping specification per engagement. Includes: field mappings grouped by canonical table, code mappings, exception counts, assumptions (from DERIVED lineage), and exclusions (from EXCLUDED exceptions). Designed for pension fund boards and actuaries.
+
+---
+
+## 17. Cross-Engagement Mapping Library (Phase 5)
+
+When an analyst approves a field mapping, the pattern is a reusable asset. Over time, an indexed library accumulates:
+
+- **Indexed by** `source_platform_type` (e.g., AS400_DB2, ORACLE_PAS, SQL_SERVER)
+- New engagements on known platforms get auto-proposed mappings pre-populated from the library
+- Library entries carry `times_used` and `success_rate` (avg reconciliation score when used)
+- Low-scoring mappings are down-ranked automatically
+
+### Future Schema
+
+```sql
+CREATE TABLE migration.mapping_library (
+    library_id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    platform_type           VARCHAR(50) NOT NULL,
+    source_column_pattern   VARCHAR(100) NOT NULL,
+    canonical_table         VARCHAR(100) NOT NULL,
+    canonical_column        VARCHAR(100) NOT NULL,
+    code_translations       JSONB,
+    times_used              INTEGER NOT NULL DEFAULT 0,
+    success_rate            DECIMAL(5,4),
+    created_from            UUID REFERENCES migration.engagement(engagement_id),
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+### Prerequisite
+
+- `source_platform_type` column added to `migration.engagement` (migration 035, 2026-03-22)
+- At least 2 completed engagements on the same platform type before library becomes useful
+
+---
+
+## 18. Source Platform Profiles (Phase 5)
+
+Legacy pension systems on the same platform (AS400/DB2, Oracle PAS, etc.) share structural patterns: naming conventions, date encodings, table organization. Each profiling run produces metadata that improves tooling for subsequent engagements on the same platform.
+
+### Concept
+
+- Platform types assigned during engagement creation
+- Pattern detection results (Section 16) accumulate per platform type
+- Auto-detection thresholds tighten as patterns are confirmed across engagements
+- Reduces Rules Engineer time on each successive engagement for known platforms
+
+### Implementation Notes
+
+- `source_platform_type VARCHAR(50)` on `migration.engagement` (migration 035, deployed)
+- Platform profile accumulation deferred until 3+ engagements exist on a single platform
+- Federated learning architecture (Section 4) applies to profiling patterns, not just mapping intelligence
+
+---
+
+## 19. References
 
 - [Industry Best Practices Research](./2026-03-20-migration-best-practices-research.md)
 - [Migration Simulation Design](./2026-03-20-migration-simulation-design.md)
@@ -521,6 +614,7 @@ CREATE TABLE migration.engagement (
     canonical_schema_version    VARCHAR(20) NOT NULL DEFAULT 'v1.0',
     status                      VARCHAR(20) NOT NULL DEFAULT 'PROFILING'
                                 CHECK (status IN ('PROFILING','MAPPING','TRANSFORMING','RECONCILING','PARALLEL_RUN','COMPLETE')),
+    source_platform_type        VARCHAR(50),          -- AS400_DB2, ORACLE_PAS, SQL_SERVER, etc. (migration 035)
     quality_baseline_approved_at TIMESTAMPTZ,
     created_at                  TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at                  TIMESTAMPTZ NOT NULL DEFAULT now()

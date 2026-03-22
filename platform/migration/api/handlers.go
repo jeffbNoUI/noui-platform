@@ -109,6 +109,12 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/ai/remediation", h.HandleGetRemediation)
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/reconciliation/root-cause", h.HandleGetRootCause)
 
+	// Coverage report (target-anchored profiling)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/coverage-report", h.CoverageReport)
+
+	// Mapping specification document (auditable artifact)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/reports/mapping-spec", h.MappingSpec)
+
 	// Notifications
 	mux.HandleFunc("GET /api/v1/migration/notifications", h.HandleGetNotifications)
 	mux.HandleFunc("PUT /api/v1/migration/notifications/{id}/read", h.HandleMarkNotificationRead)
