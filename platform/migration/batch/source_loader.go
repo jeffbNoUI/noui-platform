@@ -7,6 +7,31 @@ import (
 	"strings"
 )
 
+// prismPlanCodeMap normalizes PRISM plan codes to canonical tier IDs.
+var prismPlanCodeMap = map[string]string{
+	"DB_MAIN": "TIER_1",
+	"DB_T1":   "TIER_1",
+	"DB_T2":   "TIER_2",
+	"DB_T3":   "TIER_3",
+}
+
+// pasPlanCodeMap normalizes PAS plan codes to canonical tier IDs.
+var pasPlanCodeMap = map[string]string{
+	"DB-T1": "TIER_1",
+	"DB-T2": "TIER_2",
+	"DB-T3": "TIER_3",
+}
+
+// normalizePlanCode maps a source plan code to a canonical tier ID.
+// Returns (canonical, original). If the code is not in the map, both are the source code.
+func normalizePlanCode(sourceCode string, codeMap map[string]string) (canonical, original string) {
+	canonical, ok := codeMap[sourceCode]
+	if !ok {
+		return sourceCode, sourceCode
+	}
+	return canonical, sourceCode
+}
+
 // LoadSourceReferenceData loads stored calculations and payment history from
 // the source database into the migration schema staging tables. This data is
 // required by the reconciler (tier 1 uses stored_calculations, tier 2 uses
@@ -65,7 +90,7 @@ func loadPRISMCalculations(migrationDB, sourceDB *sql.DB, batchID string) error 
 	}
 	defer rows.Close()
 
-	return insertStoredCalculations(migrationDB, batchID, rows)
+	return insertStoredCalculations(migrationDB, batchID, rows, prismPlanCodeMap)
 }
 
 // loadPASCalculations loads benefit calculations from retirement_award.
@@ -85,22 +110,23 @@ func loadPASCalculations(migrationDB, sourceDB *sql.DB, batchID string) error {
 	}
 	defer rows.Close()
 
-	return insertStoredCalculations(migrationDB, batchID, rows)
+	return insertStoredCalculations(migrationDB, batchID, rows, pasPlanCodeMap)
 }
 
-func insertStoredCalculations(migrationDB *sql.DB, batchID string, rows *sql.Rows) error {
+func insertStoredCalculations(migrationDB *sql.DB, batchID string, rows *sql.Rows, codeMap map[string]string) error {
 	count := 0
 	for rows.Next() {
-		var memberID, yosUsed, fasUsed, planCode, storedBenefit string
+		var memberID, yosUsed, fasUsed, rawPlanCode, storedBenefit string
 		var ageAtCalc int
-		if err := rows.Scan(&memberID, &yosUsed, &fasUsed, &ageAtCalc, &planCode, &storedBenefit); err != nil {
+		if err := rows.Scan(&memberID, &yosUsed, &fasUsed, &ageAtCalc, &rawPlanCode, &storedBenefit); err != nil {
 			return fmt.Errorf("source_loader: scan stored calc: %w", err)
 		}
+		planCode, sourcePlanCode := normalizePlanCode(rawPlanCode, codeMap)
 		_, err := migrationDB.Exec(
 			`INSERT INTO migration.stored_calculations
-			 (batch_id, member_id, yos_used, fas_used, age_at_calc, plan_code, stored_benefit)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-			batchID, memberID, yosUsed, fasUsed, ageAtCalc, planCode, storedBenefit,
+			 (batch_id, member_id, yos_used, fas_used, age_at_calc, plan_code, stored_benefit, source_plan_code)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+			batchID, memberID, yosUsed, fasUsed, ageAtCalc, planCode, storedBenefit, sourcePlanCode,
 		)
 		if err != nil {
 			return fmt.Errorf("source_loader: insert stored calc: %w", err)
