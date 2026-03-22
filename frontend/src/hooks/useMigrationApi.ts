@@ -21,6 +21,8 @@ import type {
   UpdateRiskRequest,
   ApplyClusterRequest,
   UpdateMappingRequest,
+  CreateBatchRequest,
+  MigrationException,
   GenerateMappingsRequest,
   GenerateMappingsSummary,
   SourceConnection,
@@ -323,6 +325,41 @@ export function useReconcileBatch() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['migration', 'reconciliation'] });
     },
+  });
+}
+
+export function useBatches(engagementId: string) {
+  return useQuery<MigrationBatch[]>({
+    queryKey: ['migration', 'batches', engagementId],
+    queryFn: () => migrationAPI.listBatches(engagementId),
+    enabled: !!engagementId,
+  });
+}
+
+export function useBatch(batchId: string) {
+  return useQuery<MigrationBatch>({
+    queryKey: ['migration', 'batch', batchId],
+    queryFn: () => migrationAPI.getBatch(batchId),
+    enabled: !!batchId,
+  });
+}
+
+export function useCreateBatch() {
+  const queryClient = useQueryClient();
+  return useMutation<MigrationBatch, Error, { engagementId: string; req: CreateBatchRequest }>({
+    mutationFn: ({ engagementId, req }) => migrationAPI.createBatch(engagementId, req),
+    onSuccess: (_data, { engagementId }) => {
+      queryClient.invalidateQueries({ queryKey: ['migration', 'batches', engagementId] });
+      queryClient.invalidateQueries({ queryKey: ['migration', 'dashboard'] });
+    },
+  });
+}
+
+export function useExceptions(batchId: string) {
+  return useQuery<MigrationException[]>({
+    queryKey: ['migration', 'exceptions', batchId],
+    queryFn: () => migrationAPI.listExceptions(batchId),
+    enabled: !!batchId,
   });
 }
 

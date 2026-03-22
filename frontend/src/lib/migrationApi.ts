@@ -27,6 +27,7 @@ import type {
   UpdateRiskRequest,
   ApplyClusterRequest,
   UpdateMappingRequest,
+  CreateBatchRequest,
   GenerateMappingsRequest,
   GenerateMappingsSummary,
   SourceConnection,
@@ -41,6 +42,7 @@ import type {
   AdvancePhaseRequest,
   RegressPhaseRequest,
   CorpusContext,
+  MigrationException,
 } from '@/types/Migration';
 
 const BASE = '/api/v1/migration';
@@ -97,6 +99,17 @@ export const migrationAPI = {
     putAPI<CodeMapping>(`${BASE}/engagements/${engagementId}/code-mappings/${mappingId}`, req),
 
   // ─── Batches ────────────────────────────────────────────────────────────
+  listBatches: (engagementId: string) =>
+    fetchAPI<MigrationBatch[]>(`${BASE}/engagements/${engagementId}/batches`),
+
+  createBatch: (engagementId: string, req: CreateBatchRequest) =>
+    postAPI<MigrationBatch>(`${BASE}/engagements/${engagementId}/batches`, req),
+
+  getBatch: (batchId: string) => fetchAPI<MigrationBatch>(`${BASE}/batches/${batchId}`),
+
+  listExceptions: (batchId: string) =>
+    fetchAPI<MigrationException[]>(`${BASE}/batches/${batchId}/exceptions`),
+
   retransformBatch: (batchId: string) =>
     postAPI<MigrationBatch>(`${BASE}/batches/${batchId}/retransform`, {}),
 
