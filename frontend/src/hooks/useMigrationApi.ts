@@ -25,7 +25,24 @@ import type {
   GenerateMappingsSummary,
   SourceConnection,
   SourceTable,
+  PhaseGateTransition,
+  AIRecommendation,
+  AttentionItem,
+  AttentionSummary,
+  GateStatusResponse,
+  RootCauseResponse,
+  AdvancePhaseRequest,
+  RegressPhaseRequest,
 } from '@/types/Migration';
+import type { EngagementStatus } from '@/types/Migration';
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+// apiClient.ts lowercases all `status` fields for CRM/case services, but migration
+// types use UPPERCASE EngagementStatus enum values. This normalizes them back.
+function normalizeEngagement(eng: MigrationEngagement): MigrationEngagement {
+  return { ...eng, status: eng.status.toUpperCase() as EngagementStatus };
+}
 
 // ─── Query hooks ─────────────────────────────────────────────────────────────
 
@@ -48,6 +65,7 @@ export function useEngagements() {
   return useQuery<MigrationEngagement[]>({
     queryKey: ['migration', 'engagements'],
     queryFn: () => migrationAPI.listEngagements(),
+    select: (data) => data.map(normalizeEngagement),
   });
 }
 
@@ -56,6 +74,7 @@ export function useEngagement(id: string) {
     queryKey: ['migration', 'engagement', id],
     queryFn: () => migrationAPI.getEngagement(id),
     enabled: !!id,
+    select: normalizeEngagement,
   });
 }
 
@@ -284,5 +303,111 @@ export function useReconcileBatch() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['migration', 'reconciliation'] });
     },
+  });
+}
+
+// ─── Phase Gate hooks ───────────────────────────────────────────────────────
+
+export function useGateStatus(engagementId: string | undefined) {
+  return useQuery<GateStatusResponse>({
+    queryKey: ['migration', 'gate-status', engagementId],
+    queryFn: () => migrationAPI.getGateStatus(engagementId!),
+    enabled: !!engagementId,
+    staleTime: 30_000,
+  });
+}
+
+export function useAdvancePhase() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ engagementId, req }: { engagementId: string; req: AdvancePhaseRequest }) =>
+      migrationAPI.advancePhase(engagementId, req),
+    onSuccess: (_, { engagementId }) => {
+      qc.invalidateQueries({ queryKey: ['migration', 'engagement', engagementId] });
+      qc.invalidateQueries({ queryKey: ['migration', 'gate-status', engagementId] });
+      qc.invalidateQueries({ queryKey: ['migration', 'engagements'] });
+      qc.invalidateQueries({ queryKey: ['migration', 'dashboard'] });
+    },
+  });
+}
+
+export function useRegressPhase() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ engagementId, req }: { engagementId: string; req: RegressPhaseRequest }) =>
+      migrationAPI.regressPhase(engagementId, req),
+    onSuccess: (_, { engagementId }) => {
+      qc.invalidateQueries({ queryKey: ['migration', 'engagement', engagementId] });
+      qc.invalidateQueries({ queryKey: ['migration', 'gate-status', engagementId] });
+      qc.invalidateQueries({ queryKey: ['migration', 'engagements'] });
+    },
+  });
+}
+
+export function useGateHistory(engagementId: string | undefined) {
+  return useQuery<PhaseGateTransition[]>({
+    queryKey: ['migration', 'gate-history', engagementId],
+    queryFn: () => migrationAPI.getGateHistory(engagementId!),
+    enabled: !!engagementId,
+  });
+}
+
+// ─── Attention hooks ────────────────────────────────────────────────────────
+
+export function useAttentionItems(
+  engagementId: string | undefined,
+  params?: { priority?: string; phase?: string },
+) {
+  return useQuery<AttentionItem[]>({
+    queryKey: ['migration', 'attention', engagementId, params],
+    queryFn: () => migrationAPI.getAttentionItems(engagementId!, params),
+    enabled: !!engagementId,
+    staleTime: 15_000,
+  });
+}
+
+export function useAttentionSummary() {
+  return useQuery<AttentionSummary>({
+    queryKey: ['migration', 'attention', 'summary'],
+    queryFn: () => migrationAPI.getAttentionSummary(),
+    staleTime: 15_000,
+  });
+}
+
+// ─── AI hooks ───────────────────────────────────────────────────────────────
+
+export function useAIRecommendations(engagementId: string | undefined) {
+  return useQuery<AIRecommendation[]>({
+    queryKey: ['migration', 'ai', 'recommendations', engagementId],
+    queryFn: () => migrationAPI.getAIRecommendations(engagementId!),
+    enabled: !!engagementId,
+    staleTime: 60_000,
+  });
+}
+
+export function useBatchSizingRecommendation(engagementId: string | undefined) {
+  return useQuery<AIRecommendation>({
+    queryKey: ['migration', 'ai', 'batch-sizing', engagementId],
+    queryFn: () => migrationAPI.getBatchSizingRecommendation(engagementId!),
+    enabled: !!engagementId,
+    staleTime: 60_000,
+  });
+}
+
+export function useRemediationRecommendations(engagementId: string | undefined) {
+  return useQuery<AIRecommendation[]>({
+    queryKey: ['migration', 'ai', 'remediation', engagementId],
+    queryFn: () => migrationAPI.getRemediationRecommendations(engagementId!),
+    enabled: !!engagementId,
+    staleTime: 60_000,
+  });
+}
+
+export function useRootCauseAnalysis(engagementId: string | undefined) {
+  return useQuery<RootCauseResponse>({
+    queryKey: ['migration', 'ai', 'root-cause', engagementId],
+    queryFn: () => migrationAPI.getRootCauseAnalysis(engagementId!),
+    enabled: !!engagementId,
+    staleTime: 60_000,
   });
 }

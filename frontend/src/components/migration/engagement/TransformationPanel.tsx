@@ -1,5 +1,6 @@
 import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
-import { useEngagement } from '@/hooks/useMigrationApi';
+import { useEngagement, useBatchSizingRecommendation } from '@/hooks/useMigrationApi';
+import AIRecommendationCard from '../ai/AIRecommendationCard';
 import type { EngagementStatus } from '@/types/Migration';
 
 const TRANSFORM_READY: EngagementStatus[] = [
@@ -16,6 +17,7 @@ interface Props {
 
 export default function TransformationPanel({ engagementId }: Props) {
   const { data: engagement, isLoading } = useEngagement(engagementId);
+  const { data: batchSizing } = useBatchSizingRecommendation(engagementId);
 
   if (isLoading) {
     return (
@@ -111,6 +113,13 @@ export default function TransformationPanel({ engagementId }: Props) {
   // Ready state — placeholder for batch list
   return (
     <div style={{ fontFamily: BODY }}>
+      {/* AI Batch Sizing Recommendation */}
+      {batchSizing && (
+        <div style={{ marginBottom: 16 }}>
+          <AIRecommendationCard recommendation={batchSizing} />
+        </div>
+      )}
+
       <div
         style={{
           background: C.cardBg,

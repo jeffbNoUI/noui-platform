@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { C, BODY, DISPLAY } from '@/lib/designSystem';
-import { useEngagement } from '@/hooks/useMigrationApi';
+import { useEngagement, useAttentionItems } from '@/hooks/useMigrationApi';
 import { useMigrationEvents } from '@/hooks/useMigrationEvents';
 import type { EngagementStatus } from '@/types/Migration';
 import PhaseStepper from './PhaseStepper';
@@ -8,19 +8,35 @@ import QualityProfilePanel from './QualityProfilePanel';
 import MappingPanel from './MappingPanel';
 import TransformationPanel from './TransformationPanel';
 import ReconciliationPanel from './ReconciliationPanel';
+import DiscoveryPanel from './DiscoveryPanel';
+import ParallelRunPanel from './ParallelRunPanel';
+import PhaseGateDialog from './PhaseGateDialog';
+import AttentionQueue from '../attention/AttentionQueue';
 import ActivityLog from './ActivityLog';
 
-type Tab = 'quality' | 'mappings' | 'transformation' | 'reconciliation' | 'risks';
+type Tab =
+  | 'discovery'
+  | 'quality'
+  | 'mappings'
+  | 'transformation'
+  | 'reconciliation'
+  | 'parallel-run'
+  | 'risks'
+  | 'attention';
 
 const TABS: { key: Tab; label: string }[] = [
+  { key: 'discovery', label: 'Discovery' },
   { key: 'quality', label: 'Quality Profile' },
   { key: 'mappings', label: 'Mappings' },
   { key: 'transformation', label: 'Transformation' },
   { key: 'reconciliation', label: 'Reconciliation' },
+  { key: 'parallel-run', label: 'Parallel Run' },
   { key: 'risks', label: 'Risks' },
+  { key: 'attention', label: 'Attention' },
 ];
 
 const STATUS_COLOR: Record<EngagementStatus, string> = {
+  DISCOVERY: '#94a3b8',
   PROFILING: C.sky,
   MAPPING: C.gold,
   TRANSFORMING: C.sage,
@@ -30,6 +46,7 @@ const STATUS_COLOR: Record<EngagementStatus, string> = {
 };
 
 const STATUS_BG: Record<EngagementStatus, string> = {
+  DISCOVERY: C.borderLight,
   PROFILING: C.skyLight,
   MAPPING: C.goldLight,
   TRANSFORMING: C.sageLight,
@@ -41,6 +58,8 @@ const STATUS_BG: Record<EngagementStatus, string> = {
 /** Map engagement status to the default tab */
 function defaultTab(status: EngagementStatus): Tab {
   switch (status) {
+    case 'DISCOVERY':
+      return 'discovery';
     case 'PROFILING':
       return 'quality';
     case 'MAPPING':
@@ -48,13 +67,26 @@ function defaultTab(status: EngagementStatus): Tab {
     case 'TRANSFORMING':
       return 'transformation';
     case 'RECONCILING':
+      return 'reconciliation';
     case 'PARALLEL_RUN':
+      return 'parallel-run';
     case 'COMPLETE':
       return 'reconciliation';
     default:
       return 'quality';
   }
 }
+
+/** Phase ordering for advance/regress detection */
+const PHASE_ORDER: EngagementStatus[] = [
+  'DISCOVERY',
+  'PROFILING',
+  'MAPPING',
+  'TRANSFORMING',
+  'RECONCILING',
+  'PARALLEL_RUN',
+  'COMPLETE',
+];
 
 interface Props {
   engagementId: string;
@@ -65,14 +97,22 @@ interface Props {
 export default function EngagementDetail({ engagementId, onBack, onSelectBatch }: Props) {
   const { data: engagement, isLoading } = useEngagement(engagementId);
   const { connected, events, useFallback } = useMigrationEvents(engagementId);
-  const [activeTab, setActiveTab] = useState<Tab>('quality');
+  const { data: attentionItems } = useAttentionItems(engagementId);
+  const [activeTab, setActiveTab] = useState<Tab>('discovery');
+  const [gateDialog, setGateDialog] = useState<{
+    open: boolean;
+    targetPhase: EngagementStatus;
+    direction: 'ADVANCE' | 'REGRESS';
+  }>({ open: false, targetPhase: 'PROFILING', direction: 'ADVANCE' });
+
+  const attentionCount = attentionItems?.length ?? 0;
 
   // Set default tab based on engagement status
   useEffect(() => {
     if (engagement) {
       setActiveTab(defaultTab(engagement.status));
     }
-  }, [engagement?.status]);
+  }, [engagementId, engagement?.status]);
 
   const connectionDot = useMemo(() => {
     if (connected) return { color: C.sage, label: 'Live' };
@@ -178,7 +218,7 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
             &#8592;
           </button>
 
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ flex: 1, minWidth: 120 }}>
             <h1
               style={{
                 fontFamily: DISPLAY,
@@ -190,6 +230,7 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
               }}
+              title={engagement.source_system_name}
             >
               {engagement.source_system_name}
             </h1>
@@ -252,7 +293,18 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
             background: C.cardBg,
           }}
         >
-          <PhaseStepper currentStatus={engagement.status} />
+          <PhaseStepper
+            currentStatus={engagement.status}
+            onPhaseClick={(phase) => {
+              const currentIdx = PHASE_ORDER.indexOf(engagement.status);
+              const targetIdx = PHASE_ORDER.indexOf(phase);
+              if (targetIdx === currentIdx) return;
+              const direction = targetIdx > currentIdx ? 'ADVANCE' : 'REGRESS';
+              // For advance, always target the next phase
+              const targetPhase = direction === 'ADVANCE' ? PHASE_ORDER[currentIdx + 1] : phase;
+              setGateDialog({ open: true, targetPhase, direction });
+            }}
+          />
         </div>
 
         {/* Tab bar */}
@@ -281,27 +333,68 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
                   activeTab === tab.key ? `2px solid ${C.sage}` : '2px solid transparent',
                 cursor: 'pointer',
                 transition: 'color 0.15s, border-color 0.15s',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
               }}
             >
               {tab.label}
+              {tab.key === 'attention' && attentionCount > 0 && (
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: C.coral,
+                    background: C.coralLight,
+                    borderRadius: 10,
+                    padding: '1px 7px',
+                    lineHeight: '16px',
+                  }}
+                >
+                  {attentionCount}
+                </span>
+              )}
             </button>
           ))}
         </div>
 
         {/* Tab content */}
         <div style={{ flex: 1, padding: 24, overflowY: 'auto' }}>
+          {activeTab === 'discovery' && (
+            <DiscoveryPanel
+              engagementId={engagementId}
+              onAdvance={() =>
+                setGateDialog({ open: true, targetPhase: 'PROFILING', direction: 'ADVANCE' })
+              }
+            />
+          )}
           {activeTab === 'quality' && <QualityProfilePanel engagementId={engagementId} />}
           {activeTab === 'mappings' && <MappingPanel engagementId={engagementId} />}
           {activeTab === 'transformation' && (
             <TransformationPanel engagementId={engagementId} onSelectBatch={onSelectBatch} />
           )}
           {activeTab === 'reconciliation' && <ReconciliationPanel engagementId={engagementId} />}
+          {activeTab === 'parallel-run' && <ParallelRunPanel engagementId={engagementId} />}
           {activeTab === 'risks' && <RisksPlaceholder engagementId={engagementId} />}
+          {activeTab === 'attention' && <AttentionQueue engagementId={engagementId} />}
         </div>
       </div>
 
       {/* Activity Log sidebar */}
       <ActivityLog engagementId={engagementId} events={events} connected={connected} />
+
+      {/* Phase Gate Dialog */}
+      <PhaseGateDialog
+        open={gateDialog.open}
+        engagementId={engagementId}
+        currentPhase={engagement.status}
+        targetPhase={gateDialog.targetPhase}
+        direction={gateDialog.direction}
+        onClose={() => setGateDialog((prev) => ({ ...prev, open: false }))}
+        onTransitioned={() => {
+          setGateDialog((prev) => ({ ...prev, open: false }));
+        }}
+      />
     </div>
   );
 }

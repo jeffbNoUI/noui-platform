@@ -1,4 +1,5 @@
 import { C, BODY, MONO } from '@/lib/designSystem';
+import { useAttentionSummary } from '@/hooks/useMigrationApi';
 import type { DashboardSummary } from '@/types/Migration';
 
 interface SummaryCardsProps {
@@ -8,8 +9,8 @@ interface SummaryCardsProps {
 
 interface CardDef {
   label: string;
-  getValue: (s: DashboardSummary) => string;
-  getColor: (s: DashboardSummary) => string;
+  getValue: (s: DashboardSummary, p1Count?: number) => string;
+  getColor: (s: DashboardSummary, p1Count?: number) => string;
 }
 
 const CARDS: CardDef[] = [
@@ -24,9 +25,9 @@ const CARDS: CardDef[] = [
     getColor: () => C.navy,
   },
   {
-    label: 'Avg Error Rate',
-    getValue: (s) => `${(s.avg_error_rate * 100).toFixed(1)}%`,
-    getColor: () => C.navy,
+    label: 'Attention Items',
+    getValue: (_s, p1Count) => String(p1Count ?? 0),
+    getColor: (_s, p1Count) => ((p1Count ?? 0) > 0 ? C.coral : C.sage),
   },
   {
     label: 'Best Recon Score',
@@ -69,6 +70,9 @@ function SkeletonCard() {
 }
 
 export default function SummaryCards({ summary, isLoading }: SummaryCardsProps) {
+  const { data: attentionSummary } = useAttentionSummary();
+  const p1Count = attentionSummary?.p1 ?? 0;
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -98,10 +102,10 @@ export default function SummaryCards({ summary, isLoading }: SummaryCardsProps) 
               fontFamily: MONO,
               fontSize: 28,
               fontWeight: 700,
-              color: card.getColor(summary),
+              color: card.getColor(summary, p1Count),
             }}
           >
-            {card.getValue(summary)}
+            {card.getValue(summary, p1Count)}
           </div>
           <div
             style={{

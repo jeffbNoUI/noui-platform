@@ -1,3 +1,4 @@
+#!/bin/sh
 npx lint-staged
 
 # Run Go tests in any modified Go module

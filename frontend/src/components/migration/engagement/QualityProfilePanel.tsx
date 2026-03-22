@@ -8,8 +8,9 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
-import { useEngagement } from '@/hooks/useMigrationApi';
+import { useEngagement, useRemediationRecommendations } from '@/hooks/useMigrationApi';
 import type { QualityProfile, SourceTable } from '@/types/Migration';
+import AIRecommendationCard from '../ai/AIRecommendationCard';
 import RunProfileDialog from '../dialogs/RunProfileDialog';
 import ConfigureSourceDialog from '../dialogs/ConfigureSourceDialog';
 
@@ -40,6 +41,7 @@ export default function QualityProfilePanel({ engagementId }: Props) {
   const profiles: QualityProfile[] = [];
   const hasProfiles = profiles.length > 0 || engagement?.quality_baseline_approved_at != null;
   const hasSourceConnection = engagement?.source_connection != null;
+  const { data: remediations } = useRemediationRecommendations(hasProfiles ? engagementId : undefined);
 
   const radarData = useMemo(() => {
     if (profiles.length === 0) return [];
@@ -442,6 +444,28 @@ export default function QualityProfilePanel({ engagementId }: Props) {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* AI Remediation Recommendations */}
+      {remediations && remediations.length > 0 && (
+        <div style={{ marginTop: 20 }}>
+          <h3
+            style={{
+              fontFamily: DISPLAY,
+              fontSize: 16,
+              fontWeight: 600,
+              color: C.navy,
+              margin: '0 0 12px',
+            }}
+          >
+            AI Remediation Recommendations
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {remediations.map((rec, idx) => (
+              <AIRecommendationCard key={idx} recommendation={rec} />
+            ))}
           </div>
         </div>
       )}

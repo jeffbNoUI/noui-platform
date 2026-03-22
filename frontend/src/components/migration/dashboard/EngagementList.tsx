@@ -1,5 +1,6 @@
-import { C, BODY, DISPLAY } from '@/lib/designSystem';
-import type { MigrationEngagement, EngagementStatus } from '@/types/Migration';
+import { useState } from 'react';
+import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
+import type { MigrationEngagement, EngagementStatus, SourceConnection } from '@/types/Migration';
 
 interface EngagementListProps {
   engagements: MigrationEngagement[] | undefined;
@@ -8,6 +9,7 @@ interface EngagementListProps {
 }
 
 const STATUS_COLORS: Record<EngagementStatus, { bg: string; fg: string }> = {
+  DISCOVERY: { bg: C.borderLight, fg: '#94a3b8' },
   PROFILING: { bg: C.skyLight, fg: C.sky },
   MAPPING: { bg: C.goldLight, fg: C.gold },
   TRANSFORMING: { bg: C.sageLight, fg: C.sage },
@@ -27,6 +29,12 @@ function formatRelativeTime(dateStr: string): string {
   if (diffHr < 24) return `${diffHr}h ago`;
   const diffDay = Math.floor(diffHr / 24);
   return `${diffDay}d ago`;
+}
+
+function formatConnection(conn: SourceConnection | null): string | null {
+  if (!conn) return null;
+  const driver = conn.driver === 'mssql' ? 'SQL Server' : 'PostgreSQL';
+  return `${driver} · ${conn.host}${conn.port ? ':' + conn.port : ''} · ${conn.dbname}`;
 }
 
 function SkeletonRow() {
@@ -54,7 +62,11 @@ function SkeletonRow() {
   );
 }
 
+const INITIAL_DISPLAY_COUNT = 20;
+
 export default function EngagementList({ engagements, isLoading, onSelect }: EngagementListProps) {
+  const [displayCount, setDisplayCount] = useState(INITIAL_DISPLAY_COUNT);
+
   if (isLoading) {
     return (
       <div className="flex flex-col gap-3">
@@ -91,21 +103,31 @@ export default function EngagementList({ engagements, isLoading, onSelect }: Eng
     );
   }
 
+  const total = engagements.length;
+  const visible = engagements.slice(0, displayCount);
+  const hasMore = displayCount < total;
+
   return (
     <div className="flex flex-col gap-3">
-      <h3
-        style={{
-          fontFamily: DISPLAY,
-          fontSize: 16,
-          fontWeight: 600,
-          color: C.navy,
-          margin: 0,
-          marginBottom: 4,
-        }}
-      >
-        Engagements ({engagements.length})
-      </h3>
-      {engagements.map((eng) => {
+      <div className="flex items-center justify-between" style={{ marginBottom: 4 }}>
+        <h3
+          style={{
+            fontFamily: DISPLAY,
+            fontSize: 16,
+            fontWeight: 600,
+            color: C.navy,
+            margin: 0,
+          }}
+        >
+          Engagements ({total})
+        </h3>
+        {total > INITIAL_DISPLAY_COUNT && (
+          <span style={{ fontSize: 12, color: C.textTertiary, fontFamily: BODY }}>
+            Showing {Math.min(displayCount, total)} of {total}
+          </span>
+        )}
+      </div>
+      {visible.map((eng) => {
         const colors = STATUS_COLORS[eng.status] ?? { bg: C.borderLight, fg: C.textSecondary };
         return (
           <button
@@ -147,12 +169,68 @@ export default function EngagementList({ engagements, isLoading, onSelect }: Eng
                 {eng.status.replace('_', ' ')}
               </span>
             </div>
+            {eng.source_connection && (
+              <div
+                style={{
+                  fontSize: 11,
+                  fontFamily: MONO,
+                  color: C.textSecondary,
+                  marginBottom: 4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <span
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    background: C.sage,
+                    flexShrink: 0,
+                  }}
+                />
+                {formatConnection(eng.source_connection)}
+              </div>
+            )}
+            {!eng.source_connection && eng.status === 'DISCOVERY' && (
+              <div
+                style={{
+                  fontSize: 11,
+                  fontFamily: BODY,
+                  color: C.textTertiary,
+                  fontStyle: 'italic',
+                  marginBottom: 4,
+                }}
+              >
+                No source configured
+              </div>
+            )}
             <div style={{ fontSize: 12, color: C.textTertiary }}>
               Updated {formatRelativeTime(eng.updated_at)}
             </div>
           </button>
         );
       })}
+      {hasMore && (
+        <button
+          onClick={() => setDisplayCount((prev) => prev + INITIAL_DISPLAY_COUNT)}
+          style={{
+            fontSize: 13,
+            fontWeight: 600,
+            fontFamily: BODY,
+            color: C.sky,
+            background: C.skyLight,
+            border: 'none',
+            borderRadius: 8,
+            padding: '10px 20px',
+            cursor: 'pointer',
+            alignSelf: 'center',
+          }}
+        >
+          Load more
+        </button>
+      )}
     </div>
   );
 }

@@ -10,6 +10,7 @@ import SummaryCards from './SummaryCards';
 import EngagementList from './EngagementList';
 import RiskPanel from './RiskPanel';
 import SystemHealthBar from './SystemHealthBar';
+import NotificationBell from './NotificationBell';
 import CreateEngagementDialog from '../dialogs/CreateEngagementDialog';
 import AddRiskDialog from '../dialogs/AddRiskDialog';
 
@@ -49,29 +50,32 @@ export default function MigrationDashboard({ onSelectEngagement }: MigrationDash
             >
               Migration Management
             </h1>
-            <button
-              onClick={() => setShowCreateDialog(true)}
-              style={{
-                fontFamily: BODY,
-                fontSize: 13,
-                fontWeight: 600,
-                color: C.textOnDark,
-                background: C.navy,
-                border: 'none',
-                borderRadius: 8,
-                padding: '8px 20px',
-                cursor: 'pointer',
-                transition: 'background 0.15s',
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.background = C.navyLight;
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.background = C.navy;
-              }}
-            >
-              + New Engagement
-            </button>
+            <div className="flex items-center gap-3">
+              <NotificationBell onSelect={onSelectEngagement} />
+              <button
+                onClick={() => setShowCreateDialog(true)}
+                style={{
+                  fontFamily: BODY,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: C.textOnDark,
+                  background: C.navy,
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '8px 20px',
+                  cursor: 'pointer',
+                  transition: 'background 0.15s',
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLElement).style.background = C.navyLight;
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.background = C.navy;
+                }}
+              >
+                + New Engagement
+              </button>
+            </div>
           </div>
 
           {/* Summary cards */}

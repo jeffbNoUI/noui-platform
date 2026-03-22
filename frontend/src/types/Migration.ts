@@ -1,6 +1,7 @@
 // ─── Enums ──────────────────────────────────────────────────────────────────
 
 export type EngagementStatus =
+  | 'DISCOVERY'
   | 'PROFILING'
   | 'MAPPING'
   | 'TRANSFORMING'
@@ -177,6 +178,7 @@ export interface MigrationRisk {
   description: string;
   evidence: string | null;
   mitigation: string | null;
+  aiRemediation?: string;
   status: RiskStatus;
   detected_at: string;
   acknowledged_by: string | null;
@@ -196,6 +198,7 @@ export interface ExceptionCluster {
   confidence: number;
   applied: boolean;
   applied_at: string | null;
+  corpusContext?: CorpusContext;
 }
 
 export interface MigrationEvent {
@@ -236,6 +239,7 @@ export interface SystemHealth {
   migration_service: string;
   intelligence_service: string;
   database_connected: boolean;
+  queue_depth?: number;
 }
 
 export interface ReconciliationSummary {
@@ -274,6 +278,83 @@ export interface CompareResult {
   engagements: CompareEngagement[];
 }
 
+// ─── Phase 4: AI & Governance Types ──────────────────────────────────────
+
+export interface PhaseGateTransition {
+  id: string;
+  engagementId: string;
+  fromPhase: EngagementStatus;
+  toPhase: EngagementStatus;
+  direction: 'ADVANCE' | 'REGRESS';
+  gateMetrics: Record<string, number>;
+  aiRecommendation: string;
+  overrides: string[];
+  authorizedBy: string;
+  authorizedAt: string;
+  notes?: string;
+}
+
+export interface AIRecommendation {
+  phase: EngagementStatus;
+  type: 'GATE_READY' | 'REMEDIATION' | 'BATCH_SIZING' | 'ROOT_CAUSE' | 'MAPPING_SUGGESTION';
+  summary: string;
+  detail: string;
+  confidence: number;
+  actionable: boolean;
+  suggestedActions: { label: string; action: string }[];
+}
+
+export interface CorpusContext {
+  timesSeen: number;
+  approvalRate: number;
+  isNovel: boolean;
+  lastSeenDaysAgo?: number;
+}
+
+export interface AttentionItem {
+  id: string;
+  source: 'TRANSFORMATION' | 'RECONCILIATION' | 'RISK' | 'QUALITY';
+  phase: EngagementStatus;
+  priority: 'P1' | 'P2' | 'P3';
+  summary: string;
+  detail: string;
+  suggestedAction?: string;
+  corpusContext?: CorpusContext;
+  batchId?: string;
+  engagementId: string;
+  createdAt: string;
+  resolved: boolean;
+}
+
+export interface MigrationNotification {
+  id: string;
+  engagementId: string;
+  engagementName: string;
+  type: 'P1_RISK' | 'BATCH_COMPLETE' | 'BATCH_HALTED' | 'RECON_COMPLETE' | 'GATE_READY' | 'STALLED';
+  summary: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface AttentionSummary {
+  total: number;
+  p1: number;
+  p2: number;
+  p3: number;
+  byEngagement: Record<string, number>;
+}
+
+export interface GateStatusResponse {
+  metrics: Record<string, number>;
+  recommendation: AIRecommendation | null;
+}
+
+export interface RootCauseResponse {
+  analysis: string;
+  affectedCount: number;
+  confidence: number;
+}
+
 // ─── Request Types ──────────────────────────────────────────────────────────
 
 export interface CreateEngagementRequest {
@@ -305,6 +386,16 @@ export interface UpdateMappingRequest {
   approval_status: ApprovalStatus;
 }
 
+export interface AdvancePhaseRequest {
+  notes?: string;
+  overrides?: string[];
+}
+
+export interface RegressPhaseRequest {
+  targetPhase: EngagementStatus;
+  notes: string;
+}
+
 // ─── WebSocket Event Types ──────────────────────────────────────────────────
 
 export type WSEventType =
@@ -318,7 +409,10 @@ export type WSEventType =
   | 'risk_detected'
   | 'risk_resolved'
   | 'engagement_status_changed'
-  | 'mapping_agreement_updated';
+  | 'mapping_agreement_updated'
+  | 'phase_transition'
+  | 'gate_recommendation'
+  | 'ai_insight';
 
 export interface WSEvent {
   type: WSEventType;

@@ -15,6 +15,19 @@ const SEVERITY_COLORS: Record<RiskSeverity, string> = {
   P3: C.sky,
 };
 
+/** De-duplicate risks: if the same risk_id appears both globally and per-engagement, keep one */
+function deduplicateRisks(risks: MigrationRisk[]): MigrationRisk[] {
+  const seen = new Set<string>();
+  const result: MigrationRisk[] = [];
+  for (const risk of risks) {
+    if (!seen.has(risk.risk_id)) {
+      seen.add(risk.risk_id);
+      result.push(risk);
+    }
+  }
+  return result;
+}
+
 function sortRisks(risks: MigrationRisk[]): MigrationRisk[] {
   return [...risks].sort((a, b) => {
     const sevDiff = SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity];
@@ -26,7 +39,7 @@ function sortRisks(risks: MigrationRisk[]): MigrationRisk[] {
 export default function RiskPanel({ risks, isLoading, onAddRisk }: RiskPanelProps) {
   const [collapsed, setCollapsed] = useState(false);
 
-  const sorted = risks ? sortRisks(risks) : [];
+  const sorted = risks ? sortRisks(deduplicateRisks(risks)) : [];
 
   return (
     <div
@@ -183,6 +196,21 @@ export default function RiskPanel({ risks, isLoading, onAddRisk }: RiskPanelProp
                     >
                       {risk.source}
                     </span>
+                    {risk.engagement_id && (
+                      <span
+                        style={{
+                          fontSize: 9,
+                          fontWeight: 600,
+                          color: C.sky,
+                          background: C.skyLight,
+                          borderRadius: 4,
+                          padding: '1px 6px',
+                        }}
+                        title={risk.engagement_id}
+                      >
+                        {risk.engagement_id.slice(0, 8)}
+                      </span>
+                    )}
                     <span
                       style={{
                         fontSize: 10,

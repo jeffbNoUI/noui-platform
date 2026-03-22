@@ -31,6 +31,16 @@ import type {
   GenerateMappingsSummary,
   SourceConnection,
   SourceTable,
+  PhaseGateTransition,
+  AIRecommendation,
+  AttentionItem,
+  AttentionSummary,
+  GateStatusResponse,
+  RootCauseResponse,
+  MigrationNotification,
+  AdvancePhaseRequest,
+  RegressPhaseRequest,
+  CorpusContext,
 } from '@/types/Migration';
 
 const BASE = '/api/v1/migration';
@@ -130,4 +140,52 @@ export const migrationAPI = {
     fetchPaginatedAPI<MigrationEvent>(
       `${BASE}/engagements/${engagementId}/events${params ? toQueryString(params) : ''}`,
     ),
+
+  // ─── Phase Gates ──────────────────────────────────────────────────────────
+  getGateStatus: (engagementId: string) =>
+    fetchAPI<GateStatusResponse>(`${BASE}/engagements/${engagementId}/gate-status`),
+
+  advancePhase: (engagementId: string, req: AdvancePhaseRequest) =>
+    postAPI<PhaseGateTransition>(`${BASE}/engagements/${engagementId}/advance-phase`, req),
+
+  regressPhase: (engagementId: string, req: RegressPhaseRequest) =>
+    postAPI<PhaseGateTransition>(`${BASE}/engagements/${engagementId}/regress-phase`, req),
+
+  getGateHistory: (engagementId: string) =>
+    fetchAPI<PhaseGateTransition[]>(`${BASE}/engagements/${engagementId}/gate-history`),
+
+  // ─── Attention Queue ──────────────────────────────────────────────────────
+  getAttentionItems: (engagementId: string, params?: { priority?: string; phase?: string; source?: string }) =>
+    fetchAPI<AttentionItem[]>(
+      `${BASE}/engagements/${engagementId}/attention${params ? toQueryString(params) : ''}`,
+    ),
+
+  getAttentionSummary: () =>
+    fetchAPI<AttentionSummary>(`${BASE}/attention/summary`),
+
+  // ─── AI Recommendations ───────────────────────────────────────────────────
+  getAIRecommendations: (engagementId: string) =>
+    fetchAPI<AIRecommendation[]>(`${BASE}/engagements/${engagementId}/ai/recommendations`),
+
+  getBatchSizingRecommendation: (engagementId: string) =>
+    fetchAPI<AIRecommendation>(`${BASE}/engagements/${engagementId}/ai/batch-sizing`),
+
+  getRemediationRecommendations: (engagementId: string) =>
+    fetchAPI<AIRecommendation[]>(`${BASE}/engagements/${engagementId}/ai/remediation`),
+
+  getMappingCorpusContext: (engagementId: string, mappingId: string) =>
+    fetchAPI<CorpusContext>(`${BASE}/engagements/${engagementId}/mappings/${mappingId}/corpus`),
+
+  getRootCauseAnalysis: (engagementId: string) =>
+    fetchAPI<RootCauseResponse>(`${BASE}/engagements/${engagementId}/reconciliation/root-cause`),
+
+  // ─── Notifications ────────────────────────────────────────────────────────
+  getNotifications: () =>
+    fetchAPI<MigrationNotification[]>(`${BASE}/notifications`),
+
+  markNotificationRead: (id: string) =>
+    putAPI<void>(`${BASE}/notifications/${id}/read`, {}),
+
+  markAllNotificationsRead: () =>
+    putAPI<void>(`${BASE}/notifications/read-all`, {}),
 };
