@@ -14,8 +14,8 @@ CREATE TABLE migration.engagement (
     tenant_id                   UUID NOT NULL,
     source_system_name          VARCHAR(100) NOT NULL,
     canonical_schema_version    VARCHAR(20) NOT NULL DEFAULT 'v1.0',
-    status                      VARCHAR(20) NOT NULL DEFAULT 'PROFILING'
-                                CHECK (status IN ('PROFILING','MAPPING','TRANSFORMING','RECONCILING','PARALLEL_RUN','COMPLETE')),
+    status                      VARCHAR(20) NOT NULL DEFAULT 'DISCOVERY'
+                                CHECK (status IN ('DISCOVERY','PROFILING','MAPPING','TRANSFORMING','RECONCILING','PARALLEL_RUN','COMPLETE')),
     quality_baseline_approved_at TIMESTAMPTZ,
     created_at                  TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at                  TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -199,3 +199,36 @@ CREATE INDEX idx_exception_batch_disposition ON migration.exception(batch_id, di
 CREATE INDEX idx_reconciliation_batch_priority ON migration.reconciliation(batch_id, priority);
 CREATE INDEX idx_field_mapping_engagement_status ON migration.field_mapping(engagement_id, approval_status);
 CREATE INDEX idx_analyst_decision_tenant_engagement ON migration.analyst_decision(tenant_id, engagement_id);
+
+-- ============================================================
+-- Phase 4: Gate Transition Audit
+-- ============================================================
+CREATE TABLE migration.gate_transition (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    engagement_id    UUID NOT NULL REFERENCES migration.engagement(engagement_id),
+    from_phase       VARCHAR(20) NOT NULL,
+    to_phase         VARCHAR(20) NOT NULL,
+    direction        VARCHAR(10) NOT NULL CHECK (direction IN ('ADVANCE', 'REGRESS')),
+    gate_metrics     JSONB NOT NULL DEFAULT '{}',
+    ai_recommendation TEXT NOT NULL DEFAULT '',
+    overrides        JSONB NOT NULL DEFAULT '[]',
+    authorized_by    VARCHAR(100) NOT NULL,
+    authorized_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    notes            TEXT
+);
+CREATE INDEX idx_gate_transition_engagement ON migration.gate_transition(engagement_id);
+
+-- ============================================================
+-- Phase 4: Notifications
+-- ============================================================
+CREATE TABLE migration.notification (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id        UUID NOT NULL,
+    engagement_id    UUID NOT NULL REFERENCES migration.engagement(engagement_id),
+    engagement_name  VARCHAR(200) NOT NULL,
+    type             VARCHAR(30) NOT NULL,
+    summary          TEXT NOT NULL,
+    read             BOOLEAN NOT NULL DEFAULT false,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_notification_tenant ON migration.notification(tenant_id, read, created_at DESC);
