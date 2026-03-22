@@ -1,7 +1,11 @@
 import { useState, useMemo } from 'react';
 import { C, BODY, MONO } from '@/lib/designSystem';
 import { useMappings, useCodeMappings, useUpdateMapping } from '@/hooks/useMigrationApi';
-import type { AgreementStatus, FieldMapping } from '@/types/Migration';
+import CorpusIndicator from '../ai/CorpusIndicator';
+import type { AgreementStatus, FieldMapping, CorpusContext } from '@/types/Migration';
+
+// Extended mapping type — API may include corpus context in the future
+type FieldMappingWithCorpus = FieldMapping & { corpusContext?: CorpusContext };
 
 const AGREEMENT_COLORS: Record<AgreementStatus, string> = {
   AGREED: C.sage,
@@ -236,19 +240,39 @@ export default function MappingPanel({ engagementId }: Props) {
               </tr>
             </thead>
             <tbody>
-              {sorted.map((m) => (
+              {sorted.map((m) => {
+                const mExt = m as FieldMappingWithCorpus;
+                const isAgreed = m.agreement_status === 'AGREED';
+                return (
                 <tr key={m.mapping_id} style={{ borderBottom: `1px solid ${C.borderLight}` }}>
                   <td style={{ padding: '10px 16px', fontFamily: MONO, color: C.text }}>
                     {m.source_table}.{m.source_column}
                   </td>
                   <td style={{ padding: '10px 16px', fontFamily: MONO, color: C.text }}>
-                    {m.canonical_table}.{m.canonical_column}
+                    <span>{m.canonical_table}.{m.canonical_column}</span>
+                    {mExt.corpusContext && (
+                      <div style={{ marginTop: 2 }}>
+                        <CorpusIndicator context={mExt.corpusContext} />
+                      </div>
+                    )}
                   </td>
                   <td style={{ padding: '10px 12px' }}>
-                    <ConfidenceBar value={m.template_confidence} />
+                    {isAgreed ? (
+                      <span style={{ display: 'flex', justifyContent: 'center' }}>
+                        <span style={{ color: C.sage, fontSize: 14 }}>&#10003;</span>
+                      </span>
+                    ) : (
+                      <ConfidenceBar value={m.template_confidence} />
+                    )}
                   </td>
                   <td style={{ padding: '10px 12px' }}>
-                    <ConfidenceBar value={m.signal_confidence} />
+                    {isAgreed ? (
+                      <span style={{ display: 'flex', justifyContent: 'center' }}>
+                        <span style={{ color: C.sage, fontSize: 14 }}>&#10003;</span>
+                      </span>
+                    ) : (
+                      <ConfidenceBar value={m.signal_confidence} />
+                    )}
                   </td>
                   <td style={{ padding: '10px 12px', textAlign: 'center' }}>
                     <span
@@ -319,7 +343,8 @@ export default function MappingPanel({ engagementId }: Props) {
                     )}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

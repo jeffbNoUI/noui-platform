@@ -3,7 +3,9 @@ import {
   useReconciliationSummary,
   useP1Issues,
   useReconciliationByTier,
+  useRootCauseAnalysis,
 } from '@/hooks/useMigrationApi';
+import RootCauseAnalysisCard from '../ai/RootCauseAnalysis';
 import type { ReconciliationCategory, RiskSeverity } from '@/types/Migration';
 
 const CATEGORY_COLOR: Record<ReconciliationCategory, string> = {
@@ -36,6 +38,7 @@ export default function ReconciliationPanel({ engagementId }: Props) {
   const { data: tier1 } = useReconciliationByTier(engagementId, 1);
   const { data: tier2 } = useReconciliationByTier(engagementId, 2);
   const { data: tier3 } = useReconciliationByTier(engagementId, 3);
+  const { data: rootCause } = useRootCauseAnalysis(engagementId);
 
   if (summaryLoading) {
     return (
@@ -259,6 +262,17 @@ export default function ReconciliationPanel({ engagementId }: Props) {
           </div>
         );
       })}
+
+      {/* Root Cause Analysis */}
+      {rootCause && rootCause.analysis && (
+        <div style={{ marginTop: 16, marginBottom: 4 }}>
+          <RootCauseAnalysisCard
+            analysis={rootCause.analysis}
+            affectedCount={rootCause.affectedCount}
+            confidence={rootCause.confidence}
+          />
+        </div>
+      )}
 
       {/* P1 Issues table */}
       {p1Issues && p1Issues.length > 0 && (
