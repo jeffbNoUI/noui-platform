@@ -116,11 +116,11 @@ log_header "Phase 3: Source Configuration"
 SOURCE_PAYLOAD=$(cat <<EOF
 {
   "driver": "postgres",
-  "host": "postgres",
+  "host": "prism-source",
   "port": "5432",
-  "dbname": "noui",
-  "user": "noui",
-  "password": "noui"
+  "dbname": "prism_prod",
+  "user": "prism",
+  "password": "prism"
 }
 EOF
 )
@@ -246,6 +246,11 @@ if [ -n "$BATCH_ID" ] && [ "$BATCH_ID" != "null" ]; then
   RESPONSE=$(do_get "/api/v1/migration/batches/${BATCH_ID}")
   extract_http "$RESPONSE"
   assert_status "GET /migration/batches/:id" "200" "$HTTP_CODE"
+
+  # Execute the batch
+  RESPONSE=$(do_post "/api/v1/migration/batches/${BATCH_ID}/execute" "{}")
+  extract_http "$RESPONSE"
+  assert_status "POST /migration/batches/:id/execute" "202" "$HTTP_CODE"
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -337,6 +342,28 @@ fi
 RESPONSE=$(do_get "/api/v1/migration/engagements/${ENGAGEMENT_ID}/reports/mapping-spec")
 extract_http "$RESPONSE"
 assert_status "GET /migration/reports/mapping-spec" "200" "$HTTP_CODE"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Phase 11: Two-Source Proof basics
+# Verify source connection is persisted on the engagement
+# ═══════════════════════════════════════════════════════════════════════════════
+
+log_header "Phase 11: Source Database Connectivity"
+
+# Test that source config endpoint works
+RESPONSE=$(do_get "/api/v1/migration/engagements/${ENGAGEMENT_ID}")
+extract_http "$RESPONSE"
+
+# Verify source_connection is stored
+SOURCE_DRIVER=$(echo "$BODY" | jq -r '.data.source_connection.driver // empty' 2>/dev/null || echo "")
+TOTAL_COUNT=$((TOTAL_COUNT + 1))
+if [ "$SOURCE_DRIVER" = "postgres" ]; then
+  echo -e "  ${GREEN}✓${NC} Source connection configured (driver=$SOURCE_DRIVER)"
+  PASS_COUNT=$((PASS_COUNT + 1))
+else
+  echo -e "  ${RED}✗${NC} Source connection not found on engagement"
+  FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Summary

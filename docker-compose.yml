@@ -71,6 +71,38 @@ services:
       timeout: 3s
       retries: 5
 
+  prism-source:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: prism_prod
+      POSTGRES_USER: prism
+      POSTGRES_PASSWORD: prism
+    volumes:
+      - ./migration-simulation/sources/prism/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prism -d prism_prod"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - default
+
+  pas-source:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: pas_prod
+      POSTGRES_USER: pas
+      POSTGRES_PASSWORD: pas
+    volumes:
+      - ./migration-simulation/sources/pas/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pas -d pas_prod"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - default
+
   dataaccess:
     build:
       context: ./platform
