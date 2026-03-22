@@ -27,6 +27,15 @@ do_put() {
     -d "$2" 2>/dev/null || echo -e "\n000"
 }
 
+do_patch() {
+  curl -s -w "\n%{http_code}" \
+    -X PATCH "${BASE_URL}$1" \
+    -H "Content-Type: application/json" \
+    -H "${AUTH_HEADER}" \
+    -H "X-Tenant-ID: ${TENANT_ID}" \
+    -d "$2" 2>/dev/null || echo -e "\n000"
+}
+
 do_delete() {
   curl -s -w "\n%{http_code}" \
     -X DELETE "${BASE_URL}$1" \
