@@ -1,5 +1,61 @@
 # noui-platform — Build History
 
+## Session 14: AMS Competitive Analysis — Governance Documents (2026-03-22)
+
+**Branch:** `claude/lucid-robinson`
+
+### Context
+
+Session 14 competitive analysis compared NoUI against five pension/enterprise platforms
+(Sagitec Xelence, Vitech V3locity, TELUS Health Ariel, Mendix, OutSystems). Identified
+13 capability gaps across six AMS domains. Engineering assessment against the actual
+codebase found: 1 gap already fully built (employer portal), 4 gaps partially addressed,
+3 genuine infrastructure gaps (deferred to Phase 4), 3 wrongly timed, and 2 process concerns.
+
+### Decision: AFS Model NOT Adopted
+
+The "Application Foundation Services" model (six standalone engines modeled after Sagitec)
+was evaluated and rejected. NoUI's 18-service microservices architecture already distributes
+these capabilities with better isolation, independent deployment, and testability. Adding
+"engine" abstractions would reintroduce the coupling that caused the original repo split.
+
+### Documents Produced
+
+**`docs/RBAC_MATRIX.md` — Phase 1 Security Artifact**
+- Documents current enforcement: JWT auth + 43 RLS policies + 2 RLS branches (staff/member)
+- Defines 6 target roles: system_admin, pension_admin, noui_engineer, employer_hr, member, auditor
+- Service access matrix: 21 services x 6 roles (R/W/A/—)
+- Category A/B/C change authorization definitions
+- Data sensitivity tiers + restricted field access rules
+- Enforcement roadmap: Phase 1 (current) → Phase 2 (role-based filtering) → Phase 3 (ABAC)
+- Honest about gap: architecture docs describe 5 roles but RLS only branches on staff/member
+
+**`docs/RELEASE_GOVERNANCE.md` — Platform Release Process**
+- Three release types: quarterly major, monthly patch, emergency
+- Version scheme: YYYY.Q.patch (e.g., 2026.2.0)
+- Promotion pipeline: dev → staging → production with gate requirements
+- Per-plane update procedures (Plane 1: AI, Plane 2: Tenant, Plane 3: Connector)
+- Rollback procedures with time windows
+- Client notification templates and timelines
+- SOC 2 evidence collection per deployment
+- Colorado compliance requirements (breach notification, privacy act)
+
+**`docs/SESSION14_AMS_FINDINGS.md` — Competitive Analysis Reference**
+- Gap register with honest NoUI status for each of 13 items
+- 6 competitive advantages documented (calculation transparency, AI boundary enforcement,
+  migration tooling, degradation model, audit architecture, multi-tenant isolation)
+- Deferred items with trigger conditions (not target dates)
+- Competitive intelligence: Sagitec clients, Vitech TCO claims, TELUS parameter model
+- Positioned as sales/strategy reference, explicitly NOT an engineering backlog
+
+### Stats
+- 3 documents, 0 code changes
+- No tests affected (docs only)
+
+### What's Next
+- Continue migration engine development (Phase 3)
+- Two-Source Proof or Port Management Phase 2
+
 ## Port Management Phase 1 + Migration Plan Status (2026-03-22)
 
 **Branch:** `claude/bold-grothendieck`
