@@ -32,51 +32,51 @@ const (
 type InteractionChannel string
 
 const (
-	ChannelPhoneInbound    InteractionChannel = "phone_inbound"
-	ChannelPhoneOutbound   InteractionChannel = "phone_outbound"
-	ChannelSecureMessage   InteractionChannel = "secure_message"
-	ChannelEmailInbound    InteractionChannel = "email_inbound"
-	ChannelEmailOutbound   InteractionChannel = "email_outbound"
-	ChannelWalkIn          InteractionChannel = "walk_in"
-	ChannelPortalActivity  InteractionChannel = "portal_activity"
-	ChannelMailInbound     InteractionChannel = "mail_inbound"
-	ChannelMailOutbound    InteractionChannel = "mail_outbound"
-	ChannelInternalHandoff InteractionChannel = "internal_handoff"
-	ChannelSystemEvent     InteractionChannel = "system_event"
-	ChannelFax             InteractionChannel = "fax"
+	ChannelPhoneInbound    InteractionChannel = "PHONE_INBOUND"
+	ChannelPhoneOutbound   InteractionChannel = "PHONE_OUTBOUND"
+	ChannelSecureMessage   InteractionChannel = "SECURE_MESSAGE"
+	ChannelEmailInbound    InteractionChannel = "EMAIL_INBOUND"
+	ChannelEmailOutbound   InteractionChannel = "EMAIL_OUTBOUND"
+	ChannelWalkIn          InteractionChannel = "WALK_IN"
+	ChannelPortalActivity  InteractionChannel = "PORTAL_ACTIVITY"
+	ChannelMailInbound     InteractionChannel = "MAIL_INBOUND"
+	ChannelMailOutbound    InteractionChannel = "MAIL_OUTBOUND"
+	ChannelInternalHandoff InteractionChannel = "INTERNAL_HANDOFF"
+	ChannelSystemEvent     InteractionChannel = "SYSTEM_EVENT"
+	ChannelFax             InteractionChannel = "FAX"
 )
 
 // InteractionType categorizes the purpose of an interaction.
 type InteractionType string
 
 const (
-	TypeInquiry      InteractionType = "inquiry"
-	TypeRequest      InteractionType = "request"
-	TypeComplaint    InteractionType = "complaint"
-	TypeFollowUp     InteractionType = "follow_up"
-	TypeOutreach     InteractionType = "outreach"
-	TypeEscalation   InteractionType = "escalation"
-	TypeCallback     InteractionType = "callback"
-	TypeNotification InteractionType = "notification"
-	TypeStatusUpdate InteractionType = "status_update"
-	TypeDocReceipt   InteractionType = "document_receipt"
-	TypeProcessEvent InteractionType = "process_event"
-	TypeSystemEvent  InteractionType = "system_event"
+	TypeInquiry      InteractionType = "INQUIRY"
+	TypeRequest      InteractionType = "REQUEST"
+	TypeComplaint    InteractionType = "COMPLAINT"
+	TypeFollowUp     InteractionType = "FOLLOW_UP"
+	TypeOutreach     InteractionType = "OUTREACH"
+	TypeEscalation   InteractionType = "ESCALATION"
+	TypeCallback     InteractionType = "CALLBACK"
+	TypeNotification InteractionType = "NOTIFICATION"
+	TypeStatusUpdate InteractionType = "STATUS_UPDATE"
+	TypeDocReceipt   InteractionType = "DOCUMENT_RECEIPT"
+	TypeProcessEvent InteractionType = "PROCESS_EVENT"
+	TypeSystemEvent  InteractionType = "SYSTEM_EVENT"
 )
 
 // InteractionOutcome records how an interaction was resolved or left.
 type InteractionOutcome string
 
 const (
-	OutcomeResolved          InteractionOutcome = "resolved"
-	OutcomeEscalated         InteractionOutcome = "escalated"
-	OutcomeCallbackScheduled InteractionOutcome = "callback_scheduled"
-	OutcomeInfoProvided      InteractionOutcome = "info_provided"
-	OutcomeWorkItemCreated   InteractionOutcome = "work_item_created"
-	OutcomeTransferred       InteractionOutcome = "transferred"
-	OutcomeVoicemailLeft     InteractionOutcome = "voicemail_left"
-	OutcomeNoAnswer          InteractionOutcome = "no_answer"
-	OutcomeInProgress        InteractionOutcome = "in_progress"
+	OutcomeResolved          InteractionOutcome = "RESOLVED"
+	OutcomeEscalated         InteractionOutcome = "ESCALATED"
+	OutcomeCallbackScheduled InteractionOutcome = "CALLBACK_SCHEDULED"
+	OutcomeInfoProvided      InteractionOutcome = "INFO_PROVIDED"
+	OutcomeWorkItemCreated   InteractionOutcome = "WORK_ITEM_CREATED"
+	OutcomeTransferred       InteractionOutcome = "TRANSFERRED"
+	OutcomeVoicemailLeft     InteractionOutcome = "VOICEMAIL_LEFT"
+	OutcomeNoAnswer          InteractionOutcome = "NO_ANSWER"
+	OutcomeInProgress        InteractionOutcome = "IN_PROGRESS"
 )
 
 // ConversationStatus tracks the lifecycle state of a conversation thread.
@@ -117,17 +117,17 @@ const (
 type Direction string
 
 const (
-	DirectionInbound  Direction = "inbound"
-	DirectionOutbound Direction = "outbound"
-	DirectionInternal Direction = "internal"
+	DirectionInbound  Direction = "INBOUND"
+	DirectionOutbound Direction = "OUTBOUND"
+	DirectionInternal Direction = "INTERNAL"
 )
 
 // Visibility controls whether an item is visible to external parties.
 type Visibility string
 
 const (
-	VisibilityInternal Visibility = "internal"
-	VisibilityPublic   Visibility = "public"
+	VisibilityInternal Visibility = "INTERNAL"
+	VisibilityPublic   Visibility = "PUBLIC"
 )
 
 // ============================================================

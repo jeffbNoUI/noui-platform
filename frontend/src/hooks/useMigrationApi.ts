@@ -363,6 +363,15 @@ export function useExceptions(batchId: string) {
   });
 }
 
+export function useMappingCorpusContext(engagementId: string, mappingId: string) {
+  return useQuery<import('@/types/Migration').CorpusContext>({
+    queryKey: ['migration', 'corpus', engagementId, mappingId],
+    queryFn: () => migrationAPI.getMappingCorpusContext(engagementId, mappingId),
+    enabled: !!engagementId && !!mappingId,
+    staleTime: 60_000,
+  });
+}
+
 // ─── Phase Gate hooks ───────────────────────────────────────────────────────
 
 export function useGateStatus(engagementId: string | undefined) {

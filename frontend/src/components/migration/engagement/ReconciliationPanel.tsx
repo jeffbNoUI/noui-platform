@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
 import {
   useReconciliationSummary,
@@ -6,7 +7,8 @@ import {
   useRootCauseAnalysis,
 } from '@/hooks/useMigrationApi';
 import RootCauseAnalysisCard from '../ai/RootCauseAnalysis';
-import type { ReconciliationCategory, RiskSeverity } from '@/types/Migration';
+import TierFunnel from '../charts/TierFunnel';
+import type { Reconciliation, ReconciliationCategory, RiskSeverity } from '@/types/Migration';
 
 const CATEGORY_COLOR: Record<ReconciliationCategory, string> = {
   MATCH: C.sage,
@@ -39,6 +41,19 @@ export default function ReconciliationPanel({ engagementId }: Props) {
   const { data: tier2 } = useReconciliationByTier(engagementId, 2);
   const { data: tier3 } = useReconciliationByTier(engagementId, 3);
   const { data: rootCause } = useRootCauseAnalysis(engagementId);
+
+  const tierFunnelData = useMemo(() => {
+    const derive = (data: Reconciliation[] | undefined) => {
+      if (!data) return { total: 0, match: 0 };
+      return { total: data.length, match: data.filter((r) => r.category === 'MATCH').length };
+    };
+    return { tier1: derive(tier1), tier2: derive(tier2), tier3: derive(tier3) };
+  }, [tier1, tier2, tier3]);
+
+  const hasTierData =
+    tierFunnelData.tier1.total > 0 ||
+    tierFunnelData.tier2.total > 0 ||
+    tierFunnelData.tier3.total > 0;
 
   if (summaryLoading) {
     return (
@@ -164,52 +179,34 @@ export default function ReconciliationPanel({ engagementId }: Props) {
             })}
           </div>
 
-          {/* Tier scores */}
-          <div
-            style={{
-              display: 'flex',
-              gap: 12,
-              marginTop: 12,
-            }}
-          >
-            {[
-              { label: 'Tier 1', score: summary.tier1_score },
-              { label: 'Tier 2', score: summary.tier2_score },
-              { label: 'Tier 3', score: summary.tier3_score },
-            ].map((t) => (
+          {/* Tier funnel */}
+          {hasTierData && (
+            <div
+              style={{
+                background: C.cardBg,
+                borderRadius: 8,
+                border: `1px solid ${C.border}`,
+                padding: '14px 16px',
+                marginTop: 12,
+              }}
+            >
               <div
-                key={t.label}
                 style={{
-                  flex: 1,
-                  background: C.cardBg,
-                  borderRadius: 8,
-                  border: `1px solid ${C.border}`,
-                  padding: '10px 14px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: C.textSecondary,
+                  marginBottom: 10,
                 }}
               >
-                <div
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: C.textSecondary,
-                    marginBottom: 4,
-                  }}
-                >
-                  {t.label}
-                </div>
-                <div
-                  style={{
-                    fontSize: 16,
-                    fontWeight: 700,
-                    fontFamily: MONO,
-                    color: t.score >= 0.95 ? C.sage : t.score >= 0.85 ? C.gold : C.coral,
-                  }}
-                >
-                  {(t.score * 100).toFixed(1)}%
-                </div>
+                Tier Match Rates
               </div>
-            ))}
-          </div>
+              <TierFunnel
+                tier1={tierFunnelData.tier1}
+                tier2={tierFunnelData.tier2}
+                tier3={tierFunnelData.tier3}
+              />
+            </div>
+          )}
         </div>
       </div>
 

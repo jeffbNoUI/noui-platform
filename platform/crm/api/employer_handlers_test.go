@@ -40,7 +40,7 @@ func TestListOrgInteractions_InvalidUUID(t *testing.T) {
 
 func TestCreateEmployerInteraction_MissingOrgID(t *testing.T) {
 	h := &Handler{}
-	body := `{"channel":"phone_inbound","interactionType":"inquiry","direction":"inbound"}`
+	body := `{"channel":"PHONE_INBOUND","interactionType":"INQUIRY","direction":"INBOUND"}`
 	req := httptest.NewRequest("POST", "/api/v1/crm/interactions/employer", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -57,9 +57,9 @@ func TestCreateEmployerInteraction_InvalidCategory(t *testing.T) {
 	h := &Handler{}
 	body := `{
 		"orgId":"550e8400-e29b-41d4-a716-446655440000",
-		"channel":"phone_inbound",
-		"interactionType":"inquiry",
-		"direction":"inbound",
+		"channel":"PHONE_INBOUND",
+		"interactionType":"INQUIRY",
+		"direction":"INBOUND",
 		"category":"INVALID_CATEGORY"
 	}`
 	req := httptest.NewRequest("POST", "/api/v1/crm/interactions/employer", strings.NewReader(body))
