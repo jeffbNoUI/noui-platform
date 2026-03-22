@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { C, BODY, DISPLAY } from '@/lib/designSystem';
-import type { MigrationEngagement, EngagementStatus } from '@/types/Migration';
+import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
+import type { MigrationEngagement, EngagementStatus, SourceConnection } from '@/types/Migration';
 
 interface EngagementListProps {
   engagements: MigrationEngagement[] | undefined;
@@ -29,6 +29,12 @@ function formatRelativeTime(dateStr: string): string {
   if (diffHr < 24) return `${diffHr}h ago`;
   const diffDay = Math.floor(diffHr / 24);
   return `${diffDay}d ago`;
+}
+
+function formatConnection(conn: SourceConnection | null): string | null {
+  if (!conn) return null;
+  const driver = conn.driver === 'mssql' ? 'SQL Server' : 'PostgreSQL';
+  return `${driver} · ${conn.host}${conn.port ? ':' + conn.port : ''} · ${conn.dbname}`;
 }
 
 function SkeletonRow() {
@@ -163,6 +169,43 @@ export default function EngagementList({ engagements, isLoading, onSelect }: Eng
                 {eng.status.replace('_', ' ')}
               </span>
             </div>
+            {eng.source_connection && (
+              <div
+                style={{
+                  fontSize: 11,
+                  fontFamily: MONO,
+                  color: C.textSecondary,
+                  marginBottom: 4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <span
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    background: C.sage,
+                    flexShrink: 0,
+                  }}
+                />
+                {formatConnection(eng.source_connection)}
+              </div>
+            )}
+            {!eng.source_connection && eng.status === 'DISCOVERY' && (
+              <div
+                style={{
+                  fontSize: 11,
+                  fontFamily: BODY,
+                  color: C.textTertiary,
+                  fontStyle: 'italic',
+                  marginBottom: 4,
+                }}
+              >
+                No source configured
+              </div>
+            )}
             <div style={{ fontSize: 12, color: C.textTertiary }}>
               Updated {formatRelativeTime(eng.updated_at)}
             </div>
