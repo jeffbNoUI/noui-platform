@@ -4,6 +4,7 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -483,6 +484,32 @@ func (h *Handler) CreateInteraction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Write audit trail entry for the new interaction (fire-and-forget with background context)
+	agentIDVal := "system"
+	if interaction.AgentID != nil {
+		agentIDVal = *interaction.AgentID
+	}
+	go func(tid, entityID, agentID string, channel, direction interface{}) {
+		ctx := context.Background()
+		eventTime := time.Now().UTC()
+		summary := fmt.Sprintf("%v %v interaction created", channel, direction)
+
+		prevHash, _ := h.store.GetLastAuditHash(ctx, tid)
+		recordHash := crmdb.ComputeAuditHash(tid, "interaction_created", "interaction", entityID, agentID, summary, eventTime)
+
+		_ = h.store.WriteAuditLog(ctx, &crmdb.AuditEntry{
+			TenantID:      tid,
+			EventTime:     eventTime,
+			EventType:     "interaction_created",
+			EntityType:    "interaction",
+			EntityID:      &entityID,
+			AgentID:       agentID,
+			Summary:       &summary,
+			PrevAuditHash: ptrIfNonEmpty(prevHash),
+			RecordHash:    recordHash,
+		})
+	}(interaction.TenantID, interaction.InteractionID, agentIDVal, interaction.Channel, interaction.Direction)
+
 	apiresponse.WriteSuccess(w, http.StatusCreated, "crm", interaction)
 }
 
@@ -959,6 +986,13 @@ func ptrOrDefault(p *string, def string) string {
 		return *p
 	}
 	return def
+}
+
+func ptrIfNonEmpty(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }
 
 func parseOptionalTime(s *string) *time.Time {

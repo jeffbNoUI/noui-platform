@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"fmt"
 	"time"
@@ -155,4 +156,30 @@ func (s *Store) GetAuditLog(ctx context.Context, tenantID string, filter AuditFi
 	}
 
 	return entries, nil
+}
+
+// GetLastAuditHash returns the record_hash of the most recent audit entry for a tenant.
+// Returns empty string if no entries exist (first entry in chain).
+func (s *Store) GetLastAuditHash(ctx context.Context, tenantID string) (string, error) {
+	var hash sql.NullString
+	err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx,
+		`SELECT record_hash FROM crm_audit_log WHERE tenant_id = $1 ORDER BY audit_id DESC LIMIT 1`,
+		tenantID,
+	).Scan(&hash)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("getting last audit hash: %w", err)
+	}
+	return hash.String, nil
+}
+
+// ComputeAuditHash produces a SHA-256 hex digest for an audit entry.
+func ComputeAuditHash(tenantID, eventType, entityType, entityID, agentID, summary string, eventTime time.Time) string {
+	payload := fmt.Sprintf("%s|%s|%s|%s|%s|%s|%s",
+		tenantID, eventType, entityType, entityID, agentID, summary,
+		eventTime.UTC().Format(time.RFC3339Nano))
+	h := sha256.Sum256([]byte(payload))
+	return fmt.Sprintf("%x", h)
 }
