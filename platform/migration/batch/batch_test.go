@@ -56,6 +56,26 @@ func (e *testEmitter) Emit(event BatchEvent) {
 	e.events = append(e.events, event)
 }
 
+// expectClearPriorBatchData adds sqlmock expectations for all 8 DELETE statements
+// in clearPriorBatchData.
+func expectClearPriorBatchData(mock sqlmock.Sqlmock, batchID string) {
+	tables := []string{
+		"migration.lineage",
+		"migration.canonical_row",
+		"migration.canonical_members",
+		"migration.canonical_salaries",
+		"migration.canonical_contributions",
+		"migration.stored_calculations",
+		"migration.payment_history",
+		"migration.exception",
+	}
+	for _, t := range tables {
+		mock.ExpectExec("DELETE FROM " + t).
+			WithArgs(batchID).
+			WillReturnResult(sqlmock.NewResult(0, 0))
+	}
+}
+
 // --- Helper: in-memory source row provider ---
 
 type memoryProvider struct {
@@ -343,21 +363,16 @@ func TestExecuteBatch_Success(t *testing.T) {
 	// Expect: begin transaction
 	mock.ExpectBegin()
 
-	// Expect: clear prior data (3 deletes)
-	mock.ExpectExec("DELETE FROM migration.lineage").
-		WithArgs("batch-001").
-		WillReturnResult(sqlmock.NewResult(0, 0))
-	mock.ExpectExec("DELETE FROM migration.canonical_row").
-		WithArgs("batch-001").
-		WillReturnResult(sqlmock.NewResult(0, 0))
-	mock.ExpectExec("DELETE FROM migration.exception").
-		WithArgs("batch-001").
-		WillReturnResult(sqlmock.NewResult(0, 0))
+	// Expect: clear prior data (8 deletes)
+	expectClearPriorBatchData(mock, "batch-001")
 
-	// Expect: 3 rows - canonical insert + checkpoint update for each
+	// Expect: 3 rows - canonical_row + canonical_member + checkpoint for each
 	for _, key := range []string{"row-1", "row-2", "row-3"} {
 		mock.ExpectExec("INSERT INTO migration.canonical_row").
 			WithArgs("batch-001", key, "ACTUAL").
+			WillReturnResult(sqlmock.NewResult(0, 1))
+		mock.ExpectExec("INSERT INTO migration.canonical_members").
+			WithArgs("batch-001", key, "", "").
 			WillReturnResult(sqlmock.NewResult(0, 1))
 		mock.ExpectExec("UPDATE migration.batch SET checkpoint_key").
 			WithArgs("batch-001", key).
@@ -437,18 +452,13 @@ func TestExecuteBatch_Idempotent(t *testing.T) {
 	mock.ExpectBegin()
 
 	// Clear prior data — this time rows exist.
-	mock.ExpectExec("DELETE FROM migration.lineage").
-		WithArgs("batch-001").
-		WillReturnResult(sqlmock.NewResult(0, 5)) // had 5 lineage rows
-	mock.ExpectExec("DELETE FROM migration.canonical_row").
-		WithArgs("batch-001").
-		WillReturnResult(sqlmock.NewResult(0, 1)) // had 1 canonical row
-	mock.ExpectExec("DELETE FROM migration.exception").
-		WithArgs("batch-001").
-		WillReturnResult(sqlmock.NewResult(0, 0))
+	expectClearPriorBatchData(mock, "batch-001")
 
 	mock.ExpectExec("INSERT INTO migration.canonical_row").
 		WithArgs("batch-001", "row-1", "ACTUAL").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectExec("INSERT INTO migration.canonical_members").
+		WithArgs("batch-001", "row-1", "", "").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("UPDATE migration.batch SET checkpoint_key").
 		WithArgs("batch-001", "row-1").
@@ -517,15 +527,7 @@ func TestExecuteBatch_ThresholdHalt(t *testing.T) {
 		WithArgs("batch-001", "RUNNING").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectBegin()
-	mock.ExpectExec("DELETE FROM migration.lineage").
-		WithArgs("batch-001").
-		WillReturnResult(sqlmock.NewResult(0, 0))
-	mock.ExpectExec("DELETE FROM migration.canonical_row").
-		WithArgs("batch-001").
-		WillReturnResult(sqlmock.NewResult(0, 0))
-	mock.ExpectExec("DELETE FROM migration.exception").
-		WithArgs("batch-001").
-		WillReturnResult(sqlmock.NewResult(0, 0))
+	expectClearPriorBatchData(mock, "batch-001")
 
 	// Transaction rolled back on halt.
 	mock.ExpectRollback()
@@ -591,15 +593,7 @@ func TestExecuteBatch_RetireeZeroTolerance(t *testing.T) {
 		WithArgs("batch-001", "RUNNING").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectBegin()
-	mock.ExpectExec("DELETE FROM migration.lineage").
-		WithArgs("batch-001").
-		WillReturnResult(sqlmock.NewResult(0, 0))
-	mock.ExpectExec("DELETE FROM migration.canonical_row").
-		WithArgs("batch-001").
-		WillReturnResult(sqlmock.NewResult(0, 0))
-	mock.ExpectExec("DELETE FROM migration.exception").
-		WithArgs("batch-001").
-		WillReturnResult(sqlmock.NewResult(0, 0))
+	expectClearPriorBatchData(mock, "batch-001")
 	mock.ExpectRollback()
 	mock.ExpectExec("UPDATE migration.batch").
 		WithArgs("batch-001", sqlmock.AnyArg()).
@@ -680,6 +674,9 @@ func TestResumeBatch_FromCheckpoint(t *testing.T) {
 		mock.ExpectExec("INSERT INTO migration.canonical_row").
 			WithArgs("batch-001", key, "ACTUAL").
 			WillReturnResult(sqlmock.NewResult(0, 1))
+		mock.ExpectExec("INSERT INTO migration.canonical_members").
+			WithArgs("batch-001", key, "", "").
+			WillReturnResult(sqlmock.NewResult(0, 1))
 		mock.ExpectExec("UPDATE migration.batch SET checkpoint_key").
 			WithArgs("batch-001", key).
 			WillReturnResult(sqlmock.NewResult(0, 1))
@@ -751,15 +748,7 @@ func TestExecuteBatch_EmptyBatch(t *testing.T) {
 		WithArgs("batch-001", "RUNNING").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectBegin()
-	mock.ExpectExec("DELETE FROM migration.lineage").
-		WithArgs("batch-001").
-		WillReturnResult(sqlmock.NewResult(0, 0))
-	mock.ExpectExec("DELETE FROM migration.canonical_row").
-		WithArgs("batch-001").
-		WillReturnResult(sqlmock.NewResult(0, 0))
-	mock.ExpectExec("DELETE FROM migration.exception").
-		WithArgs("batch-001").
-		WillReturnResult(sqlmock.NewResult(0, 0))
+	expectClearPriorBatchData(mock, "batch-001")
 	mock.ExpectCommit()
 	mock.ExpectExec("UPDATE migration.batch").
 		WithArgs("batch-001", 0, 0, 0, float64(0)).
@@ -889,13 +878,14 @@ func TestExecuteBatch_WithExceptions(t *testing.T) {
 		WithArgs("batch-001", "RUNNING").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectBegin()
-	mock.ExpectExec("DELETE FROM migration.lineage").WithArgs("batch-001").WillReturnResult(sqlmock.NewResult(0, 0))
-	mock.ExpectExec("DELETE FROM migration.canonical_row").WithArgs("batch-001").WillReturnResult(sqlmock.NewResult(0, 0))
-	mock.ExpectExec("DELETE FROM migration.exception").WithArgs("batch-001").WillReturnResult(sqlmock.NewResult(0, 0))
+	expectClearPriorBatchData(mock, "batch-001")
 
-	// Row 1: bad row -> canonical + exception + checkpoint.
+	// Row 1: bad row -> canonical_row + canonical_member + exception + checkpoint.
 	mock.ExpectExec("INSERT INTO migration.canonical_row").
 		WithArgs("batch-001", "row-1", "ESTIMATED").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectExec("INSERT INTO migration.canonical_members").
+		WithArgs("batch-001", "row-1", "", "").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("INSERT INTO migration.exception").
 		WithArgs("batch-001", "row-1", "WarnBadOnly", "full_name", "bad_Alice", "INVALID_FORMAT", "format warning").
@@ -904,11 +894,14 @@ func TestExecuteBatch_WithExceptions(t *testing.T) {
 		WithArgs("batch-001", "row-1").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	// Rows 2-10: clean rows -> canonical + checkpoint each.
+	// Rows 2-10: clean rows -> canonical_row + canonical_member + checkpoint each.
 	for i := 2; i <= 10; i++ {
 		key := fmt.Sprintf("row-%d", i)
 		mock.ExpectExec("INSERT INTO migration.canonical_row").
 			WithArgs("batch-001", key, "ACTUAL").
+			WillReturnResult(sqlmock.NewResult(0, 1))
+		mock.ExpectExec("INSERT INTO migration.canonical_members").
+			WithArgs("batch-001", key, "", "").
 			WillReturnResult(sqlmock.NewResult(0, 1))
 		mock.ExpectExec("UPDATE migration.batch SET checkpoint_key").
 			WithArgs("batch-001", key).

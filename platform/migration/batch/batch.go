@@ -343,23 +343,28 @@ func countPriorErrors(db *sql.DB, batchID string) (hardErrors, softWarnings, ret
 	return hardErrors, softWarnings, 0, nil
 }
 
-// clearPriorBatchData removes canonical rows and lineage from a previous run
-// of this batch, enabling idempotent re-runs.
+// clearPriorBatchData removes canonical rows, lineage, exceptions, and
+// reconciliation staging tables from a previous run, enabling idempotent re-runs.
 func clearPriorBatchData(tx *sql.Tx, batchID string) error {
-	if _, err := tx.Exec(
-		`DELETE FROM migration.lineage WHERE batch_id = $1`, batchID,
-	); err != nil {
-		return fmt.Errorf("clear lineage: %w", err)
+	tables := []struct {
+		name  string
+		label string
+	}{
+		{"migration.lineage", "lineage"},
+		{"migration.canonical_row", "canonical rows"},
+		{"migration.canonical_members", "canonical members"},
+		{"migration.canonical_salaries", "canonical salaries"},
+		{"migration.canonical_contributions", "canonical contributions"},
+		{"migration.stored_calculations", "stored calculations"},
+		{"migration.payment_history", "payment history"},
+		{"migration.exception", "exceptions"},
 	}
-	if _, err := tx.Exec(
-		`DELETE FROM migration.canonical_row WHERE batch_id = $1`, batchID,
-	); err != nil {
-		return fmt.Errorf("clear canonical rows: %w", err)
-	}
-	if _, err := tx.Exec(
-		`DELETE FROM migration.exception WHERE batch_id = $1`, batchID,
-	); err != nil {
-		return fmt.Errorf("clear exceptions: %w", err)
+	for _, t := range tables {
+		if _, err := tx.Exec(
+			fmt.Sprintf(`DELETE FROM %s WHERE batch_id = $1`, t.name), batchID,
+		); err != nil {
+			return fmt.Errorf("clear %s: %w", t.label, err)
+		}
 	}
 	return nil
 }
@@ -375,6 +380,42 @@ func writeCanonicalRow(tx *sql.Tx, batchID, rowKey string, confidence transforme
 		return fmt.Errorf("write canonical row: %w", err)
 	}
 	return nil
+}
+
+// writeCanonicalMember extracts reconciliation-relevant fields from the
+// transformed canonical row and inserts them into canonical_members.
+// Fields are matched by canonical column name from the transformation result.
+func writeCanonicalMember(tx *sql.Tx, batchID, rowKey string, canonicalRow map[string]interface{}) error {
+	memberID := coerceString(canonicalRow, "member_id", rowKey)
+	memberStatus := coerceString(canonicalRow, "member_status", "")
+	canonicalBenefit := coerceString(canonicalRow, "canonical_benefit", "")
+	// Also check "gross_monthly_benefit" and "calc_result" as common source mappings.
+	if canonicalBenefit == "" {
+		canonicalBenefit = coerceString(canonicalRow, "gross_monthly_benefit", "")
+	}
+	if canonicalBenefit == "" {
+		canonicalBenefit = coerceString(canonicalRow, "calc_result", "")
+	}
+
+	_, err := tx.Exec(
+		`INSERT INTO migration.canonical_members
+		 (batch_id, member_id, member_status, canonical_benefit)
+		 VALUES ($1, $2, $3, NULLIF($4, ''))`,
+		batchID, memberID, memberStatus, canonicalBenefit,
+	)
+	if err != nil {
+		return fmt.Errorf("write canonical member: %w", err)
+	}
+	return nil
+}
+
+// coerceString extracts a string value from a map, returning fallback if missing/nil.
+func coerceString(m map[string]interface{}, key, fallback string) string {
+	v, ok := m[key]
+	if !ok || v == nil {
+		return fallback
+	}
+	return fmt.Sprintf("%v", v)
 }
 
 // writeLineageEntries inserts lineage records for a single row.
@@ -512,6 +553,13 @@ func ExecuteBatch(
 		if err := writeCanonicalRow(tx, batch.BatchID, srcRow.Key, result.Confidence); err != nil {
 			_ = tx.Rollback()
 			_ = haltBatch(db, batch.BatchID, fmt.Sprintf("write canonical row %s: %v", srcRow.Key, err))
+			return err
+		}
+
+		// Write canonical member for reconciliation.
+		if err := writeCanonicalMember(tx, batch.BatchID, srcRow.Key, result.CanonicalRow); err != nil {
+			_ = tx.Rollback()
+			_ = haltBatch(db, batch.BatchID, fmt.Sprintf("write canonical member %s: %v", srcRow.Key, err))
 			return err
 		}
 
@@ -708,6 +756,11 @@ func ResumeBatch(
 		if err := writeCanonicalRow(tx, batch.BatchID, srcRow.Key, result.Confidence); err != nil {
 			_ = tx.Rollback()
 			_ = haltBatch(db, batch.BatchID, fmt.Sprintf("write canonical row %s: %v", srcRow.Key, err))
+			return err
+		}
+		if err := writeCanonicalMember(tx, batch.BatchID, srcRow.Key, result.CanonicalRow); err != nil {
+			_ = tx.Rollback()
+			_ = haltBatch(db, batch.BatchID, fmt.Sprintf("write canonical member %s: %v", srcRow.Key, err))
 			return err
 		}
 		if err := writeLineageEntries(tx, batch.BatchID, srcRow.Key, result.Lineage); err != nil {

@@ -1,5 +1,55 @@
 # noui-platform — Build History
 
+## Session 15: Two-Source Proof — Debug Loop Complete (2026-03-22)
+
+**Branch:** `claude/stoic-franklin`
+
+### What Was Done
+
+Took the Two-Source Proof from 11/19 passing (Session 14 infrastructure) to **23/23 passing**.
+Both PRISM and PAS source databases run the complete migration pipeline end-to-end:
+engagement → profiling → mapping → batch execution → reconciliation → gate scoring.
+
+**Root causes fixed:**
+1. **Schema drift** — Migration 036 reconciled lineage/exception DDL (designed as row-level,
+   code evolved to column-level) and added 6 canonical/reference tables
+2. **Missing canonical output** — Batch executor discarded TransformResult.CanonicalRow;
+   now writes to canonical_members for reconciliation
+3. **Source reference loading** — New source_loader.go bridges PRISM_BENEFIT_CALC / PAS
+   retirement_award into migration.stored_calculations, and payment history for tier 2
+4. **Unqualified table references** — 8 SQL queries in reconciler lacked `migration.` prefix
+5. **NULL defense** — COALESCE in reconciler queries, NULLIF in inserts
+6. **Missing seed data** — Generated PRISM (100 members, 44K SQL statements) and PAS
+   (100 members, 185K records) seed data via Python generators
+7. **Proof script bugs** — Batch status check (LOADED not COMPLETE), PAS column name fix
+
+### Files Changed
+
+- `platform/migration/db/migrations/036_canonical_tables.sql` — NEW (DDL for 8 tables)
+- `platform/migration/batch/batch.go` — writeCanonicalMember, expanded clearPriorBatchData
+- `platform/migration/batch/source_loader.go` — NEW (source reference data loading)
+- `platform/migration/api/batch_handlers.go` — Trigger source data load post-execution
+- `platform/migration/reconciler/tier1.go` — Schema-qualify, COALESCE
+- `platform/migration/reconciler/tier2.go` — Schema-qualify, COALESCE
+- `platform/migration/reconciler/tier3.go` — Schema-qualify
+- `platform/migration/batch/batch_test.go` — Updated sqlmock for new tables
+- `docker-compose.yml` — Volume mount for 036
+- `scripts/run_two_source_proof.sh` — Status check + column name fixes
+
+### Stats
+
+- 10 files changed (2 new, 8 modified)
+- Migration unit tests: 11 packages, all pass
+- Two-Source Proof: 23/23 checks pass
+- Gate scores: 0 (reconciliation data alignment is next step)
+
+### What's Next
+
+- Reconciliation data alignment (member_id format mismatch between canonical_members and stored_calculations)
+- Gate score tuning for meaningful reconciliation results
+- Tier 3 benchmarks
+- Starter prompt: `docs/plans/2026-03-22-two-source-proof-complete-next-session.md`
+
 ## Session 14: AMS Competitive Analysis — Governance Documents (2026-03-22)
 
 **Branch:** `claude/lucid-robinson`

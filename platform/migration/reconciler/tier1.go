@@ -12,14 +12,14 @@ const tier1Query = `
 SELECT
 	cm.member_id,
 	cm.member_status,
-	sc.yos_used,
-	sc.fas_used,
-	sc.age_at_calc,
-	sc.plan_code,
-	sc.stored_benefit,
-	cm.canonical_benefit
-FROM canonical_members cm
-JOIN stored_calculations sc ON sc.member_id = cm.member_id
+	COALESCE(sc.yos_used, '0'),
+	COALESCE(sc.fas_used, '0'),
+	COALESCE(sc.age_at_calc, 0),
+	COALESCE(sc.plan_code, 'DB_MAIN'),
+	COALESCE(sc.stored_benefit, '0'),
+	COALESCE(cm.canonical_benefit, '0')
+FROM migration.canonical_members cm
+JOIN migration.stored_calculations sc ON sc.member_id = cm.member_id
 WHERE cm.batch_id = $1
 ORDER BY cm.member_id
 `

@@ -17,13 +17,13 @@ type PlanBenchmarks struct {
 
 // tier3 SQL queries — one per check, all parameterized by batch_id.
 const (
-	tier3SalaryQuery = `SELECT member_id, salary_year, salary_amount FROM canonical_salaries WHERE batch_id = $1 ORDER BY salary_year, member_id`
+	tier3SalaryQuery = `SELECT member_id, salary_year, salary_amount FROM migration.canonical_salaries WHERE batch_id = $1 ORDER BY salary_year, member_id`
 
-	tier3ContributionQuery = `SELECT COALESCE(SUM(contribution_amount), 0)::TEXT FROM canonical_contributions WHERE batch_id = $1`
+	tier3ContributionQuery = `SELECT COALESCE(SUM(contribution_amount), 0)::TEXT FROM migration.canonical_contributions WHERE batch_id = $1`
 
-	tier3ServiceCreditQuery = `SELECT member_id, service_credit_years, employment_start, employment_end FROM canonical_members WHERE batch_id = $1`
+	tier3ServiceCreditQuery = `SELECT member_id, service_credit_years, employment_start, employment_end FROM migration.canonical_members WHERE batch_id = $1`
 
-	tier3StatusCountQuery = `SELECT member_status, COUNT(*) FROM canonical_members WHERE batch_id = $1 GROUP BY member_status`
+	tier3StatusCountQuery = `SELECT member_status, COUNT(*) FROM migration.canonical_members WHERE batch_id = $1 GROUP BY member_status`
 )
 
 // stddevOutlierThreshold is the number of standard deviations beyond which a
