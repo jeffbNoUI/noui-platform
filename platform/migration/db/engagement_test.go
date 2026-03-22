@@ -26,7 +26,7 @@ func TestCreateEngagement(t *testing.T) {
 		WithArgs("tenant-1", "LegacyPAS").
 		WillReturnRows(sqlmock.NewRows(engagementCols).AddRow(
 			"eng-001", "tenant-1", "LegacyPAS", "1.0",
-			"PROFILING", nil, nil, now, now,
+			"DISCOVERY", nil, nil, now, now,
 		))
 
 	e, err := CreateEngagement(db, "tenant-1", "LegacyPAS")
@@ -39,8 +39,8 @@ func TestCreateEngagement(t *testing.T) {
 	if e.SourceSystemName != "LegacyPAS" {
 		t.Errorf("SourceSystemName = %q, want %q", e.SourceSystemName, "LegacyPAS")
 	}
-	if e.Status != models.StatusProfiling {
-		t.Errorf("Status = %q, want %q", e.Status, models.StatusProfiling)
+	if e.Status != models.StatusDiscovery {
+		t.Errorf("Status = %q, want %q", e.Status, models.StatusDiscovery)
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("unmet expectations: %v", err)
