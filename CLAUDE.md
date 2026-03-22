@@ -53,17 +53,32 @@ These rules are **non-negotiable** and prevent the tangling that caused the prev
 
 ## Service Naming (Important!)
 
-| Directory | Purpose | Port |
-|-----------|---------|------|
-| `connector/` | Generic schema introspection, concept tagging, monitoring engine | 8090 (service mode) |
-| `platform/dataaccess/` | PostgreSQL data access for member/salary/benefit queries | 8081 |
-| `platform/intelligence/` | Eligibility, benefit calculation, DRO, scenario analysis | 8082 |
-| `platform/crm/` | Contact management, interaction history | 8083 (host: 8084) |
-| `platform/correspondence/` | Template rendering, merge fields, letter history | 8085 |
-| `platform/dataquality/` | Data quality checks, scoring, issues, trends | 8086 |
-| `platform/knowledgebase/` | Articles, stage help, rule references, search | 8087 |
-| `platform/casemanagement/` | Retirement case tracking, stage workflow, work queue | 8088 |
-| `frontend/` | React UI (StaffPortal, MemberPortal, RetirementApplication) | 3000 |
+Services are Docker-internal only (no host port mappings). All access goes through
+nginx at `localhost:3000`. See `infrastructure/ports.env` for the full port registry.
+
+| Directory | API Path | Purpose |
+|-----------|----------|---------|
+| `connector/` | — | Generic schema introspection, concept tagging, monitoring engine |
+| `platform/dataaccess/` | `/api/v1/members`, `/api/v1/scenarios`, `/api/v1/notifications` | Member/salary/benefit queries |
+| `platform/intelligence/` | `/api/v1/eligibility`, `/api/v1/benefit`, `/api/v1/dro` | Eligibility, benefit calculation, DRO |
+| `platform/crm/` | `/api/v1/crm` | Contact management, interaction history |
+| `platform/correspondence/` | `/api/v1/correspondence` | Template rendering, merge fields |
+| `platform/dataquality/` | `/api/v1/dq` | Data quality checks, scoring |
+| `platform/knowledgebase/` | `/api/v1/kb` | Articles, stage help, rule references |
+| `platform/casemanagement/` | `/api/v1/cases`, `/api/v1/stages` | Case tracking, stage workflow |
+| `platform/preferences/` | `/api/v1/preferences` | User preferences |
+| `platform/issues/` | `/api/v1/issues` | Error self-reporting |
+| `platform/security/` | `/api/v1/security` | Security events |
+| `platform/healthagg/` | `/api/v1/health` | Health aggregation dashboard |
+| `platform/employer-portal/` | `/api/v1/employer` | Employer portal, divisions, alerts |
+| `platform/employer-reporting/` | `/api/v1/reporting` | Employer reporting, file uploads |
+| `platform/employer-enrollment/` | `/api/v1/enrollment` | Member enrollment submissions |
+| `platform/employer-terminations/` | `/api/v1/terminations` | Termination certifications, refunds |
+| `platform/employer-waret/` | `/api/v1/waret` | WARET designations |
+| `platform/employer-scp/` | `/api/v1/scp` | Service credit purchase |
+| `platform/migration/` | `/api/v1/migration` | Migration engine (profiling, mapping, loading) |
+| `migration-intelligence/` | — | Migration ML service (signal scoring, corpus) |
+| `frontend/` | `localhost:3000` | React UI + nginx proxy (only host-exposed service) |
 
 **`connector/` and `platform/dataaccess/` are completely different things.** The connector discovers unknown schemas. The dataaccess service queries a known PostgreSQL schema for member data.
 

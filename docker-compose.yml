@@ -46,6 +46,9 @@ services:
       - ./db/migrations/030_migration_schema.sql:/docker-entrypoint-initdb.d/035_migration_schema.sql
       - ./platform/migration/db/migrations/031_migration_risk_event.sql:/docker-entrypoint-initdb.d/036_migration_risk_event.sql
       - ./platform/migration/db/migrations/032_source_connection.sql:/docker-entrypoint-initdb.d/037_source_connection.sql
+      - ./platform/migration/db/migrations/033_gate_transition.sql:/docker-entrypoint-initdb.d/038_gate_transition.sql
+      - ./platform/migration/db/migrations/034_notification.sql:/docker-entrypoint-initdb.d/039_notification.sql
+      - ./platform/migration/db/migrations/035_platform_type.sql:/docker-entrypoint-initdb.d/040_platform_type.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U noui"]
       interval: 5s
@@ -72,8 +75,6 @@ services:
     build:
       context: ./platform
       dockerfile: dataaccess/Dockerfile
-    ports:
-      - "8081:8081"
     environment:
       PORT: "8081"
       DB_HOST: pgbouncer
@@ -93,8 +94,6 @@ services:
     build:
       context: ./platform
       dockerfile: intelligence/Dockerfile
-    ports:
-      - "8082:8082"
     volumes:
       - ./domains/pension/plan-config.yaml:/data/plan-config.yaml:ro
     environment:
@@ -119,8 +118,6 @@ services:
     build:
       context: ./platform
       dockerfile: crm/Dockerfile
-    ports:
-      - "8084:8083"
     environment:
       PORT: "8083"
       DB_HOST: pgbouncer
@@ -140,8 +137,6 @@ services:
     build:
       context: ./platform
       dockerfile: knowledgebase/Dockerfile
-    ports:
-      - "8087:8087"
     volumes:
       - ./domains/pension/rules/definitions:/data/rules:ro
       - ./domains/pension/demo-cases:/data/demo-cases:ro
@@ -170,8 +165,6 @@ services:
     build:
       context: ./platform
       dockerfile: dataquality/Dockerfile
-    ports:
-      - "8086:8086"
     environment:
       PORT: "8086"
       DB_HOST: pgbouncer
@@ -191,8 +184,6 @@ services:
     build:
       context: ./platform
       dockerfile: correspondence/Dockerfile
-    ports:
-      - "8085:8085"
     environment:
       PORT: "8085"
       DB_HOST: pgbouncer
@@ -212,8 +203,6 @@ services:
     build:
       context: ./platform
       dockerfile: casemanagement/Dockerfile
-    ports:
-      - "8088:8088"
     environment:
       PORT: "8088"
       DB_HOST: pgbouncer
@@ -233,8 +222,6 @@ services:
     build:
       context: ./platform
       dockerfile: preferences/Dockerfile
-    ports:
-      - "8089:8089"
     environment:
       PORT: "8089"
       DB_HOST: pgbouncer
@@ -254,8 +241,6 @@ services:
     build:
       context: ./platform
       dockerfile: issues/Dockerfile
-    ports:
-      - "8092:8092"
     environment:
       PORT: "8092"
       DB_HOST: pgbouncer
@@ -275,8 +260,6 @@ services:
     build:
       context: ./platform
       dockerfile: security/Dockerfile
-    ports:
-      - "8093:8093"
     environment:
       PORT: "8093"
       DB_HOST: pgbouncer
@@ -296,8 +279,6 @@ services:
     build:
       context: ./platform
       dockerfile: employer-portal/Dockerfile
-    ports:
-      - "8094:8094"
     environment:
       PORT: "8094"
       DB_HOST: pgbouncer
@@ -317,8 +298,6 @@ services:
     build:
       context: ./platform
       dockerfile: employer-reporting/Dockerfile
-    ports:
-      - "8095:8095"
     environment:
       PORT: "8095"
       DB_HOST: pgbouncer
@@ -338,8 +317,6 @@ services:
     build:
       context: ./platform
       dockerfile: employer-enrollment/Dockerfile
-    ports:
-      - "8096:8096"
     environment:
       PORT: "8096"
       DB_HOST: pgbouncer
@@ -359,8 +336,6 @@ services:
     build:
       context: ./platform
       dockerfile: employer-terminations/Dockerfile
-    ports:
-      - "8097:8097"
     environment:
       PORT: "8097"
       DB_HOST: pgbouncer
@@ -380,8 +355,6 @@ services:
     build:
       context: ./platform
       dockerfile: employer-waret/Dockerfile
-    ports:
-      - "8098:8098"
     environment:
       PORT: "8098"
       DB_HOST: pgbouncer
@@ -401,8 +374,6 @@ services:
     build:
       context: ./platform
       dockerfile: employer-scp/Dockerfile
-    ports:
-      - "8099:8099"
     environment:
       PORT: "8099"
       DB_HOST: pgbouncer
@@ -422,8 +393,6 @@ services:
     build:
       context: ./connector
       dockerfile: Dockerfile
-    ports:
-      - "8090:8090"
     environment:
       PORT: "8090"
       CORS_ORIGIN: "http://localhost:3000"
@@ -432,8 +401,6 @@ services:
     build:
       context: ./platform
       dockerfile: migration/Dockerfile
-    ports:
-      - "8100:8100"
     environment:
       PORT: "8100"
       DB_HOST: pgbouncer
@@ -453,8 +420,6 @@ services:
   migration-intelligence:
     build:
       context: ./migration-intelligence
-    ports:
-      - "8101:8101"
     environment:
       PORT: "8101"
 
@@ -462,8 +427,6 @@ services:
     build:
       context: ./platform
       dockerfile: healthagg/Dockerfile
-    ports:
-      - "8091:8091"
     environment:
       PORT: "8091"
       HEALTH_SERVICES: "dataaccess:http://dataaccess:8081,intelligence:http://intelligence:8082,crm:http://crm:8083,correspondence:http://correspondence:8085,dataquality:http://dataquality:8086,knowledgebase:http://knowledgebase:8087,casemanagement:http://casemanagement:8088,preferences:http://preferences:8089,connector:http://connector:8090:/healthz,issues:http://issues:8092,security:http://security:8093,employer-portal:http://employer-portal:8094,employer-reporting:http://employer-reporting:8095,employer-enrollment:http://employer-enrollment:8096,employer-terminations:http://employer-terminations:8097,employer-waret:http://employer-waret:8098,employer-scp:http://employer-scp:8099,migration:http://migration:8100,migration-intelligence:http://migration-intelligence:8101"
