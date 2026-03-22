@@ -239,6 +239,7 @@ export interface SystemHealth {
   migration_service: string;
   intelligence_service: string;
   database_connected: boolean;
+  queue_depth?: number;
 }
 
 export interface ReconciliationSummary {
