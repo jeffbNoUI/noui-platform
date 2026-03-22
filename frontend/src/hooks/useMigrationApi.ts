@@ -213,6 +213,26 @@ export function useProfileEngagement() {
     mutationFn: ({ engagementId, req }) => migrationAPI.profileEngagement(engagementId, req),
     onSuccess: (_data, { engagementId }) => {
       queryClient.invalidateQueries({ queryKey: ['migration', 'engagement', engagementId] });
+      queryClient.invalidateQueries({ queryKey: ['migration', 'profiles', engagementId] });
+    },
+  });
+}
+
+export function useProfiles(engagementId: string) {
+  return useQuery<QualityProfile[]>({
+    queryKey: ['migration', 'profiles', engagementId],
+    queryFn: () => migrationAPI.listProfiles(engagementId),
+    enabled: !!engagementId,
+  });
+}
+
+export function useApproveBaseline() {
+  const queryClient = useQueryClient();
+  return useMutation<MigrationEngagement, Error, string>({
+    mutationFn: (engagementId) => migrationAPI.approveBaseline(engagementId),
+    onSuccess: (_data, engagementId) => {
+      queryClient.invalidateQueries({ queryKey: ['migration', 'engagement', engagementId] });
+      queryClient.invalidateQueries({ queryKey: ['migration', 'profiles', engagementId] });
     },
   });
 }
