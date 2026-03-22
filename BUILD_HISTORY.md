@@ -1,5 +1,38 @@
 # noui-platform — Build History
 
+## Migration Phase 5d: CRM Audit Trail + Migration E2E Script (2026-03-22)
+
+**Branch:** `claude/magical-goldstine` — PR #130 (merged)
+
+### What Was Built
+
+**CRM Audit Trail — Interaction Creation:**
+- Wired `CreateInteraction` → `WriteAuditLog` in `platform/crm/api/handlers.go`
+- Fire-and-forget goroutine with `context.Background()` (audit failure doesn't block HTTP response)
+- SHA-256 chain hash: `ComputeAuditHash` produces hex digest, `GetLastAuditHash` links chain
+- Each audit entry stores `prev_audit_hash` + `record_hash` for tamper-evident trail
+- Fixes last E2E failure: Workflow B test 20/20 (audit trail empty after interaction)
+
+**Migration E2E Script (`tests/e2e/migration_e2e.sh`):**
+- 9-phase lifecycle test: dashboard → engagement CRUD → source config → profiling → mappings → batches → reconciliation → risks → events
+- Flexible status code assertions for async operations (200/201/202)
+- Multi-path engagement ID extraction for response envelope variations
+- Timestamp-based names for idempotent re-runs
+
+**E2E Library Enhancement:**
+- Added `do_patch` to `tests/e2e/lib/http.sh` (migration API uses PATCH for updates)
+
+### Stats
+- 6 files changed, +477 lines
+- CRM Go: all packages passing (short mode)
+- 2 new audit hash unit tests (determinism + uniqueness)
+- Frontend: typecheck clean
+
+### What's Next
+- Run full Docker E2E: expect workflows 20/20, migration_e2e.sh first run
+- Tune migration E2E payload shapes based on actual service responses
+- Optional: employer portal E2E, apiClient.ts `raw` extension for employer services
+
 ## Migration Phase 5c: Docker Infra + E2E Fixes + Enum Tech Debt (2026-03-22)
 
 **Branch:** `claude/pedantic-carson`
