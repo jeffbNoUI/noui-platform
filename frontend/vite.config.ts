@@ -58,6 +58,8 @@ export default defineConfig({
       },
     },
   },
+  // Dev proxy targets below are for local development only (Go services on host).
+  // In Docker, all access goes through nginx at localhost:3000 — these are unused.
   server: {
     port: parseInt(process.env.PORT || '3000'),
     proxy: {
