@@ -55,15 +55,16 @@ extract_http "$RESPONSE"
 BASELINE_TOTAL=$(echo "$BODY" | jq -r '.data.totalActive // 0' 2>/dev/null)
 echo -e "  ${YELLOW}→ Baseline active cases: ${BASELINE_TOTAL}${NC}"
 
-# A2. Create a new case
-CASE_PAYLOAD=$(cat <<'ENDJSON'
+# A2. Create a new case (unique ID per run to avoid duplicate key on re-runs)
+E2E_CASE_ID="WF-E2E-$(date +%s)"
+CASE_PAYLOAD=$(cat <<ENDJSON
 {
-  "memberId": "10001",
-  "memberName": "Robert Martinez",
+  "caseId": "${E2E_CASE_ID}",
+  "memberId": 10001,
   "caseType": "retirement",
+  "retirementDate": "2026-07-01",
   "priority": "standard",
-  "assignedTo": "dev-admin-001",
-  "notes": "E2E workflow test case"
+  "assignedTo": "dev-admin-001"
 }
 ENDJSON
 )
@@ -77,7 +78,7 @@ echo -e "  ${YELLOW}→ Created case: ${CASE_ID}${NC}"
 
 if [ -n "$CASE_ID" ]; then
   # A3. Add a note to the case
-  NOTE_PAYLOAD='{"content":"Initial intake completed. All documents received.","authorId":"dev-admin-001"}'
+  NOTE_PAYLOAD='{"content":"Initial intake completed. All documents received.","author":"dev-admin-001"}'
   RESPONSE=$(do_post "/api/v1/cases/${CASE_ID}/notes" "$NOTE_PAYLOAD")
   extract_http "$RESPONSE"
   assert_status "POST /cases/{id}/notes (add note)" "201" "$HTTP_CODE"
@@ -189,7 +190,7 @@ fi
 log_header "Workflow C: Issue Lifecycle with Comments"
 
 # C1. Create issue
-ISSUE_PAYLOAD='{"title":"Workflow E2E Test Issue","description":"Testing full issue lifecycle","severity":"medium","category":"bug","affectedService":"e2e-workflow","reportedBy":"workflow-test@example.com"}'
+ISSUE_PAYLOAD='{"title":"Workflow E2E Test Issue","description":"Testing full issue lifecycle","severity":"medium","category":"defect","affectedService":"e2e-workflow","reportedBy":"workflow-test@example.com"}'
 
 RESPONSE=$(do_post "/api/v1/issues" "$ISSUE_PAYLOAD")
 extract_http "$RESPONSE"
@@ -200,7 +201,7 @@ echo -e "  ${YELLOW}→ Created issue: ${ISSUE_ID}${NC}"
 
 if [ -n "$ISSUE_ID" ]; then
   # C2. Add comment
-  COMMENT_PAYLOAD='{"content":"Investigating root cause — appears to be a configuration issue.","authorId":"dev-admin-001"}'
+  COMMENT_PAYLOAD='{"content":"Investigating root cause — appears to be a configuration issue.","author":"dev-admin-001"}'
   RESPONSE=$(do_post "/api/v1/issues/${ISSUE_ID}/comments" "$COMMENT_PAYLOAD")
   extract_http "$RESPONSE"
   assert_status "POST /issues/{id}/comments" "201" "$HTTP_CODE"

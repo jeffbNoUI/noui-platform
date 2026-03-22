@@ -1,5 +1,45 @@
 # noui-platform — Build History
 
+## Migration Phase 5c: Docker Infra + E2E Fixes + Enum Tech Debt (2026-03-22)
+
+**Branch:** `claude/pedantic-carson`
+
+### What Was Built
+
+**Docker nginx — Migration Proxy:**
+- Added `/api/v1/migration` proxy route → migration:8100
+- Added `/ws/migration` WebSocket proxy with upgrade headers
+- Migration API now works through Docker-served frontend (was 502 before)
+
+**E2E Test Fixes (workflows_e2e.sh):**
+- Workflow A (cases): Added missing `caseId` field, fixed `memberId` from string to int, added required `retirementDate`
+- Workflow A (notes): Fixed field name `authorId` → `author` to match Go struct
+- Workflow C (issues): Fixed `category: "bug"` → `"defect"` (valid enum value)
+- Workflow C (comments): Fixed field name `authorId` → `author` to match Go struct
+- Added timestamp-based caseId for idempotent re-runs
+
+**apiClient.ts Enum Tech Debt — `raw` Option:**
+- Added `raw` option to `FetchOptions` — skips global enum case normalization
+- Threaded through `fetchAPI`, `postAPI`, `putAPI`, `patchAPI`, `deleteAPI`, `fetchPaginatedAPI`
+- Migration API module passes `{ raw: true }` on all 36 API functions
+- Removed `normalizeEngagement` workaround from useMigrationApi.ts
+- CRM/case/DQ services continue using global normalization unchanged
+
+### E2E Results
+- **Workflows:** 19/20 passing (was 9/13) — 1 pre-existing audit trail gap
+- **Services Hub:** 50/50 passing (was 48/50)
+- **Correspondence:** 24/24 passing
+- **Migration proxy:** Verified through Docker nginx
+
+### Known Issues
+- Workflow B audit trail: `CreateInteraction` doesn't write to `crm_audit_log` — design gap, not a regression
+- Overall health status shows "unhealthy" — connector service not in healthagg service list (cosmetic)
+
+### What's Next
+- CRM audit trail: Wire interaction creation → audit log write (if desired)
+- Full Docker E2E: engagement → profile → map → transform → reconcile flow (needs seed data)
+- apiClient.ts: Consider adding `raw` to employer portal services if they use UPPERCASE enums
+
 ## Migration Phase 5b: Panel Polish + CRM E2E Fix (2026-03-22)
 
 **Branch:** `claude/brave-cray`
