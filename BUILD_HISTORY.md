@@ -1,5 +1,62 @@
 # noui-platform — Build History
 
+## Session 17: Universal Plan Config + Reconciler Refactor (2026-03-22)
+
+**Branch:** `claude/charming-chaum`
+
+### What Was Done
+
+Replaced the hardcoded 2-plan reconciler registry with YAML-loaded configuration
+supporting all 3 tiers, and produced two Tier 1 governing architecture documents.
+
+**Architecture research & design:**
+- Researched 11+ pension systems (CalPERS, LACERA, SDCERA, OCERS, NYCERS, OPERS,
+  TRS Texas, HMEPS, FRS, COPERA, 20 California 37 Act county funds)
+- Identified 5 formula types, 7+ COLA structures, FAS periods 1-8 years
+- Designed Universal Plan/Tier Entity Model (System > Plan > Tier with 7 modules)
+- Designed Multi-Tenant Design Framework (25 config surfaces, 12 process domains)
+- Revised 3 items in multi-tenant doc after codebase cross-reference:
+  DB isolation (two-layer), intelligence service split, connector topology
+
+**Implementation (13 tasks, 16 commits):**
+- `planconfig.go`: YAML loader with `LoadPlanConfig()`, `LookupTier()`, `ToBenefitParams()`
+- `formula.go`: Refactored from hardcoded `planRegistry` to YAML-loaded `BenefitParams`
+  with lookup-table reduction (replacing formula-based 6%/yr penalty)
+- 3 tiers: TIER_1 (2.0%), TIER_2 (1.5%), TIER_3 (1.5%) with tier-specific reduction tables
+- Source loader: plan code normalization (PRISM DB_MAIN→TIER_1, PAS DB-T1→TIER_1)
+- Migration 038: `source_plan_code` column for UI display of original codes
+- Seed generators aligned with reconciler formula (multipliers, reduction tables, floor)
+- Tier 3 benchmarks computed from canonical data (salary, contributions, member counts)
+- Proof script: gate score threshold assertions (> 0.50)
+- Docker: plan-config.yaml mount + migration 038 volume
+
+### Key Decisions
+
+- **Tier is the fundamental rule unit** — all parameters hang off tiers, not plans
+- **Lookup-table reduction** replaces formula-based penalty (matches statutory tables)
+- **plan-config.yaml** is single source of truth (reconciler section coexists with intelligence service)
+- **Source plan codes preserved** in `source_plan_code` for client-facing display
+- **DB-per-tenant + RLS** two-layer isolation model established
+- **Intelligence service split** into per-tenant Rules Engine + shared Pattern Intelligence Service
+
+### Files Changed
+
+- 24 files changed (+3,394 lines, -230 lines)
+- 2 new architecture docs, 2 new plan docs, 1 new Go file, 1 new test file, 1 new migration
+
+### Stats
+
+- 11 migration test packages, all pass
+- Zero regressions
+- Seed SQL NOT yet regenerated (next session)
+
+### What's Next
+
+1. Regenerate seed SQL (run Python generators)
+2. Docker rebuild + Two-Source Proof
+3. Debug gate scores if needed (rounding, age computation)
+4. Starter prompt: `docs/plans/2026-03-22-plan-config-next-session.md`
+
 ## Session 16: Reconciliation Data Alignment — Pipeline Complete (2026-03-22)
 
 **Branch:** `claude/interesting-wu`
