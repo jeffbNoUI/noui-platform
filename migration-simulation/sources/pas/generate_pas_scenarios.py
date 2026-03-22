@@ -775,8 +775,18 @@ def main():
                 round(sum(sorted(recent_salaries)[-36:]) / min(36, max(1, len(sorted(recent_salaries)[-36:]))), 2)
                 if recent_salaries else round(base_annual / 12, 2)
             )
-            multiplier = 0.02
-            benefit = round(final_avg_salary * total_service * multiplier / 12, 2)
+            # Tier-specific multiplier from plan-config.yaml
+            multiplier = 0.015 if tier in ("TIER2", "TIER3") else 0.020
+            gross = final_avg_salary * total_service * multiplier / 12.0
+            # Early retirement reduction tables from plan-config.yaml
+            REDUCTION_T12 = {55:0.70, 56:0.73, 57:0.76, 58:0.79, 59:0.82,
+                             60:0.85, 61:0.88, 62:0.91, 63:0.94, 64:0.97, 65:1.00}
+            REDUCTION_T3 = {60:0.70, 61:0.76, 62:0.82, 63:0.88, 64:0.94, 65:1.00}
+            red_table = REDUCTION_T3 if tier == "TIER3" else REDUCTION_T12
+            age_at_ret = (retirement_date - birth).days / 365.25
+            age_int = int(age_at_ret)
+            reduction = red_table.get(age_int, 1.0 if age_int >= 65 else 0.0)
+            benefit = max(round(gross * reduction, 2), 800.0)
             award_id = new_uuid()
             option_code = random.choice(OPTION_CODES)
 
@@ -790,7 +800,7 @@ def main():
                  sql_str(random.choice(RET_TYPES)),
                  sql_date(retirement_date), sql_date(retirement_date),
                  str(final_avg_salary), str(round(total_service, 4)),
-                 str(multiplier), "1.0",
+                 str(multiplier), str(round(reduction, 4)),
                  sql_str(option_code), str(benefit),
                  "TRUE" if maybe(0.6) else "FALSE",
                  sql_str("v2"), sql_date(retirement_date)])
