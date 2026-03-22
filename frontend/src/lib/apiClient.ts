@@ -10,9 +10,11 @@ export function setAuthToken(token: string) {
 }
 
 // ─── Enum normalization ──────────────────────────────────────────────────────
-// Go services return PostgreSQL enum values in UPPERCASE (e.g. 'OPEN', 'PUBLIC').
-// TypeScript types use lowercase (e.g. 'open', 'public'). This transform bridges
-// the gap by lowercasing known enum fields in API responses.
+// Most Go services (CRM, cases, DQ) return UPPERCASE PostgreSQL enums while their
+// TypeScript types use lowercase. This transform bridges the gap automatically.
+//
+// Services that use UPPERCASE in TypeScript types (e.g. migration) should pass
+// { raw: true } to skip this normalization. See migrationApi.ts for the pattern.
 
 const ENUM_FIELDS = new Set([
   'contactType',
@@ -181,9 +183,15 @@ async function rawRequest(
 }
 
 // request unwraps body.data — used for non-paginated endpoints.
-async function request<T>(url: string, init: RequestInit = {}, timeoutMs?: number): Promise<T> {
+async function request<T>(
+  url: string,
+  init: RequestInit = {},
+  timeoutMs?: number,
+  raw?: boolean,
+): Promise<T> {
   const body = await rawRequest(url, init, timeoutMs);
-  return lowercaseEnums((body as APIResponse<T>).data) as T;
+  const data = (body as APIResponse<T>).data;
+  return (raw ? data : lowercaseEnums(data)) as T;
 }
 
 // ─── Enum case helpers (outgoing requests) ──────────────────────────────────
@@ -226,7 +234,7 @@ function lowercaseEnums(obj: unknown): unknown {
 // ─── Public helpers ─────────────────────────────────────────────────────────
 
 export function fetchAPI<T>(url: string, opts?: FetchOptions): Promise<T> {
-  return request<T>(url, {}, opts?.timeout);
+  return request<T>(url, {}, opts?.timeout, opts?.raw);
 }
 
 // fetchPaginatedAPI preserves both data and pagination from the response.
@@ -239,6 +247,8 @@ export interface PaginatedResult<T> {
 
 interface FetchOptions {
   timeout?: number;
+  /** Skip enum case normalization — use when the service already returns the correct case. */
+  raw?: boolean;
 }
 
 export async function fetchPaginatedAPI<T>(
@@ -249,26 +259,30 @@ export async function fetchPaginatedAPI<T>(
     data?: T[];
     pagination?: PaginatedResult<T>['pagination'];
   };
+  const items = body.data ?? [];
   return {
-    items: lowercaseEnums(body.data ?? []) as T[],
+    items: (opts?.raw ? items : lowercaseEnums(items)) as T[],
     pagination: body.pagination ?? { total: 0, limit: 25, offset: 0, hasMore: false },
   };
 }
 
-export function postAPI<T>(url: string, payload: unknown): Promise<T> {
-  return request<T>(url, { method: 'POST', body: JSON.stringify(uppercaseEnums(payload)) });
+export function postAPI<T>(url: string, payload: unknown, opts?: FetchOptions): Promise<T> {
+  const body = opts?.raw ? payload : uppercaseEnums(payload);
+  return request<T>(url, { method: 'POST', body: JSON.stringify(body) }, opts?.timeout, opts?.raw);
 }
 
-export function putAPI<T>(url: string, payload: unknown): Promise<T> {
-  return request<T>(url, { method: 'PUT', body: JSON.stringify(uppercaseEnums(payload)) });
+export function putAPI<T>(url: string, payload: unknown, opts?: FetchOptions): Promise<T> {
+  const body = opts?.raw ? payload : uppercaseEnums(payload);
+  return request<T>(url, { method: 'PUT', body: JSON.stringify(body) }, opts?.timeout, opts?.raw);
 }
 
-export function patchAPI<T>(url: string, payload: unknown): Promise<T> {
-  return request<T>(url, { method: 'PATCH', body: JSON.stringify(uppercaseEnums(payload)) });
+export function patchAPI<T>(url: string, payload: unknown, opts?: FetchOptions): Promise<T> {
+  const body = opts?.raw ? payload : uppercaseEnums(payload);
+  return request<T>(url, { method: 'PATCH', body: JSON.stringify(body) }, opts?.timeout, opts?.raw);
 }
 
-export function deleteAPI<T>(url: string): Promise<T> {
-  return request<T>(url, { method: 'DELETE' });
+export function deleteAPI<T>(url: string, opts?: FetchOptions): Promise<T> {
+  return request<T>(url, { method: 'DELETE' }, opts?.timeout, opts?.raw);
 }
 
 export function toQueryString(params: object): string {

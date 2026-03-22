@@ -47,130 +47,145 @@ import type {
 
 const BASE = '/api/v1/migration';
 
+// Migration service returns UPPERCASE enums that match the TypeScript types directly.
+// Skip the global apiClient enum normalization (which lowercases for CRM/case services).
+const RAW = { raw: true } as const;
+
 export const migrationAPI = {
   // ─── Dashboard ──────────────────────────────────────────────────────────
-  getDashboardSummary: () => fetchAPI<DashboardSummary>(`${BASE}/dashboard/summary`),
+  getDashboardSummary: () => fetchAPI<DashboardSummary>(`${BASE}/dashboard/summary`, RAW),
 
-  getSystemHealth: () => fetchAPI<SystemHealth>(`${BASE}/dashboard/system-health`),
+  getSystemHealth: () => fetchAPI<SystemHealth>(`${BASE}/dashboard/system-health`, RAW),
 
   // ─── Engagements ────────────────────────────────────────────────────────
-  listEngagements: () => fetchAPI<MigrationEngagement[]>(`${BASE}/engagements`),
+  listEngagements: () => fetchAPI<MigrationEngagement[]>(`${BASE}/engagements`, RAW),
 
-  getEngagement: (id: string) => fetchAPI<MigrationEngagement>(`${BASE}/engagements/${id}`),
+  getEngagement: (id: string) => fetchAPI<MigrationEngagement>(`${BASE}/engagements/${id}`, RAW),
 
   createEngagement: (req: CreateEngagementRequest) =>
-    postAPI<MigrationEngagement>(`${BASE}/engagements`, req),
+    postAPI<MigrationEngagement>(`${BASE}/engagements`, req, RAW),
 
   updateEngagement: (id: string, req: UpdateEngagementRequest) =>
-    patchAPI<MigrationEngagement>(`${BASE}/engagements/${id}`, req),
+    patchAPI<MigrationEngagement>(`${BASE}/engagements/${id}`, req, RAW),
 
   // ─── Source Connection ─────────────────────────────────────────────────
   configureSource: (id: string, conn: SourceConnection) =>
-    postAPI<{ connected: boolean }>(`${BASE}/engagements/${id}/source`, conn),
+    postAPI<{ connected: boolean }>(`${BASE}/engagements/${id}/source`, conn, RAW),
   discoverTables: (id: string) =>
-    fetchAPI<SourceTable[]>(`${BASE}/engagements/${id}/source/tables`),
+    fetchAPI<SourceTable[]>(`${BASE}/engagements/${id}/source/tables`, RAW),
 
   // ─── Quality Profiling ──────────────────────────────────────────────────
   profileEngagement: (id: string, req: Record<string, unknown>) =>
-    postAPI<QualityProfile[]>(`${BASE}/engagements/${id}/profile`, req),
+    postAPI<QualityProfile[]>(`${BASE}/engagements/${id}/profile`, req, RAW),
 
-  listProfiles: (id: string) => fetchAPI<QualityProfile[]>(`${BASE}/engagements/${id}/profiles`),
+  listProfiles: (id: string) =>
+    fetchAPI<QualityProfile[]>(`${BASE}/engagements/${id}/profiles`, RAW),
 
   approveBaseline: (id: string) =>
-    patchAPI<MigrationEngagement>(`${BASE}/engagements/${id}/approve-baseline`, {}),
+    patchAPI<MigrationEngagement>(`${BASE}/engagements/${id}/approve-baseline`, {}, RAW),
 
   // ─── Field Mappings ─────────────────────────────────────────────────────
   generateMappings: (id: string, req: GenerateMappingsRequest) =>
-    postAPI<GenerateMappingsSummary>(`${BASE}/engagements/${id}/generate-mappings`, req),
+    postAPI<GenerateMappingsSummary>(`${BASE}/engagements/${id}/generate-mappings`, req, RAW),
 
   listMappings: (id: string, params?: { status?: string; approval?: string }) =>
     fetchAPI<FieldMapping[]>(
       `${BASE}/engagements/${id}/mappings${params ? toQueryString(params) : ''}`,
+      RAW,
     ),
 
   updateMapping: (engagementId: string, mappingId: string, req: UpdateMappingRequest) =>
-    putAPI<FieldMapping>(`${BASE}/engagements/${engagementId}/mappings/${mappingId}`, req),
+    putAPI<FieldMapping>(`${BASE}/engagements/${engagementId}/mappings/${mappingId}`, req, RAW),
 
   // ─── Code Mappings ──────────────────────────────────────────────────────
   listCodeMappings: (id: string) =>
-    fetchAPI<CodeMapping[]>(`${BASE}/engagements/${id}/code-mappings`),
+    fetchAPI<CodeMapping[]>(`${BASE}/engagements/${id}/code-mappings`, RAW),
 
   updateCodeMapping: (engagementId: string, mappingId: string, req: { canonical_value: string }) =>
-    putAPI<CodeMapping>(`${BASE}/engagements/${engagementId}/code-mappings/${mappingId}`, req),
+    putAPI<CodeMapping>(`${BASE}/engagements/${engagementId}/code-mappings/${mappingId}`, req, RAW),
 
   // ─── Batches ────────────────────────────────────────────────────────────
   listBatches: (engagementId: string) =>
-    fetchAPI<MigrationBatch[]>(`${BASE}/engagements/${engagementId}/batches`),
+    fetchAPI<MigrationBatch[]>(`${BASE}/engagements/${engagementId}/batches`, RAW),
 
   createBatch: (engagementId: string, req: CreateBatchRequest) =>
-    postAPI<MigrationBatch>(`${BASE}/engagements/${engagementId}/batches`, req),
+    postAPI<MigrationBatch>(`${BASE}/engagements/${engagementId}/batches`, req, RAW),
 
-  getBatch: (batchId: string) => fetchAPI<MigrationBatch>(`${BASE}/batches/${batchId}`),
+  getBatch: (batchId: string) => fetchAPI<MigrationBatch>(`${BASE}/batches/${batchId}`, RAW),
 
   listExceptions: (batchId: string) =>
-    fetchAPI<MigrationException[]>(`${BASE}/batches/${batchId}/exceptions`),
+    fetchAPI<MigrationException[]>(`${BASE}/batches/${batchId}/exceptions`, RAW),
 
   retransformBatch: (batchId: string) =>
-    postAPI<MigrationBatch>(`${BASE}/batches/${batchId}/retransform`, {}),
+    postAPI<MigrationBatch>(`${BASE}/batches/${batchId}/retransform`, {}, RAW),
 
   // ─── Reconciliation ────────────────────────────────────────────────────
-  reconcileBatch: (batchId: string) => postAPI<void>(`${BASE}/batches/${batchId}/reconcile`, {}),
+  reconcileBatch: (batchId: string) =>
+    postAPI<void>(`${BASE}/batches/${batchId}/reconcile`, {}, RAW),
 
   getReconciliation: (engagementId: string) =>
-    fetchAPI<Reconciliation[]>(`${BASE}/engagements/${engagementId}/reconciliation`),
+    fetchAPI<Reconciliation[]>(`${BASE}/engagements/${engagementId}/reconciliation`, RAW),
 
   getP1Issues: (engagementId: string) =>
-    fetchAPI<Reconciliation[]>(`${BASE}/engagements/${engagementId}/reconciliation/p1`),
+    fetchAPI<Reconciliation[]>(`${BASE}/engagements/${engagementId}/reconciliation/p1`, RAW),
 
   getReconciliationSummary: (engagementId: string) =>
-    fetchAPI<ReconciliationSummary>(`${BASE}/engagements/${engagementId}/reconciliation/summary`),
+    fetchAPI<ReconciliationSummary>(
+      `${BASE}/engagements/${engagementId}/reconciliation/summary`,
+      RAW,
+    ),
 
   getReconciliationByTier: (engagementId: string, tier: number) =>
-    fetchAPI<Reconciliation[]>(`${BASE}/engagements/${engagementId}/reconciliation/tier/${tier}`),
+    fetchAPI<Reconciliation[]>(
+      `${BASE}/engagements/${engagementId}/reconciliation/tier/${tier}`,
+      RAW,
+    ),
 
   // ─── Risks ──────────────────────────────────────────────────────────────
   listRisks: (engagementId?: string) =>
     fetchAPI<MigrationRisk[]>(
       `${BASE}/risks${engagementId ? toQueryString({ engagement_id: engagementId }) : ''}`,
+      RAW,
     ),
 
   createRisk: (engagementId: string, req: CreateRiskRequest) =>
-    postAPI<MigrationRisk>(`${BASE}/engagements/${engagementId}/risks`, req),
+    postAPI<MigrationRisk>(`${BASE}/engagements/${engagementId}/risks`, req, RAW),
 
   updateRisk: (riskId: string, req: UpdateRiskRequest) =>
-    putAPI<MigrationRisk>(`${BASE}/risks/${riskId}`, req),
+    putAPI<MigrationRisk>(`${BASE}/risks/${riskId}`, req, RAW),
 
-  deleteRisk: (riskId: string) => deleteAPI<void>(`${BASE}/risks/${riskId}`),
+  deleteRisk: (riskId: string) => deleteAPI<void>(`${BASE}/risks/${riskId}`, RAW),
 
   // ─── Exception Clusters ─────────────────────────────────────────────────
   listExceptionClusters: (batchId: string) =>
-    fetchAPI<ExceptionCluster[]>(`${BASE}/batches/${batchId}/exception-clusters`),
+    fetchAPI<ExceptionCluster[]>(`${BASE}/batches/${batchId}/exception-clusters`, RAW),
 
   applyCluster: (clusterId: string, req: ApplyClusterRequest) =>
-    postAPI<void>(`${BASE}/exception-clusters/${clusterId}/apply`, req),
+    postAPI<void>(`${BASE}/exception-clusters/${clusterId}/apply`, req, RAW),
 
   // ─── Compare ────────────────────────────────────────────────────────────
   compareEngagements: (id1: string, id2: string) =>
-    fetchAPI<CompareResult>(`${BASE}/compare?ids=${id1},${id2}`),
+    fetchAPI<CompareResult>(`${BASE}/compare?ids=${id1},${id2}`, RAW),
 
   // ─── Events ─────────────────────────────────────────────────────────────
   listEvents: (engagementId: string, params?: { limit?: number; offset?: number }) =>
     fetchPaginatedAPI<MigrationEvent>(
       `${BASE}/engagements/${engagementId}/events${params ? toQueryString(params) : ''}`,
+      RAW,
     ),
 
   // ─── Phase Gates ──────────────────────────────────────────────────────────
   getGateStatus: (engagementId: string) =>
-    fetchAPI<GateStatusResponse>(`${BASE}/engagements/${engagementId}/gate-status`),
+    fetchAPI<GateStatusResponse>(`${BASE}/engagements/${engagementId}/gate-status`, RAW),
 
   advancePhase: (engagementId: string, req: AdvancePhaseRequest) =>
-    postAPI<PhaseGateTransition>(`${BASE}/engagements/${engagementId}/advance-phase`, req),
+    postAPI<PhaseGateTransition>(`${BASE}/engagements/${engagementId}/advance-phase`, req, RAW),
 
   regressPhase: (engagementId: string, req: RegressPhaseRequest) =>
-    postAPI<PhaseGateTransition>(`${BASE}/engagements/${engagementId}/regress-phase`, req),
+    postAPI<PhaseGateTransition>(`${BASE}/engagements/${engagementId}/regress-phase`, req, RAW),
 
   getGateHistory: (engagementId: string) =>
-    fetchAPI<PhaseGateTransition[]>(`${BASE}/engagements/${engagementId}/gate-history`),
+    fetchAPI<PhaseGateTransition[]>(`${BASE}/engagements/${engagementId}/gate-history`, RAW),
 
   // ─── Attention Queue ──────────────────────────────────────────────────────
   getAttentionItems: (
@@ -179,30 +194,37 @@ export const migrationAPI = {
   ) =>
     fetchAPI<AttentionItem[]>(
       `${BASE}/engagements/${engagementId}/attention${params ? toQueryString(params) : ''}`,
+      RAW,
     ),
 
-  getAttentionSummary: () => fetchAPI<AttentionSummary>(`${BASE}/attention/summary`),
+  getAttentionSummary: () => fetchAPI<AttentionSummary>(`${BASE}/attention/summary`, RAW),
 
   // ─── AI Recommendations ───────────────────────────────────────────────────
   getAIRecommendations: (engagementId: string) =>
-    fetchAPI<AIRecommendation[]>(`${BASE}/engagements/${engagementId}/ai/recommendations`),
+    fetchAPI<AIRecommendation[]>(`${BASE}/engagements/${engagementId}/ai/recommendations`, RAW),
 
   getBatchSizingRecommendation: (engagementId: string) =>
-    fetchAPI<AIRecommendation>(`${BASE}/engagements/${engagementId}/ai/batch-sizing`),
+    fetchAPI<AIRecommendation>(`${BASE}/engagements/${engagementId}/ai/batch-sizing`, RAW),
 
   getRemediationRecommendations: (engagementId: string) =>
-    fetchAPI<AIRecommendation[]>(`${BASE}/engagements/${engagementId}/ai/remediation`),
+    fetchAPI<AIRecommendation[]>(`${BASE}/engagements/${engagementId}/ai/remediation`, RAW),
 
   getMappingCorpusContext: (engagementId: string, mappingId: string) =>
-    fetchAPI<CorpusContext>(`${BASE}/engagements/${engagementId}/mappings/${mappingId}/corpus`),
+    fetchAPI<CorpusContext>(
+      `${BASE}/engagements/${engagementId}/mappings/${mappingId}/corpus`,
+      RAW,
+    ),
 
   getRootCauseAnalysis: (engagementId: string) =>
-    fetchAPI<RootCauseResponse>(`${BASE}/engagements/${engagementId}/reconciliation/root-cause`),
+    fetchAPI<RootCauseResponse>(
+      `${BASE}/engagements/${engagementId}/reconciliation/root-cause`,
+      RAW,
+    ),
 
   // ─── Notifications ────────────────────────────────────────────────────────
-  getNotifications: () => fetchAPI<MigrationNotification[]>(`${BASE}/notifications`),
+  getNotifications: () => fetchAPI<MigrationNotification[]>(`${BASE}/notifications`, RAW),
 
-  markNotificationRead: (id: string) => putAPI<void>(`${BASE}/notifications/${id}/read`, {}),
+  markNotificationRead: (id: string) => putAPI<void>(`${BASE}/notifications/${id}/read`, {}, RAW),
 
-  markAllNotificationsRead: () => putAPI<void>(`${BASE}/notifications/read-all`, {}),
+  markAllNotificationsRead: () => putAPI<void>(`${BASE}/notifications/read-all`, {}, RAW),
 };

@@ -36,16 +36,6 @@ import type {
   AdvancePhaseRequest,
   RegressPhaseRequest,
 } from '@/types/Migration';
-import type { EngagementStatus } from '@/types/Migration';
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-// apiClient.ts lowercases all `status` fields for CRM/case services, but migration
-// types use UPPERCASE EngagementStatus enum values. This normalizes them back.
-function normalizeEngagement(eng: MigrationEngagement): MigrationEngagement {
-  return { ...eng, status: eng.status.toUpperCase() as EngagementStatus };
-}
-
 // ─── Query hooks ─────────────────────────────────────────────────────────────
 
 export function useDashboardSummary() {
@@ -67,7 +57,6 @@ export function useEngagements() {
   return useQuery<MigrationEngagement[]>({
     queryKey: ['migration', 'engagements'],
     queryFn: () => migrationAPI.listEngagements(),
-    select: (data) => data.map(normalizeEngagement),
   });
 }
 
@@ -76,7 +65,6 @@ export function useEngagement(id: string) {
     queryKey: ['migration', 'engagement', id],
     queryFn: () => migrationAPI.getEngagement(id),
     enabled: !!id,
-    select: normalizeEngagement,
   });
 }
 
