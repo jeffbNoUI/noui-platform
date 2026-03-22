@@ -307,17 +307,24 @@ emit("")
 # Benefit calculations
 # ---------------------------------------------------------------------------
 emit("-- PRISM_BENEFIT_CALC")
+# Early retirement reduction tables from plan-config.yaml
+REDUCTION_T12 = {55:0.70, 56:0.73, 57:0.76, 58:0.79, 59:0.82,
+                 60:0.85, 61:0.88, 62:0.91, 63:0.94, 64:0.97, 65:1.00}
+REDUCTION_T3 = {60:0.70, 61:0.76, 62:0.82, 63:0.88, 64:0.94, 65:1.00}
+
 for m in members:
     if m["ret_dt"] or m["disability"]:
         as_of = m["ret_dt"] or datetime.date(2023, 1, 1)
         age_at_ret = (as_of - m["birth_dt"]).days / 365.25
         actual_yos = (as_of - m["hire_dt"]).days / 365.25
-        mult = 0.018 if m["tier"] == "T2" else 0.020
+        mult = 0.015 if m["tier"] in ("T2", "T3") else 0.020
         fas_period = 60 if m["hire_dt"] < datetime.date(2003, 1, 1) else 36
         fas = m["base_sal"] * (1.025 ** actual_yos) * random.uniform(1.05, 1.20)
         gross = mult * actual_yos * fas / 12.0
-        penalty = min(max((65.0 - age_at_ret) * 0.06, 0.0), 0.30) if age_at_ret < 65 else 0.0
-        benefit = max(min(gross * (1 - penalty), fas / 12.0 * 0.75), 800.0)
+        red_table = REDUCTION_T3 if m["tier"] == "T3" else REDUCTION_T12
+        age_int = int(age_at_ret)
+        reduction = red_table.get(age_int, 1.0 if age_int >= 65 else 0.0)
+        benefit = max(gross * reduction, 800.0)
 
         calc_type = "D" if m["disability"] else "R"
         ret_type = "DSB" if m["disability"] else ("ERY" if age_at_ret < 65 else "NRM")
@@ -331,7 +338,7 @@ for m in members:
             f"({calc_id}, {m['mbr_nbr']}, {sql_ts(calc_dt)}, {sql_str(calc_type)}, "
             f"{sql_date(as_of)}, 'C', "
             f"{round(actual_yos, 4)}, {round(fas, 2)}, {fas_period}, {round(age_at_ret, 3)}, "
-            f"{sql_str(ret_type)}, {round(gross, 2)}, {round(benefit, 2)}, {round(penalty, 4)}, "
+            f"{sql_str(ret_type)}, {round(gross, 2)}, {round(benefit, 2)}, {round(reduction, 4)}, "
             f"'SYSTEM', 'N');"
         )
 
