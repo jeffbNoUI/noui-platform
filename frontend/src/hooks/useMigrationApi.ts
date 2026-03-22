@@ -34,6 +34,15 @@ import type {
   AdvancePhaseRequest,
   RegressPhaseRequest,
 } from '@/types/Migration';
+import type { EngagementStatus } from '@/types/Migration';
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+// apiClient.ts lowercases all `status` fields for CRM/case services, but migration
+// types use UPPERCASE EngagementStatus enum values. This normalizes them back.
+function normalizeEngagement(eng: MigrationEngagement): MigrationEngagement {
+  return { ...eng, status: eng.status.toUpperCase() as EngagementStatus };
+}
 
 // ─── Query hooks ─────────────────────────────────────────────────────────────
 
@@ -56,6 +65,7 @@ export function useEngagements() {
   return useQuery<MigrationEngagement[]>({
     queryKey: ['migration', 'engagements'],
     queryFn: () => migrationAPI.listEngagements(),
+    select: (data) => data.map(normalizeEngagement),
   });
 }
 
@@ -64,6 +74,7 @@ export function useEngagement(id: string) {
     queryKey: ['migration', 'engagement', id],
     queryFn: () => migrationAPI.getEngagement(id),
     enabled: !!id,
+    select: normalizeEngagement,
   });
 }
 
@@ -343,7 +354,10 @@ export function useGateHistory(engagementId: string | undefined) {
 
 // ─── Attention hooks ────────────────────────────────────────────────────────
 
-export function useAttentionItems(engagementId: string | undefined, params?: { priority?: string; phase?: string }) {
+export function useAttentionItems(
+  engagementId: string | undefined,
+  params?: { priority?: string; phase?: string },
+) {
   return useQuery<AttentionItem[]>({
     queryKey: ['migration', 'attention', engagementId, params],
     queryFn: () => migrationAPI.getAttentionItems(engagementId!, params),
