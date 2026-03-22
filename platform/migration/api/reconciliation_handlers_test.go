@@ -65,7 +65,24 @@ func TestReconcileBatch_Success(t *testing.T) {
 		WithArgs("batch-001").
 		WillReturnRows(sqlmock.NewRows(tier2Cols))
 
-	// Tier 3 queries (empty benchmarks → minimal work):
+	// computeBenchmarks queries (run before Tier 3):
+	// Benchmark 1: avg salary by year — return empty
+	benchSalaryCols := []string{"yr", "avg"}
+	mock.ExpectQuery("SELECT").
+		WithArgs("batch-001").
+		WillReturnRows(sqlmock.NewRows(benchSalaryCols))
+	// Benchmark 2: total contributions — return "0"
+	benchContribCols := []string{"coalesce"}
+	mock.ExpectQuery("SELECT").
+		WithArgs("batch-001").
+		WillReturnRows(sqlmock.NewRows(benchContribCols).AddRow("0"))
+	// Benchmark 3: member count by status — return empty
+	benchStatusCols := []string{"member_status", "count"}
+	mock.ExpectQuery("SELECT").
+		WithArgs("batch-001").
+		WillReturnRows(sqlmock.NewRows(benchStatusCols))
+
+	// Tier 3 queries (with computed benchmarks):
 	// 3a: salary outliers — return empty rows
 	mock.ExpectQuery("SELECT").
 		WithArgs("batch-001").

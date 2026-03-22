@@ -51,9 +51,9 @@ func (h *Handler) ReconcileBatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Run Tier 3: aggregate benchmarks (empty benchmarks = checks run but
-	// produce no flagged results for unconfigured engagements).
-	tier3Results, err := reconciler.ReconcileTier3(h.DB, batchID, reconciler.PlanBenchmarks{})
+	// Run Tier 3: aggregate benchmarks computed from canonical data.
+	benchmarks := computeBenchmarks(h.DB, batchID)
+	tier3Results, err := reconciler.ReconcileTier3(h.DB, batchID, benchmarks)
 	if err != nil {
 		slog.Error("tier3 reconciliation failed", "error", err, "batch_id", batchID)
 		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "RECONCILE_ERROR", "tier 3 reconciliation failed")
@@ -279,4 +279,58 @@ func (h *Handler) GetP1Issues(w http.ResponseWriter, r *http.Request) {
 		"p1_issues":     issues,
 		"count":         len(issues),
 	})
+}
+
+// computeBenchmarks queries canonical tables to build Tier 3 aggregate
+// benchmarks for a batch. Returns empty benchmarks on query errors so
+// Tier 3 degrades gracefully rather than failing.
+func computeBenchmarks(db *sql.DB, batchID string) reconciler.PlanBenchmarks {
+	benchmarks := reconciler.PlanBenchmarks{}
+
+	// Average salary by year from canonical_salaries.
+	rows, err := db.Query(`
+		SELECT EXTRACT(YEAR FROM period_start)::INT AS yr, AVG(amount::NUMERIC)
+		FROM migration.canonical_salaries
+		WHERE batch_id = $1
+		GROUP BY yr`, batchID)
+	if err == nil {
+		defer rows.Close()
+		benchmarks.AvgSalaryByYear = make(map[int]float64)
+		for rows.Next() {
+			var yr int
+			var avg float64
+			if rows.Scan(&yr, &avg) == nil {
+				benchmarks.AvgSalaryByYear[yr] = avg
+			}
+		}
+	}
+
+	// Total contributions from canonical_contributions.
+	var total float64
+	if err := db.QueryRow(`
+		SELECT COALESCE(SUM(amount::NUMERIC), 0)
+		FROM migration.canonical_contributions
+		WHERE batch_id = $1`, batchID).Scan(&total); err == nil {
+		benchmarks.TotalContributions = total
+	}
+
+	// Member count by status from canonical_members.
+	rows2, err := db.Query(`
+		SELECT member_status, COUNT(*)
+		FROM migration.canonical_members
+		WHERE batch_id = $1
+		GROUP BY member_status`, batchID)
+	if err == nil {
+		defer rows2.Close()
+		benchmarks.MemberCountByStatus = make(map[string]int)
+		for rows2.Next() {
+			var status string
+			var count int
+			if rows2.Scan(&status, &count) == nil {
+				benchmarks.MemberCountByStatus[status] = count
+			}
+		}
+	}
+
+	return benchmarks
 }
