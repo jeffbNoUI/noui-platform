@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { C, BODY, MONO } from '@/lib/designSystem';
-import type { WSEvent, WSEventType } from '@/types/Migration';
+import { useEvents } from '@/hooks/useMigrationApi';
+import type { WSEvent, WSEventType, MigrationEvent } from '@/types/Migration';
 
 const EVENT_LABELS: Record<WSEventType, string> = {
   batch_started: 'Batch Started',
@@ -14,6 +15,9 @@ const EVENT_LABELS: Record<WSEventType, string> = {
   risk_resolved: 'Risk Resolved',
   engagement_status_changed: 'Status Changed',
   mapping_agreement_updated: 'Mapping Updated',
+  phase_transition: 'Phase Transition',
+  gate_recommendation: 'Gate Recommendation',
+  ai_insight: 'AI Insight',
 };
 
 function formatRelativeTime(timestamp: string | undefined): string {
@@ -47,11 +51,40 @@ interface Props {
   connected: boolean;
 }
 
-export default function ActivityLog({ events, connected }: Props) {
+const PAGE_SIZE = 50;
+
+export default function ActivityLog({ engagementId, events, connected }: Props) {
   const [collapsed, setCollapsed] = useState(false);
+  const [historyOffset, setHistoryOffset] = useState(0);
+  const [loadedHistory, setLoadedHistory] = useState<MigrationEvent[]>([]);
+
+  const { data: historyPage, isLoading: historyLoading } = useEvents(engagementId, {
+    limit: PAGE_SIZE,
+    offset: historyOffset,
+  });
 
   const connectionColor = connected ? C.sage : C.gold;
   const connectionLabel = connected ? 'Live' : 'Polling';
+
+  // Accumulate loaded history pages
+  const mergedHistory = loadedHistory;
+  if (historyPage && historyPage.items.length > 0) {
+    const existingIds = new Set(mergedHistory.map((e) => e.event_id));
+    for (const item of historyPage.items) {
+      if (!existingIds.has(item.event_id)) {
+        mergedHistory.push(item);
+      }
+    }
+  }
+
+  const hasMore = historyPage?.pagination?.hasMore ?? false;
+
+  const handleLoadMore = useCallback(() => {
+    if (historyPage) {
+      setLoadedHistory([...mergedHistory]);
+      setHistoryOffset((prev) => prev + PAGE_SIZE);
+    }
+  }, [historyPage, mergedHistory]);
 
   if (collapsed) {
     return (
@@ -188,13 +221,65 @@ export default function ActivityLog({ events, connected }: Props) {
             No events yet
           </div>
         ) : (
-          events.map((evt, idx) => {
-            const label = EVENT_LABELS[evt.type as WSEventType] || evt.type;
-            const ts = (evt.payload?.timestamp as string) || '';
+          <>
+            {events.map((evt, idx) => {
+              const label = EVENT_LABELS[evt.type as WSEventType] || evt.type;
+              const ts = (evt.payload?.timestamp as string) || '';
 
-            return (
+              return (
+                <div
+                  key={`ws-${idx}`}
+                  style={{
+                    padding: '10px 16px',
+                    borderBottom: `1px solid ${C.borderLight}`,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: 4,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: C.navy,
+                      }}
+                    >
+                      {label}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 10,
+                        color: C.textTertiary,
+                        fontFamily: MONO,
+                      }}
+                    >
+                      {formatRelativeTime(ts)}
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: C.textSecondary,
+                      fontFamily: MONO,
+                      lineHeight: 1.4,
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    {summarizePayload(evt.payload)}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Historical events */}
+            {mergedHistory.map((evt) => (
               <div
-                key={idx}
+                key={`hist-${evt.event_id}`}
                 style={{
                   padding: '10px 16px',
                   borderBottom: `1px solid ${C.borderLight}`,
@@ -215,7 +300,7 @@ export default function ActivityLog({ events, connected }: Props) {
                       color: C.navy,
                     }}
                   >
-                    {label}
+                    {EVENT_LABELS[evt.event_type as WSEventType] || evt.event_type}
                   </span>
                   <span
                     style={{
@@ -224,7 +309,7 @@ export default function ActivityLog({ events, connected }: Props) {
                       fontFamily: MONO,
                     }}
                   >
-                    {formatRelativeTime(ts)}
+                    {formatRelativeTime(evt.created_at)}
                   </span>
                 </div>
                 <div
@@ -239,8 +324,32 @@ export default function ActivityLog({ events, connected }: Props) {
                   {summarizePayload(evt.payload)}
                 </div>
               </div>
-            );
-          })
+            ))}
+
+            {/* Load more button */}
+            {hasMore && (
+              <div style={{ padding: '12px 16px', textAlign: 'center' }}>
+                <button
+                  onClick={handleLoadMore}
+                  disabled={historyLoading}
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    fontFamily: BODY,
+                    color: C.sky,
+                    background: C.skyLight,
+                    border: 'none',
+                    borderRadius: 6,
+                    padding: '6px 16px',
+                    cursor: historyLoading ? 'default' : 'pointer',
+                    opacity: historyLoading ? 0.6 : 1,
+                  }}
+                >
+                  {historyLoading ? 'Loading...' : 'Load more'}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

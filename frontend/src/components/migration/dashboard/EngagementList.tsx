@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { C, BODY, DISPLAY } from '@/lib/designSystem';
 import type { MigrationEngagement, EngagementStatus } from '@/types/Migration';
 
@@ -55,7 +56,11 @@ function SkeletonRow() {
   );
 }
 
+const INITIAL_DISPLAY_COUNT = 20;
+
 export default function EngagementList({ engagements, isLoading, onSelect }: EngagementListProps) {
+  const [displayCount, setDisplayCount] = useState(INITIAL_DISPLAY_COUNT);
+
   if (isLoading) {
     return (
       <div className="flex flex-col gap-3">
@@ -92,21 +97,31 @@ export default function EngagementList({ engagements, isLoading, onSelect }: Eng
     );
   }
 
+  const total = engagements.length;
+  const visible = engagements.slice(0, displayCount);
+  const hasMore = displayCount < total;
+
   return (
     <div className="flex flex-col gap-3">
-      <h3
-        style={{
-          fontFamily: DISPLAY,
-          fontSize: 16,
-          fontWeight: 600,
-          color: C.navy,
-          margin: 0,
-          marginBottom: 4,
-        }}
-      >
-        Engagements ({engagements.length})
-      </h3>
-      {engagements.map((eng) => {
+      <div className="flex items-center justify-between" style={{ marginBottom: 4 }}>
+        <h3
+          style={{
+            fontFamily: DISPLAY,
+            fontSize: 16,
+            fontWeight: 600,
+            color: C.navy,
+            margin: 0,
+          }}
+        >
+          Engagements ({total})
+        </h3>
+        {total > INITIAL_DISPLAY_COUNT && (
+          <span style={{ fontSize: 12, color: C.textTertiary, fontFamily: BODY }}>
+            Showing {Math.min(displayCount, total)} of {total}
+          </span>
+        )}
+      </div>
+      {visible.map((eng) => {
         const colors = STATUS_COLORS[eng.status] ?? { bg: C.borderLight, fg: C.textSecondary };
         return (
           <button
@@ -154,6 +169,25 @@ export default function EngagementList({ engagements, isLoading, onSelect }: Eng
           </button>
         );
       })}
+      {hasMore && (
+        <button
+          onClick={() => setDisplayCount((prev) => prev + INITIAL_DISPLAY_COUNT)}
+          style={{
+            fontSize: 13,
+            fontWeight: 600,
+            fontFamily: BODY,
+            color: C.sky,
+            background: C.skyLight,
+            border: 'none',
+            borderRadius: 8,
+            padding: '10px 20px',
+            cursor: 'pointer',
+            alignSelf: 'center',
+          }}
+        >
+          Load more
+        </button>
+      )}
     </div>
   );
 }
