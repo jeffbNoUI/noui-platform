@@ -33,9 +33,7 @@ function getGateTooltip(
   gateHistory?: PhaseGateTransition[],
 ): string | undefined {
   if (!gateHistory) return undefined;
-  const transition = gateHistory.find(
-    (g) => g.toPhase === phase && g.direction === 'ADVANCE',
-  );
+  const transition = gateHistory.find((g) => g.toPhase === phase && g.direction === 'ADVANCE');
   if (!transition) return undefined;
   const date = new Date(transition.authorizedAt).toLocaleDateString();
   return `Authorized by ${transition.authorizedBy} on ${date}`;
@@ -64,6 +62,7 @@ export default function PhaseStepper({
           justifyContent: 'center',
           padding: '20px 24px',
           fontFamily: BODY,
+          overflowX: 'auto',
         }}
       >
         {PHASES.map((phase, idx) => {
@@ -71,9 +70,7 @@ export default function PhaseStepper({
           const isActive = idx === currentIdx;
           const color = STATUS_COLOR[phase.key];
           const attentionCount = attentionByPhase?.[phase.key];
-          const tooltip = isCompleted
-            ? getGateTooltip(phase.key, gateHistory)
-            : undefined;
+          const tooltip = isCompleted ? getGateTooltip(phase.key, gateHistory) : undefined;
           const isClickable = !!onPhaseClick;
           // Clicking a completed phase from a later phase would be regression
           const isRegression = isCompleted && currentIdx > idx;
@@ -196,10 +193,10 @@ export default function PhaseStepper({
               {idx < PHASES.length - 1 && (
                 <div
                   style={{
-                    width: 48,
+                    width: 32,
                     height: 2,
-                    marginLeft: 8,
-                    marginRight: 8,
+                    marginLeft: 6,
+                    marginRight: 6,
                     marginBottom: 20,
                     background: isCompleted ? C.sage : C.border,
                     transition: 'background 0.2s',

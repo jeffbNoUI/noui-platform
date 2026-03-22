@@ -14,7 +14,15 @@ import PhaseGateDialog from './PhaseGateDialog';
 import AttentionQueue from '../attention/AttentionQueue';
 import ActivityLog from './ActivityLog';
 
-type Tab = 'discovery' | 'quality' | 'mappings' | 'transformation' | 'reconciliation' | 'parallel-run' | 'risks' | 'attention';
+type Tab =
+  | 'discovery'
+  | 'quality'
+  | 'mappings'
+  | 'transformation'
+  | 'reconciliation'
+  | 'parallel-run'
+  | 'risks'
+  | 'attention';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'discovery', label: 'Discovery' },
@@ -71,7 +79,13 @@ function defaultTab(status: EngagementStatus): Tab {
 
 /** Phase ordering for advance/regress detection */
 const PHASE_ORDER: EngagementStatus[] = [
-  'DISCOVERY', 'PROFILING', 'MAPPING', 'TRANSFORMING', 'RECONCILING', 'PARALLEL_RUN', 'COMPLETE',
+  'DISCOVERY',
+  'PROFILING',
+  'MAPPING',
+  'TRANSFORMING',
+  'RECONCILING',
+  'PARALLEL_RUN',
+  'COMPLETE',
 ];
 
 interface Props {
@@ -84,7 +98,7 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
   const { data: engagement, isLoading } = useEngagement(engagementId);
   const { connected, events, useFallback } = useMigrationEvents(engagementId);
   const { data: attentionItems } = useAttentionItems(engagementId);
-  const [activeTab, setActiveTab] = useState<Tab>('quality');
+  const [activeTab, setActiveTab] = useState<Tab>('discovery');
   const [gateDialog, setGateDialog] = useState<{
     open: boolean;
     targetPhase: EngagementStatus;
@@ -98,7 +112,7 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
     if (engagement) {
       setActiveTab(defaultTab(engagement.status));
     }
-  }, [engagement?.status]);
+  }, [engagementId, engagement?.status]);
 
   const connectionDot = useMemo(() => {
     if (connected) return { color: C.sage, label: 'Live' };
@@ -204,7 +218,7 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
             &#8592;
           </button>
 
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ flex: 1, minWidth: 120 }}>
             <h1
               style={{
                 fontFamily: DISPLAY,
@@ -287,9 +301,7 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
               if (targetIdx === currentIdx) return;
               const direction = targetIdx > currentIdx ? 'ADVANCE' : 'REGRESS';
               // For advance, always target the next phase
-              const targetPhase = direction === 'ADVANCE'
-                ? PHASE_ORDER[currentIdx + 1]
-                : phase;
+              const targetPhase = direction === 'ADVANCE' ? PHASE_ORDER[currentIdx + 1] : phase;
               setGateDialog({ open: true, targetPhase, direction });
             }}
           />
