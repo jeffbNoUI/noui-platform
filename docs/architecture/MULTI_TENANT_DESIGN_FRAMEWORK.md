@@ -40,7 +40,7 @@ Multi-tenancy in NoUI is not a deployment convenience — it is the architectura
 | Compute | Separate container namespace per tenant (rules engine execution) | Prevents runaway calculation jobs in one tenant from degrading others | Per-tenant |
 | Storage | Separate storage buckets per tenant (documents, audit logs, exports) | Audit log integrity — no cross-contamination of audit trails | Per-tenant |
 | Logging | Separate log streams per tenant with tenant-specific retention policies | Jurisdictions vary: some require 7-year retention, others indefinite. Cannot share log infrastructure | Per-tenant |
-| Data Connector | Supports multiple deployment topologies including on-premises appliance mode | `[REVISED]` PII isolation is enforced by network architecture (VPN, reverse tunnel, or on-prem deployment). The connector binary is topology-agnostic | Per-tenant |
+| Data Connector | Supports multiple deployment topologies; PII stays within tenant boundary regardless of where source DB is hosted | `[REVISED]` See Connector Deployment Topologies below. The connector binary is topology-agnostic; the isolation guarantee is "PII never leaves the tenant boundary," not "PII never leaves the building" | Per-tenant |
 | Row-level security | PostgreSQL RLS policies enforce member-sees-own-data at DB layer; staff bypass via role | Defense-in-depth: even if application layer has a bug, DB layer blocks cross-member data access | Shared (within tenant DB) |
 | Rules Engine | Per-tenant; runs inside tenant boundary; uses identified member data; loads tenant's plan-config.yaml | `[REVISED]` The rules engine is deterministic calculation code that requires identified data (DOB, salary, service credit). It runs per-tenant, not as shared infrastructure | Per-tenant |
 | Pattern Intelligence Service | Cloud-hosted; receives only de-identified structural patterns via Analytics Bridge | `[REVISED]` Separated from Rules Engine. Accumulates cross-tenant learning (schema patterns, process benchmarks, data quality signatures). Zero member PII | Shared |
@@ -58,6 +58,26 @@ Multi-tenancy in NoUI is not a deployment convenience — it is the architectura
 **Open design questions for multi-tenant scale:**
 - How workspace template inheritance works (base + override vs. full per-tenant copy)
 - Analytics Bridge architecture — the component that validates and routes cross-tenant pattern data
+
+### Connector deployment topologies
+
+The connector binary is the same in all topologies. The isolation guarantee is **"PII never leaves the tenant boundary"** — the tenant boundary is a logical construct enforced by encryption, credential isolation, and network architecture. Where source data physically resides determines which topology applies.
+
+| Topology | Source DB | NoUI Platform | PII transit path | Isolation mechanism |
+|----------|----------|--------------|------------------|-------------------|
+| **Cloud-to-cloud** | Cloud-hosted PAS (Sagitec SaaS, AWS, Azure Gov) | Cloud-hosted | Cloud → Cloud (encrypted) | TLS in transit, VPC peering or private endpoints, tenant-scoped credentials, no public internet exposure |
+| **On-prem to cloud** | Legacy mainframe or on-prem database | Cloud-hosted | On-prem → Cloud (encrypted tunnel) | Site-to-site VPN or on-prem connector appliance with reverse tunnel; PII encrypted before traversing public network |
+| **Fully on-prem** | Legacy DB | Agency-hosted NoUI instance | Never leaves agency network | Physical network isolation; strongest guarantee but highest operational cost |
+| **Cloud to on-prem** | Cloud-hosted PAS | Agency-hosted NoUI instance | Cloud → On-prem (encrypted) | Same TLS + credential isolation as cloud-to-cloud; agency controls the destination |
+
+**Key principle:** Many agencies have already moved their legacy PAS to cloud-hosted platforms (Sagitec's Neospin is SaaS; Conduent offers hosted services). In these cases, PII has already left the agency's physical premises by the agency's own procurement decision. The NoUI isolation guarantee is that PII stays within the **tenant boundary** — a logically isolated set of infrastructure (database, encryption key, compute, storage) that no other tenant can access — regardless of whether that infrastructure is on-premises or cloud-hosted.
+
+**Controls applied in all topologies:**
+- Tenant-specific encryption key (KMS-managed, agency-owned rotation rights)
+- Tenant-scoped source DB credentials (stored encrypted, never shared across engagements)
+- Database-per-tenant (no cross-tenant data mixing in NoUI's storage)
+- Audit logging of all connector data access (who accessed what, when)
+- No persistent caching of source data outside the tenant's NoUI database
 
 ---
 
