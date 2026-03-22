@@ -323,7 +323,7 @@ extract_http "$RESPONSE"
 assert_status "GET /migration/coverage-report" "200" "$HTTP_CODE"
 
 # Verify coverage report structure
-TOTAL_CANONICAL=$(echo "$HTTP_BODY" | jq -r '.data.total_canonical // 0')
+TOTAL_CANONICAL=$(echo "$BODY" | jq -r '.data.total_canonical // 0')
 TOTAL_COUNT=$((TOTAL_COUNT + 1))
 if [ "$TOTAL_CANONICAL" -gt "0" ]; then
   echo -e "  ${GREEN}✓${NC} Coverage report: ${TOTAL_CANONICAL} canonical fields assessed"
