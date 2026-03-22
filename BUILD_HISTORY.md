@@ -1,5 +1,50 @@
 # noui-platform — Build History
 
+## Migration Phase 5: Panel Wiring — Real API Data (2026-03-22)
+
+**PR:** #127
+**Branch:** `claude/optimistic-lalande`
+
+### What Was Built
+
+**Quality Profile Panel — Wired to Real Data:**
+- GET `/engagements/{id}/profiles` endpoint + `ListProfiles` DB query
+- PATCH `/engagements/{id}/approve-baseline` endpoint
+- `useProfiles` + `useApproveBaseline` React Query hooks
+- Panel now fetches real ISO 8000 profiles, displays radar chart + per-table scores
+- "Approve Quality Baseline" button with approved indicator
+
+**Transformation Panel — Full Batch Management:**
+- 4 new Go endpoints: list/create/get batches, list exceptions
+- `MigrationBatch`, `MigrationException`, `CreateBatchRequest` Go types
+- `useBatches`, `useBatch`, `useCreateBatch`, `useExceptions` hooks
+- Panel rewritten: batch list table with status badges, "+ Create Batch" dialog
+- Phase gate: only shows batch management when engagement reaches TRANSFORMING
+
+**BatchDetail Component — Replaces Placeholder:**
+- Full batch detail view with header stats (source rows, loaded, exceptions, error rate)
+- Exception clusters section with "Apply Fix" button (uses existing `useApplyCluster`)
+- Exception table (first 100 rows) with disposition color coding
+- Retransform / Reconcile Batch action buttons
+- Back navigation to engagement detail
+
+### Stats
+- 8 commits, 17 files, +3,245 lines
+- Backend: 6 new endpoints, 2 new DB query files, 3 new model types
+- Frontend: 6 new API functions, 6 new hooks, 2 new components, 3 rewrites
+- Go: 11 migration packages passing
+- Frontend: 231 test files, 1,838 tests passing
+
+### Known Issues
+- E2E Integration Tests fail on CI — pre-existing failure in Correspondence→CRM bridge test (also fails on main)
+- apiClient.ts ENUM_FIELDS global lowercase affects all status fields; migration hooks use `select: normalizeEngagement` workaround
+
+### What's Next
+- Phase 5b polish: CorpusIndicator on Mappings, TierFunnel on Reconciliation
+- Fix pre-existing E2E failure (correspondence_e2e.sh Test 3)
+- Docker E2E: rebuild stack, run full profile→transform→reconcile flow
+- Starter prompt: `docs/plans/2026-03-22-migration-phase5b-polish-starter.md`
+
 ## Migration Engine Phases 2-4: Full Backend + Frontend v2.0 (2026-03-22)
 
 **PR:** #126 (merged)
