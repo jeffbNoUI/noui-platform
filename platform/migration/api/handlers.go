@@ -39,6 +39,8 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 	// Quality profiling
 	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/profile", h.ProfileEngagement)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/profiles", h.ListProfiles)
+	mux.HandleFunc("PATCH /api/v1/migration/engagements/{id}/approve-baseline", h.ApproveBaseline)
 
 	// Field mappings
 	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/generate-mappings", h.GenerateMappings)

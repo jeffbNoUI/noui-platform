@@ -70,3 +70,65 @@ func (h *Handler) ProfileEngagement(w http.ResponseWriter, r *http.Request) {
 
 	apiresponse.WriteSuccess(w, http.StatusOK, "migration", profiles)
 }
+
+// ListProfiles handles GET /api/v1/migration/engagements/{id}/profiles.
+// It returns all stored quality profiles for the given engagement.
+func (h *Handler) ListProfiles(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		apiresponse.WriteError(w, http.StatusBadRequest, "migration", "VALIDATION_ERROR", "engagement id is required")
+		return
+	}
+
+	profiles, err := migrationdb.ListProfiles(h.DB, id)
+	if err != nil {
+		slog.Error("failed to list profiles", "error", err, "engagement_id", id)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to list profiles")
+		return
+	}
+
+	// Return empty array, not nil
+	if profiles == nil {
+		profiles = []migrationdb.QualityProfileRow{}
+	}
+
+	apiresponse.WriteSuccess(w, http.StatusOK, "migration", profiles)
+}
+
+// ApproveBaseline handles PATCH /api/v1/migration/engagements/{id}/approve-baseline.
+// It sets quality_baseline_approved_at on the engagement and returns the updated record.
+func (h *Handler) ApproveBaseline(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		apiresponse.WriteError(w, http.StatusBadRequest, "migration", "VALIDATION_ERROR", "engagement id is required")
+		return
+	}
+
+	// Verify engagement exists
+	engagement, err := migrationdb.GetEngagement(h.DB, id)
+	if err != nil {
+		slog.Error("failed to get engagement for baseline approval", "error", err, "engagement_id", id)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to get engagement")
+		return
+	}
+	if engagement == nil {
+		apiresponse.WriteError(w, http.StatusNotFound, "migration", "NOT_FOUND", fmt.Sprintf("engagement %s not found", id))
+		return
+	}
+
+	if err := migrationdb.ApproveBaseline(h.DB, id); err != nil {
+		slog.Error("failed to approve baseline", "error", err, "engagement_id", id)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to approve baseline")
+		return
+	}
+
+	// Fetch updated engagement
+	updated, err := migrationdb.GetEngagement(h.DB, id)
+	if err != nil {
+		slog.Error("failed to fetch updated engagement", "error", err, "engagement_id", id)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to fetch updated engagement")
+		return
+	}
+
+	apiresponse.WriteSuccess(w, http.StatusOK, "migration", updated)
+}
