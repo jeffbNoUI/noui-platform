@@ -316,6 +316,16 @@ if [ -n "$PRISM_BATCH_ID" ] && [ "$PRISM_BATCH_ID" != "null" ]; then
     echo "  Response: $(echo "$PRISM_RECON" | head -c 300)"
   fi
 
+  # Assert gate score above minimum threshold
+  if [ "$PRISM_GATE" != "N/A" ] && [ "$PRISM_GATE" != "null" ] && [ "$PRISM_GATE" != "" ]; then
+    ABOVE=$(echo "$PRISM_GATE > 0.50" | bc -l 2>/dev/null || echo "0")
+    if [ "$ABOVE" = "1" ]; then
+      pass "PRISM gate score $PRISM_GATE > 0.50"
+    else
+      fail "PRISM gate score $PRISM_GATE below 0.50 threshold"
+    fi
+  fi
+
   # Step 8b: Verify reconciliation data was persisted
   log "  Verifying PRISM reconciliation data counts..."
   PRISM_DATA_SQL="
@@ -487,6 +497,16 @@ if [ -n "$PAS_BATCH_ID" ] && [ "$PAS_BATCH_ID" != "null" ]; then
   else
     fail "PAS gate score unavailable"
     echo "  Response: $(echo "$PAS_RECON" | head -c 300)"
+  fi
+
+  # Assert gate score above minimum threshold
+  if [ "$PAS_GATE" != "N/A" ] && [ "$PAS_GATE" != "null" ] && [ "$PAS_GATE" != "" ]; then
+    ABOVE=$(echo "$PAS_GATE > 0.50" | bc -l 2>/dev/null || echo "0")
+    if [ "$ABOVE" = "1" ]; then
+      pass "PAS gate score $PAS_GATE > 0.50"
+    else
+      fail "PAS gate score $PAS_GATE below 0.50 threshold"
+    fi
   fi
 
   # Step 8b: Verify PAS reconciliation data counts
