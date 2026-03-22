@@ -50,6 +50,7 @@ services:
       - ./platform/migration/db/migrations/034_notification.sql:/docker-entrypoint-initdb.d/039_notification.sql
       - ./platform/migration/db/migrations/035_platform_type.sql:/docker-entrypoint-initdb.d/040_platform_type.sql
       - ./platform/migration/db/migrations/036_canonical_tables.sql:/docker-entrypoint-initdb.d/041_canonical_tables.sql
+      - ./platform/migration/db/migrations/037_reconciliation_results.sql:/docker-entrypoint-initdb.d/042_reconciliation_results.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U noui"]
       interval: 5s

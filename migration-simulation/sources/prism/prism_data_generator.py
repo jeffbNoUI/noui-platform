@@ -345,6 +345,71 @@ for m in members:
 emit("")
 
 # ---------------------------------------------------------------------------
+# Payment schedules and payment history (for retirees/disabled with calcs)
+# ---------------------------------------------------------------------------
+emit("-- PRISM_PMT_SCHEDULE")
+pmt_sched_id = 1
+pmt_hist_id = 1
+pmt_history = []
+
+for c in calcs:
+    # One schedule per calc — REGR for regular pension, DISB for disability
+    sched_typ = "DISB" if c["calc_type"] == "D" else "REGR"
+    eff_dt = c["as_of_dt"]
+    net = round(c["benefit"] * 0.78, 2)  # after tax/deductions
+    tax_fed = min(round(c["benefit"] * 0.15, 2), 999.99)  # NUMERIC(5,2) cap
+    tax_ste = min(round(c["benefit"] * 0.05, 2), 999.99)  # NUMERIC(5,2) cap
+
+    emit(
+        f"INSERT INTO src_prism.PRISM_PMT_SCHEDULE "
+        f"(PMT_SCHED_ID, MBR_NBR, SCHED_TYP, EFF_DT, MONTHLY_AMT, PAY_FREQ_CD, "
+        f"PMT_METHOD, BANK_ABA, BANK_ACCT, TAX_ELECT_FED, TAX_ELECT_STE, "
+        f"COLA_ELIGIBLE, LINKED_CALC_ID) VALUES "
+        f"({pmt_sched_id}, {c['mbr_nbr']}, {sql_str(sched_typ)}, {sql_date(eff_dt)}, "
+        f"{c['benefit']}, 'MO', 'ACH', '021000021', '1234567890', "
+        f"{tax_fed}, {tax_ste}, 'Y', {c['calc_id']});"
+    )
+
+    this_sched_id = pmt_sched_id
+    pmt_sched_id += 1
+
+    # Generate 6-24 monthly payment history records after effective date
+    n_payments = random.randint(6, 24)
+    for p in range(n_payments):
+        pmt_month = eff_dt.month + p
+        pmt_year = eff_dt.year + (pmt_month - 1) // 12
+        pmt_month = ((pmt_month - 1) % 12) + 1
+        if pmt_year > 2024:
+            break
+        pmt_dt = datetime.date(pmt_year, pmt_month, 1)
+        # Small variance on gross amount (COLA adjustments, rounding)
+        variance = random.uniform(-2.0, 5.0) if p > 6 else 0.0
+        gross_amt = round(c["benefit"] + variance, 2)
+        net_amt = round(gross_amt * 0.78, 2)
+        # Status: most are 'I' (issued), a few pending, very rare voided
+        r = random.random()
+        if r < 0.92:
+            pmt_status = "I"
+        elif r < 0.97:
+            pmt_status = "C" if pmt_dt.year >= 2005 else "C"
+        else:
+            pmt_status = "P"
+
+        emit(
+            f"INSERT INTO src_prism.PRISM_PMT_HIST "
+            f"(PMT_HIST_ID, PMT_SCHED_ID, MBR_NBR, PAY_PRD_DT, PMT_DT, PMT_STATUS, "
+            f"GROSS_AMT, NET_AMT, FED_TAX_WH, STE_TAX_WH, PMT_METHOD) VALUES "
+            f"({pmt_hist_id}, {this_sched_id}, {c['mbr_nbr']}, {sql_date(pmt_dt)}, "
+            f"{sql_date(pmt_dt + datetime.timedelta(days=random.randint(0, 5)))}, "
+            f"{sql_str(pmt_status)}, {gross_amt}, {net_amt}, "
+            f"{round(gross_amt * 0.15, 2)}, {round(gross_amt * 0.05, 2)}, 'ACH');"
+        )
+        pmt_history.append(pmt_hist_id)
+        pmt_hist_id += 1
+
+emit("")
+
+# ---------------------------------------------------------------------------
 # Salary data: PRISM_SAL_ANNUAL (pre-1998 annual)
 # ---------------------------------------------------------------------------
 emit("-- PRISM_SAL_ANNUAL (pre-1998, annual)")
@@ -413,6 +478,8 @@ print(f"Members:            {len(members)}")
 print(f"  OPUS migrated:    {opus_count}")
 print(f"  Status dist:      {dict(sorted(status_dist.items()))}")
 print(f"Benefit calcs:      {len(calcs)}")
+print(f"PMT_SCHEDULE rows:  {pmt_sched_id - 1}")
+print(f"PMT_HIST rows:      {len(pmt_history)}")
 print(f"SAL_ANNUAL rows:    {len(sal_annual)}  (pre-1998, annual only)")
 print(f"SAL_PERIOD rows:    {len(sal_period)}  (post-1998, biweekly)")
 
