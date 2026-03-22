@@ -93,12 +93,19 @@ elif [ "$HTTP_CODE" = "409" ] || [ "$HTTP_CODE" = "500" ]; then
   PASS_COUNT=$((PASS_COUNT + 1))
   USERS_RESP=$(do_get "/api/v1/employer/users?org_id=${ORG_ID}&limit=10")
   extract_http "$USERS_RESP"
-  PORTAL_USER_ID=$(echo "$BODY" | jq -r '.data.items[0].id // .items[0].id // empty' 2>/dev/null || echo "")
+  PORTAL_USER_ID=$(echo "$BODY" | jq -r '.data[0].id // .data.items[0].id // empty' 2>/dev/null || echo "")
 else
   echo -e "  ${RED}✗${NC} POST /employer/users — expected 200/201, got $HTTP_CODE"
   echo "  Response: $(echo "$BODY" | head -c 200)"
   FAIL_COUNT=$((FAIL_COUNT + 1))
   PORTAL_USER_ID=""
+fi
+
+# Regenerate JWT with real portal user UUID as sub claim so that
+# uploaded_by / resolved_by FK constraints are satisfied.
+if [ -n "$PORTAL_USER_ID" ] && [ "$PORTAL_USER_ID" != "null" ]; then
+  DEV_TOKEN=$(generate_dev_jwt "$PORTAL_USER_ID")
+  AUTH_HEADER="Authorization: Bearer ${DEV_TOKEN}"
 fi
 
 # Update user role (if we have a user ID)
@@ -125,10 +132,6 @@ extract_http "$RESPONSE"
 TOTAL_COUNT=$((TOTAL_COUNT + 1))
 if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
   echo -e "  ${GREEN}✓${NC} POST /employer/alerts (create) (HTTP $HTTP_CODE)"
-  PASS_COUNT=$((PASS_COUNT + 1))
-elif [ "$HTTP_CODE" = "500" ]; then
-  # Transient: stale DB connection from prior failed txn (portal user duplicate)
-  echo -e "  ${YELLOW}⊘${NC} POST /employer/alerts — skipped (stale DB conn, HTTP 500)"
   PASS_COUNT=$((PASS_COUNT + 1))
 else
   echo -e "  ${RED}✗${NC} POST /employer/alerts — expected 200/201, got $HTTP_CODE"
@@ -163,7 +166,7 @@ MANUAL_ENTRY_PAYLOAD=$(cat <<EOF
   "orgId": "${ORG_ID}",
   "periodStart": "2026-01-01",
   "periodEnd": "2026-01-31",
-  "divisionCode": "SD",
+  "divisionCode": "STATE",
   "records": [
     {
       "ssnHash": "${SSN_HASH}",
@@ -189,11 +192,6 @@ if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
   echo -e "  ${GREEN}✓${NC} POST /reporting/manual-entry (HTTP $HTTP_CODE)"
   PASS_COUNT=$((PASS_COUNT + 1))
   FILE_ID=$(echo "$BODY" | jq -r '.data.id // .data.fileId // .id // .fileId // empty' 2>/dev/null || echo "")
-elif [ "$HTTP_CODE" = "500" ]; then
-  # Known issue: uploaded_by UUID empty when auth context lacks user_id claim
-  echo -e "  ${YELLOW}⊘${NC} POST /reporting/manual-entry — skipped (auth context UUID, HTTP $HTTP_CODE)"
-  PASS_COUNT=$((PASS_COUNT + 1))
-  FILE_ID=""
 else
   echo -e "  ${RED}✗${NC} POST /reporting/manual-entry — expected 200/201, got $HTTP_CODE"
   echo "  Response: $(echo "$BODY" | head -c 200)"
@@ -246,7 +244,7 @@ ENROLLMENT_PAYLOAD=$(cat <<EOF
   "dateOfBirth": "1990-05-15",
   "hireDate": "2025-01-01",
   "planCode": "DB",
-  "divisionCode": "SD",
+  "divisionCode": "STATE",
   "email": "e2e-${TS}@test.example",
   "phone": "5551234567",
   "isSafetyOfficer": false,
@@ -408,10 +406,6 @@ if [ -n "$REFUND_ID" ] && [ "$REFUND_ID" != "null" ]; then
   TOTAL_COUNT=$((TOTAL_COUNT + 1))
   if [ "$HTTP_CODE" = "200" ]; then
     echo -e "  ${GREEN}✓${NC} POST /terminations/refunds/:id/calculate (HTTP $HTTP_CODE)"
-    PASS_COUNT=$((PASS_COUNT + 1))
-  elif [ "$HTTP_CODE" = "422" ]; then
-    # Known issue: hireDate stored as timestamp, calculator expects date-only
-    echo -e "  ${YELLOW}⊘${NC} POST /terminations/refunds/:id/calculate — skipped (date parse bug, HTTP 422)"
     PASS_COUNT=$((PASS_COUNT + 1))
   else
     echo -e "  ${RED}✗${NC} POST /terminations/refunds/:id/calculate — expected 200, got $HTTP_CODE"

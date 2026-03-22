@@ -168,6 +168,16 @@ func DBMiddleware(db *sql.DB, extract ClaimsExtractor) func(http.Handler) http.H
 				writeInternalError(w)
 				return
 			}
+			// Ensure the transaction is rolled back if not committed.
+			// This prevents poisoning the pooled connection when a handler
+			// query fails (e.g. duplicate key) — without this, the failed
+			// transaction stays open and the next request on this connection
+			// gets "pq: could not complete operation in a failed transaction".
+			defer func() {
+				if rbErr := tx.Rollback(); rbErr != nil && rbErr != sql.ErrTxDone {
+					slog.Warn("dbcontext: deferred rollback", "error", rbErr)
+				}
+			}()
 
 			// set_config with local=true keeps variables scoped to this transaction,
 			// which pgbouncer transaction pooling handles correctly.
@@ -179,7 +189,6 @@ func DBMiddleware(db *sql.DB, extract ClaimsExtractor) func(http.Handler) http.H
 				p.TenantID, p.MemberID, p.UserRole, p.UserID,
 			)
 			if err != nil {
-				tx.Rollback()
 				slog.Error("dbcontext: failed to set session variables", "error", err)
 				writeInternalError(w)
 				return
@@ -189,9 +198,8 @@ func DBMiddleware(db *sql.DB, extract ClaimsExtractor) func(http.Handler) http.H
 			ctx = WithTx(ctx, tx)
 			next.ServeHTTP(w, r.WithContext(ctx))
 
-			// Commit the read/write transaction. If the handler already wrote
-			// an error response, the commit still succeeds (no harm in committing
-			// a read-only or already-failed tx).
+			// Commit the transaction. On failure the deferred Rollback above
+			// will clean up, preventing connection pool poisoning.
 			if err := tx.Commit(); err != nil {
 				slog.Warn("dbcontext: transaction commit failed", "error", err)
 			}

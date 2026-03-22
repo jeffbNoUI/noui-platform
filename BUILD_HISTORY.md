@@ -1,5 +1,67 @@
 # noui-platform — Build History
 
+## Migration Phase 5g: dbcontext Connection Recovery + Employer Fixes (2026-03-22)
+
+**Branch:** `claude/intelligent-mclaren`
+
+### What Was Done
+
+**dbcontext Stale Connection Recovery (Systemic — All 17 Services):**
+- Added `defer tx.Rollback()` after `BeginTx` in `DBMiddleware` to prevent connection
+  pool poisoning when handler queries fail (e.g., duplicate key INSERT)
+- Without this fix, failed transactions stayed open and the next request on the pooled
+  connection got `pq: could not complete operation in a failed transaction`
+- Removed redundant explicit `tx.Rollback()` on set_config failure (defer handles it)
+
+**Employer Reporting: uploaded_by UUID Fix:**
+- Replaced hardcoded `UploadedBy: ""` with `auth.UserID(r.Context())` via `userIDOrDefault()`
+- Added `isUUID()` validation — dev JWT `sub` claim ("dev-admin-001") is not a valid UUID,
+  so non-UUID values fall back to default system UUID
+- Same fix applied to `resolved_by` in `ResolveException` handler
+
+**Employer Terminations: hireDate Timestamp Parsing:**
+- Added `parseFlexDate()` helper that accepts both date-only ("2006-01-02") and RFC3339
+  ("2006-01-02T00:00:00Z") formats
+- PostgreSQL `timestamptz` columns return full timestamps, but the refund calculator
+  only accepted date-only format
+
+**Employer E2E Script Fixes:**
+- Removed 3 skip tolerances (alerts stale conn, manual-entry UUID, refund date parse)
+- JWT regeneration: after portal user creation, regenerate JWT with real user UUID as
+  `sub` claim so FK constraints on `uploaded_by` are satisfied
+- Fixed jq path: `.data[0].id` (not `.data.items[0].id`) matching actual API response
+- Fixed division code: "STATE" (not "SD") matching seeded `employer_division` table
+
+**Port Management Plan:**
+- Created `docs/plans/2026-03-22-port-management-phase1.md` — plan for removing host
+  port mappings, creating single port registry, and fixing CRM port anomaly
+
+### Tests Added
+- `TestDBMiddleware_RollbackOnHandlerError` — single-connection pool, duplicate key trigger,
+  verifies next request succeeds (DB-dependent, skipped with -short)
+- `TestCalculateRefund_RFC3339Dates` — full calculation with timestamp inputs
+- `TestParseFlexDate` — 4 format variations (date-only, RFC3339, with timezone offset)
+
+### Stats
+- 7 files changed (+182 lines)
+- All 3 modified Go packages: tests passing (short mode)
+- Docker E2E: 166/166 across 5 suites (up from 163 — 3 previously-skipped tests now real passes)
+  - Workflows: 20/20
+  - Services Hub: 50/50
+  - Correspondence: 24/24
+  - Migration: 23/23
+  - Employer: 49/49 (up from 46)
+
+### Known Issues (Resolved This Session)
+- pgbouncer `query_wait_timeout` on Docker startup — too many services binding host ports
+  simultaneously. All services recovered on second start. Root cause addressed in port
+  management plan (remove host port mappings for internal services).
+
+### What's Next
+- Port Management Phase 1: Remove host port mappings, create port registry, fix CRM anomaly
+  (see `docs/plans/2026-03-22-port-management-phase1.md`)
+- Starter prompt: `docs/plans/2026-03-22-port-management-phase1-starter.md`
+
 ## Migration Phase 5f: Employer Portal E2E + nginx Proxy + Engagement Test Fix (2026-03-22)
 
 **Branch:** `claude/nostalgic-shaw`

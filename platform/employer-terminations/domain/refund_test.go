@@ -234,6 +234,56 @@ func TestCalculateRefund_TwoYearsCompound(t *testing.T) {
 	}
 }
 
+// TestCalculateRefund_RFC3339Dates tests that timestamps from PostgreSQL
+// timestamptz columns (e.g. "2020-01-15T00:00:00Z") are accepted.
+func TestCalculateRefund_RFC3339Dates(t *testing.T) {
+	input := RefundInput{
+		EmployeeContributions: "10000.00",
+		InterestRatePercent:   "3",
+		HireDate:              "2020-01-01T00:00:00Z",
+		TerminationDate:       "2020-12-31T00:00:00Z",
+		DRODeduction:          "0",
+	}
+
+	result, err := CalculateRefund(input)
+	if err != nil {
+		t.Fatalf("unexpected error with RFC3339 dates: %v", err)
+	}
+
+	// Same as TestCalculateRefund_OneYear: one June 30, 3% interest.
+	if result.InterestAmount != "300.00" {
+		t.Errorf("interest = %s, want 300.00", result.InterestAmount)
+	}
+	if result.GrossRefund != "10300.00" {
+		t.Errorf("gross = %s, want 10300.00", result.GrossRefund)
+	}
+}
+
+// TestParseFlexDate verifies both date formats are accepted.
+func TestParseFlexDate(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string // expected date in YYYY-MM-DD
+	}{
+		{"2020-01-15", "2020-01-15"},
+		{"2020-01-15T00:00:00Z", "2020-01-15"},
+		{"2023-12-31T23:59:59Z", "2023-12-31"},
+		{"2020-06-30T12:00:00+05:00", "2020-06-30"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got, err := parseFlexDate(tt.input)
+			if err != nil {
+				t.Fatalf("parseFlexDate(%q) error: %v", tt.input, err)
+			}
+			if got.Format("2006-01-02") != tt.want {
+				t.Errorf("parseFlexDate(%q) = %s, want %s", tt.input, got.Format("2006-01-02"), tt.want)
+			}
+		})
+	}
+}
+
 // TestCalculateRefund_InvalidContributions tests error handling.
 func TestCalculateRefund_InvalidContributions(t *testing.T) {
 	input := RefundInput{
