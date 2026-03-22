@@ -574,12 +574,29 @@ func strPtrNonEmpty(s string) *string {
 	return &s
 }
 
-// defaultUserID is used when the JWT sub claim is absent to avoid an empty
-// UUID being rejected by PostgreSQL.
+// defaultUserID is used when the JWT sub claim is absent or not a valid UUID
+// to avoid PostgreSQL rejecting it on UUID-typed columns.
 const defaultUserID = "00000000-0000-0000-0000-000000000001"
 
+// uuidLen is 36: 8-4-4-4-12 hex digits with hyphens.
+func isUUID(s string) bool {
+	if len(s) != 36 {
+		return false
+	}
+	for i, c := range s {
+		if i == 8 || i == 13 || i == 18 || i == 23 {
+			if c != '-' {
+				return false
+			}
+		} else if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return false
+		}
+	}
+	return true
+}
+
 func userIDOrDefault(r *http.Request) string {
-	if uid := auth.UserID(r.Context()); uid != "" {
+	if uid := auth.UserID(r.Context()); uid != "" && isUUID(uid) {
 		return uid
 	}
 	return defaultUserID
