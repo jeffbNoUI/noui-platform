@@ -1,5 +1,48 @@
 # noui-platform — Build History
 
+## Migration Engine Phases 2-4: Full Backend + Frontend v2.0 (2026-03-22)
+
+**PR:** #126 (merged)
+**Branch:** `claude/stupefied-jones`
+
+### What Was Built
+
+**Migration Engine Phase 2 — Transformation Pipeline:**
+- 12 transformation handlers, canonical loader with lineage tracking
+- Idempotent batch processor with thresholds, code table discovery
+- Re-transformation via lineage for mapping corrections
+
+**Migration Engine Phase 3 — Reconciliation + Feedback:**
+- Three-tier reconciliation (benefit formula, payment history, aggregate validation)
+- Weighted gate scoring with P1/P2/P3 priority
+- Mismatch pattern detection with correction suggestions
+- Corpus abstraction with k-anonymity
+
+**Migration Frontend Phase 4 (v2.0):**
+- 7-phase stepper with DISCOVERY phase, gate tooltips, attention badges
+- Phase gate dialog with AI readiness stubs, override controls, audit trail
+- Discovery panel: inline source connection, table discovery (85 tables), selection
+- Attention queue: cross-cutting P1/P2/P3 unified view with filters
+- Parallel run panel: Go/No-Go certification checklist
+- Comparative view: stage-gated side-by-side engagement comparison
+- Notification bell, dashboard enhancements (attention count, health bar colors)
+- AI components: AIRecommendationCard, CorpusIndicator, RootCauseAnalysis
+- 14 new backend endpoints (gates, attention, AI stubs, notifications)
+
+**Polish Fixes:**
+- Title truncation (minWidth 120px), default DISCOVERY tab, stepper overflow
+- Pre-commit hook: added missing shebang, converted CRLF to LF
+- Enum case mismatch: apiClient lowercases `status` fields; added `select: normalizeEngagement` in migration hooks
+
+### Stats
+- 47 commits, 36+ files, ~6,000+ lines added
+- Backend: 30+ total API endpoints, 4 DB migrations (031-034)
+- Frontend: 20+ components, 1,838 tests passing, 12 Go packages passing
+
+### What's Next
+- Wire real API data into panel UIs (Quality Profile, Mappings, Transformation, Reconciliation)
+- Starter prompt: `docs/plans/2026-03-22-migration-phase5-panel-wiring-starter.md`
+
 ## Migration Management Frontend + Source DB Connection (2026-03-21)
 
 **Branch:** `claude/laughing-nash`
