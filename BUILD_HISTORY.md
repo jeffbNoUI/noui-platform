@@ -1,5 +1,46 @@
 # noui-platform — Build History
 
+## Port Management Phase 1 + Migration Plan Status (2026-03-22)
+
+**Branch:** `claude/bold-grothendieck`
+
+### What Was Done
+
+**Port Management Phase 1:**
+- Removed host port mappings from 19 Docker services in docker-compose.yml
+- Only frontend (3000), postgres (5432), pgbouncer (6432) retain host mappings
+- All service access goes through nginx proxy at localhost:3000
+- Created `infrastructure/ports.env` — single-source port registry for all 21 services
+- Updated health smoke test to route through nginx (not direct healthagg port)
+- Updated CLAUDE.md service table: replaced port column with API path column
+- Added clarifying comment to vite.config.ts (dev proxy is local-only)
+
+**Migration Engine Plan Status:**
+- Added completion status section to migration engine plan
+- All 26 tasks confirmed code-complete (Tasks 1–24 done, 25 done, 18+26 need integration run)
+- Remaining work: two-source proof (run pipeline against PRISM + PAS databases)
+
+**Bug Fixes (pre-existing, surfaced during E2E):**
+- Missing docker-compose volume mounts for migrations 033-035 (gate_transition,
+  notification, platform_type) — added in #135 but mounts were missed
+- `HTTP_BODY` → `BODY` variable typo in migration E2E Phase 10 coverage report test
+
+### Stats
+- 7 files changed
+- Docker E2E: 169/169 across 5 suites (up from 166 — 3 new migration Phase 10 tests)
+  - Workflows: 20/20
+  - Services Hub: 50/50
+  - Correspondence: 24/24
+  - Migration: 26/26 (up from 23)
+  - Employer: 49/49
+- Host port `localhost:8081` confirmed unreachable (port removal verified)
+- No pgbouncer timeout cascades on startup (clean single-pass boot)
+
+### What's Next
+- Two-Source Proof: run migration pipeline against PRISM + PAS databases end-to-end
+- Or: Port Management Phase 2 (standardize container ports to :8080)
+- Starter prompt: `docs/plans/2026-03-22-next-session-starter.md`
+
 ## Migration Phase 5g: dbcontext Connection Recovery + Employer Fixes (2026-03-22)
 
 **Branch:** `claude/intelligent-mclaren`
