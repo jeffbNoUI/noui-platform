@@ -1,5 +1,47 @@
 # noui-platform — Build History
 
+## Migration Phase 5b: Panel Polish + CRM E2E Fix (2026-03-22)
+
+**Branch:** `claude/brave-cray`
+
+### What Was Built
+
+**Mappings Panel Polish:**
+- `useMappingCorpusContext` lazy-load hook for per-row corpus context
+- `LazyCorpusIndicator` wrapper component — fetches corpus data on demand per mapping
+- "Generate Mappings" button (empty state) and "Re-generate Mappings" button (header bar)
+- Wired to existing `useGenerateMappings` mutation hook
+
+**Reconciliation Panel Polish:**
+- Replaced inline tier score cards with `TierFunnel` chart component
+- Wired to real `useReconciliationByTier` hook data
+- Derives `{total, match}` from `Reconciliation[]` arrays (match = category === 'MATCH')
+
+**CRM Enum Casing Fix (E2E blocker):**
+- Root cause: Go handler validation used lowercase enums but DB CHECK constraints use UPPERCASE
+- Fixed `handlers.go`, `employer_handlers.go` enum validation lists → UPPERCASE
+- Fixed `models/types.go` all constants (InteractionChannel, InteractionType, Direction, Visibility, Outcome) → UPPERCASE
+- Updated `employer_handlers_test.go` test fixtures to match
+- `apiClient.ts` ENUM_FIELDS bridge already handles frontend lowercase ↔ backend UPPERCASE
+
+### Stats
+- 7 files changed, +155/-107 lines
+- Frontend: 231 test files, 1,838 tests passing
+- CRM Go: all packages passing
+- E2E: correspondence 24/24 passing (Test 3 CRM bridge was the blocker — now fixed)
+
+### Known Issues
+- Docker `nginx.conf` missing `/api/v1/migration` proxy route (migration only works via Vite dev server)
+- Workflows E2E: 3/6 passing (case/issue creation 400 — likely same casing pattern)
+- Services Hub E2E: 48/50 passing (issues service query bug)
+
+### What's Next
+- Add migration proxy to nginx.conf for Docker E2E
+- Fix remaining E2E casing issues (cases, issues services)
+- apiClient.ts enum normalization tech debt decision
+- Full Docker E2E: engagement → profile → map → transform → reconcile flow
+- Starter prompt: `docs/plans/2026-03-22-migration-phase5c-starter.md`
+
 ## Migration Phase 5: Panel Wiring — Real API Data (2026-03-22)
 
 **PR:** #127

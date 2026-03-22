@@ -435,15 +435,15 @@ func (h *Handler) CreateInteraction(w http.ResponseWriter, r *http.Request) {
 	var errs validation.Errors
 	errs.Required("channel", req.Channel)
 	errs.Enum("channel", req.Channel, []string{
-		"phone_inbound", "phone_outbound", "secure_message",
-		"email_inbound", "email_outbound", "walk_in",
-		"portal_activity", "mail_inbound", "mail_outbound",
-		"internal_handoff", "system_event", "fax",
+		"PHONE_INBOUND", "PHONE_OUTBOUND", "SECURE_MESSAGE",
+		"EMAIL_INBOUND", "EMAIL_OUTBOUND", "WALK_IN",
+		"PORTAL_ACTIVITY", "MAIL_INBOUND", "MAIL_OUTBOUND",
+		"INTERNAL_HANDOFF", "SYSTEM_EVENT", "FAX",
 	})
 	errs.Required("interactionType", req.InteractionType)
 	errs.MaxLen("interactionType", req.InteractionType, 50)
 	errs.Required("direction", req.Direction)
-	errs.Enum("direction", req.Direction, []string{"inbound", "outbound", "internal"})
+	errs.Enum("direction", req.Direction, []string{"INBOUND", "OUTBOUND", "INTERNAL"})
 	if req.Summary != nil {
 		errs.MaxLen("summary", *req.Summary, 5000)
 	}

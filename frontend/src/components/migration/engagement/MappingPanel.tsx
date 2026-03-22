@@ -1,11 +1,8 @@
 import { useState, useMemo } from 'react';
 import { C, BODY, MONO } from '@/lib/designSystem';
-import { useMappings, useCodeMappings, useUpdateMapping } from '@/hooks/useMigrationApi';
+import { useMappings, useCodeMappings, useUpdateMapping, useGenerateMappings, useMappingCorpusContext } from '@/hooks/useMigrationApi';
 import CorpusIndicator from '../ai/CorpusIndicator';
-import type { AgreementStatus, FieldMapping, CorpusContext } from '@/types/Migration';
-
-// Extended mapping type — API may include corpus context in the future
-type FieldMappingWithCorpus = FieldMapping & { corpusContext?: CorpusContext };
+import type { AgreementStatus, FieldMapping } from '@/types/Migration';
 
 const AGREEMENT_COLORS: Record<AgreementStatus, string> = {
   AGREED: C.sage,
@@ -32,6 +29,7 @@ export default function MappingPanel({ engagementId }: Props) {
   const { data: mappings, isLoading } = useMappings(engagementId);
   const { data: codeMappings } = useCodeMappings(engagementId);
   const updateMapping = useUpdateMapping();
+  const generateMappings = useGenerateMappings();
 
   const [showCodeMappings, setShowCodeMappings] = useState(false);
   const [filterAgreement, setFilterAgreement] = useState<AgreementStatus | ''>('');
@@ -132,6 +130,10 @@ export default function MappingPanel({ engagementId }: Props) {
     );
   }
 
+  const handleGenerate = () => {
+    generateMappings.mutate({ engagementId, req: { tables: [] } });
+  };
+
   if (!mappings || mappings.length === 0) {
     return (
       <div
@@ -142,22 +144,60 @@ export default function MappingPanel({ engagementId }: Props) {
           fontSize: 14,
         }}
       >
-        No field mappings available yet. Generate mappings from the connector schema.
+        <div style={{ marginBottom: 16 }}>No field mappings available yet.</div>
+        <button
+          onClick={handleGenerate}
+          disabled={generateMappings.isPending}
+          style={{
+            padding: '8px 20px',
+            borderRadius: 6,
+            border: 'none',
+            background: C.navy,
+            color: C.textOnDark,
+            fontSize: 13,
+            fontWeight: 600,
+            fontFamily: BODY,
+            cursor: generateMappings.isPending ? 'not-allowed' : 'pointer',
+            opacity: generateMappings.isPending ? 0.6 : 1,
+          }}
+        >
+          {generateMappings.isPending ? 'Generating...' : 'Generate Mappings'}
+        </button>
       </div>
     );
   }
 
   return (
     <div style={{ fontFamily: BODY }}>
-      {/* Summary bar */}
+      {/* Header bar */}
       <div
         style={{
           display: 'flex',
           gap: 12,
           marginBottom: 16,
           flexWrap: 'wrap',
+          alignItems: 'center',
         }}
       >
+        <button
+          onClick={handleGenerate}
+          disabled={generateMappings.isPending}
+          style={{
+            padding: '6px 14px',
+            borderRadius: 6,
+            border: `1px solid ${C.navy}`,
+            background: C.navy,
+            color: C.textOnDark,
+            fontSize: 12,
+            fontWeight: 600,
+            fontFamily: BODY,
+            cursor: generateMappings.isPending ? 'not-allowed' : 'pointer',
+            opacity: generateMappings.isPending ? 0.6 : 1,
+          }}
+        >
+          {generateMappings.isPending ? 'Generating...' : 'Re-generate Mappings'}
+        </button>
+        <div style={{ flex: 1 }} />
         {(['AGREED', 'DISAGREED', 'TEMPLATE_ONLY', 'SIGNAL_ONLY'] as AgreementStatus[]).map(
           (status) => (
             <button
@@ -241,7 +281,6 @@ export default function MappingPanel({ engagementId }: Props) {
             </thead>
             <tbody>
               {sorted.map((m) => {
-                const mExt = m as FieldMappingWithCorpus;
                 const isAgreed = m.agreement_status === 'AGREED';
                 return (
                 <tr key={m.mapping_id} style={{ borderBottom: `1px solid ${C.borderLight}` }}>
@@ -250,11 +289,7 @@ export default function MappingPanel({ engagementId }: Props) {
                   </td>
                   <td style={{ padding: '10px 16px', fontFamily: MONO, color: C.text }}>
                     <span>{m.canonical_table}.{m.canonical_column}</span>
-                    {mExt.corpusContext && (
-                      <div style={{ marginTop: 2 }}>
-                        <CorpusIndicator context={mExt.corpusContext} />
-                      </div>
-                    )}
+                    <LazyCorpusIndicator engagementId={engagementId} mappingId={m.mapping_id} />
                   </td>
                   <td style={{ padding: '10px 12px' }}>
                     {isAgreed ? (
@@ -470,6 +505,16 @@ function Th({
     >
       {children}
     </th>
+  );
+}
+
+function LazyCorpusIndicator({ engagementId, mappingId }: { engagementId: string; mappingId: string }) {
+  const { data } = useMappingCorpusContext(engagementId, mappingId);
+  if (!data) return null;
+  return (
+    <div style={{ marginTop: 2 }}>
+      <CorpusIndicator context={data} />
+    </div>
   );
 }
 
