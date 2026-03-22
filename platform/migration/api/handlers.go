@@ -84,6 +84,27 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 	// Events
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/events", h.ListEvents)
+
+	// Phase gates
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/gate-status", h.HandleGetGateStatus)
+	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/advance-phase", h.HandleAdvancePhase)
+	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/regress-phase", h.HandleRegressPhase)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/gate-history", h.HandleGetGateHistory)
+
+	// Attention queue
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/attention", h.HandleGetAttentionItems)
+	mux.HandleFunc("GET /api/v1/migration/attention/summary", h.HandleGetAttentionSummary)
+
+	// AI recommendations
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/ai/recommendations", h.HandleGetAIRecommendations)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/ai/batch-sizing", h.HandleGetBatchSizing)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/ai/remediation", h.HandleGetRemediation)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/reconciliation/root-cause", h.HandleGetRootCause)
+
+	// Notifications
+	mux.HandleFunc("GET /api/v1/migration/notifications", h.HandleGetNotifications)
+	mux.HandleFunc("PUT /api/v1/migration/notifications/{id}/read", h.HandleMarkNotificationRead)
+	mux.HandleFunc("PUT /api/v1/migration/notifications/read-all", h.HandleMarkAllNotificationsRead)
 }
 
 // HealthCheck returns service status information.
