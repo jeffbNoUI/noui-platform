@@ -27,13 +27,14 @@ type fixtureInputs struct {
 	YOS             string `yaml:"yos"`
 	FAS             string `yaml:"fas"`
 	AgeAtRetirement int    `yaml:"age_at_retirement"`
-	PlanCode        string `yaml:"plan_code"`
+	TierCode        string `yaml:"tier_code"`
 }
 
 type fixtureExpected struct {
-	GrossMonthly string `yaml:"gross_monthly"`
-	PenaltyPct   string `yaml:"penalty_pct"`
-	FinalMonthly string `yaml:"final_monthly"`
+	GrossMonthly    string `yaml:"gross_monthly"`
+	ReductionFactor string `yaml:"reduction_factor"`
+	FinalMonthly    string `yaml:"final_monthly"`
+	Error           bool   `yaml:"error"`
 }
 
 func loadFixtures(t *testing.T) []fixtureCase {
@@ -59,27 +60,47 @@ func mustRat(t *testing.T, s string) *big.Rat {
 }
 
 func TestCalcRetirementBenefit_Fixtures(t *testing.T) {
+	if _, err := os.Stat(planConfigPath); os.IsNotExist(err) {
+		t.Skip("plan-config.yaml not found; skipping")
+	}
+
+	pc, err := LoadPlanConfig(planConfigPath)
+	if err != nil {
+		t.Fatalf("LoadPlanConfig: %v", err)
+	}
+
 	cases := loadFixtures(t)
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
 			yos := mustRat(t, tc.Inputs.YOS)
 			fas := mustRat(t, tc.Inputs.FAS)
 
-			params, ok := planRegistry[tc.Inputs.PlanCode]
+			tier, ok := pc.LookupTier(tc.Inputs.TierCode)
 			if !ok {
-				t.Fatalf("unknown plan code %q", tc.Inputs.PlanCode)
+				if tc.Expected.Error {
+					return // expected: unknown tier
+				}
+				t.Fatalf("unknown tier code %q", tc.Inputs.TierCode)
+			}
+			if tc.Expected.Error {
+				t.Fatal("expected error for unknown tier, but tier was found")
 			}
 
-			result := CalcRetirementBenefit(yos, fas, tc.Inputs.AgeAtRetirement, params)
+			params, err := tier.ToBenefitParams(pc.System.NormalRetirementAge)
+			if err != nil {
+				t.Fatalf("ToBenefitParams: %v", err)
+			}
+
+			result := CalcRetirementBenefit(yos, fas, tc.Inputs.AgeAtRetirement, *params)
 
 			gotGross := formatRat2dp(result.GrossMonthly)
 			if gotGross != tc.Expected.GrossMonthly {
 				t.Errorf("GrossMonthly = %s, want %s", gotGross, tc.Expected.GrossMonthly)
 			}
 
-			gotPenalty := result.PenaltyPct.FloatString(2)
-			if gotPenalty != tc.Expected.PenaltyPct {
-				t.Errorf("PenaltyPct = %s, want %s", gotPenalty, tc.Expected.PenaltyPct)
+			gotReduction := result.ReductionFactor.FloatString(2)
+			if gotReduction != tc.Expected.ReductionFactor {
+				t.Errorf("ReductionFactor = %s, want %s", gotReduction, tc.Expected.ReductionFactor)
 			}
 
 			gotFinal := formatRat2dp(result.FinalMonthly)
@@ -120,77 +141,140 @@ func TestRoundHalfUp(t *testing.T) {
 }
 
 func TestRecomputeFromStoredInputs(t *testing.T) {
-	t.Run("DB_MAIN_standard", func(t *testing.T) {
+	if _, err := os.Stat(planConfigPath); os.IsNotExist(err) {
+		t.Skip("plan-config.yaml not found; skipping")
+	}
+
+	pc, err := LoadPlanConfig(planConfigPath)
+	if err != nil {
+		t.Fatalf("LoadPlanConfig: %v", err)
+	}
+
+	t.Run("TIER_1_standard", func(t *testing.T) {
 		yos := mustRat(t, "25")
 		fas := mustRat(t, "5500")
-		result := RecomputeFromStoredInputs(yos, fas, 65, "DB_MAIN")
+		result := RecomputeFromStoredInputs(yos, fas, 65, "TIER_1", pc)
 		if result == nil {
 			t.Fatal("expected non-nil result")
 		}
 		got := formatRat2dp(result)
-		if got != "2291.67" {
-			t.Errorf("got %s, want 2291.67", got)
+		// gross = 25*0.020*5500/12 = 229.17, factor=1.00, floor=800.00
+		if got != "800.00" {
+			t.Errorf("got %s, want 800.00", got)
 		}
 	})
 
-	t.Run("DB_T2_standard", func(t *testing.T) {
-		yos := mustRat(t, "25")
-		fas := mustRat(t, "5500")
-		result := RecomputeFromStoredInputs(yos, fas, 65, "DB_T2")
+	t.Run("TIER_1_high_earner", func(t *testing.T) {
+		yos := mustRat(t, "30")
+		fas := mustRat(t, "25000")
+		result := RecomputeFromStoredInputs(yos, fas, 65, "TIER_1", pc)
 		if result == nil {
 			t.Fatal("expected non-nil result")
 		}
 		got := formatRat2dp(result)
-		if got != "2062.50" {
-			t.Errorf("got %s, want 2062.50", got)
+		// gross = 30*0.020*25000/12 = 1250.00, factor=1.00
+		if got != "1250.00" {
+			t.Errorf("got %s, want 1250.00", got)
 		}
 	})
 
-	t.Run("unknown_plan_returns_nil", func(t *testing.T) {
+	t.Run("TIER_2_standard", func(t *testing.T) {
 		yos := mustRat(t, "25")
 		fas := mustRat(t, "5500")
-		result := RecomputeFromStoredInputs(yos, fas, 65, "UNKNOWN")
+		result := RecomputeFromStoredInputs(yos, fas, 65, "TIER_2", pc)
+		if result == nil {
+			t.Fatal("expected non-nil result")
+		}
+		got := formatRat2dp(result)
+		// gross = 25*0.015*5500/12 = 171.88, factor=1.00, floor=800.00
+		if got != "800.00" {
+			t.Errorf("got %s, want 800.00", got)
+		}
+	})
+
+	t.Run("unknown_tier_returns_nil", func(t *testing.T) {
+		yos := mustRat(t, "25")
+		fas := mustRat(t, "5500")
+		result := RecomputeFromStoredInputs(yos, fas, 65, "UNKNOWN", pc)
 		if result != nil {
-			t.Errorf("expected nil for unknown plan, got %s", formatRat2dp(result))
+			t.Errorf("expected nil for unknown tier, got %s", formatRat2dp(result))
+		}
+	})
+
+	t.Run("nil_planconfig_returns_nil", func(t *testing.T) {
+		yos := mustRat(t, "25")
+		fas := mustRat(t, "5500")
+		result := RecomputeFromStoredInputs(yos, fas, 65, "TIER_1", nil)
+		if result != nil {
+			t.Errorf("expected nil for nil PlanConfig, got %s", formatRat2dp(result))
 		}
 	})
 }
 
 func TestFormulaManualCalculations(t *testing.T) {
-	t.Run("early_retirement_penalty_calc", func(t *testing.T) {
-		// 5 years early at 6%/yr = 30% penalty (hits cap)
-		// gross = 20 * 0.20 * 4800 / 12 = 19200/12 = 1600.00
-		// final = 1600 * (1 - 0.30) = 1120.00
+	if _, err := os.Stat(planConfigPath); os.IsNotExist(err) {
+		t.Skip("plan-config.yaml not found; skipping")
+	}
+
+	pc, err := LoadPlanConfig(planConfigPath)
+	if err != nil {
+		t.Fatalf("LoadPlanConfig: %v", err)
+	}
+
+	t.Run("early_retirement_reduction_calc", func(t *testing.T) {
+		// TIER_1, age 55: factor = 0.70
+		// gross = 20 * 0.020 * 4800 / 12 = 1920/12 = 160.00
+		// after_reduction = 160.00 * 0.70 = 112.00
+		// final = max(112.00, 800.00) = 800.00 (floor applies)
 		yos := mustRat(t, "20")
 		fas := mustRat(t, "4800")
-		params := planRegistry["DB_MAIN"]
-		result := CalcRetirementBenefit(yos, fas, 60, params)
+		tier, _ := pc.LookupTier("TIER_1")
+		params, _ := tier.ToBenefitParams(pc.System.NormalRetirementAge)
+		result := CalcRetirementBenefit(yos, fas, 55, *params)
 
 		gotGross := formatRat2dp(result.GrossMonthly)
-		if gotGross != "1600.00" {
-			t.Errorf("GrossMonthly = %s, want 1600.00", gotGross)
+		if gotGross != "160.00" {
+			t.Errorf("GrossMonthly = %s, want 160.00", gotGross)
 		}
 
-		penaltyStr := result.PenaltyPct.FloatString(2)
-		if penaltyStr != "0.30" {
-			t.Errorf("PenaltyPct = %s, want 0.30", penaltyStr)
+		reductionStr := result.ReductionFactor.FloatString(2)
+		if reductionStr != "0.70" {
+			t.Errorf("ReductionFactor = %s, want 0.70", reductionStr)
 		}
 
 		gotFinal := formatRat2dp(result.FinalMonthly)
-		if gotFinal != "1120.00" {
-			t.Errorf("FinalMonthly = %s, want 1120.00", gotFinal)
+		if gotFinal != "800.00" {
+			t.Errorf("FinalMonthly = %s, want 800.00 (floor)", gotFinal)
 		}
 	})
 
-	t.Run("age_above_normal_no_penalty", func(t *testing.T) {
+	t.Run("age_above_normal_no_reduction", func(t *testing.T) {
+		// Age 67 (above NRA 65) → reduction factor = 1.0
 		yos := mustRat(t, "30")
-		fas := mustRat(t, "6000")
-		params := planRegistry["DB_MAIN"]
-		result := CalcRetirementBenefit(yos, fas, 67, params)
+		fas := mustRat(t, "25000")
+		tier, _ := pc.LookupTier("TIER_1")
+		params, _ := tier.ToBenefitParams(pc.System.NormalRetirementAge)
+		result := CalcRetirementBenefit(yos, fas, 67, *params)
 
-		if result.PenaltyPct.Sign() != 0 {
-			t.Errorf("expected zero penalty for age above NRA, got %s",
-				result.PenaltyPct.FloatString(2))
+		if result.ReductionFactor.Cmp(new(big.Rat).SetInt64(1)) != 0 {
+			t.Errorf("expected reduction factor 1.00 for age above NRA, got %s",
+				result.ReductionFactor.FloatString(2))
+		}
+	})
+
+	t.Run("tier1_high_earner_early_60", func(t *testing.T) {
+		// TIER_1, age 60: factor = 0.85
+		// gross = 30 * 0.020 * 25000 / 12 = 1250.00
+		// after = 1250.00 * 0.85 = 1062.50
+		yos := mustRat(t, "30")
+		fas := mustRat(t, "25000")
+		tier, _ := pc.LookupTier("TIER_1")
+		params, _ := tier.ToBenefitParams(pc.System.NormalRetirementAge)
+		result := CalcRetirementBenefit(yos, fas, 60, *params)
+
+		gotFinal := formatRat2dp(result.FinalMonthly)
+		if gotFinal != "1062.50" {
+			t.Errorf("FinalMonthly = %s, want 1062.50", gotFinal)
 		}
 	})
 }
@@ -198,7 +282,14 @@ func TestFormulaManualCalculations(t *testing.T) {
 func BenchmarkCalcRetirementBenefit(b *testing.B) {
 	yos := new(big.Rat).SetFrac64(25, 1)
 	fas := new(big.Rat).SetFrac64(5500, 1)
-	params := planRegistry["DB_MAIN"]
+	params := BenefitParams{
+		FormulaType:         "flat_multiplier",
+		Multiplier:          new(big.Rat).SetFloat64(0.020),
+		ReductionMethod:     "lookup_table",
+		ReductionTable:      map[int]*big.Rat{65: new(big.Rat).SetInt64(1)},
+		NormalRetirementAge: 65,
+		BenefitFloor:        new(big.Rat).SetFloat64(800.0),
+	}
 
 	for i := 0; i < b.N; i++ {
 		CalcRetirementBenefit(yos, fas, 65, params)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"strconv"
 
 	"gopkg.in/yaml.v3"
 )
@@ -83,6 +84,16 @@ type BenefitParams struct {
 	BenefitFloor        *big.Rat
 }
 
+// floatToExactRat converts a float64 to an exact *big.Rat by first formatting
+// the value as a decimal string. This avoids IEEE 754 precision loss that occurs
+// with big.Rat.SetFloat64 (e.g., 0.015 → 3/200 instead of an approximation).
+func floatToExactRat(f float64) *big.Rat {
+	s := strconv.FormatFloat(f, 'f', -1, 64)
+	r := new(big.Rat)
+	r.SetString(s)
+	return r
+}
+
 // LoadPlanConfig reads the plan-config YAML file and builds the tier lookup map.
 func LoadPlanConfig(path string) (*PlanConfig, error) {
 	data, err := os.ReadFile(path)
@@ -134,9 +145,10 @@ func (t *TierDef) ToBenefitParams(normalRetirementAge int) (*BenefitParams, erro
 		NormalRetirementAge: normalRetirementAge,
 	}
 
-	// Multiplier
+	// Multiplier — use string conversion to avoid IEEE 754 float64 precision loss.
+	// e.g., SetFloat64(0.015) gives 1080863910568919/72057594037927936 instead of 3/200.
 	if t.Formula.Multiplier != nil {
-		bp.Multiplier = new(big.Rat).SetFloat64(*t.Formula.Multiplier)
+		bp.Multiplier = floatToExactRat(*t.Formula.Multiplier)
 	} else {
 		return nil, fmt.Errorf("planconfig: tier %s has no multiplier", t.ID)
 	}
@@ -145,13 +157,13 @@ func (t *TierDef) ToBenefitParams(normalRetirementAge int) (*BenefitParams, erro
 	if len(t.Reduction.Table) > 0 {
 		bp.ReductionTable = make(map[int]*big.Rat, len(t.Reduction.Table))
 		for age, factor := range t.Reduction.Table {
-			bp.ReductionTable[age] = new(big.Rat).SetFloat64(factor)
+			bp.ReductionTable[age] = floatToExactRat(factor)
 		}
 	}
 
 	// Benefit floor from parent plan
 	if t.plan != nil && t.plan.BenefitFloor != nil {
-		bp.BenefitFloor = new(big.Rat).SetFloat64(*t.plan.BenefitFloor)
+		bp.BenefitFloor = floatToExactRat(*t.plan.BenefitFloor)
 	}
 
 	return bp, nil

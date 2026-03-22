@@ -5,43 +5,11 @@ import (
 	"math/big"
 )
 
-// PlanParams defines the parameters for a defined-benefit pension plan's
-// retirement benefit formula.
-type PlanParams struct {
-	Multiplier          *big.Rat // e.g., 0.20 (20% = 2% per YOS effectively)
-	FASPeriodMonths     int      // e.g., 60 (5 years)
-	ERYPenaltyRate      *big.Rat // e.g., 0.06 per year early
-	MaxPenalty          *big.Rat // e.g., 0.30 (30%)
-	NormalRetirementAge int      // e.g., 65
-	BenefitFloor        *big.Rat // e.g., 800.00
-}
-
 // BenefitCalcResult holds the output of a retirement benefit calculation.
 type BenefitCalcResult struct {
-	GrossMonthly *big.Rat
-	PenaltyPct   *big.Rat
-	FinalMonthly *big.Rat
-}
-
-// planRegistry maps plan codes to their parameters. In production this would
-// come from a database; for now it is a hardcoded map.
-var planRegistry = map[string]PlanParams{
-	"DB_MAIN": {
-		Multiplier:          ratFromString("1/5"),  // 0.20 (2% per year of service)
-		FASPeriodMonths:     60,                    // 5-year FAS
-		ERYPenaltyRate:      ratFromString("3/50"), // 0.06 per year early
-		MaxPenalty:          ratFromString("3/10"), // 0.30 cap
-		NormalRetirementAge: 65,
-		BenefitFloor:        ratFromString("800/1"), // $800.00
-	},
-	"DB_T2": {
-		Multiplier:          ratFromString("9/50"), // 0.18 (1.8% per year of service)
-		FASPeriodMonths:     36,                    // 3-year FAS
-		ERYPenaltyRate:      ratFromString("3/50"), // 0.06 per year early
-		MaxPenalty:          ratFromString("3/10"), // 0.30 cap
-		NormalRetirementAge: 65,
-		BenefitFloor:        ratFromString("800/1"), // $800.00
-	},
+	GrossMonthly    *big.Rat
+	ReductionFactor *big.Rat
+	FinalMonthly    *big.Rat
 }
 
 // ratFromString parses a fraction string like "1/5" into a *big.Rat.
@@ -63,51 +31,48 @@ var twelve = new(big.Rat).SetInt64(12)
 //
 // Formula:
 //
-//	gross_monthly = yos * multiplier * fas / 12
-//	penalty_years = max(0, normal_retirement_age - age_at_retirement)
-//	penalty_pct   = min(penalty_years * ery_penalty_rate, max_penalty)
-//	after_penalty = gross_monthly * (1 - penalty_pct)
-//	final_monthly = max(after_penalty, benefit_floor)
-func CalcRetirementBenefit(yos, fas *big.Rat, ageAtRetirement int, params PlanParams) BenefitCalcResult {
+//	gross_monthly    = yos * multiplier * fas / 12
+//	reduction_factor = lookup from ReductionTable by age (1.0 if at or above NRA)
+//	after_reduction  = gross_monthly * reduction_factor
+//	final_monthly    = max(after_reduction, benefit_floor)
+func CalcRetirementBenefit(yos, fas *big.Rat, ageAtRetirement int, params BenefitParams) BenefitCalcResult {
 	// gross_monthly = yos * multiplier * fas / 12
 	gross := new(big.Rat).Mul(yos, params.Multiplier)
 	gross.Mul(gross, fas)
 	gross.Quo(gross, twelve)
 
-	// penalty_years = max(0, normal_retirement_age - age_at_retirement)
-	penaltyYears := params.NormalRetirementAge - ageAtRetirement
-	if penaltyYears < 0 {
-		penaltyYears = 0
+	// Determine the reduction factor from the lookup table.
+	one := new(big.Rat).SetInt64(1)
+	reductionFactor := new(big.Rat).Set(one) // default: no reduction
+
+	if params.ReductionMethod == "lookup_table" && params.ReductionTable != nil {
+		if factor, ok := params.ReductionTable[ageAtRetirement]; ok {
+			reductionFactor.Set(factor)
+		} else if ageAtRetirement >= params.NormalRetirementAge {
+			// At or above NRA with no explicit table entry: no reduction.
+			reductionFactor.Set(one)
+		}
+		// If below NRA and no table entry, reductionFactor stays 1.0 (no data).
 	}
 
-	// penalty_pct = min(penalty_years * ery_penalty_rate, max_penalty)
-	penaltyPct := new(big.Rat).Mul(
-		new(big.Rat).SetInt64(int64(penaltyYears)),
-		params.ERYPenaltyRate,
-	)
-	if penaltyPct.Cmp(params.MaxPenalty) > 0 {
-		penaltyPct.Set(params.MaxPenalty)
-	}
+	// after_reduction = gross_monthly * reduction_factor
+	afterReduction := new(big.Rat).Mul(gross, reductionFactor)
 
-	// after_penalty = gross_monthly * (1 - penalty_pct)
-	oneMinus := new(big.Rat).Sub(new(big.Rat).SetInt64(1), penaltyPct)
-	afterPenalty := new(big.Rat).Mul(gross, oneMinus)
-
-	// final_monthly = max(after_penalty, benefit_floor)
-	finalMonthly := new(big.Rat).Set(afterPenalty)
-	if finalMonthly.Cmp(params.BenefitFloor) < 0 {
+	// final_monthly = max(after_reduction, benefit_floor)
+	finalMonthly := new(big.Rat).Set(afterReduction)
+	if params.BenefitFloor != nil && finalMonthly.Cmp(params.BenefitFloor) < 0 {
 		finalMonthly.Set(params.BenefitFloor)
 	}
 
 	// Round gross and final for display (HALF_UP to 2 decimal places).
-	// PenaltyPct stays exact.
+	// ReductionFactor stays exact.
 	grossRounded := roundHalfUpRat(gross)
 	finalRounded := roundHalfUpRat(finalMonthly)
 
 	return BenefitCalcResult{
-		GrossMonthly: grossRounded,
-		PenaltyPct:   new(big.Rat).Set(penaltyPct),
-		FinalMonthly: finalRounded,
+		GrossMonthly:    grossRounded,
+		ReductionFactor: new(big.Rat).Set(reductionFactor),
+		FinalMonthly:    finalRounded,
 	}
 }
 
@@ -169,14 +134,21 @@ func formatRat2dp(r *big.Rat) string {
 	return fmt.Sprintf("%s%s.%02d", sign, dollars.String(), remainder.Int64())
 }
 
-// RecomputeFromStoredInputs looks up plan parameters by planCode and
+// RecomputeFromStoredInputs looks up tier parameters from PlanConfig and
 // recomputes the final monthly benefit from the stored calculation inputs.
-// Returns nil if the planCode is unknown.
-func RecomputeFromStoredInputs(yosUsed, fasUsed *big.Rat, ageAtCalc int, planCode string) *big.Rat {
-	params, ok := planRegistry[planCode]
+// Returns nil if the tierCode is unknown or ToBenefitParams fails.
+func RecomputeFromStoredInputs(yosUsed, fasUsed *big.Rat, ageAtCalc int, tierCode string, planConfig *PlanConfig) *big.Rat {
+	if planConfig == nil {
+		return nil
+	}
+	tier, ok := planConfig.LookupTier(tierCode)
 	if !ok {
 		return nil
 	}
-	result := CalcRetirementBenefit(yosUsed, fasUsed, ageAtCalc, params)
+	params, err := tier.ToBenefitParams(planConfig.System.NormalRetirementAge)
+	if err != nil {
+		return nil
+	}
+	result := CalcRetirementBenefit(yosUsed, fasUsed, ageAtCalc, *params)
 	return result.FinalMonthly
 }
