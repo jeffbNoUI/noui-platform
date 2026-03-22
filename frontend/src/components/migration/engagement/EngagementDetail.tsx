@@ -21,6 +21,7 @@ const TABS: { key: Tab; label: string }[] = [
 ];
 
 const STATUS_COLOR: Record<EngagementStatus, string> = {
+  DISCOVERY: '#94a3b8',
   PROFILING: C.sky,
   MAPPING: C.gold,
   TRANSFORMING: C.sage,
@@ -30,6 +31,7 @@ const STATUS_COLOR: Record<EngagementStatus, string> = {
 };
 
 const STATUS_BG: Record<EngagementStatus, string> = {
+  DISCOVERY: C.borderLight,
   PROFILING: C.skyLight,
   MAPPING: C.goldLight,
   TRANSFORMING: C.sageLight,

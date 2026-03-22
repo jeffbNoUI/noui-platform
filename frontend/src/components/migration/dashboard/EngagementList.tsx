@@ -8,6 +8,7 @@ interface EngagementListProps {
 }
 
 const STATUS_COLORS: Record<EngagementStatus, { bg: string; fg: string }> = {
+  DISCOVERY: { bg: C.borderLight, fg: '#94a3b8' },
   PROFILING: { bg: C.skyLight, fg: C.sky },
   MAPPING: { bg: C.goldLight, fg: C.gold },
   TRANSFORMING: { bg: C.sageLight, fg: C.sage },
