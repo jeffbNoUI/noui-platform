@@ -21,7 +21,7 @@ const (
 
 	tier3ContributionQuery = `SELECT COALESCE(SUM(contribution_amount), 0)::TEXT FROM migration.canonical_contributions WHERE batch_id = $1`
 
-	tier3ServiceCreditQuery = `SELECT member_id, service_credit_years, employment_start, employment_end FROM migration.canonical_members WHERE batch_id = $1`
+	tier3ServiceCreditQuery = `SELECT member_id, COALESCE(service_credit_years, 0), employment_start, employment_end FROM migration.canonical_members WHERE batch_id = $1 AND service_credit_years IS NOT NULL AND employment_start IS NOT NULL AND employment_end IS NOT NULL`
 
 	tier3StatusCountQuery = `SELECT member_status, COUNT(*) FROM migration.canonical_members WHERE batch_id = $1 GROUP BY member_status`
 )

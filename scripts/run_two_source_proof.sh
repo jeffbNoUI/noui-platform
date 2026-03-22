@@ -123,21 +123,44 @@ if [ "$SKIP_INFRA" = "false" ]; then
     echo "  Last health response: $(echo "$HEALTH_RESP" | head -c 300)"
   fi
 
-  # Check source databases are ready
+  # Check source databases are ready (with retry — large seed data takes time)
   log "Checking source databases..."
 
-  PRISM_READY=$(docker compose exec -T prism-source pg_isready -U prism -d prism_prod 2>/dev/null || echo "failed")
+  PRISM_READY="failed"
+  for i in $(seq 1 15); do
+    PRISM_READY=$(docker compose exec -T prism-source pg_isready -U prism -d prism_prod 2>/dev/null || echo "failed")
+    if echo "$PRISM_READY" | grep -q "accepting connections"; then
+      # Verify seed data loaded (check a known table has rows)
+      PRISM_CHECK=$(docker compose exec -T prism-source psql -U prism -d prism_prod -t -A \
+        -c "SELECT COUNT(*) FROM src_prism.prism_member" 2>/dev/null || echo "0")
+      if [ "${PRISM_CHECK:-0}" -gt 0 ]; then
+        break
+      fi
+    fi
+    sleep 4
+  done
   if echo "$PRISM_READY" | grep -q "accepting connections"; then
     pass "prism-source database ready"
   else
-    fail "prism-source database not ready: $PRISM_READY"
+    fail "prism-source database not ready after 60s: $PRISM_READY"
   fi
 
-  PAS_READY=$(docker compose exec -T pas-source pg_isready -U pas -d pas_prod 2>/dev/null || echo "failed")
+  PAS_READY="failed"
+  for i in $(seq 1 15); do
+    PAS_READY=$(docker compose exec -T pas-source pg_isready -U pas -d pas_prod 2>/dev/null || echo "failed")
+    if echo "$PAS_READY" | grep -q "accepting connections"; then
+      PAS_CHECK=$(docker compose exec -T pas-source psql -U pas -d pas_prod -t -A \
+        -c "SELECT COUNT(*) FROM src_pas.member" 2>/dev/null || echo "0")
+      if [ "${PAS_CHECK:-0}" -gt 0 ]; then
+        break
+      fi
+    fi
+    sleep 4
+  done
   if echo "$PAS_READY" | grep -q "accepting connections"; then
     pass "pas-source database ready"
   else
-    fail "pas-source database not ready: $PAS_READY"
+    fail "pas-source database not ready after 60s: $PAS_READY"
   fi
 else
   log "Phase 1: Skipped (--skip-infra)"
@@ -280,15 +303,46 @@ if [ -n "$PRISM_BATCH_ID" ] && [ "$PRISM_BATCH_ID" != "null" ]; then
     echo "  Response: $(echo "$PRISM_RECON" | head -c 300)"
   fi
 
-  # Step 8: Check gate
+  # Step 8: Check gate score from reconcile response
   log "  Checking PRISM reconciliation gate..."
-  PRISM_SUMMARY=$(api_get "/api/v1/migration/engagements/${PRISM_ENG_ID}/reconciliation/summary")
-  PRISM_GATE=$(echo "$PRISM_SUMMARY" | jq -r '.data.gate_score // .gate_score // "N/A"' 2>/dev/null || echo "N/A")
+  PRISM_GATE=$(echo "$PRISM_RECON" | jq -r '.data.weighted_score // "N/A"' 2>/dev/null || echo "N/A")
+  PRISM_TOTAL=$(echo "$PRISM_RECON" | jq -r '.data.total_members // 0' 2>/dev/null || echo "0")
+  PRISM_MATCH=$(echo "$PRISM_RECON" | jq -r '.data.match_count // 0' 2>/dev/null || echo "0")
+  PRISM_PASSED=$(echo "$PRISM_RECON" | jq -r '.data.gate_passed // false' 2>/dev/null || echo "false")
   if [ "$PRISM_GATE" != "N/A" ] && [ "$PRISM_GATE" != "null" ] && [ "$PRISM_GATE" != "" ]; then
-    pass "PRISM gate score: ${PRISM_GATE}"
+    pass "PRISM gate score: ${PRISM_GATE} (${PRISM_MATCH}/${PRISM_TOTAL} matched, passed=${PRISM_PASSED})"
   else
     fail "PRISM gate score unavailable"
-    echo "  Response: $(echo "$PRISM_SUMMARY" | head -c 300)"
+    echo "  Response: $(echo "$PRISM_RECON" | head -c 300)"
+  fi
+
+  # Step 8b: Verify reconciliation data was persisted
+  log "  Verifying PRISM reconciliation data counts..."
+  PRISM_DATA_SQL="
+    SELECT 'stored_calc' AS tbl, COUNT(*) FROM migration.stored_calculations WHERE batch_id = '${PRISM_BATCH_ID}'
+    UNION ALL
+    SELECT 'payment_hist', COUNT(*) FROM migration.payment_history WHERE batch_id = '${PRISM_BATCH_ID}'
+    UNION ALL
+    SELECT 'canonical_mbr', COUNT(*) FROM migration.canonical_members WHERE batch_id = '${PRISM_BATCH_ID}'
+    UNION ALL
+    SELECT 'recon_results', COUNT(*) FROM migration.reconciliation WHERE batch_id = '${PRISM_BATCH_ID}'
+  "
+  PRISM_DATA_COUNTS=$(docker compose exec -T postgres psql -U noui -d noui -t -A -F '|' \
+    -c "$PRISM_DATA_SQL" 2>/dev/null || echo "QUERY_FAILED")
+  if echo "$PRISM_DATA_COUNTS" | grep -q "QUERY_FAILED"; then
+    fail "PRISM data count query failed"
+  else
+    echo "  PRISM data counts:"
+    echo "$PRISM_DATA_COUNTS" | while IFS='|' read -r tbl cnt; do
+      echo "    ${tbl}: ${cnt}"
+    done
+    # Assert stored_calculations > 0
+    PRISM_SC_COUNT=$(echo "$PRISM_DATA_COUNTS" | grep "stored_calc" | cut -d'|' -f2)
+    if [ "${PRISM_SC_COUNT:-0}" -gt 0 ]; then
+      pass "PRISM stored calculations loaded: ${PRISM_SC_COUNT}"
+    else
+      fail "PRISM stored calculations empty — tier 1 reconciliation has no data"
+    fi
   fi
 else
   fail "Failed to create PRISM batch"
@@ -422,15 +476,46 @@ if [ -n "$PAS_BATCH_ID" ] && [ "$PAS_BATCH_ID" != "null" ]; then
     echo "  Response: $(echo "$PAS_RECON" | head -c 300)"
   fi
 
-  # Step 8: Check gate
+  # Step 8: Check gate score from reconcile response
   log "  Checking PAS reconciliation gate..."
-  PAS_SUMMARY=$(api_get "/api/v1/migration/engagements/${PAS_ENG_ID}/reconciliation/summary")
-  PAS_GATE=$(echo "$PAS_SUMMARY" | jq -r '.data.gate_score // .gate_score // "N/A"' 2>/dev/null || echo "N/A")
+  PAS_GATE=$(echo "$PAS_RECON" | jq -r '.data.weighted_score // "N/A"' 2>/dev/null || echo "N/A")
+  PAS_TOTAL=$(echo "$PAS_RECON" | jq -r '.data.total_members // 0' 2>/dev/null || echo "0")
+  PAS_MATCH=$(echo "$PAS_RECON" | jq -r '.data.match_count // 0' 2>/dev/null || echo "0")
+  PAS_PASSED=$(echo "$PAS_RECON" | jq -r '.data.gate_passed // false' 2>/dev/null || echo "false")
   if [ "$PAS_GATE" != "N/A" ] && [ "$PAS_GATE" != "null" ] && [ "$PAS_GATE" != "" ]; then
-    pass "PAS gate score: ${PAS_GATE}"
+    pass "PAS gate score: ${PAS_GATE} (${PAS_MATCH}/${PAS_TOTAL} matched, passed=${PAS_PASSED})"
   else
     fail "PAS gate score unavailable"
-    echo "  Response: $(echo "$PAS_SUMMARY" | head -c 300)"
+    echo "  Response: $(echo "$PAS_RECON" | head -c 300)"
+  fi
+
+  # Step 8b: Verify PAS reconciliation data counts
+  log "  Verifying PAS reconciliation data counts..."
+  PAS_DATA_SQL="
+    SELECT 'stored_calc' AS tbl, COUNT(*) FROM migration.stored_calculations WHERE batch_id = '${PAS_BATCH_ID}'
+    UNION ALL
+    SELECT 'payment_hist', COUNT(*) FROM migration.payment_history WHERE batch_id = '${PAS_BATCH_ID}'
+    UNION ALL
+    SELECT 'canonical_mbr', COUNT(*) FROM migration.canonical_members WHERE batch_id = '${PAS_BATCH_ID}'
+    UNION ALL
+    SELECT 'recon_results', COUNT(*) FROM migration.reconciliation WHERE batch_id = '${PAS_BATCH_ID}'
+  "
+  PAS_DATA_COUNTS=$(docker compose exec -T postgres psql -U noui -d noui -t -A -F '|' \
+    -c "$PAS_DATA_SQL" 2>/dev/null || echo "QUERY_FAILED")
+  if echo "$PAS_DATA_COUNTS" | grep -q "QUERY_FAILED"; then
+    fail "PAS data count query failed"
+  else
+    echo "  PAS data counts:"
+    echo "$PAS_DATA_COUNTS" | while IFS='|' read -r tbl cnt; do
+      echo "    ${tbl}: ${cnt}"
+    done
+    # Assert stored_calculations > 0
+    PAS_SC_COUNT=$(echo "$PAS_DATA_COUNTS" | grep "stored_calc" | cut -d'|' -f2)
+    if [ "${PAS_SC_COUNT:-0}" -gt 0 ]; then
+      pass "PAS stored calculations loaded: ${PAS_SC_COUNT}"
+    else
+      fail "PAS stored calculations empty — tier 1 reconciliation has no data"
+    fi
   fi
 else
   fail "Failed to create PAS batch"

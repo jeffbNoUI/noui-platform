@@ -20,6 +20,15 @@ var tier2Cols = []string{
 	"member_id", "member_status", "gross_amount", "canonical_benefit",
 }
 
+// tier3SalaryCols matches the columns returned by tier3SalaryQuery.
+var tier3SalaryCols = []string{"member_id", "salary_year", "salary_amount"}
+
+// tier3ContribCols matches the columns returned by tier3ContributionQuery.
+var tier3ContribCols = []string{"sum"}
+
+// tier3ServiceCols matches the columns returned by tier3ServiceCreditQuery.
+var tier3ServiceCols = []string{"member_id", "service_credit_years", "employment_start", "employment_end"}
+
 func TestReconcileBatch_Success(t *testing.T) {
 	h, mock := newTestHandler(t)
 
@@ -35,6 +44,29 @@ func TestReconcileBatch_Success(t *testing.T) {
 	mock.ExpectQuery("SELECT").
 		WithArgs("batch-001").
 		WillReturnRows(sqlmock.NewRows(tier2Cols))
+
+	// Tier 3 queries (empty benchmarks → minimal work):
+	// 3a: salary outliers — return empty rows
+	mock.ExpectQuery("SELECT").
+		WithArgs("batch-001").
+		WillReturnRows(sqlmock.NewRows(tier3SalaryCols))
+	// 3b: contribution total — return "0"
+	mock.ExpectQuery("SELECT").
+		WithArgs("batch-001").
+		WillReturnRows(sqlmock.NewRows(tier3ContribCols).AddRow("0"))
+	// 3c: service credit span — return empty rows
+	mock.ExpectQuery("SELECT").
+		WithArgs("batch-001").
+		WillReturnRows(sqlmock.NewRows(tier3ServiceCols))
+
+	// Persistence: DELETE + INSERT (non-fatal if they fail, but mock expects them).
+	mock.ExpectBegin()
+	mock.ExpectExec("DELETE FROM migration.reconciliation").
+		WithArgs("batch-001").
+		WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectExec("INSERT INTO migration.reconciliation").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
 
 	w := serve(h, "POST", "/api/v1/migration/batches/batch-001/reconcile", nil)
 
@@ -92,8 +124,17 @@ func TestReconcileBatch_DBError(t *testing.T) {
 	}
 }
 
-func TestGetReconciliation_Placeholder(t *testing.T) {
-	h := NewHandler(nil)
+func TestGetReconciliation_Empty(t *testing.T) {
+	h, mock := newTestHandler(t)
+
+	reconCols := []string{
+		"recon_id", "batch_id", "member_id", "tier", "category", "priority",
+		"legacy_value", "recomputed_value", "variance_amount", "suspected_domain", "details",
+	}
+
+	mock.ExpectQuery("SELECT").
+		WithArgs("eng-001").
+		WillReturnRows(sqlmock.NewRows(reconCols))
 
 	w := serve(h, "GET", "/api/v1/migration/engagements/eng-001/reconciliation", nil)
 
@@ -104,7 +145,7 @@ func TestGetReconciliation_Placeholder(t *testing.T) {
 	var resp struct {
 		Data struct {
 			EngagementID string `json:"engagement_id"`
-			Status       string `json:"status"`
+			Count        int    `json:"count"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
@@ -113,13 +154,19 @@ func TestGetReconciliation_Placeholder(t *testing.T) {
 	if resp.Data.EngagementID != "eng-001" {
 		t.Errorf("expected eng-001, got %q", resp.Data.EngagementID)
 	}
-	if resp.Data.Status != "not_yet_implemented" {
-		t.Errorf("expected not_yet_implemented, got %q", resp.Data.Status)
-	}
 }
 
-func TestGetP1Issues_Placeholder(t *testing.T) {
-	h := NewHandler(nil)
+func TestGetP1Issues_Empty(t *testing.T) {
+	h, mock := newTestHandler(t)
+
+	p1Cols := []string{
+		"recon_id", "batch_id", "member_id", "tier", "category",
+		"legacy_value", "recomputed_value", "variance_amount", "suspected_domain", "details",
+	}
+
+	mock.ExpectQuery("SELECT").
+		WithArgs("eng-001").
+		WillReturnRows(sqlmock.NewRows(p1Cols))
 
 	w := serve(h, "GET", "/api/v1/migration/engagements/eng-001/reconciliation/p1", nil)
 

@@ -110,7 +110,12 @@ func insertStoredCalculations(migrationDB *sql.DB, batchID string, rows *sql.Row
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("source_loader: iterate stored calcs: %w", err)
 	}
-	slog.Info("source_loader: loaded stored calculations", "batch_id", batchID, "count", count)
+	if count == 0 {
+		slog.Warn("source_loader: zero stored calculations loaded — reconciliation tier 1 will have no data",
+			"batch_id", batchID)
+	} else {
+		slog.Info("source_loader: loaded stored calculations", "batch_id", batchID, "count", count)
+	}
 	return nil
 }
 
@@ -119,7 +124,9 @@ func loadPRISMPayments(migrationDB, sourceDB *sql.DB, batchID string) error {
 	rows, err := sourceDB.Query(`
 		SELECT
 			CAST(h.MBR_NBR AS TEXT),
-			COALESCE(s.SCHED_TYP, 'REGR'),
+			CASE WHEN TRIM(COALESCE(s.SCHED_TYP, 'REGR')) IN ('REGR','DISB') THEN 'REGULAR'
+			     ELSE TRIM(COALESCE(s.SCHED_TYP, 'REGR'))
+			END,
 			h.PMT_DT,
 			CAST(COALESCE(h.GROSS_AMT, 0) AS TEXT)
 		FROM src_prism.prism_pmt_hist h
@@ -139,7 +146,9 @@ func loadPASPayments(migrationDB, sourceDB *sql.DB, batchID string) error {
 	rows, err := sourceDB.Query(`
 		SELECT
 			CAST(member_id AS TEXT),
-			COALESCE(payment_status_code, 'REGULAR'),
+			CASE WHEN payment_status_code IN ('PAID','PROCESSED','ISSUED') THEN 'REGULAR'
+			 ELSE COALESCE(payment_status_code, 'REGULAR')
+		END,
 			payment_date,
 			CAST(COALESCE(gross_amount, 0) AS TEXT)
 		FROM src_pas.benefit_payment
@@ -177,6 +186,11 @@ func insertPaymentHistory(migrationDB *sql.DB, batchID string, rows *sql.Rows) e
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("source_loader: iterate payments: %w", err)
 	}
-	slog.Info("source_loader: loaded payment history", "batch_id", batchID, "count", count)
+	if count == 0 {
+		slog.Warn("source_loader: zero payment history rows loaded — reconciliation tier 2 will have no data",
+			"batch_id", batchID)
+	} else {
+		slog.Info("source_loader: loaded payment history", "batch_id", batchID, "count", count)
+	}
 	return nil
 }

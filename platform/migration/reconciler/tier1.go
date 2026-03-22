@@ -19,7 +19,7 @@ SELECT
 	COALESCE(sc.stored_benefit, '0'),
 	COALESCE(cm.canonical_benefit, '0')
 FROM migration.canonical_members cm
-JOIN migration.stored_calculations sc ON sc.member_id = cm.member_id
+JOIN migration.stored_calculations sc ON sc.member_id = cm.member_id AND sc.batch_id = cm.batch_id
 WHERE cm.batch_id = $1
 ORDER BY cm.member_id
 `

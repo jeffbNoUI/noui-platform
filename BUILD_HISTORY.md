@@ -1,5 +1,66 @@
 # noui-platform — Build History
 
+## Session 16: Reconciliation Data Alignment — Pipeline Complete (2026-03-22)
+
+**Branch:** `claude/interesting-wu`
+
+### What Was Done
+
+Fixed 6 root causes preventing reconciliation from producing meaningful results.
+The Two-Source Proof now passes **28/28 checks** with real data flowing through
+both PRISM and PAS pipelines end-to-end.
+
+**Root causes fixed:**
+1. **No persistence layer** — `ReconcileBatch` computed results in-memory but never
+   stored them. `migration.reconciliation` table didn't exist. Created Migration 037
+   and added transactional persistence in the handler.
+2. **PAS payment_type mismatch** — PAS stores "PAID"/"HELD" as `payment_status_code`,
+   but tier2 filters on `payment_type = 'REGULAR'`. Normalized in source_loader.
+3. **PRISM payment_type mismatch** — PRISM `SCHED_TYP` is CHAR(4) "REGR" (space-padded),
+   not "REGULAR". Added TRIM + CASE normalization.
+4. **Missing PRISM payment history seed** — Generator never created PMT_SCHEDULE/PMT_HIST.
+   Added 39 schedules + 554 payment records. Fixed NUMERIC(5,2) overflow on tax columns.
+5. **Missing PAS seed data entirely** — `generate_pas_scenarios.py` had never been run.
+   Generated 310K lines of seed SQL (100 members, 26 retirement awards, 248 payments).
+6. **Tier 3 NULL crash** — `service_credit_years` nullable DOUBLE PRECISION scanned into
+   float64. Added COALESCE + NOT NULL filter.
+
+**Additional improvements:**
+- Wired Tier 3 into ReconcileBatch (was TODO)
+- Defensive `batch_id` filter on tier1/tier2 JOINs
+- Source DB readiness retry loop (45K seed statements need time)
+- Data count assertions in proof script
+- Gate score extracted from POST response instead of broken summary endpoint
+- Zero-count warnings in source_loader
+
+### Files Changed
+
+- `platform/migration/db/migrations/037_reconciliation_results.sql` — NEW
+- `platform/migration/api/reconciliation_handlers.go` — Major rewrite (persistence + tier3)
+- `platform/migration/api/reconciliation_handlers_test.go` — Updated for new behavior
+- `platform/migration/batch/source_loader.go` — Payment type normalization + logging
+- `platform/migration/reconciler/tier1.go` — batch_id JOIN filter
+- `platform/migration/reconciler/tier2.go` — batch_id JOIN filters
+- `platform/migration/reconciler/tier3.go` — NULL defense on service credit query
+- `platform/migration/reconciler/tier3_test.go` — Updated mock patterns
+- `migration-simulation/sources/prism/prism_data_generator.py` — PMT_HIST generation
+- `migration-simulation/sources/pas/init/02_seed.sql` — NEW (generated)
+- `scripts/run_two_source_proof.sh` — Gate extraction, retry loop, assertions
+- `docker-compose.yml` — Mount for migration 037
+
+### Stats
+
+- 12 files changed (2 new, 10 modified)
+- Migration unit tests: 12 packages, all pass
+- Two-Source Proof: 28/28 checks pass
+- Gate scores: 0 (expected — seed data formulas don't match reconciler formulas yet)
+
+### What's Next
+
+- Gate score tuning: align seed data benefit formulas with reconciler's RecomputeFromStoredInputs()
+- Tier 3 benchmarks: configure plan-level expectations
+- Starter prompt: `docs/plans/2026-03-22-reconciliation-alignment-complete-next-session.md`
+
 ## Session 15: Two-Source Proof — Debug Loop Complete (2026-03-22)
 
 **Branch:** `claude/stoic-franklin`
