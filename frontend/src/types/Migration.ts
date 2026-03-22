@@ -386,6 +386,11 @@ export interface UpdateMappingRequest {
   approval_status: ApprovalStatus;
 }
 
+export interface CreateBatchRequest {
+  batch_scope: string;
+  mapping_version?: string;
+}
+
 export interface AdvancePhaseRequest {
   notes?: string;
   overrides?: string[];

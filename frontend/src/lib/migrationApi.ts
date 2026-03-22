@@ -27,6 +27,7 @@ import type {
   UpdateRiskRequest,
   ApplyClusterRequest,
   UpdateMappingRequest,
+  CreateBatchRequest,
   GenerateMappingsRequest,
   GenerateMappingsSummary,
   SourceConnection,
@@ -41,6 +42,7 @@ import type {
   AdvancePhaseRequest,
   RegressPhaseRequest,
   CorpusContext,
+  MigrationException,
 } from '@/types/Migration';
 
 const BASE = '/api/v1/migration';
@@ -72,6 +74,11 @@ export const migrationAPI = {
   profileEngagement: (id: string, req: Record<string, unknown>) =>
     postAPI<QualityProfile[]>(`${BASE}/engagements/${id}/profile`, req),
 
+  listProfiles: (id: string) => fetchAPI<QualityProfile[]>(`${BASE}/engagements/${id}/profiles`),
+
+  approveBaseline: (id: string) =>
+    patchAPI<MigrationEngagement>(`${BASE}/engagements/${id}/approve-baseline`, {}),
+
   // ─── Field Mappings ─────────────────────────────────────────────────────
   generateMappings: (id: string, req: GenerateMappingsRequest) =>
     postAPI<GenerateMappingsSummary>(`${BASE}/engagements/${id}/generate-mappings`, req),
@@ -92,6 +99,17 @@ export const migrationAPI = {
     putAPI<CodeMapping>(`${BASE}/engagements/${engagementId}/code-mappings/${mappingId}`, req),
 
   // ─── Batches ────────────────────────────────────────────────────────────
+  listBatches: (engagementId: string) =>
+    fetchAPI<MigrationBatch[]>(`${BASE}/engagements/${engagementId}/batches`),
+
+  createBatch: (engagementId: string, req: CreateBatchRequest) =>
+    postAPI<MigrationBatch>(`${BASE}/engagements/${engagementId}/batches`, req),
+
+  getBatch: (batchId: string) => fetchAPI<MigrationBatch>(`${BASE}/batches/${batchId}`),
+
+  listExceptions: (batchId: string) =>
+    fetchAPI<MigrationException[]>(`${BASE}/batches/${batchId}/exceptions`),
+
   retransformBatch: (batchId: string) =>
     postAPI<MigrationBatch>(`${BASE}/batches/${batchId}/retransform`, {}),
 
@@ -155,13 +173,15 @@ export const migrationAPI = {
     fetchAPI<PhaseGateTransition[]>(`${BASE}/engagements/${engagementId}/gate-history`),
 
   // ─── Attention Queue ──────────────────────────────────────────────────────
-  getAttentionItems: (engagementId: string, params?: { priority?: string; phase?: string; source?: string }) =>
+  getAttentionItems: (
+    engagementId: string,
+    params?: { priority?: string; phase?: string; source?: string },
+  ) =>
     fetchAPI<AttentionItem[]>(
       `${BASE}/engagements/${engagementId}/attention${params ? toQueryString(params) : ''}`,
     ),
 
-  getAttentionSummary: () =>
-    fetchAPI<AttentionSummary>(`${BASE}/attention/summary`),
+  getAttentionSummary: () => fetchAPI<AttentionSummary>(`${BASE}/attention/summary`),
 
   // ─── AI Recommendations ───────────────────────────────────────────────────
   getAIRecommendations: (engagementId: string) =>
@@ -180,12 +200,9 @@ export const migrationAPI = {
     fetchAPI<RootCauseResponse>(`${BASE}/engagements/${engagementId}/reconciliation/root-cause`),
 
   // ─── Notifications ────────────────────────────────────────────────────────
-  getNotifications: () =>
-    fetchAPI<MigrationNotification[]>(`${BASE}/notifications`),
+  getNotifications: () => fetchAPI<MigrationNotification[]>(`${BASE}/notifications`),
 
-  markNotificationRead: (id: string) =>
-    putAPI<void>(`${BASE}/notifications/${id}/read`, {}),
+  markNotificationRead: (id: string) => putAPI<void>(`${BASE}/notifications/${id}/read`, {}),
 
-  markAllNotificationsRead: () =>
-    putAPI<void>(`${BASE}/notifications/read-all`, {}),
+  markAllNotificationsRead: () => putAPI<void>(`${BASE}/notifications/read-all`, {}),
 };

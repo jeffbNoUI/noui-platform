@@ -8,7 +8,12 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
-import { useEngagement, useRemediationRecommendations } from '@/hooks/useMigrationApi';
+import {
+  useEngagement,
+  useProfiles,
+  useApproveBaseline,
+  useRemediationRecommendations,
+} from '@/hooks/useMigrationApi';
 import type { QualityProfile, SourceTable } from '@/types/Migration';
 import AIRecommendationCard from '../ai/AIRecommendationCard';
 import RunProfileDialog from '../dialogs/RunProfileDialog';
@@ -38,10 +43,13 @@ export default function QualityProfilePanel({ engagementId }: Props) {
   const [showSourceDialog, setShowSourceDialog] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [discoveredTables, setDiscoveredTables] = useState<SourceTable[]>([]);
-  const profiles: QualityProfile[] = [];
-  const hasProfiles = profiles.length > 0 || engagement?.quality_baseline_approved_at != null;
+  const { data: profiles = [] } = useProfiles(engagementId);
+  const hasProfiles = profiles.length > 0;
   const hasSourceConnection = engagement?.source_connection != null;
-  const { data: remediations } = useRemediationRecommendations(hasProfiles ? engagementId : undefined);
+  const approveMutation = useApproveBaseline();
+  const { data: remediations } = useRemediationRecommendations(
+    hasProfiles ? engagementId : undefined,
+  );
 
   const radarData = useMemo(() => {
     if (profiles.length === 0) return [];
@@ -467,6 +475,47 @@ export default function QualityProfilePanel({ engagementId }: Props) {
               <AIRecommendationCard key={idx} recommendation={rec} />
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Approve Baseline */}
+      {profiles.length > 0 && !engagement?.quality_baseline_approved_at && (
+        <div style={{ marginTop: 20, textAlign: 'center' }}>
+          <button
+            onClick={() => approveMutation.mutate(engagementId)}
+            disabled={approveMutation.isPending}
+            style={{
+              padding: '10px 24px',
+              borderRadius: 8,
+              border: 'none',
+              background: C.sage,
+              color: C.textOnDark,
+              fontSize: 14,
+              fontWeight: 600,
+              fontFamily: BODY,
+              cursor: approveMutation.isPending ? 'not-allowed' : 'pointer',
+              opacity: approveMutation.isPending ? 0.7 : 1,
+            }}
+          >
+            {approveMutation.isPending ? 'Approving...' : 'Approve Quality Baseline'}
+          </button>
+        </div>
+      )}
+      {engagement?.quality_baseline_approved_at && (
+        <div
+          style={{
+            marginTop: 20,
+            padding: '10px 16px',
+            background: '#f0fdf4',
+            border: '1px solid #bbf7d0',
+            borderRadius: 8,
+            fontSize: 13,
+            color: '#166534',
+            fontWeight: 600,
+            textAlign: 'center',
+          }}
+        >
+          Baseline approved
         </div>
       )}
     </div>

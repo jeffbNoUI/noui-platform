@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { C, BODY } from '@/lib/designSystem';
 import MigrationDashboard from './dashboard/MigrationDashboard';
 import EngagementDetail from './engagement/EngagementDetail';
+import BatchDetail from './engagement/BatchDetail';
 
 export type MigrationView = 'dashboard' | 'engagement' | 'batch';
 
@@ -87,12 +88,12 @@ export default function MigrationManagementUI() {
           onSelectBatch={navigateToBatch}
         />
       )}
-      {view === 'batch' && selectedBatchId && (
-        <div className="p-6">
-          <p style={{ color: C.textSecondary, fontFamily: BODY }}>
-            Batch detail view -- coming in Phase 2
-          </p>
-        </div>
+      {view === 'batch' && selectedBatchId && selectedEngagementId && (
+        <BatchDetail
+          batchId={selectedBatchId}
+          engagementId={selectedEngagementId}
+          onBack={() => setView('engagement')}
+        />
       )}
     </div>
   );
