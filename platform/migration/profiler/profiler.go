@@ -14,10 +14,11 @@ type QualityDimension struct {
 
 // TableProfile is the complete quality profile for a single source table.
 type TableProfile struct {
-	TableName    string             `json:"table_name"`
-	RowCount     int                `json:"row_count"`
-	Dimensions   []QualityDimension `json:"dimensions"`
-	OverallScore float64            `json:"overall_score"`
+	TableName        string             `json:"table_name"`
+	RowCount         int                `json:"row_count"`
+	Dimensions       []QualityDimension `json:"dimensions"`
+	OverallScore     float64            `json:"overall_score"`
+	DetectedPatterns []DetectedPattern  `json:"detected_patterns,omitempty"`
 }
 
 // ProfileConfig holds all the checks to run for a given table.
@@ -93,11 +94,19 @@ func ProfileTable(db *sql.DB, cfg ProfileConfig) (*TableProfile, error) {
 	}
 	overallScore := sum / float64(len(dimensions))
 
+	// Run pattern detection on VARCHAR/TEXT columns.
+	detectedPatterns, err := DetectPatterns(db, cfg.TableName, DefaultSampleSize)
+	if err != nil {
+		// Pattern detection is non-critical — log but don't fail the profile.
+		detectedPatterns = nil
+	}
+
 	return &TableProfile{
-		TableName:    cfg.TableName,
-		RowCount:     rowCount,
-		Dimensions:   dimensions,
-		OverallScore: overallScore,
+		TableName:        cfg.TableName,
+		RowCount:         rowCount,
+		Dimensions:       dimensions,
+		OverallScore:     overallScore,
+		DetectedPatterns: detectedPatterns,
 	}, nil
 }
 
