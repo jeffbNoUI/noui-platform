@@ -1,5 +1,43 @@
 # noui-platform — Build History
 
+## Migration Phase 5e: Docker E2E Verification + Schema Drift Fix (2026-03-22)
+
+**Branch:** `claude/busy-ardinghelli`
+
+### What Was Done
+
+**Full Docker E2E Verification — 117/117:**
+- Workflows: 20/20 (audit trail fix from Phase 5d confirmed)
+- Services Hub: 50/50
+- Correspondence: 24/24 (transient DB connection error on first run, clean on retry)
+- Migration: 23/23 (after payload tuning + schema drift fix)
+
+**Migration E2E Payload Tuning (6 fixes):**
+- Engagement: `source_system_name` (only required field)
+- Status transition: `DISCOVERY → PROFILING` (initial status is DISCOVERY)
+- Source config: `driver`/`user`/`dbname` with correct credentials (`noui`/`noui`)
+- Profile: real table names (`member_master`, `salary_hist`)
+- Generate mappings: valid concept tag `employee-master` with realistic column set
+- Batch: `batch_scope` field; Risk: `severity: "P2"` + `description`
+
+**Schema Drift Bug Fix:**
+- `reconciliation_detail.go`: `GetReconciliationByTier` query used planned column names
+  (`reconciliation_id`, `field_name`, `source_value`, `target_value`) but actual DDL uses
+  `recon_id`, `calc_name`, `legacy_value`, `recomputed_value`
+- `attention.go`: Same stale column names in P1 reconciliation UNION query
+- Both queries now match the actual `migration.reconciliation` table DDL
+
+### Stats
+- 4 files changed (3 code + 1 starter prompt)
+- Migration Go: all 11 packages passing (short mode)
+- Frontend: typecheck clean
+- Docker E2E: 117/117 across 4 suites
+
+### What's Next
+- Employer Portal E2E script (`tests/e2e/employer_e2e.sh`)
+- Engagement test fixture fix (`db/engagement_test.go` asserts PROFILING but real default is DISCOVERY)
+- Starter prompt: `docs/plans/2026-03-22-migration-phase5f-starter.md`
+
 ## Migration Phase 5d: CRM Audit Trail + Migration E2E Script (2026-03-22)
 
 **Branch:** `claude/magical-goldstine` — PR #130 (merged)

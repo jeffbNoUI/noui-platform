@@ -51,26 +51,26 @@ func GetReconciliationSummary(db *sql.DB, engagementID string) (*models.Reconcil
 
 // ReconciliationRecord represents a single reconciliation result row.
 type ReconciliationRecord struct {
-	ReconciliationID string  `json:"reconciliation_id"`
-	BatchID          string  `json:"batch_id"`
-	MemberID         string  `json:"member_id"`
-	FieldName        string  `json:"field_name"`
-	SourceValue      *string `json:"source_value"`
-	TargetValue      *string `json:"target_value"`
-	Category         string  `json:"category"`
-	Priority         *string `json:"priority"`
-	Tier             int     `json:"tier"`
+	ReconID         string  `json:"recon_id"`
+	BatchID         string  `json:"batch_id"`
+	MemberID        string  `json:"member_id"`
+	CalcName        string  `json:"calc_name"`
+	LegacyValue     *string `json:"legacy_value"`
+	RecomputedValue *string `json:"recomputed_value"`
+	Category        string  `json:"category"`
+	Priority        string  `json:"priority"`
+	Tier            int     `json:"tier"`
 }
 
 // GetReconciliationByTier returns reconciliation records for a specific tier within an engagement.
 func GetReconciliationByTier(db *sql.DB, engagementID string, tier int) ([]ReconciliationRecord, error) {
 	rows, err := db.Query(
-		`SELECT r.reconciliation_id, r.batch_id, r.member_id, r.field_name,
-		        r.source_value, r.target_value, r.category, r.priority, r.tier
+		`SELECT r.recon_id, r.batch_id, r.member_id, r.calc_name,
+		        r.legacy_value, r.recomputed_value, r.category, r.priority, r.tier
 		 FROM migration.reconciliation r
 		 JOIN migration.batch b ON b.batch_id = r.batch_id
 		 WHERE b.engagement_id = $1 AND r.tier = $2
-		 ORDER BY r.priority NULLS LAST, r.category`,
+		 ORDER BY r.priority ASC, r.category`,
 		engagementID, tier,
 	)
 	if err != nil {
@@ -82,8 +82,8 @@ func GetReconciliationByTier(db *sql.DB, engagementID string, tier int) ([]Recon
 	for rows.Next() {
 		var rec ReconciliationRecord
 		if err := rows.Scan(
-			&rec.ReconciliationID, &rec.BatchID, &rec.MemberID, &rec.FieldName,
-			&rec.SourceValue, &rec.TargetValue, &rec.Category, &rec.Priority, &rec.Tier,
+			&rec.ReconID, &rec.BatchID, &rec.MemberID, &rec.CalcName,
+			&rec.LegacyValue, &rec.RecomputedValue, &rec.Category, &rec.Priority, &rec.Tier,
 		); err != nil {
 			return nil, fmt.Errorf("scan reconciliation record: %w", err)
 		}

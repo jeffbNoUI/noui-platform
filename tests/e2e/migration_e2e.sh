@@ -59,14 +59,10 @@ assert_status "GET /migration/dashboard/system-health" "200" "$HTTP_CODE"
 
 log_header "Phase 2: Engagement Lifecycle"
 
-ENGAGEMENT_NAME="E2E-Test-$(date +%s)"
+ENGAGEMENT_NAME="E2E-Legacy-PAS-$(date +%s)"
 ENGAGEMENT_PAYLOAD=$(cat <<EOF
 {
-  "name": "${ENGAGEMENT_NAME}",
-  "client_name": "E2E Test Client",
-  "source_system": "legacy_pas",
-  "target_system": "noui_platform",
-  "description": "Automated E2E test engagement"
+  "source_system_name": "${ENGAGEMENT_NAME}"
 }
 EOF
 )
@@ -104,11 +100,11 @@ RESPONSE=$(do_get "/api/v1/migration/engagements/${ENGAGEMENT_ID}")
 extract_http "$RESPONSE"
 assert_status "GET /migration/engagements/:id" "200" "$HTTP_CODE"
 
-# Update engagement (PATCH)
-UPDATE_PAYLOAD='{"description": "Updated by E2E test"}'
+# Update engagement status (PATCH) — DISCOVERY → PROFILING (valid forward transition)
+UPDATE_PAYLOAD='{"status": "PROFILING"}'
 RESPONSE=$(do_patch "/api/v1/migration/engagements/${ENGAGEMENT_ID}" "$UPDATE_PAYLOAD")
 extract_http "$RESPONSE"
-assert_status "PATCH /migration/engagements/:id (update)" "200" "$HTTP_CODE"
+assert_status "PATCH /migration/engagements/:id (status → PROFILING)" "200" "$HTTP_CODE"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Phase 3: Source Configuration
@@ -119,12 +115,12 @@ log_header "Phase 3: Source Configuration"
 
 SOURCE_PAYLOAD=$(cat <<EOF
 {
-  "type": "postgresql",
+  "driver": "postgres",
   "host": "postgres",
-  "port": 5432,
-  "database": "noui_pension",
-  "username": "noui",
-  "password": "noui_dev"
+  "port": "5432",
+  "dbname": "noui",
+  "user": "noui",
+  "password": "noui"
 }
 EOF
 )
@@ -144,7 +140,7 @@ assert_status "GET /migration/engagements/:id/source/tables" "200" "$HTTP_CODE"
 
 log_header "Phase 4: Quality Profiling"
 
-PROFILE_PAYLOAD='{"tables": ["members", "salary_history"]}'
+PROFILE_PAYLOAD='{"tables": [{"table_name": "member_master", "schema_name": "public"}, {"table_name": "salary_hist", "schema_name": "public"}]}'
 
 RESPONSE=$(do_post "/api/v1/migration/engagements/${ENGAGEMENT_ID}/profile" "$PROFILE_PAYLOAD")
 extract_http "$RESPONSE"
@@ -167,9 +163,35 @@ assert_status "GET /migration/profiles (list)" "200" "$HTTP_CODE"
 # Generate mappings → list → verify count
 # ═══════════════════════════════════════════════════════════════════════════════
 
-log_header "Phase 5: Field Mappings"
+log_header "Phase 5: Approve Baseline + Field Mappings"
 
-MAPPING_PAYLOAD='{"strategy": "auto"}'
+# Approve quality baseline (required before generate-mappings)
+RESPONSE=$(do_patch "/api/v1/migration/engagements/${ENGAGEMENT_ID}/approve-baseline" "{}")
+extract_http "$RESPONSE"
+assert_status "PATCH /migration/approve-baseline" "200" "$HTTP_CODE"
+
+# Generate mappings with table/column details
+MAPPING_PAYLOAD=$(cat <<EOF
+{
+  "tables": [
+    {
+      "source_table": "member_master",
+      "concept_tag": "employee-master",
+      "columns": [
+        {"name": "member_id", "data_type": "integer", "is_nullable": false, "is_key": true},
+        {"name": "first_name", "data_type": "varchar", "is_nullable": false, "is_key": false},
+        {"name": "last_name", "data_type": "varchar", "is_nullable": false, "is_key": false},
+        {"name": "dob", "data_type": "date", "is_nullable": true, "is_key": false},
+        {"name": "hire_date", "data_type": "date", "is_nullable": true, "is_key": false},
+        {"name": "ssn", "data_type": "varchar", "is_nullable": false, "is_key": false},
+        {"name": "plan_code", "data_type": "varchar", "is_nullable": true, "is_key": false},
+        {"name": "status", "data_type": "varchar", "is_nullable": false, "is_key": false}
+      ]
+    }
+  ]
+}
+EOF
+)
 
 RESPONSE=$(do_post "/api/v1/migration/engagements/${ENGAGEMENT_ID}/generate-mappings" "$MAPPING_PAYLOAD")
 extract_http "$RESPONSE"
@@ -179,6 +201,7 @@ if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "202
   PASS_COUNT=$((PASS_COUNT + 1))
 else
   echo -e "  ${RED}✗${NC} POST /migration/generate-mappings — expected 200/201/202, got $HTTP_CODE"
+  echo "  Response: $(echo "$BODY" | head -c 200)"
   FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 
@@ -195,9 +218,8 @@ log_header "Phase 6: Batches"
 
 BATCH_PAYLOAD=$(cat <<EOF
 {
-  "name": "E2E-Batch-$(date +%s)",
-  "record_count": 100,
-  "filter": {}
+  "batch_scope": "ACTIVE_MEMBERS",
+  "mapping_version": "v1.0"
 }
 EOF
 )
@@ -254,11 +276,10 @@ log_header "Phase 8: Risks"
 
 RISK_PAYLOAD=$(cat <<EOF
 {
-  "title": "E2E Test Risk",
-  "description": "Risk created by E2E test",
-  "severity": "MEDIUM",
-  "category": "DATA_QUALITY",
-  "status": "OPEN"
+  "severity": "P2",
+  "description": "E2E Test Risk — data quality gap in member records",
+  "evidence": "Detected during E2E profiling phase",
+  "mitigation": "Review and correct source records before next batch"
 }
 EOF
 )
