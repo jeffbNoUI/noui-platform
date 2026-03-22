@@ -36,7 +36,7 @@ func (h *Handler) ReconcileBatch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Run Tier 1: stored calculation reconciliation.
-	tier1Results, err := reconciler.ReconcileTier1(h.DB, batchID)
+	tier1Results, err := reconciler.ReconcileTier1(h.DB, batchID, h.PlanConfig)
 	if err != nil {
 		slog.Error("tier1 reconciliation failed", "error", err, "batch_id", batchID)
 		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "RECONCILE_ERROR", "tier 1 reconciliation failed")
