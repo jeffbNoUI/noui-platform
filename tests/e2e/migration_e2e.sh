@@ -42,6 +42,26 @@ if [[ "${1:-}" == "--wait" ]]; then
     echo -e "  ${YELLOW}⚠${NC} intelligence service not available — pattern tests will degrade gracefully"
   fi
   echo ""
+
+  # Wait for prism-source seed data to finish loading.
+  # pg_isready returns true before docker-entrypoint-initdb.d scripts complete.
+  echo -e "${YELLOW}Checking prism-source seed data...${NC}"
+  SEED_ATTEMPTS=0
+  while [ $SEED_ATTEMPTS -lt 30 ]; do
+    ROW_COUNT=$(docker compose exec -T prism-source psql -U prism -d prism_prod -tAc \
+      "SELECT count(*) FROM src_prism.prism_member" 2>/dev/null || echo "0")
+    ROW_COUNT=$(echo "$ROW_COUNT" | tr -d '[:space:]')
+    if [ "$ROW_COUNT" -gt 0 ] 2>/dev/null; then
+      echo -e "  ${GREEN}✓${NC} prism-source ready (${ROW_COUNT} members)"
+      break
+    fi
+    SEED_ATTEMPTS=$((SEED_ATTEMPTS + 1))
+    sleep 2
+  done
+  if [ $SEED_ATTEMPTS -ge 30 ]; then
+    echo -e "  ${YELLOW}⚠${NC} prism-source seed data not detected — source tests may fail"
+  fi
+  echo ""
 fi
 
 echo -e "${CYAN}Migration Service E2E Tests${NC}"
@@ -221,6 +241,9 @@ RESPONSE=$(do_get "/api/v1/migration/engagements/${ENGAGEMENT_ID}/mappings")
 extract_http "$RESPONSE"
 assert_status "GET /migration/mappings (list)" "200" "$HTTP_CODE"
 
+# Extract first mapping ID for later use (Phase 7b corpus learning test)
+FIRST_MAPPING_ID=$(echo "$BODY" | jq -r '.data[0].mapping_id // .data[0].id // empty' 2>/dev/null || echo "")
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Phase 6: Batches
 # Create batch → list → get batch
@@ -392,6 +415,10 @@ if [ -n "$BATCH_ID" ] && [ "$BATCH_ID" != "null" ]; then
   RESPONSE=$(do_get "/api/v1/migration/engagements/${ENGAGEMENT_ID}/mappings")
   extract_http "$RESPONSE"
   MAPPING_ID=$(echo "$BODY" | jq -r '.data[0].mapping_id // .data[0].id // empty' 2>/dev/null || echo "")
+  # Fall back to Phase 5 extraction if re-fetch yielded nothing
+  if [ -z "$MAPPING_ID" ] || [ "$MAPPING_ID" = "null" ]; then
+    MAPPING_ID="${FIRST_MAPPING_ID:-}"
+  fi
 
   if [ -n "$MAPPING_ID" ] && [ "$MAPPING_ID" != "null" ]; then
     APPROVAL_PAYLOAD='{"approval_status": "AGREED"}'
@@ -535,6 +562,76 @@ if [ "$SOURCE_DRIVER" = "postgres" ]; then
 else
   echo -e "  ${RED}✗${NC} Source connection not found (HTTP $HTTP_CODE, driver='$SOURCE_DRIVER')"
   FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Phase 12: Certification
+# Certify the engagement → verify certification record
+# ═══════════════════════════════════════════════════════════════════════════════
+
+log_header "Phase 12: Certification"
+
+CERT_PAYLOAD=$(cat <<'CERTEOF'
+{
+  "gate_score": 1.0,
+  "p1_count": 0,
+  "checklist": {
+    "recon_score": true,
+    "p1_resolved": true,
+    "parallel_duration": true,
+    "stakeholder_signoff": true,
+    "rollback_plan": true
+  },
+  "notes": "E2E test certification"
+}
+CERTEOF
+)
+
+RESPONSE=$(do_post "/api/v1/migration/engagements/${ENGAGEMENT_ID}/certify" "$CERT_PAYLOAD")
+extract_http "$RESPONSE"
+assert_status "POST /migration/engagements/:id/certify" "200" "$HTTP_CODE"
+
+RESPONSE=$(do_get "/api/v1/migration/engagements/${ENGAGEMENT_ID}/certification")
+extract_http "$RESPONSE"
+assert_status "GET /migration/engagements/:id/certification" "200" "$HTTP_CODE"
+
+CERT_BY=$(echo "$BODY" | jq -r '.data.certified_by // empty' 2>/dev/null || echo "")
+TOTAL_COUNT=$((TOTAL_COUNT + 1))
+if [ -n "$CERT_BY" ] && [ "$CERT_BY" != "null" ]; then
+  echo -e "  ${GREEN}✓${NC} Certification record has certified_by=${CERT_BY}"
+  PASS_COUNT=$((PASS_COUNT + 1))
+else
+  echo -e "  ${RED}✗${NC} Certification record missing certified_by"
+  FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Phase 13: Lineage
+# Verify batch lineage tracking
+# ═══════════════════════════════════════════════════════════════════════════════
+
+log_header "Phase 13: Lineage"
+
+if [ -n "$BATCH_ID" ] && [ "$BATCH_ID" != "null" ]; then
+  RESPONSE=$(do_get "/api/v1/migration/batches/${BATCH_ID}/lineage?limit=10")
+  extract_http "$RESPONSE"
+  assert_status "GET /migration/batches/:id/lineage" "200" "$HTTP_CODE"
+
+  LINEAGE_COUNT=$(echo "$BODY" | jq -r '.data.count // 0' 2>/dev/null || echo "0")
+  TOTAL_COUNT=$((TOTAL_COUNT + 1))
+  if [ "$LINEAGE_COUNT" -ge 0 ] 2>/dev/null; then
+    echo -e "  ${GREEN}✓${NC} Lineage endpoint returned count=${LINEAGE_COUNT}"
+    PASS_COUNT=$((PASS_COUNT + 1))
+  else
+    echo -e "  ${RED}✗${NC} Lineage endpoint failed"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+  fi
+
+  RESPONSE=$(do_get "/api/v1/migration/batches/${BATCH_ID}/lineage/summary")
+  extract_http "$RESPONSE"
+  assert_status "GET /migration/batches/:id/lineage/summary" "200" "$HTTP_CODE"
+else
+  echo -e "  ${YELLOW}⚠${NC} No batch ID — skipping lineage tests"
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
