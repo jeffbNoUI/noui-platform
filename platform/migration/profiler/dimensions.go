@@ -230,9 +230,28 @@ func ProfileTimeliness(db *sql.DB, table string, dateColumns []string) (QualityD
 			return dim, fmt.Errorf("profile timeliness: %w", err)
 		}
 		query := fmt.Sprintf("SELECT MAX(%s) FROM %s", qc, quotedTable)
+
+		// Try scanning as native time first, fall back to string parsing
+		// for legacy systems that store dates as VARCHAR.
 		var maxDate sql.NullTime
 		if err := db.QueryRow(query).Scan(&maxDate); err != nil {
-			return dim, fmt.Errorf("profile timeliness for column %s: %w", col, err)
+			// Scan failed — column is likely VARCHAR; retry as string
+			var maxStr sql.NullString
+			if err2 := db.QueryRow(query).Scan(&maxStr); err2 != nil {
+				return dim, fmt.Errorf("profile timeliness for column %s: %w", col, err2)
+			}
+			if maxStr.Valid && maxStr.String != "" {
+				parsed, parseErr := parseFlexibleDate(maxStr.String)
+				if parseErr != nil {
+					// Unparseable date string — skip this column gracefully
+					continue
+				}
+				if !found || parsed.After(mostRecent) {
+					mostRecent = parsed
+					found = true
+				}
+			}
+			continue
 		}
 		if maxDate.Valid {
 			if !found || maxDate.Time.After(mostRecent) {
@@ -258,6 +277,25 @@ func ProfileTimeliness(db *sql.DB, table string, dateColumns []string) (QualityD
 	dim.Details = fmt.Sprintf("most recent record: %.0f days ago", daysSince)
 
 	return dim, nil
+}
+
+// parseFlexibleDate tries common date formats for legacy VARCHAR date columns.
+func parseFlexibleDate(s string) (time.Time, error) {
+	s = strings.TrimSpace(s)
+	formats := []string{
+		"2006-01-02",          // ISO 8601
+		"01/02/2006",          // US format
+		"2006-01-02 15:04:05", // ISO with time
+		"20060102",            // Compact YYYYMMDD
+		"01-02-2006",          // US with dashes
+		"2006/01/02",          // ISO with slashes
+	}
+	for _, f := range formats {
+		if t, err := time.Parse(f, s); err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("unable to parse date: %q", s)
 }
 
 // ProfileValidity measures business rule pass rate.

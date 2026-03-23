@@ -306,6 +306,17 @@ export function useApplyCluster() {
   });
 }
 
+export function useExecuteBatch() {
+  const queryClient = useQueryClient();
+  return useMutation<MigrationBatch, Error, string>({
+    mutationFn: (batchId) => migrationAPI.executeBatch(batchId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['migration', 'batch'] });
+      queryClient.invalidateQueries({ queryKey: ['migration', 'engagement'] });
+    },
+  });
+}
+
 export function useRetransformBatch() {
   const queryClient = useQueryClient();
   return useMutation<MigrationBatch, Error, string>({

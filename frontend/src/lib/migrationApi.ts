@@ -119,6 +119,9 @@ export const migrationAPI = {
   listExceptions: (batchId: string) =>
     fetchAPI<MigrationException[]>(`${BASE}/batches/${batchId}/exceptions`, RAW),
 
+  executeBatch: (batchId: string) =>
+    postAPI<MigrationBatch>(`${BASE}/batches/${batchId}/execute`, {}, RAW),
+
   retransformBatch: (batchId: string) =>
     postAPI<MigrationBatch>(`${BASE}/batches/${batchId}/retransform`, {}, RAW),
 

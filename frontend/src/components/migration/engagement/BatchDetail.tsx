@@ -3,6 +3,7 @@ import {
   useBatch,
   useExceptionClusters,
   useExceptions,
+  useExecuteBatch,
   useRetransformBatch,
   useReconcileBatch,
   useApplyCluster,
@@ -55,6 +56,7 @@ export default function BatchDetail({
   const { data: batch, isLoading } = useBatch(batchId);
   const { data: clusters } = useExceptionClusters(batchId);
   const { data: exceptions } = useExceptions(batchId);
+  const executeBatch = useExecuteBatch();
   const retransform = useRetransformBatch();
   const reconcile = useReconcileBatch();
   const applyCluster = useApplyCluster();
@@ -162,24 +164,45 @@ export default function BatchDetail({
 
         {/* Action buttons */}
         <div className="flex gap-3">
-          <button
-            onClick={() => retransform.mutate(batchId)}
-            disabled={retransform.isPending}
-            style={{
-              fontFamily: BODY,
-              fontSize: 13,
-              fontWeight: 500,
-              padding: '8px 16px',
-              borderRadius: 8,
-              border: `1px solid ${C.border}`,
-              background: C.cardBg,
-              color: C.navy,
-              cursor: retransform.isPending ? 'not-allowed' : 'pointer',
-              opacity: retransform.isPending ? 0.6 : 1,
-            }}
-          >
-            {retransform.isPending ? 'Retransforming...' : 'Retransform'}
-          </button>
+          {batch.status === 'PENDING' ? (
+            <button
+              onClick={() => executeBatch.mutate(batchId)}
+              disabled={executeBatch.isPending}
+              style={{
+                fontFamily: BODY,
+                fontSize: 13,
+                fontWeight: 600,
+                padding: '8px 16px',
+                borderRadius: 8,
+                border: 'none',
+                background: C.navy,
+                color: '#fff',
+                cursor: executeBatch.isPending ? 'not-allowed' : 'pointer',
+                opacity: executeBatch.isPending ? 0.6 : 1,
+              }}
+            >
+              {executeBatch.isPending ? 'Executing...' : 'Execute Batch'}
+            </button>
+          ) : (
+            <button
+              onClick={() => retransform.mutate(batchId)}
+              disabled={retransform.isPending}
+              style={{
+                fontFamily: BODY,
+                fontSize: 13,
+                fontWeight: 500,
+                padding: '8px 16px',
+                borderRadius: 8,
+                border: `1px solid ${C.border}`,
+                background: C.cardBg,
+                color: C.navy,
+                cursor: retransform.isPending ? 'not-allowed' : 'pointer',
+                opacity: retransform.isPending ? 0.6 : 1,
+              }}
+            >
+              {retransform.isPending ? 'Retransforming...' : 'Retransform'}
+            </button>
+          )}
           <button
             onClick={() => reconcile.mutate(batchId)}
             disabled={isActionDisabled || reconcile.isPending}
