@@ -296,6 +296,27 @@ type RootCauseResponse struct {
 	Confidence    float64 `json:"confidence"`
 }
 
+// ReconciliationPattern represents a systematic mismatch pattern detected by
+// the intelligence service after reconciliation.
+type ReconciliationPattern struct {
+	PatternID        string   `json:"pattern_id"`
+	BatchID          string   `json:"batch_id"`
+	SuspectedDomain  string   `json:"suspected_domain"`
+	PlanCode         string   `json:"plan_code"`
+	Direction        string   `json:"direction"`
+	MemberCount      int      `json:"member_count"`
+	MeanVariance     string   `json:"mean_variance"`
+	CoefficientOfVar float64  `json:"coefficient_of_var"`
+	AffectedMembers  []string `json:"affected_members"`
+	CorrectionType   *string  `json:"correction_type"`
+	AffectedField    *string  `json:"affected_field"`
+	Confidence       *float64 `json:"confidence"`
+	Evidence         *string  `json:"evidence"`
+	Resolved         bool     `json:"resolved"`
+	ResolvedAt       *string  `json:"resolved_at"`
+	CreatedAt        string   `json:"created_at"`
+}
+
 // MigrationBatch represents a transformation batch.
 type MigrationBatch struct {
 	BatchID           string     `json:"batch_id"`
