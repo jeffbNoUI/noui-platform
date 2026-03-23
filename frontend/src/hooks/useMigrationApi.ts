@@ -477,6 +477,39 @@ export function useResolvePattern() {
   });
 }
 
+// ─── Certification hooks ────────────────────────────────────────────────────
+
+export function useCertification(engagementId: string) {
+  return useQuery<Record<string, unknown> | null>({
+    queryKey: ['migration', 'certification', engagementId],
+    queryFn: () => migrationAPI.getCertification(engagementId),
+    enabled: !!engagementId,
+  });
+}
+
+export function useCertifyEngagement() {
+  const queryClient = useQueryClient();
+  return useMutation<
+    void,
+    Error,
+    {
+      engagementId: string;
+      body: {
+        gate_score: number;
+        p1_count: number;
+        checklist: Record<string, boolean>;
+        notes?: string;
+      };
+    }
+  >({
+    mutationFn: ({ engagementId, body }) => migrationAPI.certifyEngagement(engagementId, body),
+    onSuccess: (_, { engagementId }) => {
+      queryClient.invalidateQueries({ queryKey: ['migration', 'certification', engagementId] });
+      queryClient.invalidateQueries({ queryKey: ['migration', 'engagement', engagementId] });
+    },
+  });
+}
+
 export function useReconciliationPatterns(engagementId: string | undefined) {
   return useQuery<{ patterns: ReconciliationPattern[]; count: number }>({
     queryKey: ['migration', 'reconciliation', 'patterns', engagementId],
