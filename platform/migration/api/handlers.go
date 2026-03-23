@@ -69,6 +69,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/reconciliation", h.GetReconciliation)
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/reconciliation/p1", h.GetP1Issues)
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/reconciliation/patterns", h.GetReconciliationPatterns)
+	mux.HandleFunc("PATCH /api/v1/migration/reconciliation/patterns/{id}/resolve", h.ResolvePattern)
 
 	// Dashboard
 	mux.HandleFunc("GET /api/v1/migration/dashboard/summary", h.DashboardSummary)
