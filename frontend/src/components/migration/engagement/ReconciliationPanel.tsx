@@ -6,6 +6,7 @@ import {
   useReconciliation,
   useRootCauseAnalysis,
   useReconciliationPatterns,
+  useResolvePattern,
 } from '@/hooks/useMigrationApi';
 import RootCauseAnalysisCard from '../ai/RootCauseAnalysis';
 import TierFunnel from '../charts/TierFunnel';
@@ -45,6 +46,7 @@ export default function ReconciliationPanel({ engagementId }: Props) {
   const { data: rootCause } = useRootCauseAnalysis(engagementId);
   const { data: patternsData } = useReconciliationPatterns(engagementId);
   const patterns = patternsData?.patterns ?? [];
+  const resolvePattern = useResolvePattern();
 
   const [filterCategory, setFilterCategory] = useState<ReconciliationCategory | 'ALL'>('ALL');
   const [filterTier, setFilterTier] = useState<number | 0>(0);
@@ -364,6 +366,28 @@ export default function ReconciliationPanel({ engagementId }: Props) {
                     )}
                   </div>
                 )}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+                  {!p.resolved ? (
+                    <button
+                      onClick={() => resolvePattern.mutate(p.pattern_id)}
+                      disabled={resolvePattern.isPending}
+                      style={{
+                        background: 'none',
+                        border: `1px solid ${C.sage}`,
+                        borderRadius: 4,
+                        padding: '2px 8px',
+                        cursor: 'pointer',
+                        fontFamily: MONO,
+                        fontSize: 11,
+                        color: C.sage,
+                      }}
+                    >
+                      {resolvePattern.isPending ? 'Resolving...' : 'Resolve'}
+                    </button>
+                  ) : (
+                    <span style={{ fontFamily: MONO, fontSize: 11, color: C.sage }}>Resolved</span>
+                  )}
+                </div>
               </div>
             ))}
           </div>

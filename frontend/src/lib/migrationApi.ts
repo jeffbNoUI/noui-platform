@@ -230,6 +230,13 @@ export const migrationAPI = {
       RAW,
     ),
 
+  resolvePattern: (patternId: string) =>
+    patchAPI<ReconciliationPattern>(
+      `${BASE}/reconciliation/patterns/${patternId}/resolve`,
+      {},
+      RAW,
+    ),
+
   // ─── Notifications ────────────────────────────────────────────────────────
   getNotifications: () => fetchAPI<MigrationNotification[]>(`${BASE}/notifications`, RAW),
 
