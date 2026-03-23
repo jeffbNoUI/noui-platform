@@ -125,6 +125,10 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/certify", h.HandleCertify)
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/certification", h.HandleGetCertification)
 
+	// Lineage
+	mux.HandleFunc("GET /api/v1/migration/batches/{id}/lineage", h.HandleGetLineage)
+	mux.HandleFunc("GET /api/v1/migration/batches/{id}/lineage/summary", h.HandleGetLineageSummary)
+
 	// Notifications
 	mux.HandleFunc("GET /api/v1/migration/notifications", h.HandleGetNotifications)
 	mux.HandleFunc("PUT /api/v1/migration/notifications/{id}/read", h.HandleMarkNotificationRead)

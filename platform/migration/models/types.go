@@ -378,3 +378,24 @@ type CreateBatchRequest struct {
 	BatchScope     string `json:"batch_scope"`
 	MappingVersion string `json:"mapping_version"`
 }
+
+// LineageRecord represents a single data lineage entry tracking a transformation.
+type LineageRecord struct {
+	LineageID   string `json:"lineage_id"`
+	BatchID     string `json:"batch_id"`
+	RowKey      string `json:"row_key"`
+	HandlerName string `json:"handler_name"`
+	ColumnName  string `json:"column_name"`
+	SourceValue string `json:"source_value"`
+	ResultValue string `json:"result_value"`
+	CreatedAt   string `json:"created_at"`
+}
+
+// LineageSummary provides aggregate statistics for lineage records in a batch.
+type LineageSummary struct {
+	TotalRecords        int      `json:"total_records"`
+	UniqueMembers       int      `json:"unique_members"`
+	FieldsCovered       int      `json:"fields_covered"`
+	TransformationTypes []string `json:"transformation_types"`
+	ExceptionCount      int      `json:"exception_count"`
+}
