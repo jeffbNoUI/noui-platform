@@ -19,7 +19,7 @@ func PersistPatterns(tx *sql.Tx, batchID string, patterns []models.Reconciliatio
 		(batch_id, suspected_domain, plan_code, direction, member_count,
 		 mean_variance, coefficient_of_var, affected_members,
 		 correction_type, affected_field, confidence, evidence)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, $11, $12)`
 
 	for _, p := range patterns {
 		membersJSON, err := json.Marshal(p.AffectedMembers)
@@ -34,7 +34,7 @@ func PersistPatterns(tx *sql.Tx, batchID string, patterns []models.Reconciliatio
 			p.MemberCount,
 			p.MeanVariance,
 			p.CoefficientOfVar,
-			membersJSON,
+			string(membersJSON),
 			p.CorrectionType,
 			p.AffectedField,
 			p.Confidence,

@@ -58,6 +58,11 @@ export function useEngagements() {
   return useQuery<MigrationEngagement[]>({
     queryKey: ['migration', 'engagements'],
     queryFn: () => migrationAPI.listEngagements(),
+    select: (data) =>
+      data.map((e) => ({
+        ...e,
+        status: (e.status?.toUpperCase() ?? e.status) as MigrationEngagement['status'],
+      })),
   });
 }
 
@@ -66,6 +71,10 @@ export function useEngagement(id: string) {
     queryKey: ['migration', 'engagement', id],
     queryFn: () => migrationAPI.getEngagement(id),
     enabled: !!id,
+    select: (data) => ({
+      ...data,
+      status: (data.status?.toUpperCase() ?? data.status) as MigrationEngagement['status'],
+    }),
   });
 }
 
