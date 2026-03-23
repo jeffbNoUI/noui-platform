@@ -15,6 +15,7 @@ import (
 type Handler struct {
 	DB          *sql.DB
 	IntelClient intelligence.Scorer    // nil-safe: handlers degrade to template-only if nil
+	Analyzer    intelligence.Analyzer  // nil-safe: pattern detection degrades if nil
 	Hub         *ws.Hub                // WebSocket hub for broadcasting events (nil-safe)
 	PlanConfig  *reconciler.PlanConfig // nil-safe: reconciliation degrades if not loaded
 }
@@ -67,6 +68,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/migration/batches/{id}/reconcile", h.ReconcileBatch)
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/reconciliation", h.GetReconciliation)
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/reconciliation/p1", h.GetP1Issues)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/reconciliation/patterns", h.GetReconciliationPatterns)
 
 	// Dashboard
 	mux.HandleFunc("GET /api/v1/migration/dashboard/summary", h.DashboardSummary)
