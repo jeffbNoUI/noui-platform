@@ -1,5 +1,56 @@
 # noui-platform — Build History
 
+## Session 25: Migration Pipeline Fixes — Batch Scope + NaN Guard (2026-03-23)
+
+**Branch:** `claude/priceless-albattani` → PR #150 (merged)
+
+### What Was Done
+
+Fixed two critical blockers preventing the migration data pipeline from working end-to-end.
+
+**1. Batch Scope → Source Table Mapping (production design — Option B)**
+
+The batch executor treated `batch_scope` ("ACTIVE_MEMBERS") as a literal table name,
+which failed because no such table exists. Implemented a proper resolution chain:
+
+- **Primary**: Extract source table from field mappings (set during Phase 3 Mapping).
+  These are authoritative — created by the user during mapping and reflect actual
+  discovered table names.
+- **Secondary**: Auto-discover primary key from source DB's `information_schema`.
+- **Fallback**: Hard-coded system name → table mapping (PRISM, PAS) for backward
+  compatibility.
+
+**2. NaN% AI Recommendation Display**
+
+`AIRecommendationCard` displayed `NaN%` when recommendation confidence was
+undefined/null. Added type guard: `typeof confidence === 'number' && isFinite()`.
+
+**3. Phase 5g Verification (already complete)**
+
+Confirmed PR #134 already fixed: dbcontext stale connection cascade, uploaded_by UUID
+in employer-reporting, hireDate timestamp parsing in employer-terminations.
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `platform/migration/api/batch_handlers.go` | `resolveSourceTable` reads mappings; `resolvePrimaryKey` auto-discovers from info_schema |
+| `platform/migration/api/batch_handlers_test.go` | 5 new tests for resolve functions |
+| `frontend/src/components/migration/ai/AIRecommendationCard.tsx` | NaN confidence guard |
+
+### Stats
+
+- **Go migration:** 11/11 packages pass
+- **Frontend:** 235 files, 1856 tests pass (0 typecheck errors)
+- **Migration E2E:** 47/47 (baseline, pre-code-change)
+
+### What's Next
+
+- Docker E2E verification of batch execution with new resolve logic
+- Browser walkthrough: batch execute → loaded rows → reconciliation → certification
+- Full employer + migration E2E suites to confirm no regressions
+- Starter prompt: `docs/plans/2026-03-23-migration-pipeline-docker-e2e-starter.md`
+
 ## Session 24: Migration UI Walkthrough — 6 Phases, 5 Bugs Fixed (2026-03-23)
 
 **Branch:** `claude/elegant-elion`
