@@ -1,5 +1,59 @@
 # noui-platform — Build History
 
+## Session 22: Reconciliation E2E Verification — 40/40 PASSING (2026-03-23)
+
+**Branch:** `claude/sad-goodall`
+
+### What Was Done
+
+Docker E2E verification of the full reconciliation pipeline from Sessions 20-21,
+plus fixing all 3 pre-existing E2E failures to reach 40/40 passing.
+
+**E2E Test Additions (Phase 7b + 7c):**
+1. **POST /batches/:id/reconcile** — trigger full 3-tier reconciliation, verify gate result
+2. **GET /reconciliation/patterns** — verify intelligence-detected patterns endpoint
+3. **PATCH /reconciliation/patterns/:id/resolve** — pattern resolution workflow
+4. **GET /reconciliation/root-cause** — enriched root cause with patterns array
+5. **GET /reconciliation/p1** — P1 priority issues endpoint
+6. **Corpus learning** — mapping approval triggers async RecordDecision
+7. **Intelligence service health** — direct health check on port 8101
+8. **GET /intelligence/corpus-stats** — corpus metrics endpoint
+
+**Pre-existing Failures FIXED:**
+
+| Failure | Root Cause | Fix |
+|---------|-----------|-----|
+| Phase 4: profiling 500 | E2E used `member_master` but source DB has `src_prism.prism_member` | Use schema-qualified table names in E2E payload |
+| Phase 10: mapping-spec 500 | Migration 036 recreated `migration.exception` without `canonical_table` column | Updated `report_handler.go` query to use `handler_name` |
+| Phase 11: source_connection missing | Rate limiting (1 req/s burst 20) exhausted by Phase 10; 429 responses lack data fields | Raised rate limits for Docker dev env + added HTTP status assert |
+
+**Infrastructure Fixes:**
+- Added migration 039 (`reconciliation_patterns.sql`) to docker-compose.yml volume mounts
+- Exposed intelligence service port 8101 to host for direct E2E testing
+- Added intelligence service health check to `--wait` flag (non-blocking)
+- Raised migration service rate limits in Docker for E2E burst traffic
+
+### Files Changed
+
+- `tests/e2e/migration_e2e.sh` — Phase 7b + 7c, fixed table names, added status assert
+- `docker-compose.yml` — Migration 039 mount, intelligence port, rate limit env vars
+- `platform/migration/api/report_handler.go` — Fixed `canonical_table` → `handler_name`
+- `BUILD_HISTORY.md` — Session record
+
+### Stats
+
+- **E2E: 40/40 PASSING** (up from 36/39)
+- New tests: ~15 assertions across Phase 7b + 7c
+- All reconciliation endpoints: 200 OK
+- Intelligence service: healthy, corpus-stats accessible
+- Nil-safe degradation verified: pattern count=0 when no mismatches exist
+
+### What's Next
+
+- Parallel run infrastructure (Phase 4 hardening)
+- Auditor-readable lineage reports
+- Performance testing at 250K+ member scale
+
 ## Session 21: Reconciliation Completion — 5 Items (2026-03-22)
 
 **Branch:** `claude/quizzical-murdock`
