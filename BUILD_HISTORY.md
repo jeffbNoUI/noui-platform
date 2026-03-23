@@ -1,5 +1,54 @@
 # noui-platform — Build History
 
+## Session 19: Frontend Polish + Reconciliation UI Enhancement (2026-03-22)
+
+**Branch:** `claude/interesting-hamilton`
+
+### What Was Done
+
+**Phase 5g verification:** Confirmed all 3 reported bugs (dbcontext stale connection,
+uploaded_by UUID, hireDate parsing) were already fixed in the current codebase. No code
+changes needed.
+
+**Frontend polish (2 of 3 items — 1 was already correct):**
+1. **Title truncation on engagement cards** — Added `overflow: hidden`, `textOverflow:
+   ellipsis`, `whiteSpace: nowrap` to EngagementList card titles. Previously titles
+   could overflow the card boundary.
+2. **Default tab for DISCOVERY phase** — Already correct (`defaultTab()` maps DISCOVERY
+   → 'discovery' tab). No change needed.
+3. **Phase stepper responsive overflow** — Added CSS media query for `max-width: 640px`
+   that shrinks connector width (32px → 16px) and label font size (11px → 9px). Added
+   className hooks for media query targeting.
+
+**Reconciliation UI enhancement:**
+- Added **tier score cards** showing per-tier gate scores (T1/T2/T3) with color-coded
+  pass/warn/fail thresholds
+- Added **full variance detail table** (collapsible) showing all reconciliation records
+  with legacy vs. recomputed values side-by-side
+- Added **filter bar** with category (ALL/MATCH/MINOR/MAJOR/ERROR), tier (All/T1/T2/T3),
+  and member ID search
+- Displays **systematic flag** indicator (gold dot) and **resolved** checkmark
+- Shows **suspected domain** column for variance root cause hints
+- Sticky header, scrollable body (max 480px), responsive filter wrapping
+
+### Files Changed
+
+- `frontend/src/components/migration/dashboard/EngagementList.tsx` — title truncation
+- `frontend/src/components/migration/engagement/PhaseStepper.tsx` — responsive CSS
+- `frontend/src/components/migration/engagement/ReconciliationPanel.tsx` — full enhancement
+
+### Stats
+
+- 3 files changed
+- Frontend: typecheck clean, 231 test files, 1838 tests passing
+- Migration Go: 11 packages passing (short mode)
+
+### What's Next
+
+- Migration intelligence integration (wire Python service into Go reconciler)
+- Port management Phase 2 (standardize container ports)
+- Additional reconciliation features: batch-level reconcile button, resolution workflow
+
 ## Session 18: Two-Source Proof — Perfect Gate Scores (2026-03-22)
 
 **Branch:** `claude/loving-pike`
