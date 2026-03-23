@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
 import {
   useReconciliationSummary,
@@ -13,6 +13,8 @@ import {
 import RootCauseAnalysisCard from '../ai/RootCauseAnalysis';
 import TierFunnel from '../charts/TierFunnel';
 import type { Reconciliation, ReconciliationCategory, RiskSeverity } from '@/types/Migration';
+
+type FeedbackState = { type: 'success' | 'error'; message: string } | null;
 
 const CATEGORY_COLOR: Record<ReconciliationCategory, string> = {
   MATCH: C.sage,
@@ -52,6 +54,15 @@ export default function ReconciliationPanel({ engagementId }: Props) {
   const reconcileBatch = useReconcileBatch();
   const { data: batches } = useBatches(engagementId);
   const latestBatch = batches?.[batches.length - 1];
+
+  const [feedback, setFeedback] = useState<FeedbackState>(null);
+
+  // Auto-dismiss feedback after 4 seconds
+  useEffect(() => {
+    if (!feedback) return;
+    const timer = setTimeout(() => setFeedback(null), 4000);
+    return () => clearTimeout(timer);
+  }, [feedback]);
 
   const [filterCategory, setFilterCategory] = useState<ReconciliationCategory | 'ALL'>('ALL');
   const [filterTier, setFilterTier] = useState<number | 0>(0);
@@ -103,10 +114,35 @@ export default function ReconciliationPanel({ engagementId }: Props) {
 
   return (
     <div style={{ fontFamily: BODY }}>
+      {feedback && (
+        <div
+          style={{
+            padding: '10px 16px',
+            borderRadius: 8,
+            marginBottom: 12,
+            fontSize: 13,
+            fontWeight: 500,
+            color: '#fff',
+            background: feedback.type === 'success' ? C.sage : C.coral,
+          }}
+        >
+          {feedback.message}
+        </div>
+      )}
       {latestBatch && latestBatch.status === 'LOADED' && (
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
           <button
-            onClick={() => reconcileBatch.mutate(latestBatch.batch_id)}
+            onClick={() =>
+              reconcileBatch.mutate(latestBatch.batch_id, {
+                onSuccess: () =>
+                  setFeedback({
+                    type: 'success',
+                    message: 'Reconciliation completed successfully.',
+                  }),
+                onError: (err) =>
+                  setFeedback({ type: 'error', message: `Reconciliation failed: ${err.message}` }),
+              })
+            }
             disabled={reconcileBatch.isPending}
             style={{
               background: C.sage,
@@ -394,7 +430,20 @@ export default function ReconciliationPanel({ engagementId }: Props) {
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
                   {!p.resolved ? (
                     <button
-                      onClick={() => resolvePattern.mutate(p.pattern_id)}
+                      onClick={() =>
+                        resolvePattern.mutate(p.pattern_id, {
+                          onSuccess: () =>
+                            setFeedback({
+                              type: 'success',
+                              message: `Pattern "${p.suspected_domain}" resolved.`,
+                            }),
+                          onError: (err) =>
+                            setFeedback({
+                              type: 'error',
+                              message: `Resolve failed: ${err.message}`,
+                            }),
+                        })
+                      }
                       disabled={resolvePattern.isPending}
                       style={{
                         background: 'none',
