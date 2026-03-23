@@ -264,3 +264,58 @@ func TestAnalyzeMismatches_EmptyResults(t *testing.T) {
 		t.Errorf("expected 0 patterns, got %d", len(resp.Patterns))
 	}
 }
+
+func TestRecordDecision_Success(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("expected POST, got %s", r.Method)
+		}
+		if r.URL.Path != "/intelligence/record-decision" {
+			t.Errorf("expected /intelligence/record-decision, got %s", r.URL.Path)
+		}
+
+		var req RecordDecisionRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("failed to decode request: %v", err)
+		}
+		if req.Decision != "approve" {
+			t.Errorf("expected decision=approve, got %s", req.Decision)
+		}
+		if req.SourceColumn != "MBR_NBR" {
+			t.Errorf("expected source_column=MBR_NBR, got %s", req.SourceColumn)
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	err := client.RecordDecision(context.Background(), RecordDecisionRequest{
+		TenantID:        "test-tenant",
+		SourceColumn:    "MBR_NBR",
+		CanonicalColumn: "member_id",
+		Decision:        "approve",
+		SourcePlatform:  "PRISM",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestRecordDecision_ServerError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("internal error"))
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	err := client.RecordDecision(context.Background(), RecordDecisionRequest{
+		TenantID:     "test-tenant",
+		SourceColumn: "MBR_NBR",
+		Decision:     "approve",
+	})
+	if err == nil {
+		t.Fatal("expected error for 500 response")
+	}
+}

@@ -1,15 +1,18 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/noui/platform/apiresponse"
+	"github.com/noui/platform/auth"
 	migrationdb "github.com/noui/platform/migration/db"
 	"github.com/noui/platform/migration/intelligence"
 	"github.com/noui/platform/migration/mapper"
@@ -359,4 +362,22 @@ func (h *Handler) UpdateMapping(w http.ResponseWriter, r *http.Request) {
 	}
 
 	apiresponse.WriteSuccess(w, http.StatusOK, "migration", m)
+
+	// Record mapping decision for corpus learning (fire-and-forget).
+	if h.Analyzer != nil {
+		if recorder, ok := h.Analyzer.(intelligence.CorpusRecorder); ok {
+			go func() {
+				ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+				defer cancel()
+				if err := recorder.RecordDecision(ctx, intelligence.RecordDecisionRequest{
+					TenantID:        auth.TenantID(r.Context()),
+					SourceColumn:    m.SourceColumn,
+					CanonicalColumn: m.CanonicalColumn,
+					Decision:        strings.ToLower(req.ApprovalStatus),
+				}); err != nil {
+					slog.Warn("failed to record mapping decision", "error", err, "mapping_id", mappingID)
+				}
+			}()
+		}
+	}
 }
