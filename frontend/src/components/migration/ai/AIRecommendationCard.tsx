@@ -15,7 +15,11 @@ function confidenceColor(confidence: number): { bg: string; text: string } {
 
 export default function AIRecommendationCard({ recommendation, onAction }: Props) {
   const [expanded, setExpanded] = useState(false);
-  const cc = confidenceColor(recommendation.confidence);
+  const confidence =
+    typeof recommendation.confidence === 'number' && isFinite(recommendation.confidence)
+      ? recommendation.confidence
+      : 0;
+  const cc = confidenceColor(confidence);
 
   return (
     <div
@@ -62,7 +66,7 @@ export default function AIRecommendationCard({ recommendation, onAction }: Props
             color: cc.text,
           }}
         >
-          {Math.round(recommendation.confidence * 100)}%
+          {Math.round(confidence * 100)}%
         </span>
       </div>
 

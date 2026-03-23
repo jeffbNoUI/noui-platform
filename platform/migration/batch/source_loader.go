@@ -47,7 +47,12 @@ func LoadSourceReferenceData(migrationDB *sql.DB, batchID, sourceSystem, sourceD
 	}
 	defer sourceDB.Close()
 
-	switch strings.ToUpper(sourceSystem) {
+	// Resolve source system: try explicit name first, then auto-detect
+	// from the source DB schema. This handles engagements created with
+	// arbitrary display names (e.g. "E2E-Legacy-PAS-12345").
+	resolved := resolveSourceSystem(sourceSystem, sourceDB)
+
+	switch resolved {
 	case "PRISM":
 		if err := loadPRISMCalculations(migrationDB, sourceDB, batchID); err != nil {
 			return err
@@ -64,10 +69,63 @@ func LoadSourceReferenceData(migrationDB *sql.DB, batchID, sourceSystem, sourceD
 		}
 	default:
 		slog.Warn("source_loader: unknown source system, skipping reference data load",
-			"source_system", sourceSystem, "batch_id", batchID)
+			"source_system", sourceSystem, "resolved", resolved, "batch_id", batchID)
 	}
 
 	return nil
+}
+
+// resolveSourceSystem determines the source system type. It checks the explicit
+// name first (case-insensitive), then probes the source DB for known tables.
+func resolveSourceSystem(explicit string, sourceDB *sql.DB) string {
+	upper := strings.ToUpper(strings.TrimSpace(explicit))
+
+	// Exact match on known names.
+	switch upper {
+	case "PRISM":
+		return "PRISM"
+	case "PAS":
+		return "PAS"
+	}
+
+	// Substring match (handles "E2E-Legacy-PAS-12345" or "PRISM-prod").
+	if strings.Contains(upper, "PRISM") {
+		return "PRISM"
+	}
+	if strings.Contains(upper, "PAS") {
+		return "PAS"
+	}
+
+	// Auto-detect by probing for known tables in the source DB.
+	if sourceDB != nil {
+		if tableExists(sourceDB, "src_prism", "prism_member") ||
+			tableExists(sourceDB, "src_prism", "prism_benefit_calc") {
+			slog.Info("source_loader: auto-detected PRISM from source schema")
+			return "PRISM"
+		}
+		if tableExists(sourceDB, "src_pas", "member") ||
+			tableExists(sourceDB, "src_pas", "retirement_award") {
+			slog.Info("source_loader: auto-detected PAS from source schema")
+			return "PAS"
+		}
+	}
+
+	return upper
+}
+
+// tableExists checks whether a table exists in the source database.
+func tableExists(db *sql.DB, schema, table string) bool {
+	var exists bool
+	err := db.QueryRow(
+		`SELECT EXISTS (
+			SELECT 1 FROM information_schema.tables
+			WHERE table_schema = $1 AND table_name = $2
+		)`, schema, table,
+	).Scan(&exists)
+	if err != nil {
+		return false
+	}
+	return exists
 }
 
 // loadPRISMCalculations loads benefit calculations from PRISM_BENEFIT_CALC.
