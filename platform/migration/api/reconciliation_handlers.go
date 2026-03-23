@@ -80,8 +80,10 @@ func (h *Handler) ReconcileBatch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Call intelligence service for pattern detection (non-fatal).
+	// Extract tenant ID before goroutine launch (request context won't be available later).
 	if h.Analyzer != nil {
-		go h.analyzePatterns(batchID, allResults)
+		tenantID := r.Header.Get("X-Tenant-ID") // fallback; prefer auth context when available
+		go h.analyzePatterns(batchID, tenantID, allResults)
 	}
 
 	slog.Info("reconciliation completed",
@@ -347,7 +349,7 @@ func computeBenchmarks(db *sql.DB, batchID string) reconciler.PlanBenchmarks {
 
 // analyzePatterns calls the Python intelligence service to detect systematic
 // mismatch patterns. Runs in a goroutine — errors are logged, not propagated.
-func (h *Handler) analyzePatterns(batchID string, results []reconciler.ReconciliationResult) {
+func (h *Handler) analyzePatterns(batchID, tenantID string, results []reconciler.ReconciliationResult) {
 	// Build mismatch records from non-MATCH results only.
 	var mismatches []intelligence.MismatchRecord
 	for _, r := range results {
@@ -372,6 +374,7 @@ func (h *Handler) analyzePatterns(batchID string, results []reconciler.Reconcili
 	defer cancel()
 
 	resp, err := h.Analyzer.AnalyzeMismatches(ctx, intelligence.AnalyzeMismatchesRequest{
+		TenantID:              tenantID,
 		ReconciliationResults: mismatches,
 	})
 	if err != nil {
