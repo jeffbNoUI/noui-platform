@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { Component, useMemo, useState } from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
 import {
   Radar,
   RadarChart,
@@ -7,6 +8,26 @@ import {
   PolarRadiusAxis,
   ResponsiveContainer,
 } from 'recharts';
+
+// Recharts can crash on mount when container dimensions are unavailable.
+class ChartErrorBoundary extends Component<
+  { children: ReactNode; fallback?: ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(_error: Error, _info: ErrorInfo) {
+    // Swallow Recharts rendering errors silently
+  }
+  render() {
+    if (this.state.hasError) {
+      return (this.props.fallback ?? null) as ReactNode;
+    }
+    return this.props.children;
+  }
+}
 import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
 import {
   useEngagement,
@@ -301,28 +322,30 @@ export default function QualityProfilePanel({ engagementId }: Props) {
             ISO 8000 Quality Dimensions
           </h3>
           <div style={{ height: 280 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart data={radarData}>
-                <PolarGrid stroke={C.border} />
-                <PolarAngleAxis
-                  dataKey="dimension"
-                  tick={{ fontSize: 11, fill: C.textSecondary }}
-                />
-                <PolarRadiusAxis
-                  domain={[0, 1]}
-                  tick={{ fontSize: 10, fill: C.textTertiary }}
-                  tickCount={5}
-                />
-                <Radar
-                  name="Quality"
-                  dataKey="score"
-                  stroke={C.sky}
-                  fill={C.sky}
-                  fillOpacity={0.2}
-                  strokeWidth={2}
-                />
-              </RadarChart>
-            </ResponsiveContainer>
+            <ChartErrorBoundary>
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart data={radarData}>
+                  <PolarGrid stroke={C.border} />
+                  <PolarAngleAxis
+                    dataKey="dimension"
+                    tick={{ fontSize: 11, fill: C.textSecondary }}
+                  />
+                  <PolarRadiusAxis
+                    domain={[0, 1]}
+                    tick={{ fontSize: 10, fill: C.textTertiary }}
+                    tickCount={5}
+                  />
+                  <Radar
+                    name="Quality"
+                    dataKey="score"
+                    stroke={C.sky}
+                    fill={C.sky}
+                    fillOpacity={0.2}
+                    strokeWidth={2}
+                  />
+                </RadarChart>
+              </ResponsiveContainer>
+            </ChartErrorBoundary>
           </div>
         </div>
       )}

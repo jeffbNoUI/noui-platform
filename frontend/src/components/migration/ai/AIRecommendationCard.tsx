@@ -96,11 +96,11 @@ export default function AIRecommendationCard({ recommendation, onAction }: Props
               }),
         }}
       >
-        {recommendation.detail}
+        {recommendation.detail ?? recommendation.summary ?? ''}
       </div>
 
       {/* Expand toggle */}
-      {recommendation.detail.length > 120 && (
+      {(recommendation.detail?.length ?? 0) > 120 && (
         <button
           onClick={() => setExpanded(!expanded)}
           style={{
@@ -120,7 +120,7 @@ export default function AIRecommendationCard({ recommendation, onAction }: Props
       )}
 
       {/* Action buttons */}
-      {recommendation.suggestedActions.length > 0 && (
+      {(recommendation.suggestedActions?.length ?? 0) > 0 && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {recommendation.suggestedActions.map((sa, idx) => (
             <button
