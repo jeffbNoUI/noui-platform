@@ -1,9 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
 import {
   useReconciliationSummary,
   useP1Issues,
   useReconciliationByTier,
+  useReconciliation,
   useRootCauseAnalysis,
 } from '@/hooks/useMigrationApi';
 import RootCauseAnalysisCard from '../ai/RootCauseAnalysis';
@@ -40,7 +41,13 @@ export default function ReconciliationPanel({ engagementId }: Props) {
   const { data: tier1 } = useReconciliationByTier(engagementId, 1);
   const { data: tier2 } = useReconciliationByTier(engagementId, 2);
   const { data: tier3 } = useReconciliationByTier(engagementId, 3);
+  const { data: allRecords } = useReconciliation(engagementId);
   const { data: rootCause } = useRootCauseAnalysis(engagementId);
+
+  const [filterCategory, setFilterCategory] = useState<ReconciliationCategory | 'ALL'>('ALL');
+  const [filterTier, setFilterTier] = useState<number | 0>(0);
+  const [searchMember, setSearchMember] = useState('');
+  const [showDetailTable, setShowDetailTable] = useState(false);
 
   const tierFunnelData = useMemo(() => {
     const derive = (data: Reconciliation[] | undefined) => {
@@ -271,6 +278,56 @@ export default function ReconciliationPanel({ engagementId }: Props) {
         </div>
       )}
 
+      {/* Tier score cards */}
+      {summary.tier1_score > 0 || summary.tier2_score > 0 || summary.tier3_score > 0 ? (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: 12,
+            marginBottom: 20,
+          }}
+        >
+          {[
+            { label: 'Tier 1', score: summary.tier1_score },
+            { label: 'Tier 2', score: summary.tier2_score },
+            { label: 'Tier 3', score: summary.tier3_score },
+          ].map((t) => {
+            const sc = t.score;
+            const col =
+              sc >= 0.95 ? C.sage : sc >= 0.85 ? C.gold : sc > 0 ? C.coral : C.textTertiary;
+            return (
+              <div
+                key={t.label}
+                style={{
+                  background: C.cardBg,
+                  borderRadius: 8,
+                  border: `1px solid ${C.border}`,
+                  padding: '12px 16px',
+                  textAlign: 'center',
+                }}
+              >
+                <div
+                  style={{ fontSize: 11, fontWeight: 600, color: C.textSecondary, marginBottom: 4 }}
+                >
+                  {t.label}
+                </div>
+                <div
+                  style={{
+                    fontSize: 20,
+                    fontWeight: 700,
+                    fontFamily: MONO,
+                    color: col,
+                  }}
+                >
+                  {sc > 0 ? `${(sc * 100).toFixed(1)}%` : '--'}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+
       {/* P1 Issues table */}
       {p1Issues && p1Issues.length > 0 && (
         <div
@@ -450,6 +507,379 @@ export default function ReconciliationPanel({ engagementId }: Props) {
             </table>
           </div>
         </div>
+      )}
+      {/* Full Detail Table — collapsible */}
+      {allRecords && allRecords.length > 0 && (
+        <VarianceDetailTable
+          records={allRecords}
+          showDetailTable={showDetailTable}
+          onToggle={() => setShowDetailTable(!showDetailTable)}
+          filterCategory={filterCategory}
+          onCategoryChange={setFilterCategory}
+          filterTier={filterTier}
+          onTierChange={setFilterTier}
+          searchMember={searchMember}
+          onSearchChange={setSearchMember}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Variance Detail Table ───────────────────────────────────────────────────
+
+const FILTER_BTN_BASE: React.CSSProperties = {
+  padding: '4px 12px',
+  borderRadius: 6,
+  fontSize: 11,
+  fontWeight: 600,
+  border: `1px solid ${C.border}`,
+  cursor: 'pointer',
+  transition: 'all 0.15s',
+  fontFamily: BODY,
+};
+
+function VarianceDetailTable({
+  records,
+  showDetailTable,
+  onToggle,
+  filterCategory,
+  onCategoryChange,
+  filterTier,
+  onTierChange,
+  searchMember,
+  onSearchChange,
+}: {
+  records: Reconciliation[];
+  showDetailTable: boolean;
+  onToggle: () => void;
+  filterCategory: ReconciliationCategory | 'ALL';
+  onCategoryChange: (c: ReconciliationCategory | 'ALL') => void;
+  filterTier: number;
+  onTierChange: (t: number) => void;
+  searchMember: string;
+  onSearchChange: (s: string) => void;
+}) {
+  const filtered = useMemo(() => {
+    let result = records;
+    if (filterCategory !== 'ALL') {
+      result = result.filter((r) => r.category === filterCategory);
+    }
+    if (filterTier > 0) {
+      result = result.filter((r) => r.tier === filterTier);
+    }
+    if (searchMember.trim()) {
+      const q = searchMember.trim().toLowerCase();
+      result = result.filter((r) => r.member_id.toLowerCase().includes(q));
+    }
+    return result;
+  }, [records, filterCategory, filterTier, searchMember]);
+
+  const systematicCount = filtered.filter((r) => r.systematic_flag).length;
+
+  return (
+    <div
+      style={{
+        background: C.cardBg,
+        borderRadius: 10,
+        border: `1px solid ${C.border}`,
+        overflow: 'hidden',
+        marginTop: 20,
+      }}
+    >
+      {/* Header */}
+      <button
+        onClick={onToggle}
+        style={{
+          width: '100%',
+          padding: '14px 16px',
+          borderBottom: showDetailTable ? `1px solid ${C.border}` : 'none',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          fontFamily: BODY,
+        }}
+      >
+        <span
+          style={{
+            fontSize: 12,
+            color: C.textSecondary,
+            transition: 'transform 0.2s',
+            transform: showDetailTable ? 'rotate(90deg)' : 'rotate(0deg)',
+          }}
+        >
+          &#9654;
+        </span>
+        <h4
+          style={{
+            fontFamily: DISPLAY,
+            fontSize: 14,
+            fontWeight: 600,
+            color: C.navy,
+            margin: 0,
+          }}
+        >
+          All Reconciliation Records
+        </h4>
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 600,
+            color: C.textOnDark,
+            background: C.navy,
+            borderRadius: 10,
+            padding: '2px 8px',
+          }}
+        >
+          {records.length}
+        </span>
+        {systematicCount > 0 && (
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              color: C.gold,
+              background: C.goldLight,
+              borderRadius: 10,
+              padding: '2px 8px',
+              marginLeft: 'auto',
+            }}
+          >
+            {systematicCount} systematic
+          </span>
+        )}
+      </button>
+
+      {showDetailTable && (
+        <>
+          {/* Filter bar */}
+          <div
+            style={{
+              padding: '10px 16px',
+              borderBottom: `1px solid ${C.border}`,
+              display: 'flex',
+              gap: 8,
+              alignItems: 'center',
+              flexWrap: 'wrap',
+            }}
+          >
+            {/* Category filter */}
+            {(['ALL', 'MATCH', 'MINOR', 'MAJOR', 'ERROR'] as const).map((cat) => (
+              <button
+                key={cat}
+                onClick={() => onCategoryChange(cat)}
+                style={{
+                  ...FILTER_BTN_BASE,
+                  background:
+                    filterCategory === cat
+                      ? cat === 'ALL'
+                        ? C.navy
+                        : CATEGORY_COLOR[cat]
+                      : C.cardBg,
+                  color: filterCategory === cat ? C.textOnDark : C.textSecondary,
+                  borderColor: filterCategory === cat ? 'transparent' : C.border,
+                }}
+              >
+                {cat}
+              </button>
+            ))}
+
+            <span style={{ width: 1, height: 20, background: C.border }} />
+
+            {/* Tier filter */}
+            {[0, 1, 2, 3].map((t) => (
+              <button
+                key={t}
+                onClick={() => onTierChange(t)}
+                style={{
+                  ...FILTER_BTN_BASE,
+                  background: filterTier === t ? C.sky : C.cardBg,
+                  color: filterTier === t ? C.textOnDark : C.textSecondary,
+                  borderColor: filterTier === t ? 'transparent' : C.border,
+                }}
+              >
+                {t === 0 ? 'All Tiers' : `T${t}`}
+              </button>
+            ))}
+
+            <span style={{ width: 1, height: 20, background: C.border }} />
+
+            {/* Member search */}
+            <input
+              type="text"
+              placeholder="Search member ID..."
+              value={searchMember}
+              onChange={(e) => onSearchChange(e.target.value)}
+              style={{
+                padding: '4px 10px',
+                borderRadius: 6,
+                border: `1px solid ${C.border}`,
+                fontSize: 12,
+                fontFamily: MONO,
+                color: C.text,
+                background: C.pageBg,
+                outline: 'none',
+                width: 160,
+              }}
+            />
+
+            <span
+              style={{
+                fontSize: 11,
+                color: C.textTertiary,
+                marginLeft: 'auto',
+              }}
+            >
+              {filtered.length} of {records.length}
+            </span>
+          </div>
+
+          {/* Table */}
+          <div style={{ overflowX: 'auto', maxHeight: 480, overflowY: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr
+                  style={{
+                    background: C.pageBg,
+                    borderBottom: `1px solid ${C.border}`,
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 1,
+                  }}
+                >
+                  {[
+                    'Member ID',
+                    'Tier',
+                    'Calc Name',
+                    'Legacy',
+                    'Recomputed',
+                    'Variance',
+                    'Cat',
+                    'Pri',
+                    'Domain',
+                    '',
+                  ].map((h) => (
+                    <th
+                      key={h}
+                      style={{
+                        padding: '8px 10px',
+                        textAlign:
+                          h === 'Legacy' || h === 'Recomputed' || h === 'Variance'
+                            ? 'right'
+                            : 'left',
+                        fontWeight: 600,
+                        color: C.textSecondary,
+                        background: C.pageBg,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((r) => (
+                  <tr key={r.recon_id} style={{ borderBottom: `1px solid ${C.borderLight}` }}>
+                    <td style={{ padding: '8px 10px', fontFamily: MONO, color: C.text }}>
+                      {r.member_id}
+                    </td>
+                    <td style={{ padding: '8px 10px', fontFamily: MONO, color: C.textSecondary }}>
+                      T{r.tier}
+                    </td>
+                    <td style={{ padding: '8px 10px', color: C.text }}>{r.calc_name}</td>
+                    <td
+                      style={{
+                        padding: '8px 10px',
+                        textAlign: 'right',
+                        fontFamily: MONO,
+                        color: C.textSecondary,
+                      }}
+                    >
+                      {r.legacy_value ?? '--'}
+                    </td>
+                    <td
+                      style={{
+                        padding: '8px 10px',
+                        textAlign: 'right',
+                        fontFamily: MONO,
+                        color: C.text,
+                      }}
+                    >
+                      {r.recomputed_value ?? '--'}
+                    </td>
+                    <td
+                      style={{
+                        padding: '8px 10px',
+                        textAlign: 'right',
+                        fontFamily: MONO,
+                        fontWeight: 600,
+                        color:
+                          r.category === 'MATCH'
+                            ? C.sage
+                            : r.category === 'MINOR'
+                              ? C.gold
+                              : C.coral,
+                      }}
+                    >
+                      {r.variance_amount ?? '--'}
+                    </td>
+                    <td style={{ padding: '8px 10px' }}>
+                      <span
+                        style={{
+                          display: 'inline-block',
+                          padding: '2px 8px',
+                          borderRadius: 10,
+                          fontSize: 10,
+                          fontWeight: 600,
+                          color: CATEGORY_COLOR[r.category],
+                          background: CATEGORY_BG[r.category],
+                        }}
+                      >
+                        {r.category}
+                      </span>
+                    </td>
+                    <td style={{ padding: '8px 10px' }}>
+                      <span
+                        style={{ fontSize: 11, fontWeight: 700, color: SEVERITY_COLOR[r.priority] }}
+                      >
+                        {r.priority}
+                      </span>
+                    </td>
+                    <td style={{ padding: '8px 10px', fontSize: 11, color: C.textTertiary }}>
+                      {r.suspected_domain ?? ''}
+                    </td>
+                    <td style={{ padding: '8px 10px', textAlign: 'center' }}>
+                      {r.systematic_flag && (
+                        <span
+                          title="Part of a systematic pattern"
+                          style={{
+                            display: 'inline-block',
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            background: C.gold,
+                          }}
+                        />
+                      )}
+                      {r.resolved && (
+                        <span
+                          title={`Resolved${r.resolution_note ? ': ' + r.resolution_note : ''}`}
+                          style={{ fontSize: 12, color: C.sage, marginLeft: 4 }}
+                        >
+                          &#10003;
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );

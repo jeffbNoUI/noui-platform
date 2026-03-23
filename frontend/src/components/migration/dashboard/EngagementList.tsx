@@ -153,7 +153,18 @@ export default function EngagementList({ engagements, isLoading, onSelect }: Eng
             }}
           >
             <div className="flex items-center justify-between mb-2">
-              <span style={{ fontSize: 15, fontWeight: 600, color: C.text }}>
+              <span
+                style={{
+                  fontSize: 15,
+                  fontWeight: 600,
+                  color: C.text,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  flex: 1,
+                  minWidth: 0,
+                }}
+              >
                 {eng.source_system_name}
               </span>
               <span
