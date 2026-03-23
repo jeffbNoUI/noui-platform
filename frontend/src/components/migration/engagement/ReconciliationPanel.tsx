@@ -76,6 +76,9 @@ export default function ReconciliationPanel({ engagementId }: Props) {
     return () => clearTimeout(timer);
   }, [feedback]);
 
+  const [domainFilter, setDomainFilter] = useState<string | null>(null);
+  const [expandedPattern, setExpandedPattern] = useState<string | null>(null);
+
   const [filterCategory, setFilterCategory] = useState<ReconciliationCategory | 'ALL'>('ALL');
   const [filterTier, setFilterTier] = useState<number | 0>(0);
   const [searchMember, setSearchMember] = useState('');
@@ -138,6 +141,12 @@ export default function ReconciliationPanel({ engagementId }: Props) {
       </div>
     );
   }
+
+  const filteredP1 = useMemo(() => {
+    if (!p1Issues) return [];
+    if (!domainFilter) return p1Issues;
+    return p1Issues.filter((issue) => issue.suspected_domain === domainFilter);
+  }, [p1Issues, domainFilter]);
 
   const gateScore = summary.gate_score;
   const gaugeColor = gateScore >= 0.95 ? C.sage : gateScore >= 0.85 ? C.gold : C.coral;
@@ -369,6 +378,7 @@ export default function ReconciliationPanel({ engagementId }: Props) {
             analysis={rootCause.analysis}
             affectedCount={rootCause.affectedCount}
             confidence={rootCause.confidence}
+            onViewMembers={() => setDomainFilter(null)}
           />
         </div>
       )}
@@ -388,13 +398,21 @@ export default function ReconciliationPanel({ engagementId }: Props) {
                   borderRadius: 8,
                   border: '1px solid #e5e7eb',
                   background: p.resolved ? '#f9fafb' : '#fffbeb',
+                  cursor: 'pointer',
                 }}
+                onClick={() =>
+                  setExpandedPattern(expandedPattern === p.pattern_id ? null : p.pattern_id)
+                }
               >
                 <div
                   style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                 >
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDomainFilter(p.suspected_domain);
+                      }}
                       style={{
                         fontSize: 12,
                         fontWeight: 600,
@@ -402,7 +420,9 @@ export default function ReconciliationPanel({ engagementId }: Props) {
                         borderRadius: 4,
                         background: '#fef3c7',
                         color: '#92400e',
+                        cursor: 'pointer',
                       }}
+                      title={`Filter P1 issues by ${p.suspected_domain}`}
                     >
                       {p.suspected_domain}
                     </span>
@@ -460,7 +480,8 @@ export default function ReconciliationPanel({ engagementId }: Props) {
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
                   {!p.resolved ? (
                     <button
-                      onClick={() =>
+                      onClick={(e) => {
+                        e.stopPropagation();
                         resolvePattern.mutate(p.pattern_id, {
                           onSuccess: () =>
                             setFeedback({
@@ -472,8 +493,8 @@ export default function ReconciliationPanel({ engagementId }: Props) {
                               type: 'error',
                               message: `Resolve failed: ${err.message}`,
                             }),
-                        })
-                      }
+                        });
+                      }}
                       disabled={resolvePattern.isPending}
                       style={{
                         background: 'none',
@@ -492,6 +513,22 @@ export default function ReconciliationPanel({ engagementId }: Props) {
                     <span style={{ fontFamily: MONO, fontSize: 11, color: C.sage }}>Resolved</span>
                   )}
                 </div>
+                {expandedPattern === p.pattern_id && p.affected_members.length > 0 && (
+                  <div
+                    style={{
+                      marginTop: 8,
+                      padding: '8px 10px',
+                      borderRadius: 6,
+                      background: '#f3f4f6',
+                      fontSize: 11,
+                      fontFamily: MONO,
+                      color: '#374151',
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    {p.affected_members.join(', ')}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -589,9 +626,39 @@ export default function ReconciliationPanel({ engagementId }: Props) {
                 padding: '2px 8px',
               }}
             >
-              {p1Issues.length}
+              {filteredP1.length}
             </span>
           </div>
+          {domainFilter && (
+            <div
+              style={{
+                padding: '8px 16px',
+                borderBottom: `1px solid ${C.border}`,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                fontSize: 12,
+                color: C.textSecondary,
+              }}
+            >
+              Filtered by: <strong style={{ color: '#92400e' }}>{domainFilter}</strong>
+              <button
+                onClick={() => setDomainFilter(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  color: C.coral,
+                  fontWeight: 600,
+                  padding: 0,
+                  fontFamily: BODY,
+                }}
+              >
+                Clear
+              </button>
+            </div>
+          )}
           <div style={{ overflowX: 'auto' }}>
             <table
               style={{
@@ -660,7 +727,7 @@ export default function ReconciliationPanel({ engagementId }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {p1Issues.map((issue) => (
+                {filteredP1.map((issue) => (
                   <tr
                     key={issue.recon_id}
                     style={{
