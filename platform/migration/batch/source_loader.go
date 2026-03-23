@@ -78,7 +78,7 @@ func loadPRISMCalculations(migrationDB, sourceDB *sql.DB, batchID string) error 
 			CAST(c.MBR_NBR AS TEXT),
 			COALESCE(CAST(c.YOS_USED AS TEXT), '0'),
 			COALESCE(CAST(c.FAS_USED AS TEXT), '0'),
-			COALESCE(c.AGE_AT_CALC::INTEGER, 0),
+			COALESCE(FLOOR(c.AGE_AT_CALC)::INTEGER, 0),
 			COALESCE(m.PLAN_CD, 'DB_MAIN'),
 			CAST(COALESCE(c.CALC_RESULT, c.GROSS_BENEFIT, 0) AS TEXT)
 		FROM src_prism.prism_benefit_calc c

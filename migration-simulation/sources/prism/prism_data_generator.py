@@ -323,7 +323,13 @@ for m in members:
         gross = mult * actual_yos * fas / 12.0
         red_table = REDUCTION_T3 if m["tier"] == "T3" else REDUCTION_T12
         age_int = int(age_at_ret)
-        reduction = red_table.get(age_int, 1.0 if age_int >= 65 else 0.0)
+        if age_int in red_table:
+            reduction = red_table[age_int]
+        elif age_int >= 65:
+            reduction = 1.0
+        else:
+            # Below table minimum: clamp to the lowest factor
+            reduction = red_table[min(red_table.keys())]
         benefit = max(gross * reduction, 800.0)
 
         calc_type = "D" if m["disability"] else "R"
@@ -481,14 +487,15 @@ for m in members:
     status_dist[m["status_cd"]] = status_dist.get(m["status_cd"], 0) + 1
 
 opus_count = sum(1 for m in members if m["orig_sys"] == "OPUS")
-print(f"Members:            {len(members)}")
-print(f"  OPUS migrated:    {opus_count}")
-print(f"  Status dist:      {dict(sorted(status_dist.items()))}")
-print(f"Benefit calcs:      {len(calcs)}")
-print(f"PMT_SCHEDULE rows:  {pmt_sched_id - 1}")
-print(f"PMT_HIST rows:      {len(pmt_history)}")
-print(f"SAL_ANNUAL rows:    {len(sal_annual)}  (pre-1998, annual only)")
-print(f"SAL_PERIOD rows:    {len(sal_period)}  (post-1998, biweekly)")
+import sys as _sys
+print(f"Members:            {len(members)}", file=_sys.stderr)
+print(f"  OPUS migrated:    {opus_count}", file=_sys.stderr)
+print(f"  Status dist:      {dict(sorted(status_dist.items()))}", file=_sys.stderr)
+print(f"Benefit calcs:      {len(calcs)}", file=_sys.stderr)
+print(f"PMT_SCHEDULE rows:  {pmt_sched_id - 1}", file=_sys.stderr)
+print(f"PMT_HIST rows:      {len(pmt_history)}", file=_sys.stderr)
+print(f"SAL_ANNUAL rows:    {len(sal_annual)}  (pre-1998, annual only)", file=_sys.stderr)
+print(f"SAL_PERIOD rows:    {len(sal_period)}  (post-1998, biweekly)", file=_sys.stderr)
 
 # ---------------------------------------------------------------------------
 # Write output
@@ -501,5 +508,5 @@ with open(output_path, "w", encoding="utf-8") as f:
     f.write("\n".join(sql_lines))
     f.write("\n")
 
-print(f"\nSaved: {output_path}")
-print(f"Total SQL statements: {len([l for l in sql_lines if l.startswith('INSERT')])}")
+print(f"\nSaved: {output_path}", file=_sys.stderr)
+print(f"Total SQL statements: {len([l for l in sql_lines if l.startswith('INSERT')])}", file=_sys.stderr)

@@ -318,9 +318,9 @@ if [ -n "$PRISM_BATCH_ID" ] && [ "$PRISM_BATCH_ID" != "null" ]; then
 
   # Assert gate score above minimum threshold
   if [ "$PRISM_GATE" != "N/A" ] && [ "$PRISM_GATE" != "null" ] && [ "$PRISM_GATE" != "" ]; then
-    ABOVE=$(echo "$PRISM_GATE > 0.50" | bc -l 2>/dev/null || echo "0")
+    ABOVE=$(awk "BEGIN {print ($PRISM_GATE >= 0.50) ? 1 : 0}")
     if [ "$ABOVE" = "1" ]; then
-      pass "PRISM gate score $PRISM_GATE > 0.50"
+      pass "PRISM gate score $PRISM_GATE >= 0.50"
     else
       fail "PRISM gate score $PRISM_GATE below 0.50 threshold"
     fi
@@ -501,9 +501,9 @@ if [ -n "$PAS_BATCH_ID" ] && [ "$PAS_BATCH_ID" != "null" ]; then
 
   # Assert gate score above minimum threshold
   if [ "$PAS_GATE" != "N/A" ] && [ "$PAS_GATE" != "null" ] && [ "$PAS_GATE" != "" ]; then
-    ABOVE=$(echo "$PAS_GATE > 0.50" | bc -l 2>/dev/null || echo "0")
+    ABOVE=$(awk "BEGIN {print ($PAS_GATE >= 0.50) ? 1 : 0}")
     if [ "$ABOVE" = "1" ]; then
-      pass "PAS gate score $PAS_GATE > 0.50"
+      pass "PAS gate score $PAS_GATE >= 0.50"
     else
       fail "PAS gate score $PAS_GATE below 0.50 threshold"
     fi
