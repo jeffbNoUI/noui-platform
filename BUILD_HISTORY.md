@@ -1,5 +1,61 @@
 # noui-platform — Build History
 
+## Session 23: Migration Wrap-Up — Certification, Lineage, UI Fixes (2026-03-23)
+
+**Branch:** `claude/lucid-colden` → PR #147 (merged)
+
+### What Was Done
+
+Completed migration wrap-up plan (4 vertical slices) + fixed systemic bugs found
+during browser verification.
+
+**Slice 1 — Reconciliation UI Polish:**
+- Mutation feedback (success/error) for Run Reconciliation and Resolve Pattern
+- P1 issues currency formatting ($X,XXX.XX)
+- Error states when API queries fail
+- Member drill-down from root cause analysis (scroll to P1 table)
+- Pattern card expansion showing affected members list
+- 15 new unit tests (ReconciliationPanel, ParallelRunPanel, TierFunnel)
+
+**Slice 2 — Certification Workflow:**
+- Migration 040: `certification_record` table (immutable, audit trail)
+- POST /certify (validates 5-item Go/No-Go checklist) + GET /certification
+- ParallelRunPanel wired to API — persists checklist, shows "Already Certified" state
+
+**Slice 3 — Lineage API:**
+- GET /batches/{id}/lineage — paginated, filterable by member_id/column_name
+- GET /batches/{id}/lineage/summary — aggregate stats (records, members, fields, types)
+
+**Slice 4 — E2E Hardening:**
+- Seed data readiness poll (prism-source member count check)
+- Mapping approval fix (use valid mapping ID)
+- Phase 12: certification assertions + Phase 13: lineage assertions
+
+**Bug Fixes Found During Browser Testing:**
+- JSONB insert casting: gate.go, pattern.go, certification.go — pq driver sends
+  []byte as bytea, not JSONB. Fixed with string() + ::jsonb cast.
+- Attention query: `r.resolved` column doesn't exist on reconciliation table (FALSE),
+  UNION type mismatch ($1 needs ::text cast)
+- Engagement status casing: lowercaseEnums was converting status despite RAW flag.
+  Added select() normalization in useEngagement/useEngagements hooks.
+- AIRecommendationCard crash: .detail.length and .suggestedActions.length on undefined
+  when batch-sizing API returns different shape than AIRecommendation type.
+- TabErrorBoundary: wraps all tab content in EngagementDetail so panel render errors
+  don't crash the entire engagement view.
+
+### Stats
+
+- **Frontend:** 1856/1856 tests (235 files), 15 new
+- **Migration Go:** 11 packages, all pass
+- **E2E:** 46/46 (up from 40, 6 new assertions)
+- **Browser verified:** Engagement detail loads, Transformation tab active, all tabs work
+
+### What's Next
+
+- **Full UI walkthrough** — test every phase of migration lifecycle through the browser
+  (Discovery → Profiling → Mapping → Transformation → Reconciliation → Certification)
+- See `docs/plans/2026-03-23-migration-e2e-ui-testing-starter.md`
+
 ## Session 22: Reconciliation E2E Verification — 40/40 PASSING (2026-03-23)
 
 **Branch:** `claude/sad-goodall`
