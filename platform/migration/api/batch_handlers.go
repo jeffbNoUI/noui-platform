@@ -174,9 +174,10 @@ func (h *Handler) ExecuteBatchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Determine source table and key column from engagement source system.
-	tableName := resolveSourceTable(engagement.SourceSystemName, b.BatchScope)
-	keyColumn := resolvePrimaryKey(engagement.SourceSystemName)
+	// Determine source table from field mappings (authoritative), falling
+	// back to hard-coded system name → table mapping.
+	tableName := resolveSourceTable(engagement.SourceSystemName, b.BatchScope, mappings)
+	keyColumn := resolvePrimaryKey(engagement.SourceSystemName, tableName, dsn)
 
 	provider := &batch.DBSourceRowProvider{
 		DSN:       dsn,
@@ -216,8 +217,23 @@ func (h *Handler) ExecuteBatchHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// resolveSourceTable maps source system name and batch scope to a schema-qualified table name.
-func resolveSourceTable(sourceSystem, scope string) string {
+// resolveSourceTable determines the schema-qualified source table for batch
+// execution. It checks field mappings first (authoritative — set during Phase 3
+// Mapping), then falls back to hard-coded system name → table mapping.
+func resolveSourceTable(sourceSystem, scope string, mappings []FieldMapping) string {
+	// Primary: extract from field mappings — these were set by the user during
+	// the mapping phase and reflect the actual discovered table names.
+	if len(mappings) > 0 {
+		for _, m := range mappings {
+			if m.SourceTable != "" {
+				slog.Info("resolveSourceTable: using mapping source_table",
+					"table", m.SourceTable, "scope", scope)
+				return m.SourceTable
+			}
+		}
+	}
+
+	// Fallback: hard-coded system name → table mapping for known systems.
 	switch sourceSystem {
 	case "PRISM":
 		return "src_prism.prism_member"
@@ -228,8 +244,18 @@ func resolveSourceTable(sourceSystem, scope string) string {
 	}
 }
 
-// resolvePrimaryKey returns the primary key column for the given source system.
-func resolvePrimaryKey(sourceSystem string) string {
+// resolvePrimaryKey determines the primary key column for the source table.
+// It queries the source DB's information_schema when possible, falling back
+// to known system defaults and then to "id".
+func resolvePrimaryKey(sourceSystem, tableName, dsn string) string {
+	// Try to discover the PK from the source DB.
+	if dsn != "" && tableName != "" {
+		if pk := discoverPrimaryKey(dsn, tableName); pk != "" {
+			return pk
+		}
+	}
+
+	// Fallback: known system defaults.
 	switch sourceSystem {
 	case "PRISM":
 		return "mbr_nbr"
@@ -238,6 +264,47 @@ func resolvePrimaryKey(sourceSystem string) string {
 	default:
 		return "id"
 	}
+}
+
+// discoverPrimaryKey queries the source DB for the primary key column of the
+// given table. Returns empty string if discovery fails.
+func discoverPrimaryKey(dsn, tableName string) string {
+	// Parse schema.table if present.
+	schema, table := "public", tableName
+	if parts := strings.SplitN(tableName, ".", 2); len(parts) == 2 {
+		schema, table = parts[0], parts[1]
+	}
+
+	driver := "postgres"
+	if strings.HasPrefix(dsn, "sqlserver:") {
+		driver = "sqlserver"
+	}
+
+	db, err := sql.Open(driver, dsn)
+	if err != nil {
+		slog.Warn("discoverPrimaryKey: open failed", "error", err)
+		return ""
+	}
+	defer db.Close()
+
+	var col string
+	err = db.QueryRow(`
+		SELECT kcu.column_name
+		FROM information_schema.table_constraints tc
+		JOIN information_schema.key_column_usage kcu
+			ON tc.constraint_name = kcu.constraint_name
+			AND tc.table_schema = kcu.table_schema
+		WHERE tc.constraint_type = 'PRIMARY KEY'
+			AND tc.table_schema = $1
+			AND tc.table_name = $2
+		ORDER BY kcu.ordinal_position
+		LIMIT 1`, schema, table).Scan(&col)
+	if err != nil {
+		slog.Warn("discoverPrimaryKey: query failed", "error", err, "table", tableName)
+		return ""
+	}
+	slog.Info("discoverPrimaryKey: discovered", "table", tableName, "column", col)
+	return col
 }
 
 // queryFieldMappings loads field mappings for an engagement from the database.

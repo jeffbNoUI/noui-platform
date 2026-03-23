@@ -89,7 +89,7 @@ assert_status "GET /migration/dashboard/system-health" "200" "$HTTP_CODE"
 
 log_header "Phase 2: Engagement Lifecycle"
 
-ENGAGEMENT_NAME="E2E-Legacy-PAS-$(date +%s)"
+ENGAGEMENT_NAME="E2E-PRISM-$(date +%s)"
 ENGAGEMENT_PAYLOAD=$(cat <<EOF
 {
   "source_system_name": "${ENGAGEMENT_NAME}"
@@ -207,17 +207,17 @@ MAPPING_PAYLOAD=$(cat <<EOF
 {
   "tables": [
     {
-      "source_table": "member_master",
+      "source_table": "src_prism.prism_member",
       "concept_tag": "employee-master",
       "columns": [
-        {"name": "member_id", "data_type": "integer", "is_nullable": false, "is_key": true},
-        {"name": "first_name", "data_type": "varchar", "is_nullable": false, "is_key": false},
-        {"name": "last_name", "data_type": "varchar", "is_nullable": false, "is_key": false},
-        {"name": "dob", "data_type": "date", "is_nullable": true, "is_key": false},
-        {"name": "hire_date", "data_type": "date", "is_nullable": true, "is_key": false},
-        {"name": "ssn", "data_type": "varchar", "is_nullable": false, "is_key": false},
-        {"name": "plan_code", "data_type": "varchar", "is_nullable": true, "is_key": false},
-        {"name": "status", "data_type": "varchar", "is_nullable": false, "is_key": false}
+        {"name": "mbr_nbr", "data_type": "integer", "is_nullable": false, "is_key": true},
+        {"name": "first_nm", "data_type": "varchar", "is_nullable": false, "is_key": false},
+        {"name": "last_nm", "data_type": "varchar", "is_nullable": false, "is_key": false},
+        {"name": "birth_dt", "data_type": "varchar", "is_nullable": false, "is_key": false},
+        {"name": "hire_dt", "data_type": "varchar", "is_nullable": false, "is_key": false},
+        {"name": "natl_id", "data_type": "varchar", "is_nullable": false, "is_key": false},
+        {"name": "mbr_tier", "data_type": "varchar", "is_nullable": true, "is_key": false},
+        {"name": "status_cd", "data_type": "varchar", "is_nullable": false, "is_key": false}
       ]
     }
   ]
@@ -286,6 +286,35 @@ if [ -n "$BATCH_ID" ] && [ "$BATCH_ID" != "null" ]; then
   RESPONSE=$(do_post "/api/v1/migration/batches/${BATCH_ID}/execute" "{}")
   extract_http "$RESPONSE"
   assert_status "POST /migration/batches/:id/execute" "202" "$HTTP_CODE"
+
+  # Wait for batch execution to complete (async — poll until LOADED or FAILED).
+  BATCH_STATUS="RUNNING"
+  POLL_COUNT=0
+  MAX_POLLS=30  # 30 × 2s = 60s max wait
+  while [ "$BATCH_STATUS" = "RUNNING" ] || [ "$BATCH_STATUS" = "PENDING" ]; do
+    sleep 2
+    POLL_COUNT=$((POLL_COUNT + 1))
+    if [ "$POLL_COUNT" -ge "$MAX_POLLS" ]; then
+      echo -e "  ${RED}✗${NC} Batch execution timed out after ${MAX_POLLS} polls"
+      break
+    fi
+    RESPONSE=$(do_get "/api/v1/migration/batches/${BATCH_ID}")
+    extract_http "$RESPONSE"
+    BATCH_STATUS=$(echo "$BODY" | jq -r '.data.status // .status // "UNKNOWN"' 2>/dev/null || echo "UNKNOWN")
+  done
+
+  TOTAL_COUNT=$((TOTAL_COUNT + 1))
+  if [ "$BATCH_STATUS" = "LOADED" ]; then
+    echo -e "  ${GREEN}✓${NC} Batch execution completed (status=LOADED, polls=${POLL_COUNT})"
+    PASS_COUNT=$((PASS_COUNT + 1))
+  elif [ "$BATCH_STATUS" = "FAILED" ]; then
+    HALT_REASON=$(echo "$BODY" | jq -r '.data.halted_reason // "unknown"' 2>/dev/null || echo "unknown")
+    echo -e "  ${RED}✗${NC} Batch execution FAILED: ${HALT_REASON}"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+  else
+    echo -e "  ${RED}✗${NC} Batch execution ended in unexpected status: ${BATCH_STATUS}"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+  fi
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
