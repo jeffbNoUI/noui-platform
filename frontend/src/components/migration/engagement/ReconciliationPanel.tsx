@@ -16,6 +16,14 @@ import type { Reconciliation, ReconciliationCategory, RiskSeverity } from '@/typ
 
 type FeedbackState = { type: 'success' | 'error'; message: string } | null;
 
+/** Format a numeric string as USD currency, e.g. "$2,847.33". Returns '--' for null/undefined. */
+function fmtCurrency(value: string | number | null | undefined): string {
+  if (value == null) return '--';
+  const n = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(n)) return '--';
+  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+}
+
 const CATEGORY_COLOR: Record<ReconciliationCategory, string> = {
   MATCH: C.sage,
   MINOR: C.gold,
@@ -41,7 +49,11 @@ interface Props {
 }
 
 export default function ReconciliationPanel({ engagementId }: Props) {
-  const { data: summary, isLoading: summaryLoading } = useReconciliationSummary(engagementId);
+  const {
+    data: summary,
+    isLoading: summaryLoading,
+    isError: summaryError,
+  } = useReconciliationSummary(engagementId);
   const { data: p1Issues } = useP1Issues(engagementId);
   const { data: allRecords } = useReconciliation(engagementId);
   const tier1 = useMemo(() => allRecords?.filter((r) => r.tier === 1), [allRecords]);
@@ -89,6 +101,24 @@ export default function ReconciliationPanel({ engagementId }: Props) {
           className="animate-pulse"
           style={{ height: 200, borderRadius: 8, background: C.border }}
         />
+      </div>
+    );
+  }
+
+  if (summaryError) {
+    return (
+      <div
+        style={{
+          padding: '16px 24px',
+          background: C.coralLight,
+          borderRadius: 8,
+          color: C.coral,
+          fontSize: 13,
+          fontWeight: 500,
+          fontFamily: BODY,
+        }}
+      >
+        Failed to load reconciliation summary. Please try again later.
       </div>
     );
   }
@@ -663,7 +693,7 @@ export default function ReconciliationPanel({ engagementId }: Props) {
                         color: C.coral,
                       }}
                     >
-                      {issue.variance_amount ?? '--'}
+                      {fmtCurrency(issue.variance_amount)}
                     </td>
                     <td style={{ padding: '10px 12px', textAlign: 'center' }}>
                       <span
