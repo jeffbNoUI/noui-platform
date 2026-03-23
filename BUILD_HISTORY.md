@@ -1,5 +1,50 @@
 # noui-platform — Build History
 
+## Session 21: Reconciliation Completion — 5 Items (2026-03-22)
+
+**Branch:** `claude/quizzical-murdock`
+
+### What Was Done
+
+Completed all 5 remaining reconciliation items in 2 waves (backend Go sweep, frontend React sweep).
+
+**Wave 1 — Backend (3 items):**
+1. **Enhanced root cause** — `HandleGetRootCause` now includes intelligence-detected patterns
+   in the response payload alongside the deterministic analysis.
+2. **Resolution workflow** — New `PATCH /reconciliation/patterns/{id}/resolve` endpoint.
+   `ResolvePattern()` DB function sets `resolved=TRUE`, `resolved_at`, `resolved_by`.
+3. **Corpus learning** — New `RecordDecision()` method on intelligence client. Wired into
+   `UpdateMapping` handler as fire-and-forget goroutine when analyst approves/rejects a mapping.
+
+**Wave 2 — Frontend (3 items):**
+4. **Rate limit fix** — Removed 3 `useReconciliationByTier` API calls that triggered 429.
+   Tier breakdowns now derived client-side from `useReconciliation` via `useMemo`.
+5. **Resolution workflow UI** — Resolve button on pattern cards, `useResolvePattern` mutation
+   hook, `resolvePattern()` API function. Shows "Resolved" state after resolution.
+6. **Batch trigger button** — "Run Reconciliation" button appears when latest batch is loaded.
+   Uses existing `useReconcileBatch` mutation hook.
+
+### Files Changed
+
+- 12 files changed (+264 lines, -19 lines)
+- Go: `ai_handlers.go`, `pattern_handlers.go`, `handlers.go`, `mapping_handlers.go`,
+  `pattern.go`, `client.go`, `client_test.go`, `types.go`
+- Frontend: `ReconciliationPanel.tsx`, `ReconciliationPatterns.test.tsx`,
+  `useMigrationApi.ts`, `migrationApi.ts`
+
+### Stats
+
+- Migration Go: 11 packages, all pass (short mode)
+- Frontend: 232 test files, 1840 tests passing
+- 6 commits, zero regressions
+
+### What's Next
+
+- Docker E2E verification of full reconciliation flow
+- Parallel run infrastructure (Phase 4 hardening)
+- Auditor-readable lineage reports
+- Performance testing at 250K+ member scale
+
 ## Session 20: Migration Intelligence Integration (2026-03-22)
 
 **Branch:** `claude/exciting-jang`
