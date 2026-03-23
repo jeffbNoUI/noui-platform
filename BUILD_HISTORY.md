@@ -1,5 +1,69 @@
 # noui-platform — Build History
 
+## Session 20: Migration Intelligence Integration (2026-03-22)
+
+**Branch:** `claude/exciting-jang`
+
+### What Was Done
+
+Wired the Python migration-intelligence service (`POST /intelligence/analyze-mismatches`)
+into the Go reconciler's post-reconciliation flow. After `ReconcileBatch` persists variance
+results, it now calls the Python service asynchronously for pattern detection and persists
+detected patterns to a new `migration.reconciliation_pattern` table.
+
+**Go backend (6 commits):**
+1. Migration 039: `reconciliation_pattern` table with batch FK, pattern fields, correction
+   suggestion columns, resolved tracking, and batch index
+2. `ReconciliationPattern` model type in `models/types.go`
+3. `AnalyzeMismatches()` on intelligence client — new `Analyzer` interface, request/response
+   types (`MismatchRecord`, `DetectedPattern`, `CorrectionSuggestion`), 3 httptest tests
+4. Pattern persistence layer (`PersistPatterns`, `GetPatternsByEngagement`)
+5. Async `analyzePatterns` goroutine in `ReconcileBatch` — nil-safe, 5s timeout, errors
+   logged not propagated, tenant ID passed from request context
+6. `GET /api/v1/migration/engagements/{id}/reconciliation/patterns` endpoint
+
+**Frontend (2 commits):**
+7. `ReconciliationPattern` type, `getReconciliationPatterns` API method,
+   `useReconciliationPatterns` query hook
+8. Systematic Patterns section in `ReconciliationPanel` — domain/plan/direction badges,
+   member count, correction type with confidence, evidence text. Hidden when no patterns.
+9. Integration test: 2 tests (patterns render, empty state hidden)
+
+### Files Changed
+
+**New files (6):**
+- `platform/migration/db/migrations/039_reconciliation_patterns.sql`
+- `platform/migration/db/pattern.go`
+- `platform/migration/db/pattern_test.go`
+- `platform/migration/intelligence/client_test.go`
+- `platform/migration/api/pattern_handlers.go`
+- `frontend/src/components/migration/engagement/__tests__/ReconciliationPatterns.test.tsx`
+
+**Modified files (7):**
+- `platform/migration/models/types.go`
+- `platform/migration/intelligence/client.go`
+- `platform/migration/api/handlers.go`
+- `platform/migration/api/reconciliation_handlers.go`
+- `frontend/src/types/Migration.ts`
+- `frontend/src/lib/migrationApi.ts`
+- `frontend/src/hooks/useMigrationApi.ts`
+- `frontend/src/components/migration/engagement/ReconciliationPanel.tsx`
+
+### Stats
+
+- 9 commits, 6 new files, 8 modified files
+- Migration Go: 11 packages, all pass (short mode)
+- Intelligence client: 8 tests (5 existing + 3 new)
+- Frontend: 232 test files, 1840 tests passing
+- Typecheck: clean
+
+### What's Next
+
+- Docker E2E: verify full reconcile → intelligence → patterns flow with services running
+- Corpus learning: wire analyst decisions back to intelligence service
+- Resolution workflow: mark patterns resolved, track who resolved them
+- Port management Phase 2 (deferred, low priority)
+
 ## Session 19: Frontend Polish + Reconciliation UI Enhancement (2026-03-22)
 
 **Branch:** `claude/interesting-hamilton`
