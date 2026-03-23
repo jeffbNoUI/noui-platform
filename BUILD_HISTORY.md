@@ -1,5 +1,56 @@
 # noui-platform — Build History
 
+## Session 18: Two-Source Proof — Perfect Gate Scores (2026-03-22)
+
+**Branch:** `claude/loving-pike`
+
+### What Was Done
+
+Fixed 6 root causes to achieve perfect reconciliation gate scores (1.0) on both
+PRISM (39/39) and PAS (26/26) sources. Two-Source Proof passes 30/30 checks.
+
+**Root causes fixed:**
+1. **PRISM seed SQL corruption** — `print()` stats leaked via stdout redirect into
+   SQL file. PostgreSQL aborted on `\U` meta-command. Fixed: stats to stderr.
+2. **Profiler NULL scan** — `SUM()` returns NULL on empty tables, crashing `int64`
+   scan. Added `COALESCE(..., 0)` to all 4 dimension queries.
+3. **Gate threshold script** — `bc` unavailable on Windows, silent fallback. Replaced
+   with `awk` for cross-platform support.
+4. **Python formula alignment** — Replaced linear penalty model with lookup-table
+   reduction matching Go reconciler. Updated `PLAN_REGISTRY` to TIER_1/2/3.
+5. **Age truncation** — PostgreSQL `::INTEGER` rounds, Python `int()` truncates.
+   Fixed source_loader to use `FLOOR()::INTEGER`.
+6. **Below-table age clamping** — Ages below reduction table minimum now clamp to
+   lowest factor (0.70) in Go, Python, and both seed generators.
+
+### Files Changed
+
+- `platform/migration/profiler/dimensions.go` — COALESCE on 4 SUM queries
+- `platform/migration/batch/source_loader.go` — FLOOR() for age truncation
+- `platform/migration/reconciler/formula.go` — below-table age clamping
+- `migration-simulation/formula/benefit.py` — lookup-table reduction + clamping
+- `migration-simulation/tests/test_cross_language.py` — tier_code + reduction_factor
+- `migration-simulation/sources/prism/prism_data_generator.py` — stderr + clamping
+- `migration-simulation/sources/pas/generate_pas_scenarios.py` — clamping fix
+- `migration-simulation/sources/prism/init/02_seed.sql` — regenerated clean
+- `migration-simulation/sources/pas/init/02_seed.sql` — regenerated
+- `scripts/run_two_source_proof.sh` — awk replaces bc
+- `docs/plans/2026-03-22-post-proof-next-session.md` — NEW
+
+### Stats
+
+- 11 files changed (1 new, 10 modified)
+- Migration Go: 11 packages, all pass (short mode)
+- Python cross-language: 9/9 pass
+- Two-Source Proof: 30/30 pass, PRISM 39/39, PAS 26/26, both gates=1.0
+
+### What's Next
+
+- Phase 5g: dbcontext stale connection fix + employer service bugs
+- Migration frontend polish (3 minor items)
+- Reconciliation UI enhancement (gate score display, P1 detail table)
+- Starter prompt: `docs/plans/2026-03-22-post-proof-next-session.md`
+
 ## Session 17: Universal Plan Config + Reconciler Refactor (2026-03-22)
 
 **Branch:** `claude/charming-chaum`

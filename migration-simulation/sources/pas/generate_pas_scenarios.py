@@ -785,7 +785,13 @@ def main():
             red_table = REDUCTION_T3 if tier == "TIER3" else REDUCTION_T12
             age_at_ret = (retirement_date - birth).days / 365.25
             age_int = int(age_at_ret)
-            reduction = red_table.get(age_int, 1.0 if age_int >= 65 else 0.0)
+            if age_int in red_table:
+                reduction = red_table[age_int]
+            elif age_int >= 65:
+                reduction = 1.0
+            else:
+                # Below table minimum: clamp to the lowest factor
+                reduction = red_table[min(red_table.keys())]
             benefit = max(round(gross * reduction, 2), 800.0)
             award_id = new_uuid()
             option_code = random.choice(OPTION_CODES)

@@ -51,8 +51,18 @@ func CalcRetirementBenefit(yos, fas *big.Rat, ageAtRetirement int, params Benefi
 		} else if ageAtRetirement >= params.NormalRetirementAge {
 			// At or above NRA with no explicit table entry: no reduction.
 			reductionFactor.Set(one)
+		} else {
+			// Below table minimum: clamp to the lowest factor in the table.
+			minAge := params.NormalRetirementAge
+			for age := range params.ReductionTable {
+				if age < minAge {
+					minAge = age
+				}
+			}
+			if factor, ok := params.ReductionTable[minAge]; ok {
+				reductionFactor.Set(factor)
+			}
 		}
-		// If below NRA and no table entry, reductionFactor stays 1.0 (no data).
 	}
 
 	// after_reduction = gross_monthly * reduction_factor

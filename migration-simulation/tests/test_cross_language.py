@@ -2,7 +2,7 @@
 Cross-language verification: Python (decimal.Decimal) vs Go (math/big.Rat).
 
 Both languages read the same YAML fixtures and must produce $0.00 variance
-on gross_monthly, penalty_pct, and final_monthly for every test case.
+on gross_monthly, reduction_factor, and final_monthly for every test case.
 
 Run:
     cd migration-simulation
@@ -50,22 +50,29 @@ def test_benefit_formula_matches_fixtures(case):
     inputs = case["inputs"]
     expected = case["expected"]
 
+    # Handle error cases (e.g., unknown tier)
+    if expected.get("error"):
+        tier_code = inputs["tier_code"]
+        assert tier_code not in PLAN_REGISTRY, (
+            f"tier_code {tier_code!r} should NOT be in PLAN_REGISTRY for error case"
+        )
+        return
+
     yos = Decimal(inputs["yos"])
     fas = Decimal(inputs["fas"])
     age = inputs["age_at_retirement"]
-    plan_code = inputs["plan_code"]
+    tier_code = inputs["tier_code"]
 
-    params = PLAN_REGISTRY[plan_code]
+    params = PLAN_REGISTRY[tier_code]
     result = calc_retirement_benefit(yos, fas, age, params)
 
     assert str(result.gross_monthly) == expected["gross_monthly"], (
         f"gross_monthly: got {result.gross_monthly}, want {expected['gross_monthly']}"
     )
 
-    # penalty_pct: format to 2dp for comparison (Go uses FloatString(2))
-    penalty_str = str(round_half_up(result.penalty_pct))
-    assert penalty_str == expected["penalty_pct"], (
-        f"penalty_pct: got {penalty_str}, want {expected['penalty_pct']}"
+    # reduction_factor: compare as string (Go uses FloatString(2))
+    assert str(result.reduction_factor) == expected["reduction_factor"], (
+        f"reduction_factor: got {result.reduction_factor}, want {expected['reduction_factor']}"
     )
 
     assert str(result.final_monthly) == expected["final_monthly"], (
@@ -93,7 +100,11 @@ def test_round_half_up_cases():
 
 
 def test_all_plan_codes_covered():
-    """Every plan_code in fixtures must exist in PLAN_REGISTRY."""
-    plan_codes = {c["inputs"]["plan_code"] for c in FIXTURES}
-    for code in plan_codes:
-        assert code in PLAN_REGISTRY, f"plan code {code!r} not in PLAN_REGISTRY"
+    """Every tier_code in fixtures (except error cases) must exist in PLAN_REGISTRY."""
+    tier_codes = {
+        c["inputs"]["tier_code"]
+        for c in FIXTURES
+        if not c["expected"].get("error")
+    }
+    for code in tier_codes:
+        assert code in PLAN_REGISTRY, f"tier code {code!r} not in PLAN_REGISTRY"

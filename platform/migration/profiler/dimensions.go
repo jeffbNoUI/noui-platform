@@ -73,7 +73,7 @@ func ProfileCompleteness(db *sql.DB, table string, requiredColumns []string) (Qu
 		if err != nil {
 			return dim, fmt.Errorf("profile completeness: %w", err)
 		}
-		query += fmt.Sprintf(", SUM(CASE WHEN %s IS NULL THEN 1 ELSE 0 END)", qc)
+		query += fmt.Sprintf(", COALESCE(SUM(CASE WHEN %s IS NULL THEN 1 ELSE 0 END), 0)", qc)
 	}
 	query += " FROM " + quotedTable
 
@@ -131,7 +131,7 @@ func ProfileAccuracy(db *sql.DB, table string, patternChecks []PatternCheck) (Qu
 			return dim, fmt.Errorf("profile accuracy: %w", err)
 		}
 		query := fmt.Sprintf(
-			"SELECT COUNT(*), SUM(CASE WHEN %s ~ $1 THEN 1 ELSE 0 END) FROM %s WHERE %s IS NOT NULL",
+			"SELECT COUNT(*), COALESCE(SUM(CASE WHEN %s ~ $1 THEN 1 ELSE 0 END), 0) FROM %s WHERE %s IS NOT NULL",
 			qc, quotedTable, qc,
 		)
 		var total, matched int64
@@ -182,7 +182,7 @@ func ProfileConsistency(db *sql.DB, table string, fkRefs []FKReference) (Quality
 		}
 		query := fmt.Sprintf(
 			`SELECT COUNT(*),
-			        SUM(CASE WHEN %s IN (SELECT %s FROM %s) THEN 1 ELSE 0 END)
+			        COALESCE(SUM(CASE WHEN %s IN (SELECT %s FROM %s) THEN 1 ELSE 0 END), 0)
 			 FROM %s WHERE %s IS NOT NULL`,
 			qCol, qRefCol, qRefTable, quotedTable, qCol,
 		)
@@ -282,7 +282,7 @@ func ProfileValidity(db *sql.DB, table string, rules []BusinessRule) (QualityDim
 		// system-defined rules, never with user-supplied conditions. The API
 		// handler is responsible for validating or restricting conditions.
 		query := fmt.Sprintf(
-			"SELECT COUNT(*), SUM(CASE WHEN %s THEN 1 ELSE 0 END) FROM %s",
+			"SELECT COUNT(*), COALESCE(SUM(CASE WHEN %s THEN 1 ELSE 0 END), 0) FROM %s",
 			rule.Condition, quotedTable,
 		)
 		var total, passed int64
