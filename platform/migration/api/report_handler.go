@@ -274,12 +274,13 @@ func queryMappingSpecCodes(db *sql.DB, engagementID string) ([]codeMappingRow, e
 }
 
 func queryExceptionCounts(db *sql.DB, engagementID string) (map[string]int, error) {
+	// Group exceptions by handler_name (migration 036 replaced canonical_table with handler_name).
 	rows, err := db.Query(
-		`SELECT COALESCE(e.canonical_table, 'unknown'), COUNT(*)
+		`SELECT COALESCE(e.handler_name, 'unknown'), COUNT(*)
 		 FROM migration.exception e
 		 JOIN migration.batch b ON b.batch_id = e.batch_id
 		 WHERE b.engagement_id = $1
-		 GROUP BY e.canonical_table`,
+		 GROUP BY e.handler_name`,
 		engagementID,
 	)
 	if err != nil {
