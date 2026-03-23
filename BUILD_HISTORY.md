@@ -1,5 +1,63 @@
 # noui-platform — Build History
 
+## Session 24: Migration UI Walkthrough — 6 Phases, 5 Bugs Fixed (2026-03-23)
+
+**Branch:** `claude/elegant-elion`
+
+### What Was Done
+
+Full end-to-end browser walkthrough of the migration lifecycle (all 6 phases),
+fixing bugs as encountered. Each phase was tested through the Docker-hosted
+frontend with live backend services.
+
+**Phase 1 — Discovery:** Create engagement, configure source (prism-source:5432),
+discover 21 tables, select all, advance to Profiling. **No bugs.**
+
+**Phase 2 — Profiling:** Run quality profile, radar chart renders (ISO 8000
+dimensions), approve baseline. **Bug 1:** ProfileTimeliness crashed on VARCHAR
+date columns in legacy source systems.
+
+**Phase 3 — Mapping:** Generate 67 field mappings via auto-discovery, review
+mapping table with confidence scores. **Bug 2:** Frontend sent empty tables
+array; backend had no auto-discover fallback.
+
+**Phase 4 — Transformation:** Phase gate transitions work, create batch, execute
+batch (202 accepted). **Bug 3:** `normalizeEnums` in `rawRequest` lowercased ALL
+API responses including migration status — defeating the `raw: true` flag. **Bug 4:**
+No Execute Batch button for PENDING batches (only Retransform existed).
+
+**Phase 5 — Reconciliation:** Panel renders empty state correctly. **Bug 5:**
+Reconciliation hooks expected raw arrays but backend returns wrapped objects
+(`{ records: [...], count }`), causing `.filter is not a function` crash.
+
+**Phase 6 — Parallel Run + Certification:** Go/No-Go checklist renders with
+2 auto-checks + 3 manual checks. Certify Complete button disabled until all
+checked. Panel works correctly.
+
+### 5 Bugs Fixed
+
+| # | Bug | Root Cause | Fix |
+|---|-----|-----------|-----|
+| 1 | ProfileTimeliness VARCHAR crash | `sql.NullTime` scan fails on VARCHAR dates | String-scan fallback + `parseFlexibleDate()` |
+| 2 | Generate Mappings 400 on empty tables | Backend required explicit table list | `autoDiscoverMappingTables()` introspects source DB |
+| 3 | Status casing (TRANSFORMING → transforming) | `normalizeEnums` in `rawRequest()` ran on ALL responses | Removed `normalizeEnums` from `rawRequest()` |
+| 4 | No Execute Batch button | Only Retransform existed | Added `useExecuteBatch` + conditional button |
+| 5 | ReconciliationPanel crash | API returns wrapped objects, hooks expected arrays | Added `select()` transforms to extract arrays |
+
+### Stats
+
+- **Frontend:** 1856/1856 tests (235 files)
+- **Migration Go:** 11/11 packages pass
+- **Files changed:** 7 across 2 commits
+- **Browser verified:** All 6 phases render and function correctly
+
+### What's Next
+
+- Batch execution needs a valid source scope (ACTIVE_MEMBERS doesn't map to a real table)
+- Full reconciliation with real data (needs successful batch execution first)
+- Certification end-to-end (needs reconciliation gate score > 0)
+- NaN% display on AI Recommendation in Transformation tab (cosmetic)
+
 ## Session 23: Migration Wrap-Up — Certification, Lineage, UI Fixes (2026-03-23)
 
 **Branch:** `claude/lucid-colden` → PR #147 (merged)

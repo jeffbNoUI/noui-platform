@@ -41,23 +41,6 @@ const ENUM_FIELDS = new Set([
   'subcategory',
 ]);
 
-function normalizeEnums(obj: unknown): unknown {
-  if (obj === null || obj === undefined) return obj;
-  if (Array.isArray(obj)) return obj.map(normalizeEnums);
-  if (typeof obj === 'object') {
-    const result: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-      if (ENUM_FIELDS.has(key) && typeof value === 'string') {
-        result[key] = value.toLowerCase();
-      } else {
-        result[key] = normalizeEnums(value);
-      }
-    }
-    return result;
-  }
-  return obj;
-}
-
 export interface APIResponse<T> {
   data: T;
   meta: { requestId: string; timestamp: string };
@@ -155,7 +138,7 @@ async function rawRequest(
         throw apiError;
       }
 
-      return normalizeEnums(await res.json());
+      return await res.json();
     } catch (err) {
       clearTimeout(timer);
       // Abort errors (timeout) are not retryable
