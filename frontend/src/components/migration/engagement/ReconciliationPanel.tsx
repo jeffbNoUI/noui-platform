@@ -3,7 +3,6 @@ import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
 import {
   useReconciliationSummary,
   useP1Issues,
-  useReconciliationByTier,
   useReconciliation,
   useRootCauseAnalysis,
   useReconciliationPatterns,
@@ -39,10 +38,10 @@ interface Props {
 export default function ReconciliationPanel({ engagementId }: Props) {
   const { data: summary, isLoading: summaryLoading } = useReconciliationSummary(engagementId);
   const { data: p1Issues } = useP1Issues(engagementId);
-  const { data: tier1 } = useReconciliationByTier(engagementId, 1);
-  const { data: tier2 } = useReconciliationByTier(engagementId, 2);
-  const { data: tier3 } = useReconciliationByTier(engagementId, 3);
   const { data: allRecords } = useReconciliation(engagementId);
+  const tier1 = useMemo(() => allRecords?.filter((r) => r.tier === 1), [allRecords]);
+  const tier2 = useMemo(() => allRecords?.filter((r) => r.tier === 2), [allRecords]);
+  const tier3 = useMemo(() => allRecords?.filter((r) => r.tier === 3), [allRecords]);
   const { data: rootCause } = useRootCauseAnalysis(engagementId);
   const { data: patternsData } = useReconciliationPatterns(engagementId);
   const patterns = patternsData?.patterns ?? [];
