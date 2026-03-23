@@ -7,6 +7,8 @@ import {
   useRootCauseAnalysis,
   useReconciliationPatterns,
   useResolvePattern,
+  useReconcileBatch,
+  useBatches,
 } from '@/hooks/useMigrationApi';
 import RootCauseAnalysisCard from '../ai/RootCauseAnalysis';
 import TierFunnel from '../charts/TierFunnel';
@@ -47,6 +49,9 @@ export default function ReconciliationPanel({ engagementId }: Props) {
   const { data: patternsData } = useReconciliationPatterns(engagementId);
   const patterns = patternsData?.patterns ?? [];
   const resolvePattern = useResolvePattern();
+  const reconcileBatch = useReconcileBatch();
+  const { data: batches } = useBatches(engagementId);
+  const latestBatch = batches?.[batches.length - 1];
 
   const [filterCategory, setFilterCategory] = useState<ReconciliationCategory | 'ALL'>('ALL');
   const [filterTier, setFilterTier] = useState<number | 0>(0);
@@ -98,6 +103,26 @@ export default function ReconciliationPanel({ engagementId }: Props) {
 
   return (
     <div style={{ fontFamily: BODY }}>
+      {latestBatch && latestBatch.status === 'LOADED' && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+          <button
+            onClick={() => reconcileBatch.mutate(latestBatch.batch_id)}
+            disabled={reconcileBatch.isPending}
+            style={{
+              background: C.sage,
+              color: '#fff',
+              border: 'none',
+              borderRadius: 6,
+              padding: '6px 16px',
+              cursor: 'pointer',
+              fontFamily: BODY,
+              fontWeight: 600,
+            }}
+          >
+            {reconcileBatch.isPending ? 'Reconciling...' : 'Run Reconciliation'}
+          </button>
+        </div>
+      )}
       {/* Gate Score gauge */}
       <div
         style={{
