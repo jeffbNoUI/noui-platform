@@ -291,9 +291,10 @@ type Notification struct {
 
 // RootCauseResponse contains a root-cause analysis for reconciliation mismatches.
 type RootCauseResponse struct {
-	Analysis      string  `json:"analysis"`
-	AffectedCount int     `json:"affected_count"`
-	Confidence    float64 `json:"confidence"`
+	Analysis      string                  `json:"analysis"`
+	AffectedCount int                     `json:"affected_count"`
+	Confidence    float64                 `json:"confidence"`
+	Patterns      []ReconciliationPattern `json:"patterns,omitempty"`
 }
 
 // ReconciliationPattern represents a systematic mismatch pattern detected by

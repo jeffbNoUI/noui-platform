@@ -113,11 +113,11 @@ func (h *Handler) HandleGetBatchSizing(w http.ResponseWriter, r *http.Request) {
 	}
 
 	apiresponse.WriteSuccess(w, http.StatusOK, "migration", map[string]any{
-		"engagement_id":  id,
-		"tables_profiled": tableCount,
-		"quality_min":     qualityMin,
+		"engagement_id":          id,
+		"tables_profiled":        tableCount,
+		"quality_min":            qualityMin,
 		"recommended_batch_size": batchSize,
-		"recommendation":  recommendation,
+		"recommendation":         recommendation,
 	})
 }
 
@@ -138,10 +138,10 @@ func (h *Handler) HandleGetRemediation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type RemediationSuggestion struct {
-		Dimension   string  `json:"dimension"`
-		Score       float64 `json:"score"`
-		Suggestion  string  `json:"suggestion"`
-		Priority    string  `json:"priority"`
+		Dimension  string  `json:"dimension"`
+		Score      float64 `json:"score"`
+		Suggestion string  `json:"suggestion"`
+		Priority   string  `json:"priority"`
 	}
 
 	var suggestions []RemediationSuggestion
@@ -221,9 +221,16 @@ func (h *Handler) HandleGetRootCause(w http.ResponseWriter, r *http.Request) {
 		confidence = 0.75
 	}
 
+	// Enrich with intelligence-detected patterns if available.
+	patterns, pErr := migrationdb.GetPatternsByEngagement(h.DB, id)
+	if pErr != nil {
+		slog.Warn("failed to get patterns for root cause", "error", pErr, "engagement_id", id)
+	}
+
 	apiresponse.WriteSuccess(w, http.StatusOK, "migration", models.RootCauseResponse{
 		Analysis:      analysis,
 		AffectedCount: totalMismatches,
 		Confidence:    confidence,
+		Patterns:      patterns,
 	})
 }

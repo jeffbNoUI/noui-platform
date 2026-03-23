@@ -90,3 +90,33 @@ func GetPatternsByEngagement(db *sql.DB, engagementID string) ([]models.Reconcil
 	}
 	return patterns, nil
 }
+
+// ResolvePattern marks a pattern as resolved by the given user.
+func ResolvePattern(db *sql.DB, patternID, userID string) (*models.ReconciliationPattern, error) {
+	var p models.ReconciliationPattern
+	var membersJSON []byte
+	var resolvedAt *string
+	err := db.QueryRow(`
+		UPDATE migration.reconciliation_pattern
+		SET resolved = TRUE, resolved_at = NOW(), resolved_by = $2
+		WHERE pattern_id = $1
+		RETURNING pattern_id, batch_id, suspected_domain, plan_code,
+		          direction, member_count, mean_variance, coefficient_of_var,
+		          affected_members, correction_type, affected_field,
+		          confidence, evidence, resolved, resolved_at, created_at`,
+		patternID, userID,
+	).Scan(
+		&p.PatternID, &p.BatchID, &p.SuspectedDomain, &p.PlanCode,
+		&p.Direction, &p.MemberCount, &p.MeanVariance, &p.CoefficientOfVar,
+		&membersJSON, &p.CorrectionType, &p.AffectedField,
+		&p.Confidence, &p.Evidence, &p.Resolved, &resolvedAt, &p.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("resolve pattern: %w", err)
+	}
+	if err := json.Unmarshal(membersJSON, &p.AffectedMembers); err != nil {
+		p.AffectedMembers = []string{}
+	}
+	p.ResolvedAt = resolvedAt
+	return &p, nil
+}

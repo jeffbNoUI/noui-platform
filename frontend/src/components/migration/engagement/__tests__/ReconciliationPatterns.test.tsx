@@ -9,7 +9,6 @@ vi.mock('@/hooks/useMigrationApi', async () => {
     ...actual,
     useReconciliationSummary: vi.fn(),
     useP1Issues: vi.fn(),
-    useReconciliationByTier: vi.fn(),
     useReconciliation: vi.fn(),
     useRootCauseAnalysis: vi.fn(),
     useReconciliationPatterns: vi.fn(),
@@ -19,7 +18,6 @@ vi.mock('@/hooks/useMigrationApi', async () => {
 import {
   useReconciliationSummary,
   useP1Issues,
-  useReconciliationByTier,
   useReconciliation,
   useRootCauseAnalysis,
   useReconciliationPatterns,
@@ -76,8 +74,7 @@ describe('ReconciliationPanel — Systematic Patterns', () => {
   beforeEach(() => {
     (useReconciliationSummary as any).mockReturnValue(mockSummary);
     (useP1Issues as any).mockReturnValue({ data: { p1_issues: [] }, isLoading: false });
-    (useReconciliationByTier as any).mockReturnValue({ data: [], isLoading: false });
-    (useReconciliation as any).mockReturnValue({ data: { records: [] }, isLoading: false });
+    (useReconciliation as any).mockReturnValue({ data: [], isLoading: false });
     (useRootCauseAnalysis as any).mockReturnValue({ data: null });
   });
 

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/noui/platform/apiresponse"
+	"github.com/noui/platform/auth"
 	migrationdb "github.com/noui/platform/migration/db"
 	"github.com/noui/platform/migration/models"
 )
@@ -34,4 +35,27 @@ func (h *Handler) GetReconciliationPatterns(w http.ResponseWriter, r *http.Reque
 		"patterns":      patterns,
 		"count":         len(patterns),
 	})
+}
+
+// ResolvePattern handles PATCH /api/v1/migration/reconciliation/patterns/{id}/resolve.
+func (h *Handler) ResolvePattern(w http.ResponseWriter, r *http.Request) {
+	patternID := r.PathValue("id")
+	if patternID == "" {
+		apiresponse.WriteError(w, http.StatusBadRequest, "migration", "VALIDATION_ERROR", "pattern id is required")
+		return
+	}
+
+	userID := auth.UserID(r.Context())
+	if userID == "" {
+		userID = "system"
+	}
+
+	pattern, err := migrationdb.ResolvePattern(h.DB, patternID, userID)
+	if err != nil {
+		slog.Error("failed to resolve pattern", "error", err, "pattern_id", patternID)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "RESOLVE_FAILED", "failed to resolve pattern")
+		return
+	}
+
+	apiresponse.WriteSuccess(w, http.StatusOK, "migration", pattern)
 }

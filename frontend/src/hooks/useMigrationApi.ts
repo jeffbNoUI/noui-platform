@@ -467,6 +467,16 @@ export function useRootCauseAnalysis(engagementId: string | undefined) {
   });
 }
 
+export function useResolvePattern() {
+  const queryClient = useQueryClient();
+  return useMutation<ReconciliationPattern, Error, string>({
+    mutationFn: (patternId) => migrationAPI.resolvePattern(patternId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['migration', 'patterns'] });
+    },
+  });
+}
+
 export function useReconciliationPatterns(engagementId: string | undefined) {
   return useQuery<{ patterns: ReconciliationPattern[]; count: number }>({
     queryKey: ['migration', 'reconciliation', 'patterns', engagementId],

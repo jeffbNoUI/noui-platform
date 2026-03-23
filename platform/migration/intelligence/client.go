@@ -192,3 +192,47 @@ func (c *Client) AnalyzeMismatches(ctx context.Context, req AnalyzeMismatchesReq
 
 	return &result, nil
 }
+
+// --- Corpus Learning Types ---
+
+// RecordDecisionRequest is the request body for POST /intelligence/record-decision.
+type RecordDecisionRequest struct {
+	TenantID        string `json:"tenant_id"`
+	SourceColumn    string `json:"source_column"`
+	CanonicalColumn string `json:"canonical_column"`
+	Decision        string `json:"decision"` // "approve" or "reject"
+	SourcePlatform  string `json:"source_platform"`
+}
+
+// CorpusRecorder defines the interface for recording mapping decisions.
+type CorpusRecorder interface {
+	RecordDecision(ctx context.Context, req RecordDecisionRequest) error
+}
+
+// RecordDecision calls POST /intelligence/record-decision on the Python service.
+func (c *Client) RecordDecision(ctx context.Context, req RecordDecisionRequest) error {
+	body, err := json.Marshal(req)
+	if err != nil {
+		return fmt.Errorf("marshal request: %w", err)
+	}
+
+	url := c.BaseURL + "/intelligence/record-decision"
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.HTTPClient.Do(httpReq)
+	if err != nil {
+		return fmt.Errorf("intelligence service call: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		return fmt.Errorf("intelligence service returned %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	return nil
+}
