@@ -18,10 +18,10 @@ func CreateGateTransition(db *sql.DB, t models.PhaseGateTransition) (*models.Pha
 	err := db.QueryRow(
 		`INSERT INTO migration.gate_transition
 		   (engagement_id, from_phase, to_phase, direction, gate_metrics, ai_recommendation, overrides, authorized_by, notes)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		 VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7::jsonb, $8, $9)
 		 RETURNING id, engagement_id, from_phase, to_phase, direction, gate_metrics,
 		           ai_recommendation, overrides, authorized_by, authorized_at, notes`,
-		t.EngagementID, t.FromPhase, t.ToPhase, t.Direction, metricsJSON, t.AIRecommendation, overridesJSON, t.AuthorizedBy, t.Notes,
+		t.EngagementID, t.FromPhase, t.ToPhase, t.Direction, string(metricsJSON), t.AIRecommendation, string(overridesJSON), t.AuthorizedBy, t.Notes,
 	).Scan(
 		&result.ID, &result.EngagementID, &result.FromPhase, &result.ToPhase,
 		&result.Direction, &metricsRaw, &result.AIRecommendation, &overridesRaw,

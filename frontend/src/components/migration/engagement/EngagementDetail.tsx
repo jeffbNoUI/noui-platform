@@ -1,9 +1,57 @@
-import { useState, useMemo, useEffect } from 'react';
+import { Component, useState, useMemo, useEffect } from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
 import { C, BODY, DISPLAY } from '@/lib/designSystem';
 import { useEngagement, useAttentionItems } from '@/hooks/useMigrationApi';
 import { useMigrationEvents } from '@/hooks/useMigrationEvents';
 import type { EngagementStatus } from '@/types/Migration';
 import PhaseStepper from './PhaseStepper';
+
+// Catch render errors in tab panels (e.g. Recharts dimension issues) without
+// crashing the entire engagement detail view.
+class TabErrorBoundary extends Component<
+  { children: ReactNode; tabName: string },
+  { hasError: boolean; error: string }
+> {
+  state = { hasError: false, error: '' };
+  static getDerivedStateFromError(err: Error) {
+    return { hasError: true, error: err.message };
+  }
+  componentDidCatch(_error: Error, _info: ErrorInfo) {
+    // logged by global handler
+  }
+  componentDidUpdate(prevProps: { tabName: string }) {
+    if (prevProps.tabName !== this.props.tabName && this.state.hasError) {
+      this.setState({ hasError: false, error: '' });
+    }
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: 24, textAlign: 'center', color: C.textSecondary }}>
+          <p style={{ fontFamily: BODY, fontSize: 14 }}>
+            This panel encountered an error: {this.state.error}
+          </p>
+          <button
+            onClick={() => this.setState({ hasError: false, error: '' })}
+            style={{
+              marginTop: 12,
+              padding: '8px 16px',
+              borderRadius: 6,
+              border: `1px solid ${C.border}`,
+              background: 'white',
+              cursor: 'pointer',
+              fontFamily: BODY,
+              fontSize: 13,
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 import QualityProfilePanel from './QualityProfilePanel';
 import MappingPanel from './MappingPanel';
 import TransformationPanel from './TransformationPanel';
@@ -360,23 +408,25 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
 
         {/* Tab content */}
         <div style={{ flex: 1, padding: 24, overflowY: 'auto' }}>
-          {activeTab === 'discovery' && (
-            <DiscoveryPanel
-              engagementId={engagementId}
-              onAdvance={() =>
-                setGateDialog({ open: true, targetPhase: 'PROFILING', direction: 'ADVANCE' })
-              }
-            />
-          )}
-          {activeTab === 'quality' && <QualityProfilePanel engagementId={engagementId} />}
-          {activeTab === 'mappings' && <MappingPanel engagementId={engagementId} />}
-          {activeTab === 'transformation' && (
-            <TransformationPanel engagementId={engagementId} onSelectBatch={onSelectBatch} />
-          )}
-          {activeTab === 'reconciliation' && <ReconciliationPanel engagementId={engagementId} />}
-          {activeTab === 'parallel-run' && <ParallelRunPanel engagementId={engagementId} />}
-          {activeTab === 'risks' && <RisksPlaceholder engagementId={engagementId} />}
-          {activeTab === 'attention' && <AttentionQueue engagementId={engagementId} />}
+          <TabErrorBoundary tabName={activeTab}>
+            {activeTab === 'discovery' && (
+              <DiscoveryPanel
+                engagementId={engagementId}
+                onAdvance={() =>
+                  setGateDialog({ open: true, targetPhase: 'PROFILING', direction: 'ADVANCE' })
+                }
+              />
+            )}
+            {activeTab === 'quality' && <QualityProfilePanel engagementId={engagementId} />}
+            {activeTab === 'mappings' && <MappingPanel engagementId={engagementId} />}
+            {activeTab === 'transformation' && (
+              <TransformationPanel engagementId={engagementId} onSelectBatch={onSelectBatch} />
+            )}
+            {activeTab === 'reconciliation' && <ReconciliationPanel engagementId={engagementId} />}
+            {activeTab === 'parallel-run' && <ParallelRunPanel engagementId={engagementId} />}
+            {activeTab === 'risks' && <RisksPlaceholder engagementId={engagementId} />}
+            {activeTab === 'attention' && <AttentionQueue engagementId={engagementId} />}
+          </TabErrorBoundary>
         </div>
       </div>
 

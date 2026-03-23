@@ -352,8 +352,50 @@ type MigrationException struct {
 	ResolvedAt         *time.Time `json:"resolved_at"`
 }
 
+// CertificationRecord represents a parallel run Go/No-Go certification.
+type CertificationRecord struct {
+	ID            string                 `json:"id"`
+	EngagementID  string                 `json:"engagement_id"`
+	GateScore     float64                `json:"gate_score"`
+	P1Count       int                    `json:"p1_count"`
+	ChecklistJSON map[string]interface{} `json:"checklist_json"`
+	CertifiedBy   string                 `json:"certified_by"`
+	CertifiedAt   time.Time              `json:"certified_at"`
+	Notes         string                 `json:"notes,omitempty"`
+	CreatedAt     time.Time              `json:"created_at"`
+}
+
+// CertifyRequest is the JSON body for creating a certification record.
+type CertifyRequest struct {
+	GateScore float64                `json:"gate_score"`
+	P1Count   int                    `json:"p1_count"`
+	Checklist map[string]interface{} `json:"checklist"`
+	Notes     string                 `json:"notes,omitempty"`
+}
+
 // CreateBatchRequest is the JSON body for creating a transformation batch.
 type CreateBatchRequest struct {
 	BatchScope     string `json:"batch_scope"`
 	MappingVersion string `json:"mapping_version"`
+}
+
+// LineageRecord represents a single data lineage entry tracking a transformation.
+type LineageRecord struct {
+	LineageID   string `json:"lineage_id"`
+	BatchID     string `json:"batch_id"`
+	RowKey      string `json:"row_key"`
+	HandlerName string `json:"handler_name"`
+	ColumnName  string `json:"column_name"`
+	SourceValue string `json:"source_value"`
+	ResultValue string `json:"result_value"`
+	CreatedAt   string `json:"created_at"`
+}
+
+// LineageSummary provides aggregate statistics for lineage records in a batch.
+type LineageSummary struct {
+	TotalRecords        int      `json:"total_records"`
+	UniqueMembers       int      `json:"unique_members"`
+	FieldsCovered       int      `json:"fields_covered"`
+	TransformationTypes []string `json:"transformation_types"`
+	ExceptionCount      int      `json:"exception_count"`
 }

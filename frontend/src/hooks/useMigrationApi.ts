@@ -58,6 +58,11 @@ export function useEngagements() {
   return useQuery<MigrationEngagement[]>({
     queryKey: ['migration', 'engagements'],
     queryFn: () => migrationAPI.listEngagements(),
+    select: (data) =>
+      data.map((e) => ({
+        ...e,
+        status: (e.status?.toUpperCase() ?? e.status) as MigrationEngagement['status'],
+      })),
   });
 }
 
@@ -66,6 +71,10 @@ export function useEngagement(id: string) {
     queryKey: ['migration', 'engagement', id],
     queryFn: () => migrationAPI.getEngagement(id),
     enabled: !!id,
+    select: (data) => ({
+      ...data,
+      status: (data.status?.toUpperCase() ?? data.status) as MigrationEngagement['status'],
+    }),
   });
 }
 
@@ -473,6 +482,39 @@ export function useResolvePattern() {
     mutationFn: (patternId) => migrationAPI.resolvePattern(patternId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['migration', 'patterns'] });
+    },
+  });
+}
+
+// ─── Certification hooks ────────────────────────────────────────────────────
+
+export function useCertification(engagementId: string) {
+  return useQuery<Record<string, unknown> | null>({
+    queryKey: ['migration', 'certification', engagementId],
+    queryFn: () => migrationAPI.getCertification(engagementId),
+    enabled: !!engagementId,
+  });
+}
+
+export function useCertifyEngagement() {
+  const queryClient = useQueryClient();
+  return useMutation<
+    void,
+    Error,
+    {
+      engagementId: string;
+      body: {
+        gate_score: number;
+        p1_count: number;
+        checklist: Record<string, boolean>;
+        notes?: string;
+      };
+    }
+  >({
+    mutationFn: ({ engagementId, body }) => migrationAPI.certifyEngagement(engagementId, body),
+    onSuccess: (_, { engagementId }) => {
+      queryClient.invalidateQueries({ queryKey: ['migration', 'certification', engagementId] });
+      queryClient.invalidateQueries({ queryKey: ['migration', 'engagement', engagementId] });
     },
   });
 }

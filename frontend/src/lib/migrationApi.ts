@@ -144,6 +144,23 @@ export const migrationAPI = {
       RAW,
     ),
 
+  // ─── Certification ─────────────────────────────────────────────────────
+  certifyEngagement: (
+    engagementId: string,
+    body: {
+      gate_score: number;
+      p1_count: number;
+      checklist: Record<string, boolean>;
+      notes?: string;
+    },
+  ) => postAPI<void>(`${BASE}/engagements/${engagementId}/certify`, body, RAW),
+
+  getCertification: (engagementId: string) =>
+    fetchAPI<Record<string, unknown> | null>(
+      `${BASE}/engagements/${engagementId}/certification`,
+      RAW,
+    ),
+
   // ─── Risks ──────────────────────────────────────────────────────────────
   listRisks: (engagementId?: string) =>
     fetchAPI<MigrationRisk[]>(

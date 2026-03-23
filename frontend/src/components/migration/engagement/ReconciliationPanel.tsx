@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
 import {
   useReconciliationSummary,
@@ -13,6 +13,16 @@ import {
 import RootCauseAnalysisCard from '../ai/RootCauseAnalysis';
 import TierFunnel from '../charts/TierFunnel';
 import type { Reconciliation, ReconciliationCategory, RiskSeverity } from '@/types/Migration';
+
+type FeedbackState = { type: 'success' | 'error'; message: string } | null;
+
+/** Format a numeric string as USD currency, e.g. "$2,847.33". Returns '--' for null/undefined. */
+function fmtCurrency(value: string | number | null | undefined): string {
+  if (value == null) return '--';
+  const n = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(n)) return '--';
+  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+}
 
 const CATEGORY_COLOR: Record<ReconciliationCategory, string> = {
   MATCH: C.sage,
@@ -39,7 +49,11 @@ interface Props {
 }
 
 export default function ReconciliationPanel({ engagementId }: Props) {
-  const { data: summary, isLoading: summaryLoading } = useReconciliationSummary(engagementId);
+  const {
+    data: summary,
+    isLoading: summaryLoading,
+    isError: summaryError,
+  } = useReconciliationSummary(engagementId);
   const { data: p1Issues } = useP1Issues(engagementId);
   const { data: allRecords } = useReconciliation(engagementId);
   const tier1 = useMemo(() => allRecords?.filter((r) => r.tier === 1), [allRecords]);
@@ -52,6 +66,18 @@ export default function ReconciliationPanel({ engagementId }: Props) {
   const reconcileBatch = useReconcileBatch();
   const { data: batches } = useBatches(engagementId);
   const latestBatch = batches?.[batches.length - 1];
+
+  const [feedback, setFeedback] = useState<FeedbackState>(null);
+
+  // Auto-dismiss feedback after 4 seconds
+  useEffect(() => {
+    if (!feedback) return;
+    const timer = setTimeout(() => setFeedback(null), 4000);
+    return () => clearTimeout(timer);
+  }, [feedback]);
+
+  const [domainFilter, setDomainFilter] = useState<string | null>(null);
+  const [expandedPattern, setExpandedPattern] = useState<string | null>(null);
 
   const [filterCategory, setFilterCategory] = useState<ReconciliationCategory | 'ALL'>('ALL');
   const [filterTier, setFilterTier] = useState<number | 0>(0);
@@ -71,6 +97,12 @@ export default function ReconciliationPanel({ engagementId }: Props) {
     tierFunnelData.tier2.total > 0 ||
     tierFunnelData.tier3.total > 0;
 
+  const filteredP1 = useMemo(() => {
+    if (!p1Issues) return [];
+    if (!domainFilter) return p1Issues;
+    return p1Issues.filter((issue) => issue.suspected_domain === domainFilter);
+  }, [p1Issues, domainFilter]);
+
   if (summaryLoading) {
     return (
       <div style={{ padding: 24 }}>
@@ -78,6 +110,24 @@ export default function ReconciliationPanel({ engagementId }: Props) {
           className="animate-pulse"
           style={{ height: 200, borderRadius: 8, background: C.border }}
         />
+      </div>
+    );
+  }
+
+  if (summaryError) {
+    return (
+      <div
+        style={{
+          padding: '16px 24px',
+          background: C.coralLight,
+          borderRadius: 8,
+          color: C.coral,
+          fontSize: 13,
+          fontWeight: 500,
+          fontFamily: BODY,
+        }}
+      >
+        Failed to load reconciliation summary. Please try again later.
       </div>
     );
   }
@@ -103,10 +153,35 @@ export default function ReconciliationPanel({ engagementId }: Props) {
 
   return (
     <div style={{ fontFamily: BODY }}>
+      {feedback && (
+        <div
+          style={{
+            padding: '10px 16px',
+            borderRadius: 8,
+            marginBottom: 12,
+            fontSize: 13,
+            fontWeight: 500,
+            color: '#fff',
+            background: feedback.type === 'success' ? C.sage : C.coral,
+          }}
+        >
+          {feedback.message}
+        </div>
+      )}
       {latestBatch && latestBatch.status === 'LOADED' && (
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
           <button
-            onClick={() => reconcileBatch.mutate(latestBatch.batch_id)}
+            onClick={() =>
+              reconcileBatch.mutate(latestBatch.batch_id, {
+                onSuccess: () =>
+                  setFeedback({
+                    type: 'success',
+                    message: 'Reconciliation completed successfully.',
+                  }),
+                onError: (err) =>
+                  setFeedback({ type: 'error', message: `Reconciliation failed: ${err.message}` }),
+              })
+            }
             disabled={reconcileBatch.isPending}
             style={{
               background: C.sage,
@@ -303,6 +378,10 @@ export default function ReconciliationPanel({ engagementId }: Props) {
             analysis={rootCause.analysis}
             affectedCount={rootCause.affectedCount}
             confidence={rootCause.confidence}
+            onViewMembers={() => {
+              setDomainFilter(null);
+              document.getElementById('p1-issues-table')?.scrollIntoView({ behavior: 'smooth' });
+            }}
           />
         </div>
       )}
@@ -322,13 +401,21 @@ export default function ReconciliationPanel({ engagementId }: Props) {
                   borderRadius: 8,
                   border: '1px solid #e5e7eb',
                   background: p.resolved ? '#f9fafb' : '#fffbeb',
+                  cursor: 'pointer',
                 }}
+                onClick={() =>
+                  setExpandedPattern(expandedPattern === p.pattern_id ? null : p.pattern_id)
+                }
               >
                 <div
                   style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                 >
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDomainFilter(p.suspected_domain);
+                      }}
                       style={{
                         fontSize: 12,
                         fontWeight: 600,
@@ -336,7 +423,9 @@ export default function ReconciliationPanel({ engagementId }: Props) {
                         borderRadius: 4,
                         background: '#fef3c7',
                         color: '#92400e',
+                        cursor: 'pointer',
                       }}
+                      title={`Filter P1 issues by ${p.suspected_domain}`}
                     >
                       {p.suspected_domain}
                     </span>
@@ -394,7 +483,21 @@ export default function ReconciliationPanel({ engagementId }: Props) {
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
                   {!p.resolved ? (
                     <button
-                      onClick={() => resolvePattern.mutate(p.pattern_id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        resolvePattern.mutate(p.pattern_id, {
+                          onSuccess: () =>
+                            setFeedback({
+                              type: 'success',
+                              message: `Pattern "${p.suspected_domain}" resolved.`,
+                            }),
+                          onError: (err) =>
+                            setFeedback({
+                              type: 'error',
+                              message: `Resolve failed: ${err.message}`,
+                            }),
+                        });
+                      }}
                       disabled={resolvePattern.isPending}
                       style={{
                         background: 'none',
@@ -413,6 +516,22 @@ export default function ReconciliationPanel({ engagementId }: Props) {
                     <span style={{ fontFamily: MONO, fontSize: 11, color: C.sage }}>Resolved</span>
                   )}
                 </div>
+                {expandedPattern === p.pattern_id && p.affected_members.length > 0 && (
+                  <div
+                    style={{
+                      marginTop: 8,
+                      padding: '8px 10px',
+                      borderRadius: 6,
+                      background: '#f3f4f6',
+                      fontSize: 11,
+                      fontFamily: MONO,
+                      color: '#374151',
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    {p.affected_members.join(', ')}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -472,6 +591,7 @@ export default function ReconciliationPanel({ engagementId }: Props) {
       {/* P1 Issues table */}
       {p1Issues && p1Issues.length > 0 && (
         <div
+          id="p1-issues-table"
           style={{
             background: C.cardBg,
             borderRadius: 10,
@@ -510,9 +630,39 @@ export default function ReconciliationPanel({ engagementId }: Props) {
                 padding: '2px 8px',
               }}
             >
-              {p1Issues.length}
+              {filteredP1.length}
             </span>
           </div>
+          {domainFilter && (
+            <div
+              style={{
+                padding: '8px 16px',
+                borderBottom: `1px solid ${C.border}`,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                fontSize: 12,
+                color: C.textSecondary,
+              }}
+            >
+              Filtered by: <strong style={{ color: '#92400e' }}>{domainFilter}</strong>
+              <button
+                onClick={() => setDomainFilter(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  color: C.coral,
+                  fontWeight: 600,
+                  padding: 0,
+                  fontFamily: BODY,
+                }}
+              >
+                Clear
+              </button>
+            </div>
+          )}
           <div style={{ overflowX: 'auto' }}>
             <table
               style={{
@@ -581,7 +731,7 @@ export default function ReconciliationPanel({ engagementId }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {p1Issues.map((issue) => (
+                {filteredP1.map((issue) => (
                   <tr
                     key={issue.recon_id}
                     style={{
@@ -614,7 +764,7 @@ export default function ReconciliationPanel({ engagementId }: Props) {
                         color: C.coral,
                       }}
                     >
-                      {issue.variance_amount ?? '--'}
+                      {fmtCurrency(issue.variance_amount)}
                     </td>
                     <td style={{ padding: '10px 12px', textAlign: 'center' }}>
                       <span

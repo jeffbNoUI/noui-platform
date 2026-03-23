@@ -1,6 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
-import { useReconciliationSummary, useP1Issues } from '@/hooks/useMigrationApi';
+import {
+  useReconciliationSummary,
+  useP1Issues,
+  useCertification,
+  useCertifyEngagement,
+} from '@/hooks/useMigrationApi';
 
 interface Props {
   engagementId: string;
@@ -24,12 +29,35 @@ const CHECKLIST: ChecklistItem[] = [
 export default function ParallelRunPanel({ engagementId, onCertifyComplete }: Props) {
   const { data: reconSummary } = useReconciliationSummary(engagementId);
   const { data: p1Issues } = useP1Issues(engagementId);
+  const { data: existingCert } = useCertification(engagementId);
+  const certifyMutation = useCertifyEngagement();
 
   const [manualChecks, setManualChecks] = useState<Record<string, boolean>>({
     parallel_duration: false,
     stakeholder_signoff: false,
     rollback_plan: false,
   });
+  const [certifyError, setCertifyError] = useState<string | null>(null);
+  const [certifySuccess, setCertifySuccess] = useState(false);
+
+  // Restore manual check states from existing certification
+  useEffect(() => {
+    if (existingCert) {
+      const checklist = (existingCert as Record<string, unknown>).checklist_json as
+        | Record<string, boolean>
+        | undefined;
+      if (checklist) {
+        setManualChecks((prev) => ({
+          ...prev,
+          parallel_duration: checklist.parallel_duration ?? prev.parallel_duration,
+          stakeholder_signoff: checklist.stakeholder_signoff ?? prev.stakeholder_signoff,
+          rollback_plan: checklist.rollback_plan ?? prev.rollback_plan,
+        }));
+      }
+    }
+  }, [existingCert]);
+
+  const isCertified = !!existingCert;
 
   // Auto-computed checks
   const gateScore = reconSummary?.gate_score ?? 0;
@@ -44,11 +72,67 @@ export default function ParallelRunPanel({ engagementId, onCertifyComplete }: Pr
   );
 
   const toggleManual = (key: string) => {
+    if (isCertified) return;
     setManualChecks((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleCertify = () => {
+    setCertifyError(null);
+    const checklist: Record<string, boolean> = { ...autoChecks, ...manualChecks };
+    certifyMutation.mutate(
+      {
+        engagementId,
+        body: {
+          gate_score: gateScore,
+          p1_count: p1Count,
+          checklist,
+        },
+      },
+      {
+        onSuccess: () => {
+          setCertifySuccess(true);
+          onCertifyComplete?.();
+        },
+        onError: (err) => {
+          setCertifyError(err.message || 'Certification failed');
+        },
+      },
+    );
   };
 
   return (
     <div style={{ fontFamily: BODY }}>
+      {/* Already-certified banner */}
+      {isCertified && (
+        <div
+          style={{
+            background: C.sageLight,
+            border: `1px solid ${C.sage}`,
+            borderRadius: 8,
+            padding: '10px 14px',
+            fontSize: 13,
+            color: C.sage,
+            fontWeight: 600,
+            marginBottom: 16,
+          }}
+        >
+          Already Certified
+          {!!(existingCert as Record<string, unknown>).certified_by && (
+            <span style={{ fontWeight: 400, marginLeft: 8 }}>
+              by {String((existingCert as Record<string, unknown>).certified_by)}
+            </span>
+          )}
+          {!!(existingCert as Record<string, unknown>).certified_at && (
+            <span style={{ fontWeight: 400, marginLeft: 8 }}>
+              on{' '}
+              {new Date(
+                String((existingCert as Record<string, unknown>).certified_at),
+              ).toLocaleDateString()}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Status card */}
       <div
         style={{
@@ -92,7 +176,9 @@ export default function ParallelRunPanel({ engagementId, onCertifyComplete }: Pr
             Parallel Run
           </h3>
           <p style={{ fontSize: 13, color: C.textSecondary, margin: '4px 0 0' }}>
-            Parallel run not yet started. Complete the Go/No-Go checklist below to certify.
+            {isCertified
+              ? 'Parallel run certification complete.'
+              : 'Parallel run not yet started. Complete the Go/No-Go checklist below to certify.'}
           </p>
         </div>
       </div>
@@ -130,6 +216,7 @@ export default function ParallelRunPanel({ engagementId, onCertifyComplete }: Pr
           {CHECKLIST.map((item) => {
             const isChecked = item.auto ? autoChecks[item.key] : manualChecks[item.key];
             const isAuto = item.auto;
+            const isDisabled = isAuto || isCertified;
 
             return (
               <label
@@ -140,7 +227,7 @@ export default function ParallelRunPanel({ engagementId, onCertifyComplete }: Pr
                   gap: 12,
                   padding: '12px 16px',
                   borderBottom: `1px solid ${C.borderLight}`,
-                  cursor: isAuto ? 'default' : 'pointer',
+                  cursor: isDisabled ? 'default' : 'pointer',
                   background: isChecked ? C.sageLight : 'transparent',
                   transition: 'background 0.15s',
                 }}
@@ -148,13 +235,13 @@ export default function ParallelRunPanel({ engagementId, onCertifyComplete }: Pr
                 <input
                   type="checkbox"
                   checked={isChecked}
-                  onChange={() => !isAuto && toggleManual(item.key)}
-                  disabled={isAuto}
+                  onChange={() => !isDisabled && toggleManual(item.key)}
+                  disabled={isDisabled}
                   style={{
                     width: 18,
                     height: 18,
                     accentColor: C.sage,
-                    cursor: isAuto ? 'default' : 'pointer',
+                    cursor: isDisabled ? 'default' : 'pointer',
                   }}
                 />
                 <span
@@ -224,28 +311,66 @@ export default function ParallelRunPanel({ engagementId, onCertifyComplete }: Pr
           marginBottom: 20,
         }}
       >
-        CDC sync and continuous comparison will be available in a future release. For now,
-        parallel run verification is manual.
+        CDC sync and continuous comparison will be available in a future release. For now, parallel
+        run verification is manual.
       </div>
+
+      {/* Success/Error feedback */}
+      {certifySuccess && !isCertified && (
+        <div
+          style={{
+            background: C.sageLight,
+            border: `1px solid ${C.sage}`,
+            borderRadius: 8,
+            padding: '10px 14px',
+            fontSize: 13,
+            color: C.sage,
+            fontWeight: 500,
+            marginBottom: 12,
+          }}
+        >
+          Certification recorded successfully.
+        </div>
+      )}
+      {certifyError && (
+        <div
+          style={{
+            background: '#FEF2F2',
+            border: `1px solid ${C.coral}`,
+            borderRadius: 8,
+            padding: '10px 14px',
+            fontSize: 13,
+            color: C.coral,
+            fontWeight: 500,
+            marginBottom: 12,
+          }}
+        >
+          {certifyError}
+        </div>
+      )}
 
       {/* Certify button */}
       <button
-        onClick={() => onCertifyComplete?.()}
-        disabled={!allChecked}
+        onClick={handleCertify}
+        disabled={!allChecked || isCertified || certifyMutation.isPending}
         style={{
           padding: '12px 28px',
           borderRadius: 8,
           border: 'none',
-          background: allChecked ? C.sage : C.border,
+          background: allChecked && !isCertified ? C.sage : C.border,
           color: C.textOnDark,
           fontSize: 14,
           fontWeight: 600,
           fontFamily: BODY,
-          cursor: allChecked ? 'pointer' : 'not-allowed',
+          cursor: allChecked && !isCertified ? 'pointer' : 'not-allowed',
           width: '100%',
         }}
       >
-        Certify Complete
+        {certifyMutation.isPending
+          ? 'Certifying...'
+          : isCertified
+            ? 'Already Certified'
+            : 'Certify Complete'}
       </button>
     </div>
   );
