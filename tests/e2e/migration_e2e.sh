@@ -589,7 +589,7 @@ CERTEOF
 
 RESPONSE=$(do_post "/api/v1/migration/engagements/${ENGAGEMENT_ID}/certify" "$CERT_PAYLOAD")
 extract_http "$RESPONSE"
-assert_status "POST /migration/engagements/:id/certify" "200" "$HTTP_CODE"
+assert_status "POST /migration/engagements/:id/certify" "201" "$HTTP_CODE"
 
 RESPONSE=$(do_get "/api/v1/migration/engagements/${ENGAGEMENT_ID}/certification")
 extract_http "$RESPONSE"

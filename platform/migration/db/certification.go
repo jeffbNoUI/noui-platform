@@ -24,9 +24,9 @@ func CreateCertification(db *sql.DB, c *models.CertificationRecord) error {
 	err = db.QueryRow(
 		`INSERT INTO migration.certification_record
 			(engagement_id, gate_score, p1_count, checklist_json, certified_by, notes)
-		 VALUES ($1, $2, $3, $4, $5, $6)
+		 VALUES ($1, $2, $3, $4::jsonb, $5, $6)
 		 RETURNING id, certified_at, created_at`,
-		c.EngagementID, c.GateScore, c.P1Count, checklistBytes, c.CertifiedBy, notes,
+		c.EngagementID, c.GateScore, c.P1Count, string(checklistBytes), c.CertifiedBy, notes,
 	).Scan(&c.ID, &c.CertifiedAt, &c.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("insert certification: %w", err)
