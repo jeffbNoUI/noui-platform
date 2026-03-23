@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
+	"github.com/noui/platform/migration/reconciler"
 )
 
 // tier1Cols matches the columns returned by the tier1Query in reconciler/tier1.go.
@@ -29,23 +31,58 @@ var tier3ContribCols = []string{"sum"}
 // tier3ServiceCols matches the columns returned by tier3ServiceCreditQuery.
 var tier3ServiceCols = []string{"member_id", "service_credit_years", "employment_start", "employment_end"}
 
+// planConfigTestPath is the relative path from the api/ test dir to plan-config.yaml.
+const planConfigTestPath = "../../../domains/pension/plan-config.yaml"
+
+// loadTestPlanConfig attempts to load PlanConfig for tests. Returns nil if unavailable.
+func loadTestPlanConfig(t *testing.T) *reconciler.PlanConfig {
+	t.Helper()
+	if _, err := os.Stat(planConfigTestPath); os.IsNotExist(err) {
+		t.Log("plan-config.yaml not found; using nil PlanConfig")
+		return nil
+	}
+	pc, err := reconciler.LoadPlanConfig(planConfigTestPath)
+	if err != nil {
+		t.Fatalf("LoadPlanConfig: %v", err)
+	}
+	return pc
+}
+
 func TestReconcileBatch_Success(t *testing.T) {
 	h, mock := newTestHandler(t)
+	h.PlanConfig = loadTestPlanConfig(t)
 
 	// Tier 1 query: return one MATCH-worthy member (recomputed will match stored).
-	// DB_MAIN: yos=25, fas=5000, age=65 -> gross = 25 * 0.20 * 5000 / 12 = 2083.33
-	// No penalty at age 65. Final = 2083.33 (above $800 floor).
+	// TIER_1: yos=30, fas=25000, age=65 -> gross = 30 * 0.020 * 25000 / 12 = 1250.00
+	// No reduction at age 65. Final = 1250.00 (above $800 floor).
 	mock.ExpectQuery("SELECT").
 		WithArgs("batch-001").
 		WillReturnRows(sqlmock.NewRows(tier1Cols).
-			AddRow("M-001", "ACTIVE", "25", "5000.00", 65, "DB_MAIN", "2083.33", "2083.33"))
+			AddRow("M-001", "ACTIVE", "30", "25000.00", 65, "TIER_1", "1250.00", "1250.00"))
 
 	// Tier 2 query: return empty (no payment-only members).
 	mock.ExpectQuery("SELECT").
 		WithArgs("batch-001").
 		WillReturnRows(sqlmock.NewRows(tier2Cols))
 
-	// Tier 3 queries (empty benchmarks → minimal work):
+	// computeBenchmarks queries (run before Tier 3):
+	// Benchmark 1: avg salary by year — return empty
+	benchSalaryCols := []string{"yr", "avg"}
+	mock.ExpectQuery("SELECT").
+		WithArgs("batch-001").
+		WillReturnRows(sqlmock.NewRows(benchSalaryCols))
+	// Benchmark 2: total contributions — return "0"
+	benchContribCols := []string{"coalesce"}
+	mock.ExpectQuery("SELECT").
+		WithArgs("batch-001").
+		WillReturnRows(sqlmock.NewRows(benchContribCols).AddRow("0"))
+	// Benchmark 3: member count by status — return empty
+	benchStatusCols := []string{"member_status", "count"}
+	mock.ExpectQuery("SELECT").
+		WithArgs("batch-001").
+		WillReturnRows(sqlmock.NewRows(benchStatusCols))
+
+	// Tier 3 queries (with computed benchmarks):
 	// 3a: salary outliers — return empty rows
 	mock.ExpectQuery("SELECT").
 		WithArgs("batch-001").

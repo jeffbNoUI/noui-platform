@@ -17,6 +17,7 @@ import (
 	"github.com/noui/platform/logging"
 	"github.com/noui/platform/migration/api"
 	"github.com/noui/platform/migration/db"
+	"github.com/noui/platform/migration/reconciler"
 	"github.com/noui/platform/migration/ws"
 	"github.com/noui/platform/ratelimit"
 )
@@ -35,12 +36,26 @@ func main() {
 	}
 	defer database.Close()
 
+	// Load plan configuration for reconciliation.
+	planConfigPath := os.Getenv("PLAN_CONFIG_PATH")
+	if planConfigPath == "" {
+		planConfigPath = "../../domains/pension/plan-config.yaml"
+	}
+	var planConfig *reconciler.PlanConfig
+	if pc, err := reconciler.LoadPlanConfig(planConfigPath); err != nil {
+		slog.Warn("plan config not loaded, reconciliation will use defaults", "error", err, "path", planConfigPath)
+	} else {
+		planConfig = pc
+		slog.Info("plan config loaded", "system", planConfig.System.ShortName, "plans", len(planConfig.Plans))
+	}
+
 	hub := ws.NewHub()
 	go hub.Run()
 
 	counters := healthutil.NewRequestCounters()
 	handler := api.NewHandler(database)
 	handler.Hub = hub
+	handler.PlanConfig = planConfig
 	mux := http.NewServeMux()
 
 	// WebSocket route on bare mux — bypasses auth/ratelimit/dbcontext middleware chain.

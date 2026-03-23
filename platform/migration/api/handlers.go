@@ -7,14 +7,16 @@ import (
 
 	"github.com/noui/platform/apiresponse"
 	"github.com/noui/platform/migration/intelligence"
+	"github.com/noui/platform/migration/reconciler"
 	"github.com/noui/platform/migration/ws"
 )
 
 // Handler holds dependencies for API handlers.
 type Handler struct {
 	DB          *sql.DB
-	IntelClient intelligence.Scorer // nil-safe: handlers degrade to template-only if nil
-	Hub         *ws.Hub             // WebSocket hub for broadcasting events (nil-safe)
+	IntelClient intelligence.Scorer    // nil-safe: handlers degrade to template-only if nil
+	Hub         *ws.Hub                // WebSocket hub for broadcasting events (nil-safe)
+	PlanConfig  *reconciler.PlanConfig // nil-safe: reconciliation degrades if not loaded
 }
 
 // NewHandler creates a Handler with the given database connection.

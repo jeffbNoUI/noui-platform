@@ -1,55 +1,75 @@
 test_cases:
-  - name: standard_retirement_65
+  - name: tier1_normal_retirement_65
     inputs:
       yos: "25.0000"
       fas: "5500.00"
       age_at_retirement: 65
-      plan_code: "DB_MAIN"
+      tier_code: "TIER_1"
     expected:
-      gross_monthly: "2291.67"
-      penalty_pct: "0.00"
-      final_monthly: "2291.67"
-
-  - name: early_retirement_60
-    inputs:
-      yos: "20.0000"
-      fas: "4800.00"
-      age_at_retirement: 60
-      plan_code: "DB_MAIN"
-    expected:
-      gross_monthly: "1600.00"
-      penalty_pct: "0.30"
-      final_monthly: "1120.00"
-
-  - name: penalty_cap_at_30pct
-    inputs:
-      yos: "15.0000"
-      fas: "6000.00"
-      age_at_retirement: 55
-      plan_code: "DB_MAIN"
-    expected:
-      gross_monthly: "1500.00"
-      penalty_pct: "0.30"
-      final_monthly: "1050.00"
-
-  - name: benefit_floor_800
-    inputs:
-      yos: "5.0000"
-      fas: "2000.00"
-      age_at_retirement: 65
-      plan_code: "DB_MAIN"
-    expected:
-      gross_monthly: "166.67"
-      penalty_pct: "0.00"
+      gross_monthly: "229.17"
+      reduction_factor: "1.00"
       final_monthly: "800.00"
 
-  - name: tier2_lower_multiplier
+  - name: tier1_early_retirement_58
+    inputs:
+      yos: "25.0000"
+      fas: "5500.00"
+      age_at_retirement: 58
+      tier_code: "TIER_1"
+    expected:
+      gross_monthly: "229.17"
+      reduction_factor: "0.79"
+      final_monthly: "800.00"
+
+  - name: tier1_high_earner_normal
+    inputs:
+      yos: "30.0000"
+      fas: "25000.00"
+      age_at_retirement: 65
+      tier_code: "TIER_1"
+    expected:
+      gross_monthly: "1250.00"
+      reduction_factor: "1.00"
+      final_monthly: "1250.00"
+
+  - name: tier1_high_earner_early_58
+    inputs:
+      yos: "30.0000"
+      fas: "25000.00"
+      age_at_retirement: 58
+      tier_code: "TIER_1"
+    expected:
+      gross_monthly: "1250.00"
+      reduction_factor: "0.79"
+      final_monthly: "987.50"
+
+  - name: tier2_normal_retirement_floor
     inputs:
       yos: "25.0000"
       fas: "5500.00"
       age_at_retirement: 65
-      plan_code: "DB_T2"
+      tier_code: "TIER_2"
     expected:
-      gross_monthly: "2062.50"
-      penalty_pct: "0.00"
-      final_monthly: "2062.50"
+      gross_monthly: "171.88"
+      reduction_factor: "1.00"
+      final_monthly: "800.00"
+
+  - name: tier3_early_retirement_63
+    inputs:
+      yos: "30.0000"
+      fas: "25000.00"
+      age_at_retirement: 63
+      tier_code: "TIER_3"
+    expected:
+      gross_monthly: "937.50"
+      reduction_factor: "0.88"
+      final_monthly: "825.00"
+
+  - name: unknown_tier_error
+    inputs:
+      yos: "25.0000"
+      fas: "5500.00"
+      age_at_retirement: 65
+      tier_code: "UNKNOWN"
+    expected:
+      error: true

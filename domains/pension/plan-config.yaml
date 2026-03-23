@@ -100,3 +100,90 @@ js_factors:              # Illustrative — actual from plan actuarial tables
   100: 0.8850
   75: 0.9150
   50: 0.9450
+
+# --- Reconciler Configuration ---
+# Used by migration reconciler to recompute benefits for data verification.
+# Conforms to docs/architecture/UNIVERSAL_PLAN_TIER_MODEL.md entity hierarchy.
+# The intelligence service ignores this section.
+
+reconciler:
+  system:
+    name: "Colorado PERA"
+    short_name: "PERA"
+    normal_retirement_age: 65
+
+  plans:
+    - id: "state_division"
+      name: "State Division Trust"
+      benefit_floor: 800.00
+
+      tiers:
+        - id: "TIER_1"
+          name: "Tier 1"
+          status: "active"
+          cloned_from: null
+          formula:
+            type: "flat_multiplier"
+            multiplier: 0.020
+          fas:
+            method: "highest_consecutive"
+            window_months: 36
+          reduction:
+            method: "lookup_table"
+            table:
+              55: 0.70
+              56: 0.73
+              57: 0.76
+              58: 0.79
+              59: 0.82
+              60: 0.85
+              61: 0.88
+              62: 0.91
+              63: 0.94
+              64: 0.97
+              65: 1.00
+
+        - id: "TIER_2"
+          name: "Tier 2"
+          status: "active"
+          cloned_from: "TIER_1"
+          formula:
+            type: "flat_multiplier"
+            multiplier: 0.015
+          fas:
+            method: "highest_consecutive"
+            window_months: 36
+          reduction:
+            method: "lookup_table"
+            table:
+              55: 0.70
+              56: 0.73
+              57: 0.76
+              58: 0.79
+              59: 0.82
+              60: 0.85
+              61: 0.88
+              62: 0.91
+              63: 0.94
+              64: 0.97
+              65: 1.00
+
+        - id: "TIER_3"
+          name: "Tier 3"
+          status: "active"
+          cloned_from: "TIER_2"
+          formula:
+            type: "flat_multiplier"
+            multiplier: 0.015
+          fas:
+            method: "highest_consecutive"
+            window_months: 60
+          reduction:
+            method: "lookup_table"
+            table:
+              60: 0.70
+              61: 0.76
+              62: 0.82
+              63: 0.88
+              64: 0.94
+              65: 1.00
