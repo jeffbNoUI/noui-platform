@@ -45,6 +45,7 @@ import type {
   MigrationException,
   CoverageReport,
   MappingSpecReport,
+  ReconciliationPattern,
 } from '@/types/Migration';
 
 const BASE = '/api/v1/migration';
@@ -220,6 +221,12 @@ export const migrationAPI = {
   getRootCauseAnalysis: (engagementId: string) =>
     fetchAPI<RootCauseResponse>(
       `${BASE}/engagements/${engagementId}/reconciliation/root-cause`,
+      RAW,
+    ),
+
+  getReconciliationPatterns: (engagementId: string) =>
+    fetchAPI<{ patterns: ReconciliationPattern[]; count: number }>(
+      `${BASE}/engagements/${engagementId}/reconciliation/patterns`,
       RAW,
     ),
 

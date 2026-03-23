@@ -6,6 +6,7 @@ import {
   useReconciliationByTier,
   useReconciliation,
   useRootCauseAnalysis,
+  useReconciliationPatterns,
 } from '@/hooks/useMigrationApi';
 import RootCauseAnalysisCard from '../ai/RootCauseAnalysis';
 import TierFunnel from '../charts/TierFunnel';
@@ -43,6 +44,8 @@ export default function ReconciliationPanel({ engagementId }: Props) {
   const { data: tier3 } = useReconciliationByTier(engagementId, 3);
   const { data: allRecords } = useReconciliation(engagementId);
   const { data: rootCause } = useRootCauseAnalysis(engagementId);
+  const { data: patternsData } = useReconciliationPatterns(engagementId);
+  const patterns = patternsData?.patterns ?? [];
 
   const [filterCategory, setFilterCategory] = useState<ReconciliationCategory | 'ALL'>('ALL');
   const [filterTier, setFilterTier] = useState<number | 0>(0);
@@ -275,6 +278,96 @@ export default function ReconciliationPanel({ engagementId }: Props) {
             affectedCount={rootCause.affectedCount}
             confidence={rootCause.confidence}
           />
+        </div>
+      )}
+
+      {/* Systematic Patterns (from intelligence service) */}
+      {patterns.length > 0 && (
+        <div style={{ marginTop: 16, marginBottom: 16 }}>
+          <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: '#374151' }}>
+            Systematic Patterns ({patterns.length})
+          </h4>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {patterns.map((p) => (
+              <div
+                key={p.pattern_id}
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: 8,
+                  border: '1px solid #e5e7eb',
+                  background: p.resolved ? '#f9fafb' : '#fffbeb',
+                }}
+              >
+                <div
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        padding: '2px 6px',
+                        borderRadius: 4,
+                        background: '#fef3c7',
+                        color: '#92400e',
+                      }}
+                    >
+                      {p.suspected_domain}
+                    </span>
+                    <span style={{ fontSize: 12, color: '#6b7280' }}>
+                      {p.plan_code} · {p.direction}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>
+                    {p.member_count} members · avg {p.mean_variance}
+                  </span>
+                </div>
+                {p.evidence && (
+                  <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>{p.evidence}</div>
+                )}
+                {p.correction_type && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: 8,
+                      alignItems: 'center',
+                      marginTop: 6,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 11,
+                        padding: '1px 5px',
+                        borderRadius: 3,
+                        background: '#dbeafe',
+                        color: '#1e40af',
+                      }}
+                    >
+                      {p.correction_type}
+                    </span>
+                    {p.affected_field && (
+                      <span style={{ fontSize: 11, color: '#6b7280' }}>
+                        Field: {p.affected_field}
+                      </span>
+                    )}
+                    {p.confidence != null && (
+                      <span
+                        style={{
+                          fontSize: 11,
+                          padding: '1px 5px',
+                          borderRadius: 3,
+                          background: p.confidence >= 0.8 ? '#dcfce7' : '#fef9c3',
+                          color: p.confidence >= 0.8 ? '#166534' : '#854d0e',
+                        }}
+                      >
+                        {Math.round(p.confidence * 100)}% confidence
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
