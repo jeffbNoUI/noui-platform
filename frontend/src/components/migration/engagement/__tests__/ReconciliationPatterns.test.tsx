@@ -73,7 +73,7 @@ const mockPatterns = [
 describe('ReconciliationPanel — Systematic Patterns', () => {
   beforeEach(() => {
     (useReconciliationSummary as any).mockReturnValue(mockSummary);
-    (useP1Issues as any).mockReturnValue({ data: { p1_issues: [] }, isLoading: false });
+    (useP1Issues as any).mockReturnValue({ data: [], isLoading: false });
     (useReconciliation as any).mockReturnValue({ data: [], isLoading: false });
     (useRootCauseAnalysis as any).mockReturnValue({ data: null });
   });

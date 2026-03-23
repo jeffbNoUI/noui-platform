@@ -378,7 +378,10 @@ export default function ReconciliationPanel({ engagementId }: Props) {
             analysis={rootCause.analysis}
             affectedCount={rootCause.affectedCount}
             confidence={rootCause.confidence}
-            onViewMembers={() => setDomainFilter(null)}
+            onViewMembers={() => {
+              setDomainFilter(null);
+              document.getElementById('p1-issues-table')?.scrollIntoView({ behavior: 'smooth' });
+            }}
           />
         </div>
       )}
@@ -588,6 +591,7 @@ export default function ReconciliationPanel({ engagementId }: Props) {
       {/* P1 Issues table */}
       {p1Issues && p1Issues.length > 0 && (
         <div
+          id="p1-issues-table"
           style={{
             background: C.cardBg,
             borderRadius: 10,
