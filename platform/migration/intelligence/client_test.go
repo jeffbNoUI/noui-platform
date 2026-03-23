@@ -165,3 +165,102 @@ func TestScoreColumns_EmptyMappings(t *testing.T) {
 		t.Errorf("expected 0 mappings, got %d", len(resp.Mappings))
 	}
 }
+
+func TestAnalyzeMismatches_Success(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/intelligence/analyze-mismatches" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		if r.Method != http.MethodPost {
+			t.Errorf("unexpected method: %s", r.Method)
+		}
+
+		var req AnalyzeMismatchesRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		if len(req.ReconciliationResults) != 2 {
+			t.Errorf("expected 2 results, got %d", len(req.ReconciliationResults))
+		}
+
+		resp := AnalyzeMismatchesResponse{
+			Patterns: []DetectedPattern{
+				{
+					PatternID:       "salary_TIER_1_negative",
+					SuspectedDomain: "salary",
+					PlanCode:        "TIER_1",
+					Direction:       "negative",
+					MemberCount:     23,
+					MeanVariance:    "-142.75",
+					CV:              0.18,
+					AffectedMembers: []string{"M001", "M002"},
+				},
+			},
+			Suggestions: []CorrectionSuggestion{
+				{
+					CorrectionType:      "MAPPING_FIX",
+					AffectedField:       "gross_amount",
+					Confidence:          0.82,
+					Evidence:            "23 members in TIER_1 show -142.75 salary variance",
+					AffectedMemberCount: 23,
+				},
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	resp, err := client.AnalyzeMismatches(context.Background(), AnalyzeMismatchesRequest{
+		TenantID: "test-tenant",
+		ReconciliationResults: []MismatchRecord{
+			{MemberID: "M001", VarianceAmount: "-150.50", Category: "MAJOR", SuspectedDomain: "salary", PlanCode: "TIER_1"},
+			{MemberID: "M002", VarianceAmount: "-135.00", Category: "MAJOR", SuspectedDomain: "salary", PlanCode: "TIER_1"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(resp.Patterns) != 1 {
+		t.Fatalf("expected 1 pattern, got %d", len(resp.Patterns))
+	}
+	if resp.Patterns[0].MemberCount != 23 {
+		t.Errorf("expected member_count=23, got %d", resp.Patterns[0].MemberCount)
+	}
+	if len(resp.Suggestions) != 1 {
+		t.Fatalf("expected 1 suggestion, got %d", len(resp.Suggestions))
+	}
+	if resp.Suggestions[0].CorrectionType != "MAPPING_FIX" {
+		t.Errorf("expected MAPPING_FIX, got %s", resp.Suggestions[0].CorrectionType)
+	}
+}
+
+func TestAnalyzeMismatches_ServiceDown(t *testing.T) {
+	client := NewClient("http://127.0.0.1:1")
+	_, err := client.AnalyzeMismatches(context.Background(), AnalyzeMismatchesRequest{
+		TenantID: "test-tenant",
+		ReconciliationResults: []MismatchRecord{
+			{MemberID: "M001", VarianceAmount: "-150.50", Category: "MAJOR"},
+		},
+	})
+	if err == nil {
+		t.Fatal("expected error when service is unreachable")
+	}
+}
+
+func TestAnalyzeMismatches_EmptyResults(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(AnalyzeMismatchesResponse{})
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	resp, err := client.AnalyzeMismatches(context.Background(), AnalyzeMismatchesRequest{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(resp.Patterns) != 0 {
+		t.Errorf("expected 0 patterns, got %d", len(resp.Patterns))
+	}
+}

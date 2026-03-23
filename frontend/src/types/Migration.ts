@@ -356,6 +356,25 @@ export interface RootCauseResponse {
   confidence: number;
 }
 
+export interface ReconciliationPattern {
+  pattern_id: string;
+  batch_id: string;
+  suspected_domain: string;
+  plan_code: string;
+  direction: string;
+  member_count: number;
+  mean_variance: string;
+  coefficient_of_var: number;
+  affected_members: string[];
+  correction_type: string | null;
+  affected_field: string | null;
+  confidence: number | null;
+  evidence: string | null;
+  resolved: boolean;
+  resolved_at: string | null;
+  created_at: string;
+}
+
 // ─── Request Types ──────────────────────────────────────────────────────────
 
 export interface CreateEngagementRequest {

@@ -33,6 +33,7 @@ import type {
   AttentionSummary,
   GateStatusResponse,
   RootCauseResponse,
+  ReconciliationPattern,
   AdvancePhaseRequest,
   RegressPhaseRequest,
 } from '@/types/Migration';
@@ -461,6 +462,15 @@ export function useRootCauseAnalysis(engagementId: string | undefined) {
   return useQuery<RootCauseResponse>({
     queryKey: ['migration', 'ai', 'root-cause', engagementId],
     queryFn: () => migrationAPI.getRootCauseAnalysis(engagementId!),
+    enabled: !!engagementId,
+    staleTime: 60_000,
+  });
+}
+
+export function useReconciliationPatterns(engagementId: string | undefined) {
+  return useQuery<{ patterns: ReconciliationPattern[]; count: number }>({
+    queryKey: ['migration', 'reconciliation', 'patterns', engagementId],
+    queryFn: () => migrationAPI.getReconciliationPatterns(engagementId!),
     enabled: !!engagementId,
     staleTime: 60_000,
   });

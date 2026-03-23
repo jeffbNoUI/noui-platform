@@ -1,12 +1,17 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/noui/platform/apiresponse"
+	migrationdb "github.com/noui/platform/migration/db"
+	"github.com/noui/platform/migration/intelligence"
+	"github.com/noui/platform/migration/models"
 	"github.com/noui/platform/migration/reconciler"
 )
 
@@ -72,6 +77,13 @@ func (h *Handler) ReconcileBatch(w http.ResponseWriter, r *http.Request) {
 	if err := persistReconciliationResults(h.DB, batchID, allResults); err != nil {
 		slog.Error("failed to persist reconciliation results", "error", err, "batch_id", batchID)
 		// Non-fatal: return the gate result even if persistence fails.
+	}
+
+	// Call intelligence service for pattern detection (non-fatal).
+	// Extract tenant ID before goroutine launch (request context won't be available later).
+	if h.Analyzer != nil {
+		tenantID := r.Header.Get("X-Tenant-ID") // fallback; prefer auth context when available
+		go h.analyzePatterns(batchID, tenantID, allResults)
 	}
 
 	slog.Info("reconciliation completed",
@@ -333,4 +345,88 @@ func computeBenchmarks(db *sql.DB, batchID string) reconciler.PlanBenchmarks {
 	}
 
 	return benchmarks
+}
+
+// analyzePatterns calls the Python intelligence service to detect systematic
+// mismatch patterns. Runs in a goroutine — errors are logged, not propagated.
+func (h *Handler) analyzePatterns(batchID, tenantID string, results []reconciler.ReconciliationResult) {
+	// Build mismatch records from non-MATCH results only.
+	var mismatches []intelligence.MismatchRecord
+	for _, r := range results {
+		if r.Category == reconciler.CategoryMatch {
+			continue
+		}
+		mismatches = append(mismatches, intelligence.MismatchRecord{
+			MemberID:        r.MemberID,
+			VarianceAmount:  r.VarianceAmount,
+			SuspectedDomain: r.SuspectedDomain,
+			MemberStatus:    string(r.MemberStatus),
+			PlanCode:        "", // plan code not on individual results
+			Category:        string(r.Category),
+		})
+	}
+
+	if len(mismatches) == 0 {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	resp, err := h.Analyzer.AnalyzeMismatches(ctx, intelligence.AnalyzeMismatchesRequest{
+		TenantID:              tenantID,
+		ReconciliationResults: mismatches,
+	})
+	if err != nil {
+		slog.Warn("intelligence pattern analysis failed", "error", err, "batch_id", batchID)
+		return
+	}
+
+	// Convert intelligence response to model patterns.
+	var patterns []models.ReconciliationPattern
+	for i, p := range resp.Patterns {
+		pat := models.ReconciliationPattern{
+			SuspectedDomain:  p.SuspectedDomain,
+			PlanCode:         p.PlanCode,
+			Direction:        p.Direction,
+			MemberCount:      p.MemberCount,
+			MeanVariance:     p.MeanVariance,
+			CoefficientOfVar: p.CV,
+			AffectedMembers:  p.AffectedMembers,
+		}
+		if i < len(resp.Suggestions) {
+			s := resp.Suggestions[i]
+			pat.CorrectionType = &s.CorrectionType
+			pat.AffectedField = &s.AffectedField
+			pat.Confidence = &s.Confidence
+			pat.Evidence = &s.Evidence
+		}
+		patterns = append(patterns, pat)
+	}
+
+	if len(patterns) == 0 {
+		return
+	}
+
+	tx, err := h.DB.Begin()
+	if err != nil {
+		slog.Warn("failed to begin pattern persist tx", "error", err, "batch_id", batchID)
+		return
+	}
+	defer tx.Rollback()
+
+	if err := migrationdb.PersistPatterns(tx, batchID, patterns); err != nil {
+		slog.Warn("failed to persist patterns", "error", err, "batch_id", batchID)
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		slog.Warn("failed to commit patterns", "error", err, "batch_id", batchID)
+		return
+	}
+
+	slog.Info("intelligence patterns persisted",
+		"batch_id", batchID,
+		"pattern_count", len(patterns),
+	)
 }
