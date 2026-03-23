@@ -97,6 +97,12 @@ export default function ReconciliationPanel({ engagementId }: Props) {
     tierFunnelData.tier2.total > 0 ||
     tierFunnelData.tier3.total > 0;
 
+  const filteredP1 = useMemo(() => {
+    if (!p1Issues) return [];
+    if (!domainFilter) return p1Issues;
+    return p1Issues.filter((issue) => issue.suspected_domain === domainFilter);
+  }, [p1Issues, domainFilter]);
+
   if (summaryLoading) {
     return (
       <div style={{ padding: 24 }}>
@@ -141,12 +147,6 @@ export default function ReconciliationPanel({ engagementId }: Props) {
       </div>
     );
   }
-
-  const filteredP1 = useMemo(() => {
-    if (!p1Issues) return [];
-    if (!domainFilter) return p1Issues;
-    return p1Issues.filter((issue) => issue.suspected_domain === domainFilter);
-  }, [p1Issues, domainFilter]);
 
   const gateScore = summary.gate_score;
   const gaugeColor = gateScore >= 0.95 ? C.sage : gateScore >= 0.85 ? C.gold : C.coral;
