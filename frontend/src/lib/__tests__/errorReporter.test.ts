@@ -1,22 +1,20 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-
-// Must mock apiClient before importing errorReporter
-vi.mock('../apiClient', () => ({
-  postAPI: vi.fn().mockResolvedValue({}),
-}));
-
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { reportError, _resetForTesting } from '../errorReporter';
-import { postAPI } from '../apiClient';
-
-const mockedPostAPI = vi.mocked(postAPI);
 
 describe('errorReporter', () => {
+  const fetchSpy = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }));
+
   beforeEach(() => {
     _resetForTesting();
-    mockedPostAPI.mockClear();
+    fetchSpy.mockClear();
+    vi.stubGlobal('fetch', fetchSpy);
   });
 
-  it('sends error report via postAPI', async () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('sends error report via fetch', async () => {
     reportError({
       requestId: 'req-123',
       url: '/api/v1/members',
@@ -29,14 +27,13 @@ describe('errorReporter', () => {
 
     await new Promise((r) => setTimeout(r, 10));
 
-    expect(mockedPostAPI).toHaveBeenCalledTimes(1);
-    expect(mockedPostAPI).toHaveBeenCalledWith(
-      expect.stringContaining('/v1/errors/report'),
-      expect.objectContaining({
-        requestId: 'req-123',
-        errorCode: 'DB_ERROR',
-      }),
-    );
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const [url, opts] = fetchSpy.mock.calls[0];
+    expect(url).toContain('/v1/errors/report');
+    expect(opts.method).toBe('POST');
+    const body = JSON.parse(opts.body);
+    expect(body.requestId).toBe('req-123');
+    expect(body.errorCode).toBe('DB_ERROR');
   });
 
   it('skips reporting if URL is the error report endpoint', async () => {
@@ -51,11 +48,11 @@ describe('errorReporter', () => {
     });
 
     await new Promise((r) => setTimeout(r, 10));
-    expect(mockedPostAPI).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it('does not throw even if postAPI fails', async () => {
-    mockedPostAPI.mockRejectedValueOnce(new Error('network down'));
+  it('does not throw even if fetch fails', async () => {
+    fetchSpy.mockRejectedValueOnce(new Error('network down'));
 
     expect(() => {
       reportError({
@@ -87,7 +84,7 @@ describe('errorReporter', () => {
     reportError({ ...error, requestId: 'req-dup-2' }); // same fingerprint
 
     await new Promise((r) => setTimeout(r, 10));
-    expect(mockedPostAPI).toHaveBeenCalledTimes(1);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
   it('includes componentStack when provided', async () => {
@@ -104,12 +101,9 @@ describe('errorReporter', () => {
 
     await new Promise((r) => setTimeout(r, 10));
 
-    expect(mockedPostAPI).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({
-        errorCode: 'REACT_CRASH',
-        componentStack: 'at Dashboard\nat ErrorBoundary',
-      }),
-    );
+    const [, opts] = fetchSpy.mock.calls[0];
+    const body = JSON.parse(opts.body);
+    expect(body.errorCode).toBe('REACT_CRASH');
+    expect(body.componentStack).toBe('at Dashboard\nat ErrorBoundary');
   });
 });

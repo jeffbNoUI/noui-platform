@@ -9,6 +9,13 @@ export function setAuthToken(token: string) {
   _authToken = token;
 }
 
+// Token refresh callback — registered by AuthContext to handle 401 recovery.
+// Returns a fresh token string, or throws if refresh is not possible.
+let _refreshToken: (() => Promise<string>) | null = null;
+export function setTokenRefresher(fn: (() => Promise<string>) | null) {
+  _refreshToken = fn;
+}
+
 // ─── Enum normalization ──────────────────────────────────────────────────────
 // Most Go services (CRM, cases, DQ) return UPPERCASE PostgreSQL enums while their
 // TypeScript types use lowercase. This transform bridges the gap automatically.
@@ -101,6 +108,10 @@ async function rawRequest(
         `[api] Retry ${attempt}/${MAX_RETRIES} for ${init.method ?? 'GET'} ${url} after ${delay}ms`,
       );
       await sleep(delay);
+      // Re-apply auth header in case token was refreshed after a 401
+      if (_authToken) {
+        headers.set('Authorization', `Bearer ${_authToken}`);
+      }
     }
 
     const controller = new AbortController();
@@ -115,6 +126,20 @@ async function rawRequest(
         if (RETRYABLE_STATUSES.has(res.status) && attempt < MAX_RETRIES) {
           lastError = new APIError(`Server returned ${res.status}`, res.status, requestId, url);
           continue;
+        }
+
+        // 401 — attempt token refresh and retry once
+        if (res.status === 401 && _refreshToken && attempt === 0) {
+          try {
+            const newToken = await _refreshToken();
+            _authToken = newToken;
+            // Retry with fresh token (will be picked up on next iteration via _authToken)
+            lastError = new APIError('Token expired, retrying', 401, requestId, url);
+            continue;
+          } catch {
+            // Refresh failed — fall through to normal error handling
+            console.warn('[api] Token refresh failed, session expired');
+          }
         }
 
         const errBody = await res.json().catch(() => ({ error: { message: res.statusText } }));

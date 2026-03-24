@@ -1,5 +1,59 @@
 # noui-platform — Build History
 
+## Session 27: JWT Recovery, Tier 2/3 Recon Loaders, Polish (2026-03-24)
+
+**Branch:** `claude/nervous-mccarthy`
+
+### What Was Done
+
+Three priority areas addressed:
+
+**1. JWT Expiry Silent Failure — Fixed (4 files)**
+- `apiClient.ts`: 401 interceptor with token refresh callback + retry
+- `AuthContext.tsx`: Registers `refreshToken` with apiClient (decoupled)
+- `devAuth.ts`: Dev token TTL 1h → 24h
+- `useMigrationApi.ts`: Batch auto-polls every 5s while PENDING/RUNNING
+
+**2. Tier 2/3 Reconciliation Data Loaders — Implemented (1 file, +325 lines)**
+Six new loaders in `source_loader.go`:
+- Salary: `PRISM_SAL_ANNUAL` + `PRISM_SAL_PERIOD` → `canonical_salaries`
+- Contributions: `PRISM_CONTRIB_LEGACY` + `PRISM_CONTRIB_HIST` → `canonical_contributions`
+- Service credit: `PRISM_SVC_CREDIT` → `canonical_members.service_credit_years`
+- PAS equivalents for all three (salary_history, contribution_history, service_credit_history)
+
+**3. Polish — 2 of 3 Fixed**
+- Stepper click: Cache invalidation on tab change (`EngagementDetail.tsx`)
+- Error reporter: Uses raw `fetch` (no auth dependency) + updated tests
+- Risk Register encoding: Deferred (needs Docker + risk seed data)
+
+### Verification
+
+- Go migration: 11/11 packages pass
+- Frontend: 235/235 test files, 1856/1856 tests pass, typecheck clean
+- Docker: Full 24-container stack, 0 console errors, all APIs 200
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `frontend/src/lib/apiClient.ts` | 401 handler + `setTokenRefresher` callback |
+| `frontend/src/contexts/AuthContext.tsx` | Register token refresh on mount |
+| `frontend/src/lib/devAuth.ts` | TTL 1h → 24h |
+| `frontend/src/hooks/useMigrationApi.ts` | Batch auto-polling (PENDING/RUNNING) |
+| `frontend/src/lib/errorReporter.ts` | Raw `fetch` instead of `postAPI` |
+| `frontend/src/lib/__tests__/errorReporter.test.ts` | Updated tests for fetch mock |
+| `frontend/src/components/migration/engagement/EngagementDetail.tsx` | Tab cache invalidation |
+| `platform/migration/batch/source_loader.go` | 6 new Tier 2/3 loaders (+325 lines) |
+| `docs/plans/2026-03-24-post-jwt-recon-polish-starter.md` | Next session starter |
+
+### What's Next
+
+- E2E Tier 2/3 reconciliation with populated seed data
+- Seed all 21 PRISM source tables (only prism_member has data)
+- Risk Register encoding fix (needs seed data with risks)
+- JWT refresh E2E verification with short-lived token
+- Starter prompt: `docs/plans/2026-03-24-post-jwt-recon-polish-starter.md`
+
 ## Session 26: Migration Full Lifecycle — 2 Bugs Fixed, Certification E2E (2026-03-23)
 
 **Branch:** `claude/gracious-pike`

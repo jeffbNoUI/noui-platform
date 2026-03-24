@@ -1,5 +1,6 @@
-import { Component, useState, useMemo, useEffect } from 'react';
+import { Component, useState, useMemo, useEffect, useCallback } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { C, BODY, DISPLAY } from '@/lib/designSystem';
 import { useEngagement, useAttentionItems } from '@/hooks/useMigrationApi';
 import { useMigrationEvents } from '@/hooks/useMigrationEvents';
@@ -143,10 +144,22 @@ interface Props {
 }
 
 export default function EngagementDetail({ engagementId, onBack, onSelectBatch }: Props) {
+  const queryClient = useQueryClient();
   const { data: engagement, isLoading } = useEngagement(engagementId);
   const { connected, events, useFallback } = useMigrationEvents(engagementId);
   const { data: attentionItems } = useAttentionItems(engagementId);
   const [activeTab, setActiveTab] = useState<Tab>('discovery');
+
+  // Invalidate gate status + engagement cache on tab change so the stepper
+  // and gate dialog always reflect the latest server state.
+  const handleTabChange = useCallback(
+    (tab: Tab) => {
+      setActiveTab(tab);
+      queryClient.invalidateQueries({ queryKey: ['migration', 'gate-status', engagementId] });
+      queryClient.invalidateQueries({ queryKey: ['migration', 'engagement', engagementId] });
+    },
+    [queryClient, engagementId],
+  );
   const [gateDialog, setGateDialog] = useState<{
     open: boolean;
     targetPhase: EngagementStatus;
@@ -368,7 +381,7 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
           {TABS.map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => handleTabChange(tab.key)}
               style={{
                 padding: '10px 16px',
                 fontSize: 13,
