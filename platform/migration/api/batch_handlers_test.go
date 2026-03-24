@@ -47,6 +47,34 @@ func TestResolveSourceTable_EmptyMappings(t *testing.T) {
 	}
 }
 
+func TestResolveSourceTable_ScopeMatching(t *testing.T) {
+	// Multiple source tables in mappings — scope should pick the right one.
+	mappings := []FieldMapping{
+		{SourceTable: "src_prism.prism_beneficiary", SourceColumn: "mbr_nbr"},
+		{SourceTable: "src_prism.prism_benefit_calc", SourceColumn: "calc_type"},
+		{SourceTable: "src_prism.prism_member", SourceColumn: "first_nm"},
+		{SourceTable: "src_prism.prism_sal_annual", SourceColumn: "sal_amt"},
+	}
+
+	tests := []struct {
+		scope string
+		want  string
+	}{
+		{"ACTIVE_MEMBERS", "src_prism.prism_member"},
+		{"ALL_MEMBERS", "src_prism.prism_member"},
+		{"BENEFICIARIES", "src_prism.prism_beneficiary"},
+		{"SALARY_HISTORY", "src_prism.prism_sal_annual"},
+		{"BENEFIT_CALCS", "src_prism.prism_benefit_calc"},
+	}
+
+	for _, tc := range tests {
+		got := resolveSourceTable("SomeSystem", tc.scope, mappings)
+		if got != tc.want {
+			t.Errorf("resolveSourceTable(scope=%q) = %q, want %q", tc.scope, got, tc.want)
+		}
+	}
+}
+
 func TestResolvePrimaryKey_Fallbacks(t *testing.T) {
 	// No DSN — should use system name fallbacks.
 	tests := []struct {
