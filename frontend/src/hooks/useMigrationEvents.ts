@@ -6,6 +6,8 @@ const WS_BASE = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${wi
 const MAX_RECONNECT_ATTEMPTS = 5;
 const BASE_RECONNECT_DELAY = 1000;
 const POLL_INTERVAL = 5000;
+/** While in polling fallback, attempt a WebSocket reconnect every 30s. */
+const FALLBACK_RETRY_INTERVAL = 30_000;
 
 export function useMigrationEvents(engagementId: string | null) {
   const [connected, setConnected] = useState(false);
@@ -14,6 +16,7 @@ export function useMigrationEvents(engagementId: string | null) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttempts = useRef(0);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
+  const fallbackRetryTimer = useRef<ReturnType<typeof setInterval>>();
   const queryClient = useQueryClient();
   const [useFallback, setUseFallback] = useState(false);
 
@@ -59,6 +62,36 @@ export function useMigrationEvents(engagementId: string | null) {
     },
     [invalidateQueries],
   );
+
+  // Attempt a single WebSocket connection. On success, clears fallback state
+  // so the main effect takes over. On failure, silently returns to polling.
+  const attemptReconnect = useCallback(() => {
+    if (!engagementId || wsRef.current) return;
+
+    const ws = new WebSocket(`${WS_BASE}/${engagementId}`);
+
+    ws.onopen = () => {
+      // Successful reconnect — hand off to main effect
+      ws.close();
+      reconnectAttempts.current = 0;
+      setUseFallback(false);
+    };
+
+    ws.onerror = () => {
+      ws.close();
+    };
+
+    // Timeout: if the socket hasn't opened in 5s, abandon the probe
+    const timeout = setTimeout(() => {
+      if (ws.readyState !== WebSocket.OPEN) {
+        ws.close();
+      }
+    }, 5000);
+
+    ws.onclose = () => {
+      clearTimeout(timeout);
+    };
+  }, [engagementId]);
 
   // WebSocket connection
   useEffect(() => {
@@ -106,10 +139,11 @@ export function useMigrationEvents(engagementId: string | null) {
     return () => {
       clearTimeout(reconnectTimer.current);
       wsRef.current?.close();
+      wsRef.current = null;
     };
   }, [engagementId, useFallback, handleMessage]);
 
-  // Polling fallback
+  // Polling fallback with periodic WebSocket reconnect probes
   useEffect(() => {
     if (!engagementId || !useFallback) return;
 
@@ -118,8 +152,31 @@ export function useMigrationEvents(engagementId: string | null) {
       queryClient.invalidateQueries({ queryKey: ['migration', 'events', engagementId] });
     }, POLL_INTERVAL);
 
-    return () => clearInterval(poll);
-  }, [engagementId, useFallback, queryClient]);
+    // Periodically probe whether WebSocket is available again
+    fallbackRetryTimer.current = setInterval(attemptReconnect, FALLBACK_RETRY_INTERVAL);
+
+    return () => {
+      clearInterval(poll);
+      clearInterval(fallbackRetryTimer.current);
+    };
+  }, [engagementId, useFallback, queryClient, attemptReconnect]);
+
+  // Reconnect on tab visibility change (laptop wake, network restore)
+  useEffect(() => {
+    if (!engagementId) return;
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) return;
+      // In fallback mode — probe immediately instead of waiting for interval
+      if (useFallback) {
+        attemptReconnect();
+      }
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, [engagementId, useFallback, attemptReconnect]);
 
   return { connected, events, lastEvent, useFallback };
 }
