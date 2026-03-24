@@ -5,7 +5,12 @@
 assert_status() {
   local label="$1" expected="$2" actual="$3"
   TOTAL_COUNT=$((TOTAL_COUNT + 1))
-  if [ "$expected" = "$actual" ]; then
+  # Support space-separated expected codes (e.g. "200 201")
+  local code matched=false
+  for code in $expected; do
+    if [ "$code" = "$actual" ]; then matched=true; break; fi
+  done
+  if $matched; then
     echo -e "  ${GREEN}✓${NC} $label (HTTP $actual)"
     PASS_COUNT=$((PASS_COUNT + 1))
   else

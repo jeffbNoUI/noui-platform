@@ -1,48 +1,53 @@
 # Next Session Starter
 
-## Current State (as of 2026-03-16)
+## Current State (as of 2026-03-23)
 
-**Master Quality Review Plan: ALL 32 TASKS COMPLETE across 9 sessions.**
+**Migration module is functionally complete** — all 6 phases work end-to-end
+through the browser with real data (100 PRISM members).
 
-### What Sessions 1-9 Accomplished
+**Docker E2E: 166/166 across 5 suites** — connector, dataaccess, intelligence,
+employer, case-management. Zero skips, zero failures.
 
-| Session | Branch | What |
-|---------|--------|------|
-| 1 | `claude/frosty-torvalds` | Auth middleware (JWT), structured logging (slog), CORS lockdown |
-| 2 | `claude/festive-pauli` | Input validation package, frontend test batch 1 |
-| 3 | `claude/bold-albattani` | Input validation wiring to all 7 services (F-010) |
-| 4 | `claude/hopeful-goldstine` | Connection pool sizing (F-012), rate limiting (F-011), route guards (F-013) |
-| 5 | `claude/happy-galileo` | TypeScript `any` elimination, request timeouts, shared envutil, tech debt cleanup |
-| 6 | `claude/jolly-curie` | API client tests (6 files, +51 tests), vitest coverage config, test tier docs, pre-commit typecheck |
-| 7 | `claude/hungry-ellis` | Performance indexes (8 composite), pagination enforcement (5 endpoints), PgBouncer pooling |
-| 8 | `claude/priceless-hermann` | Server-side caching (cache pkg + KB/case/dataaccess), component decomposition (20 components → 45+ sub-components) |
-| 9 | `claude/inspiring-sammet` | Dead code cleanup, API response consistency (all 7 services aligned), final regression suite |
+### Recent Sessions (23–26)
 
-### Test Baseline
-- 15 Go modules: all build and pass with `-short`
-- Frontend: 119 test files, 869 tests, typecheck clean (zero `any`)
-- Coverage: Istanbul provider configured in vitest.config.ts (run `npm test -- --run --coverage`)
-- Pre-commit hook: typecheck + Tier 1 tests on staged changes
-- Dependencies added: `golang.org/x/time v0.9.0`
+| Session | What |
+|---------|------|
+| 23 | Migration wrap-up: certification, lineage, UI fixes, E2E hardening |
+| 24 | Migration UI walkthrough: 6 phases, 5 bugs fixed |
+| 25 | Migration pipeline fixes: batch scope + NaN guard |
+| 26 | Migration full lifecycle: exception schema + scope-aware resolver |
+| 26b | E2E hardening: dbcontext stale conn, employer auth/date bugs (PR #155) |
 
-### API Response Contract (standardized in Session 9)
-All 7 platform services now use consistent response envelopes:
-- Success: `{ data, meta: { request_id, timestamp, service, version } }`
-- Error: `{ error: { code, message, request_id } }`
-- Paginated: `{ data: [...], pagination: { total, limit, offset, hasMore }, meta: {...} }`
+### Open PR
 
-### Still untested (frontend components — consider for future sessions)
-- Dashboard card components (~15 components)
-- Detail overlay components
-- These are UI components requiring jsdom render tests, not API contract tests
+- **PR #155** — E2E hardening: tests, seed data, assert/JWT helpers, PgBouncer timeout
+  - Supplements PR #134 (already merged) with additional test coverage
+  - 7 files: new unit tests, employer seed SQL, multi-code assert_status, UUID JWT sub
 
-### npm audit note
-- 5 moderate dev-dependency vulnerabilities (esbuild in vitest/vite)
-- Fix requires vitest 4.x (breaking change) — defer until next major vitest upgrade
+## Recommended Next Steps (priority order)
 
-## Recommended Next Steps
+### High Priority
+1. **Seed data for all 21 source tables** — Only `prism_member` has data (100 rows).
+   Run `prism_data_generator.py` and verify all 21 tables populate.
+2. **Batch status polling after JWT expiry** — Polling fails silently, batch stuck
+   at RUNNING. Options: auto-refresh, "session expired" toast, or extend dev TTL.
+3. **Reconciliation with Tier 2/3 data** — Current recon is Tier 1 only (benefit calc).
+   Needs source_loader to populate canonical tables for payment history + demographics.
 
-1. **Feature development** — Return to sprint roadmap (quality bar is met)
-2. **Additional frontend test coverage** — Dashboard cards, detail overlays (~15 components)
-3. **E2E testing** — Docker-based integration tests across services
-4. **Production readiness** — Health check monitoring, alerting, deployment pipeline
+### Medium Priority
+4. **Risk Register encoding** — Dashboard shows garbled Unicode in risk register cards.
+5. **Error reporting endpoint** — `POST /api/v1/errors/report` returns 405.
+6. **Phase stepper click reliability** — Gate dialog sometimes doesn't trigger after tab switch.
+
+### Low Priority
+7. **0-row profiling display** — Tables show "0 rows" even when they have data.
+8. **Reconciliation panel for 0 records** — Blocks certification on empty engagements.
+
+### Pre-existing Code Quality
+9. **`sumAmounts` uses float64** in `platform/employer-reporting/api/handlers.go` —
+   violates fiduciary rule ("Use big.Rat or scaled integers, never float64").
+
+## Detailed Starter Prompt
+
+For full context including key files, verification results, and beyond-migration
+platform next steps, see: `docs/plans/2026-03-23-post-full-lifecycle-next-session.md`

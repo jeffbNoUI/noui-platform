@@ -358,3 +358,82 @@ func ratFromString(s string) *big.Rat {
 	r, _ := new(big.Rat).SetString(s)
 	return r
 }
+
+// TestCalculateRefund_RFC3339Dates verifies that timestamptz-format dates
+// (returned by PostgreSQL) are handled correctly.
+func TestCalculateRefund_RFC3339Dates(t *testing.T) {
+	input := RefundInput{
+		EmployeeContributions: "10000.00",
+		InterestRatePercent:   "3",
+		HireDate:              "2020-01-01T00:00:00Z",
+		TerminationDate:       "2020-12-31T00:00:00Z",
+		DRODeduction:          "0",
+	}
+
+	result, err := CalculateRefund(input)
+	if err != nil {
+		t.Fatalf("CalculateRefund with RFC3339 dates: %v", err)
+	}
+
+	if result.InterestAmount != "300.00" {
+		t.Errorf("interest = %s, want 300.00", result.InterestAmount)
+	}
+}
+
+// TestCalculateRefund_RFC3339MatchesDateOnly confirms both formats produce
+// identical results for the same logical dates.
+func TestCalculateRefund_RFC3339MatchesDateOnly(t *testing.T) {
+	dateOnly := RefundInput{
+		EmployeeContributions: "45230.15",
+		InterestRatePercent:   "3",
+		HireDate:              "2015-03-01",
+		TerminationDate:       "2020-09-15",
+		DRODeduction:          "0",
+	}
+	rfc3339 := RefundInput{
+		EmployeeContributions: "45230.15",
+		InterestRatePercent:   "3",
+		HireDate:              "2015-03-01T00:00:00Z",
+		TerminationDate:       "2020-09-15T00:00:00Z",
+		DRODeduction:          "0",
+	}
+
+	r1, err := CalculateRefund(dateOnly)
+	if err != nil {
+		t.Fatalf("date-only: %v", err)
+	}
+	r2, err := CalculateRefund(rfc3339)
+	if err != nil {
+		t.Fatalf("rfc3339: %v", err)
+	}
+
+	if r1.NetRefund != r2.NetRefund {
+		t.Errorf("net mismatch: date-only=%s, rfc3339=%s", r1.NetRefund, r2.NetRefund)
+	}
+	if r1.InterestAmount != r2.InterestAmount {
+		t.Errorf("interest mismatch: date-only=%s, rfc3339=%s", r1.InterestAmount, r2.InterestAmount)
+	}
+	if r1.GrossRefund != r2.GrossRefund {
+		t.Errorf("gross mismatch: date-only=%s, rfc3339=%s", r1.GrossRefund, r2.GrossRefund)
+	}
+}
+
+func TestParseFlexDate(t *testing.T) {
+	tests := []struct {
+		input   string
+		wantErr bool
+	}{
+		{"2020-01-15", false},
+		{"2020-01-15T00:00:00Z", false},
+		{"2023-06-30T12:30:00-06:00", false},
+		{"not-a-date", true},
+		{"", true},
+	}
+
+	for _, tt := range tests {
+		_, err := parseFlexDate(tt.input)
+		if (err != nil) != tt.wantErr {
+			t.Errorf("parseFlexDate(%q): err=%v, wantErr=%v", tt.input, err, tt.wantErr)
+		}
+	}
+}

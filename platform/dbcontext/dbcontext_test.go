@@ -387,3 +387,56 @@ func TestDBMiddleware_ErrorReturns500(t *testing.T) {
 		t.Errorf("error message = %q", body["error"]["message"])
 	}
 }
+
+func TestDBMiddleware_RollbackOnHandlerError(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping DB test in -short mode")
+	}
+	db := testDB(t)
+
+	extract := func(r *http.Request) Params {
+		return Params{
+			TenantID: DefaultTenantID,
+			UserRole: DefaultUserRole,
+		}
+	}
+
+	// Handler that forces a transaction failure by writing to a non-existent table.
+	failHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		q := DB(r.Context(), db)
+		_, _ = q.ExecContext(r.Context(), `INSERT INTO _nonexistent_table_ (id) VALUES ('x')`)
+		// The transaction is now in a failed state.
+		w.WriteHeader(http.StatusInternalServerError)
+	})
+
+	// Handler that succeeds — reads a simple value.
+	okHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		q := DB(r.Context(), db)
+		var one int
+		err := q.QueryRowContext(r.Context(), `SELECT 1`).Scan(&one)
+		if err != nil {
+			t.Errorf("second request query failed (stale connection?): %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+
+	mw := DBMiddleware(db, extract)
+
+	// Request 1: triggers a transaction failure inside the handler.
+	req1 := httptest.NewRequest(http.MethodPost, "/api/v1/fail", nil)
+	rec1 := httptest.NewRecorder()
+	mw(failHandler).ServeHTTP(rec1, req1)
+
+	// Request 2: must succeed on the same pool. Before the fix, this would
+	// get a "pq: could not complete operation in a failed transaction" error
+	// because the pooled connection was returned without rollback.
+	req2 := httptest.NewRequest(http.MethodGet, "/api/v1/ok", nil)
+	rec2 := httptest.NewRecorder()
+	mw(okHandler).ServeHTTP(rec2, req2)
+
+	if rec2.Code != http.StatusOK {
+		t.Fatalf("second request status = %d, want 200 (connection pool may be poisoned)", rec2.Code)
+	}
+}
