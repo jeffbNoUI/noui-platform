@@ -53,19 +53,20 @@ type GenerateMappingsSummary struct {
 
 // FieldMapping represents a stored field mapping record.
 type FieldMapping struct {
-	MappingID          string     `json:"mapping_id"`
-	EngagementID       string     `json:"engagement_id"`
-	MappingVersion     string     `json:"mapping_version"`
-	SourceTable        string     `json:"source_table"`
-	SourceColumn       string     `json:"source_column"`
-	CanonicalTable     string     `json:"canonical_table"`
-	CanonicalColumn    string     `json:"canonical_column"`
-	TemplateConfidence *float64   `json:"template_confidence"`
-	SignalConfidence   *float64   `json:"signal_confidence"`
-	AgreementStatus    string     `json:"agreement_status"`
-	ApprovalStatus     string     `json:"approval_status"`
-	ApprovedBy         *string    `json:"approved_by"`
-	ApprovedAt         *time.Time `json:"approved_at"`
+	MappingID          string                  `json:"mapping_id"`
+	EngagementID       string                  `json:"engagement_id"`
+	MappingVersion     string                  `json:"mapping_version"`
+	SourceTable        string                  `json:"source_table"`
+	SourceColumn       string                  `json:"source_column"`
+	CanonicalTable     string                  `json:"canonical_table"`
+	CanonicalColumn    string                  `json:"canonical_column"`
+	TemplateConfidence *float64                `json:"template_confidence"`
+	SignalConfidence   *float64                `json:"signal_confidence"`
+	AgreementStatus    string                  `json:"agreement_status"`
+	ApprovalStatus     string                  `json:"approval_status"`
+	ApprovedBy         *string                 `json:"approved_by"`
+	ApprovedAt         *time.Time              `json:"approved_at"`
+	Warnings           []mapper.MappingWarning `json:"warnings,omitempty"`
 }
 
 // UpdateMappingRequest is the JSON body for PUT .../mappings/{mapping_id}.
@@ -326,6 +327,26 @@ func (h *Handler) ListMappings(w http.ResponseWriter, r *http.Request) {
 		slog.Error("failed to iterate mappings", "error", err)
 		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to list mappings")
 		return
+	}
+
+	// Enrich with false cognate warnings from vocabulary (non-fatal).
+	if vocab, err := mapper.LoadVocabulary(); err == nil {
+		idx := mapper.BuildFalseCognateIndex(vocab)
+		registry := mapper.NewRegistry()
+		reverseMap := registry.ReverseTableMap()
+		for i := range mappings {
+			conceptTag := reverseMap[mappings[i].CanonicalTable]
+			if conceptTag == "" {
+				continue
+			}
+			if fc, ok := idx.Lookup(conceptTag, mappings[i].CanonicalColumn, mappings[i].SourceColumn); ok {
+				mappings[i].Warnings = []mapper.MappingWarning{{
+					Term:    fc.Term,
+					Warning: fc.Warning,
+					Risk:    fc.Risk,
+				}}
+			}
+		}
 	}
 
 	apiresponse.WriteSuccess(w, http.StatusOK, "migration", mappings)
