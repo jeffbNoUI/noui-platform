@@ -49,11 +49,12 @@ func getSecret() []byte {
 
 // bypassPaths are health/readiness endpoints that skip authentication.
 var bypassPaths = map[string]bool{
-	"/healthz":       true,
-	"/health":        true,
-	"/health/detail": true,
-	"/ready":         true,
-	"/metrics":       true,
+	"/healthz":              true,
+	"/health":               true,
+	"/health/detail":        true,
+	"/ready":                true,
+	"/metrics":              true,
+	"/api/v1/errors/report": true,
 }
 
 // NewMiddleware returns an HTTP middleware that validates JWT bearer tokens using the

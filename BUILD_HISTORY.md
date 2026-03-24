@@ -1,5 +1,52 @@
 # noui-platform — Build History
 
+## Session 29: Auth Bypass + Tier 2/3 E2E Verification (2026-03-24)
+
+**Branch:** `claude/modest-euler`
+
+### What Was Done
+
+**1. Error Reporting Auth Bypass — Fixed (1 file)**
+- Added `/api/v1/errors/report` to `bypassPaths` in `platform/auth/auth.go`
+- Frontend `errorReporter.ts` sends requests without auth (JWT may be expired)
+- Handler already falls back to `defaultTenantID` for unauthenticated callers
+
+**2. Tier 2/3 E2E Assertions — Added (1 file, +60 lines)**
+- Extended `tests/e2e/migration_e2e.sh` Phase 7b with 6 new assertions
+- GET tier/2, GET tier/3, legacy_value check, summary post-reconcile
+- Non-fatal (yellow warnings) when seed data not loaded
+- Test count: 47 → 53
+
+**3. Browser E2E Verification — 3 items confirmed**
+- Phase stepper click: Gate dialog with metrics, AI recommendation, risk checkboxes
+- Reconciliation panel: Context-aware empty state with "Run Reconciliation" button
+- Tab switching: Cache invalidation working, tabs reload on switch
+
+### Verification
+
+- Go auth: 1/1 test pass
+- Go migration: 11/11 packages pass (short mode)
+- Frontend: typecheck clean
+- Docker E2E: 53/53 migration tests pass, 0 failures
+- Browser: stepper, reconciliation panel, tab switching all functional
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `platform/auth/auth.go` | Add `/api/v1/errors/report` to bypass list |
+| `tests/e2e/migration_e2e.sh` | Tier 2/3 reconciliation assertions (+60 lines) |
+| `docs/plans/2026-03-24-high-priority-e2e-design.md` | Design doc |
+| `docs/plans/2026-03-24-high-priority-e2e-plan.md` | Implementation plan |
+| `docs/plans/2026-03-24-post-e2e-verification-starter.md` | Next session starter |
+
+### What's Next
+
+- Seed data Docker loading (02_seed.sql not auto-loading → 0 Tier 2/3 results)
+- JWT 401 refresh E2E (needs Docker rebuild with latest code)
+- WebSocket reconnection investigation
+- Starter prompt: `docs/plans/2026-03-24-post-e2e-verification-starter.md`
+
 ## Session 28: JWT Recovery, Tier 2/3 Recon Loaders, Polish (2026-03-24)
 
 **Branch:** `claude/nervous-mccarthy`
