@@ -11,6 +11,9 @@ type Registry struct {
 func NewRegistry() *Registry {
 	r := &Registry{templates: make(map[string]MappingTemplate)}
 	r.registerAll()
+	// Merge external vocabulary terms into registry slots.
+	// Errors are non-fatal — registry works with base names if YAML fails.
+	_ = mergeVocabulary(r)
 	return r
 }
 
