@@ -25,7 +25,7 @@ func (m *mockScorer) ScoreColumns(ctx context.Context, req intelligence.ScoreCol
 	return m.response, m.err
 }
 
-// mappingCols matches the 13-column SELECT used by ListMappings and UpdateMapping.
+// mappingCols matches the 13-column RETURNING used by UpdateMapping.
 var mappingCols = []string{
 	"mapping_id", "engagement_id", "mapping_version",
 	"source_table", "source_column",
@@ -33,6 +33,17 @@ var mappingCols = []string{
 	"template_confidence", "signal_confidence",
 	"agreement_status", "approval_status",
 	"approved_by", "approved_at",
+}
+
+// listMappingCols matches the 14-column SELECT used by ListMappings (includes acknowledged).
+var listMappingCols = []string{
+	"mapping_id", "engagement_id", "mapping_version",
+	"source_table", "source_column",
+	"canonical_table", "canonical_column",
+	"template_confidence", "signal_confidence",
+	"agreement_status", "approval_status",
+	"approved_by", "approved_at",
+	"acknowledged",
 }
 
 // newTestHandlerWithIntel creates a Handler with sqlmock + mock intelligence client.
@@ -309,15 +320,15 @@ func TestListMappings_Success(t *testing.T) {
 	tmplConf := 0.9
 	sigConf := 0.85
 
-	rows := sqlmock.NewRows(mappingCols).
+	rows := sqlmock.NewRows(listMappingCols).
 		AddRow("map-001", "eng-001", "v1.0", "SRC_TABLE", "MBR_NBR",
 			"member", "member_id", &tmplConf, &sigConf,
-			"AGREED", "PROPOSED", nil, nil).
+			"AGREED", "PROPOSED", nil, nil, false).
 		AddRow("map-002", "eng-001", "v1.0", "SRC_TABLE", "BIRTH_DT",
 			"member", "birth_date", &tmplConf, &sigConf,
-			"AGREED", "APPROVED", stringPtr("analyst@example.com"), timePtr(time.Now().UTC()))
+			"AGREED", "APPROVED", stringPtr("analyst@example.com"), timePtr(time.Now().UTC()), true)
 
-	mock.ExpectQuery("SELECT .+ FROM migration.field_mapping").
+	mock.ExpectQuery("SELECT .+ FROM migration.field_mapping fm").
 		WithArgs("eng-001").
 		WillReturnRows(rows)
 
@@ -346,12 +357,12 @@ func TestListMappings_WithStatusFilter(t *testing.T) {
 	h, mock := newTestHandlerWithIntel(t, nil)
 
 	tmplConf := 0.9
-	rows := sqlmock.NewRows(mappingCols).
+	rows := sqlmock.NewRows(listMappingCols).
 		AddRow("map-001", "eng-001", "v1.0", "SRC", "COL1",
 			"member", "member_id", &tmplConf, nil,
-			"AGREED", "PROPOSED", nil, nil)
+			"AGREED", "PROPOSED", nil, nil, false)
 
-	mock.ExpectQuery("SELECT .+ FROM migration.field_mapping .+ agreement_status").
+	mock.ExpectQuery("SELECT fm.mapping_id").
 		WithArgs("eng-001", "AGREED").
 		WillReturnRows(rows)
 
@@ -369,9 +380,9 @@ func TestListMappings_WithStatusFilter(t *testing.T) {
 func TestListMappings_WithApprovalFilter(t *testing.T) {
 	h, mock := newTestHandlerWithIntel(t, nil)
 
-	rows := sqlmock.NewRows(mappingCols)
+	rows := sqlmock.NewRows(listMappingCols)
 
-	mock.ExpectQuery("SELECT .+ FROM migration.field_mapping .+ approval_status").
+	mock.ExpectQuery("SELECT fm.mapping_id").
 		WithArgs("eng-001", "PROPOSED").
 		WillReturnRows(rows)
 

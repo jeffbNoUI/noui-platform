@@ -67,6 +67,7 @@ type FieldMapping struct {
 	ApprovedBy         *string                 `json:"approved_by"`
 	ApprovedAt         *time.Time              `json:"approved_at"`
 	Warnings           []mapper.MappingWarning `json:"warnings,omitempty"`
+	Acknowledged       bool                    `json:"acknowledged"`
 }
 
 // UpdateMappingRequest is the JSON body for PUT .../mappings/{mapping_id}.
@@ -277,26 +278,29 @@ func (h *Handler) ListMappings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build query with optional filters.
-	query := `SELECT mapping_id, engagement_id, mapping_version, source_table, source_column,
-	                 canonical_table, canonical_column, template_confidence, signal_confidence,
-	                 agreement_status, approval_status, approved_by, approved_at
-	          FROM migration.field_mapping
-	          WHERE engagement_id = $1`
+	query := `SELECT fm.mapping_id, fm.engagement_id, fm.mapping_version, fm.source_table, fm.source_column,
+	                 fm.canonical_table, fm.canonical_column, fm.template_confidence, fm.signal_confidence,
+	                 fm.agreement_status, fm.approval_status, fm.approved_by, fm.approved_at,
+	                 (wa.mapping_id IS NOT NULL) AS acknowledged
+	          FROM migration.field_mapping fm
+	          LEFT JOIN migration.warning_acknowledgment wa
+	            ON wa.engagement_id = fm.engagement_id AND wa.mapping_id = fm.mapping_id
+	          WHERE fm.engagement_id = $1`
 	args := []any{id}
 	argIdx := 2
 
 	if status := r.URL.Query().Get("status"); status != "" {
-		query += fmt.Sprintf(" AND agreement_status = $%d", argIdx)
+		query += fmt.Sprintf(" AND fm.agreement_status = $%d", argIdx)
 		args = append(args, status)
 		argIdx++
 	}
 	if approval := r.URL.Query().Get("approval"); approval != "" {
-		query += fmt.Sprintf(" AND approval_status = $%d", argIdx)
+		query += fmt.Sprintf(" AND fm.approval_status = $%d", argIdx)
 		args = append(args, approval)
 		argIdx++
 	}
 
-	query += " ORDER BY source_table, source_column"
+	query += " ORDER BY fm.source_table, fm.source_column"
 
 	rows, err := h.DB.Query(query, args...)
 	if err != nil {
@@ -316,6 +320,7 @@ func (h *Handler) ListMappings(w http.ResponseWriter, r *http.Request) {
 			&m.TemplateConfidence, &m.SignalConfidence,
 			&m.AgreementStatus, &m.ApprovalStatus,
 			&m.ApprovedBy, &m.ApprovedAt,
+			&m.Acknowledged,
 		); err != nil {
 			slog.Error("failed to scan mapping", "error", err)
 			apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to read mapping")
@@ -535,4 +540,39 @@ func discoverColumns(db *sql.DB, schema, table string) ([]GenerateMappingsColumn
 		cols = append(cols, c)
 	}
 	return cols, rows.Err()
+}
+
+// AcknowledgeMapping handles POST /api/v1/migration/engagements/{id}/mappings/{mapping_id}/acknowledge.
+// Records that an analyst has reviewed the false cognate warnings for a mapping.
+// Idempotent — repeated calls for the same mapping are no-ops.
+func (h *Handler) AcknowledgeMapping(w http.ResponseWriter, r *http.Request) {
+	engagementID := r.PathValue("id")
+	mappingID := r.PathValue("mapping_id")
+	if engagementID == "" || mappingID == "" {
+		apiresponse.WriteError(w, http.StatusBadRequest, "migration", "VALIDATION_ERROR", "engagement id and mapping id are required")
+		return
+	}
+
+	userID := auth.UserID(r.Context())
+	if userID == "" {
+		userID = "unknown"
+	}
+
+	_, err := h.DB.Exec(
+		`INSERT INTO migration.warning_acknowledgment (engagement_id, mapping_id, acknowledged_by)
+		 VALUES ($1, $2, $3)
+		 ON CONFLICT (engagement_id, mapping_id) DO NOTHING`,
+		engagementID, mappingID, userID,
+	)
+	if err != nil {
+		slog.Error("failed to acknowledge mapping warning", "error", err,
+			"engagement_id", engagementID, "mapping_id", mappingID)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to acknowledge warning")
+		return
+	}
+
+	apiresponse.WriteSuccess(w, http.StatusOK, "migration", map[string]any{
+		"mapping_id":   mappingID,
+		"acknowledged": true,
+	})
 }

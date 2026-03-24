@@ -274,6 +274,21 @@ export function useUpdateMapping() {
   });
 }
 
+export function useAcknowledgeWarning() {
+  const queryClient = useQueryClient();
+  return useMutation<
+    { mapping_id: string; acknowledged: boolean },
+    Error,
+    { engagementId: string; mappingId: string }
+  >({
+    mutationFn: ({ engagementId, mappingId }) =>
+      migrationAPI.acknowledgeWarning(engagementId, mappingId),
+    onSuccess: (_data, { engagementId }) => {
+      queryClient.invalidateQueries({ queryKey: ['migration', 'mappings', engagementId] });
+    },
+  });
+}
+
 export function useCreateRisk() {
   const queryClient = useQueryClient();
   return useMutation<MigrationRisk, Error, { engagementId: string; req: CreateRiskRequest }>({
