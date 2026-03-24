@@ -190,4 +190,3 @@ func parseFlexDate(s string) (time.Time, error) {
 func ratToFixed2(r *big.Rat) string {
 	return r.FloatString(2)
 }
-
