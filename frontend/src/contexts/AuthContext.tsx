@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import type { AuthUser, UserRole, ViewMode } from '@/types/auth';
 import { hasAccess, ROLE_DEFAULT_VIEW } from '@/types/auth';
 import { generateDevToken, DEV_USERS } from '@/lib/devAuth';
-import { setAuthToken } from '@/lib/apiClient';
+import { setAuthToken, setTokenRefresher } from '@/lib/apiClient';
 
 interface AuthContextValue {
   user: AuthUser;
@@ -27,6 +27,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(t);
       setAuthToken(t);
     });
+  }, [user]);
+
+  // Register token refresh callback so apiClient can recover from 401s
+  useEffect(() => {
+    setTokenRefresher(async () => {
+      const t = await generateDevToken(user);
+      setToken(t);
+      setAuthToken(t);
+      return t;
+    });
+    return () => setTokenRefresher(null);
   }, [user]);
 
   const canAccess = useCallback(

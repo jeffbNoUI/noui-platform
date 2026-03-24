@@ -20,7 +20,7 @@ export async function generateDevToken(user: AuthUser): Promise<string> {
       tenant_id: user.tenantId,
       role: user.role,
       member_id: user.memberId ? String(user.memberId) : '',
-      exp: Math.floor(Date.now() / 1000) + 3600, // 1 hour
+      exp: Math.floor(Date.now() / 1000) + 86400, // 24 hours (dev only)
     }),
   );
 

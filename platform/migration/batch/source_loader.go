@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 )
 
 // prismPlanCodeMap normalizes PRISM plan codes to canonical tier IDs.
@@ -60,11 +61,29 @@ func LoadSourceReferenceData(migrationDB *sql.DB, batchID, sourceSystem, sourceD
 		if err := loadPRISMPayments(migrationDB, sourceDB, batchID); err != nil {
 			return err
 		}
+		if err := loadPRISMSalaryHistory(migrationDB, sourceDB, batchID); err != nil {
+			return err
+		}
+		if err := loadPRISMContributions(migrationDB, sourceDB, batchID); err != nil {
+			return err
+		}
+		if err := loadPRISMServiceCredit(migrationDB, sourceDB, batchID); err != nil {
+			return err
+		}
 	case "PAS":
 		if err := loadPASCalculations(migrationDB, sourceDB, batchID); err != nil {
 			return err
 		}
 		if err := loadPASPayments(migrationDB, sourceDB, batchID); err != nil {
+			return err
+		}
+		if err := loadPASSalaryHistory(migrationDB, sourceDB, batchID); err != nil {
+			return err
+		}
+		if err := loadPASContributions(migrationDB, sourceDB, batchID); err != nil {
+			return err
+		}
+		if err := loadPASServiceCredit(migrationDB, sourceDB, batchID); err != nil {
 			return err
 		}
 	default:
@@ -276,5 +295,311 @@ func insertPaymentHistory(migrationDB *sql.DB, batchID string, rows *sql.Rows) e
 	} else {
 		slog.Info("source_loader: loaded payment history", "batch_id", batchID, "count", count)
 	}
+	return nil
+}
+
+// ─── Salary History Loaders (Tier 3a) ───────────────────────────────────────
+
+// loadPRISMSalaryHistory loads annual salary data from PRISM_SAL_ANNUAL (pre-1998)
+// and aggregated PRISM_SAL_PERIOD (post-1998) into canonical_salaries.
+func loadPRISMSalaryHistory(migrationDB, sourceDB *sql.DB, batchID string) error {
+	// UNION: pre-1998 annual totals + post-1998 period aggregates by year
+	rows, err := sourceDB.Query(`
+		SELECT CAST(EMP_NBR AS TEXT), TAX_YR, COALESCE(PENSION_EARN, GROSS_EARN)
+		FROM src_prism.prism_sal_annual
+		UNION ALL
+		SELECT CAST(EMP_ID AS TEXT), EXTRACT(YEAR FROM PRD_END_DT)::INTEGER,
+		       SUM(COALESCE(PENSION_PAY, GROSS_PAY))
+		FROM src_prism.prism_sal_period
+		GROUP BY EMP_ID, EXTRACT(YEAR FROM PRD_END_DT)
+	`)
+	if err != nil {
+		return fmt.Errorf("source_loader: query PRISM salary history: %w", err)
+	}
+	defer rows.Close()
+
+	return insertCanonicalSalaries(migrationDB, batchID, rows)
+}
+
+// loadPASSalaryHistory loads salary history from PAS salary_history, aggregated
+// to annual totals per member.
+func loadPASSalaryHistory(migrationDB, sourceDB *sql.DB, batchID string) error {
+	rows, err := sourceDB.Query(`
+		SELECT CAST(member_id AS TEXT),
+		       EXTRACT(YEAR FROM period_begin_date)::INTEGER,
+		       SUM(COALESCE(pensionable_earnings, reportable_earnings, 0))
+		FROM src_pas.salary_history
+		GROUP BY member_id, EXTRACT(YEAR FROM period_begin_date)
+	`)
+	if err != nil {
+		return fmt.Errorf("source_loader: query PAS salary history: %w", err)
+	}
+	defer rows.Close()
+
+	return insertCanonicalSalaries(migrationDB, batchID, rows)
+}
+
+func insertCanonicalSalaries(migrationDB *sql.DB, batchID string, rows *sql.Rows) error {
+	count := 0
+	for rows.Next() {
+		var memberID string
+		var salaryYear int
+		var salaryAmount float64
+		if err := rows.Scan(&memberID, &salaryYear, &salaryAmount); err != nil {
+			return fmt.Errorf("source_loader: scan salary: %w", err)
+		}
+		_, err := migrationDB.Exec(
+			`INSERT INTO migration.canonical_salaries
+			 (batch_id, member_id, salary_year, salary_amount)
+			 VALUES ($1, $2, $3, $4)`,
+			batchID, memberID, salaryYear, salaryAmount,
+		)
+		if err != nil {
+			return fmt.Errorf("source_loader: insert salary: %w", err)
+		}
+		count++
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("source_loader: iterate salaries: %w", err)
+	}
+	if count == 0 {
+		slog.Warn("source_loader: zero salary history rows loaded — tier 3a will have no data",
+			"batch_id", batchID)
+	} else {
+		slog.Info("source_loader: loaded salary history", "batch_id", batchID, "count", count)
+	}
+	return nil
+}
+
+// ─── Contribution Loaders (Tier 3b) ─────────────────────────────────────────
+
+// loadPRISMContributions loads lifetime contribution totals per member from
+// PRISM_CONTRIB_LEGACY (pre-1998) + PRISM_CONTRIB_HIST (post-1998).
+// Uses CONTRIB tables only — NOT PRISM_SAL_ANNUAL.CONTRIB_AMT (double-counting).
+func loadPRISMContributions(migrationDB, sourceDB *sql.DB, batchID string) error {
+	rows, err := sourceDB.Query(`
+		SELECT CAST(mbr AS TEXT), SUM(total) FROM (
+			SELECT MBR_NBR AS mbr,
+			       COALESCE(EE_CONTRIB, 0) + COALESCE(ER_CONTRIB, 0) AS total
+			FROM src_prism.prism_contrib_legacy
+			UNION ALL
+			SELECT MBR_ID AS mbr,
+			       COALESCE(EE_CONTRIB_AMT, 0) + COALESCE(ER_CONTRIB_AMT, 0) AS total
+			FROM src_prism.prism_contrib_hist
+		) combined
+		GROUP BY mbr
+	`)
+	if err != nil {
+		return fmt.Errorf("source_loader: query PRISM contributions: %w", err)
+	}
+	defer rows.Close()
+
+	return insertCanonicalContributions(migrationDB, batchID, rows)
+}
+
+// loadPASContributions loads lifetime contribution totals per member from PAS.
+func loadPASContributions(migrationDB, sourceDB *sql.DB, batchID string) error {
+	rows, err := sourceDB.Query(`
+		SELECT CAST(member_id AS TEXT),
+		       SUM(COALESCE(member_contribution_amount, 0)
+		         + COALESCE(employer_contribution_amount, 0)
+		         + COALESCE(picked_up_amount, 0))
+		FROM src_pas.contribution_history
+		GROUP BY member_id
+	`)
+	if err != nil {
+		return fmt.Errorf("source_loader: query PAS contributions: %w", err)
+	}
+	defer rows.Close()
+
+	return insertCanonicalContributions(migrationDB, batchID, rows)
+}
+
+func insertCanonicalContributions(migrationDB *sql.DB, batchID string, rows *sql.Rows) error {
+	count := 0
+	for rows.Next() {
+		var memberID string
+		var amount float64
+		if err := rows.Scan(&memberID, &amount); err != nil {
+			return fmt.Errorf("source_loader: scan contribution: %w", err)
+		}
+		_, err := migrationDB.Exec(
+			`INSERT INTO migration.canonical_contributions
+			 (batch_id, member_id, contribution_amount)
+			 VALUES ($1, $2, $3)`,
+			batchID, memberID, amount,
+		)
+		if err != nil {
+			return fmt.Errorf("source_loader: insert contribution: %w", err)
+		}
+		count++
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("source_loader: iterate contributions: %w", err)
+	}
+	if count == 0 {
+		slog.Warn("source_loader: zero contribution rows loaded — tier 3b will have no data",
+			"batch_id", batchID)
+	} else {
+		slog.Info("source_loader: loaded contributions", "batch_id", batchID, "count", count)
+	}
+	return nil
+}
+
+// ─── Service Credit + Employment Span Loaders (Tier 3c) ─────────────────────
+
+// loadPRISMServiceCredit populates canonical_members with service_credit_years
+// (from PRISM_SVC_CREDIT running balance) and employment_start (from HIRE_DT).
+func loadPRISMServiceCredit(migrationDB, sourceDB *sql.DB, batchID string) error {
+	// Get the most recent SVC_CR_BAL per member + hire date from PRISM_MEMBER
+	rows, err := sourceDB.Query(`
+		SELECT CAST(m.MBR_NBR AS TEXT),
+		       sc.SVC_CR_BAL,
+		       m.HIRE_DT,
+		       m.RET_DT
+		FROM src_prism.prism_member m
+		LEFT JOIN LATERAL (
+			SELECT SVC_CR_BAL FROM src_prism.prism_svc_credit
+			WHERE MBR_NBR = m.MBR_NBR
+			ORDER BY AS_OF_DT DESC LIMIT 1
+		) sc ON true
+	`)
+	if err != nil {
+		return fmt.Errorf("source_loader: query PRISM service credit: %w", err)
+	}
+	defer rows.Close()
+
+	count := 0
+	for rows.Next() {
+		var memberID string
+		var svcCreditBal sql.NullFloat64
+		var hireDt, retDt sql.NullString
+		if err := rows.Scan(&memberID, &svcCreditBal, &hireDt, &retDt); err != nil {
+			return fmt.Errorf("source_loader: scan PRISM service credit: %w", err)
+		}
+
+		_, err := migrationDB.Exec(
+			`UPDATE migration.canonical_members
+			 SET service_credit_years = $1,
+			     employment_start = $2,
+			     employment_end   = $3
+			 WHERE batch_id = $4 AND member_id = $5`,
+			nullFloat(svcCreditBal),
+			parsePRISMDate(nullStr(hireDt)),
+			parsePRISMDate(nullStr(retDt)),
+			batchID, memberID,
+		)
+		if err != nil {
+			return fmt.Errorf("source_loader: update canonical member service credit: %w", err)
+		}
+		count++
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("source_loader: iterate PRISM service credit: %w", err)
+	}
+	slog.Info("source_loader: updated service credit on canonical members (PRISM)",
+		"batch_id", batchID, "count", count)
+	return nil
+}
+
+// loadPASServiceCredit populates canonical_members with service_credit_years
+// (from service_credit_history) and employment dates (from employment_segment).
+func loadPASServiceCredit(migrationDB, sourceDB *sql.DB, batchID string) error {
+	rows, err := sourceDB.Query(`
+		SELECT CAST(m.member_id AS TEXT),
+		       COALESCE(sc.total_credited, 0),
+		       es.earliest_start,
+		       es.latest_end
+		FROM src_pas.member m
+		LEFT JOIN LATERAL (
+			SELECT SUM(credited_service_years) AS total_credited
+			FROM src_pas.service_credit_history
+			WHERE member_id = m.member_id AND purchased_flag = false
+		) sc ON true
+		LEFT JOIN LATERAL (
+			SELECT MIN(segment_start_date) AS earliest_start,
+			       MAX(segment_end_date)   AS latest_end
+			FROM src_pas.employment_segment
+			WHERE member_id = m.member_id
+		) es ON true
+	`)
+	if err != nil {
+		return fmt.Errorf("source_loader: query PAS service credit: %w", err)
+	}
+	defer rows.Close()
+
+	count := 0
+	for rows.Next() {
+		var memberID string
+		var svcCredit float64
+		var empStart, empEnd sql.NullTime
+		if err := rows.Scan(&memberID, &svcCredit, &empStart, &empEnd); err != nil {
+			return fmt.Errorf("source_loader: scan PAS service credit: %w", err)
+		}
+
+		_, err := migrationDB.Exec(
+			`UPDATE migration.canonical_members
+			 SET service_credit_years = $1,
+			     employment_start = $2,
+			     employment_end = $3
+			 WHERE batch_id = $4 AND member_id = $5`,
+			svcCredit, nullTime(empStart), nullTime(empEnd), batchID, memberID,
+		)
+		if err != nil {
+			return fmt.Errorf("source_loader: update canonical member service credit (PAS): %w", err)
+		}
+		count++
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("source_loader: iterate PAS service credit: %w", err)
+	}
+	slog.Info("source_loader: updated service credit on canonical members (PAS)",
+		"batch_id", batchID, "count", count)
+	return nil
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+func nullFloat(v sql.NullFloat64) interface{} {
+	if v.Valid {
+		return v.Float64
+	}
+	return nil
+}
+
+func nullStr(v sql.NullString) string {
+	if v.Valid {
+		return v.String
+	}
+	return ""
+}
+
+func nullTime(v sql.NullTime) interface{} {
+	if v.Valid {
+		return v.Time
+	}
+	return nil
+}
+
+// parsePRISMDate attempts to parse PRISM's mixed-format VARCHAR dates.
+// Formats: YYYYMMDD (post-1998), MMDDYYYY (pre-1998), YYYY-MM-DD, MM/DD/YYYY.
+// Returns nil for empty or unparseable strings.
+func parsePRISMDate(s string) interface{} {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return nil
+	}
+	for _, layout := range []string{
+		"20060102",   // YYYYMMDD
+		"01022006",   // MMDDYYYY
+		"2006-01-02", // ISO
+		"01/02/2006", // US slash
+		"1/2/2006",   // US slash (no zero-pad)
+	} {
+		if t, err := time.Parse(layout, s); err == nil {
+			return t
+		}
+	}
+	slog.Warn("source_loader: unparseable PRISM date", "value", s)
 	return nil
 }

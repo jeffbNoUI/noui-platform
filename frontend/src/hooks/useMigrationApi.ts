@@ -358,6 +358,12 @@ export function useBatch(batchId: string) {
     queryKey: ['migration', 'batch', batchId],
     queryFn: () => migrationAPI.getBatch(batchId),
     enabled: !!batchId,
+    // Poll every 5s while batch is in a non-terminal state (QUEUED/RUNNING)
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      if (status === 'PENDING' || status === 'RUNNING') return 5_000;
+      return false;
+    },
   });
 }
 
