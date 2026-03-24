@@ -1,4 +1,4 @@
-import { Component, useState, useMemo, useEffect, useCallback } from 'react';
+import { Component, useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { C, BODY, DISPLAY } from '@/lib/designSystem';
@@ -149,11 +149,16 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
   const { connected, events, useFallback } = useMigrationEvents(engagementId);
   const { data: attentionItems } = useAttentionItems(engagementId);
   const [activeTab, setActiveTab] = useState<Tab>('discovery');
+  // Track whether the user has manually clicked a tab — prevents the
+  // defaultTab effect from overwriting their selection on async data loads.
+  const userSelectedTab = useRef(false);
+  const prevEngagementId = useRef(engagementId);
 
   // Invalidate gate status + engagement cache on tab change so the stepper
   // and gate dialog always reflect the latest server state.
   const handleTabChange = useCallback(
     (tab: Tab) => {
+      userSelectedTab.current = true;
       setActiveTab(tab);
       queryClient.invalidateQueries({ queryKey: ['migration', 'gate-status', engagementId] });
       queryClient.invalidateQueries({ queryKey: ['migration', 'engagement', engagementId] });
@@ -168,9 +173,17 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
 
   const attentionCount = attentionItems?.length ?? 0;
 
-  // Set default tab based on engagement status
+  // Set default tab based on engagement status — only on initial load or
+  // when navigating to a different engagement. Skipped if the user has
+  // already clicked a tab (avoids the race where async data overwrites
+  // the user's selection).
   useEffect(() => {
-    if (engagement) {
+    if (prevEngagementId.current !== engagementId) {
+      // New engagement — reset user intent and auto-select tab
+      userSelectedTab.current = false;
+      prevEngagementId.current = engagementId;
+    }
+    if (engagement && !userSelectedTab.current) {
       setActiveTab(defaultTab(engagement.status));
     }
   }, [engagementId, engagement?.status]);
