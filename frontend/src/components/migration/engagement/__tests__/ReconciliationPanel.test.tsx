@@ -225,4 +225,42 @@ describe('ReconciliationPanel', () => {
     expect(screen.queryByText('M-2002')).toBeNull();
     expect(screen.getByText(/Filtered by/)).toBeTruthy();
   });
+
+  it('shows empty state with Run Reconciliation button when a loaded batch exists', () => {
+    (useReconciliationSummary as any).mockReturnValue({
+      data: {
+        total_records: 0,
+        gate_score: 0,
+        match_count: 0,
+        minor_count: 0,
+        major_count: 0,
+        error_count: 0,
+      },
+      isLoading: false,
+      isError: false,
+    });
+    (useBatches as any).mockReturnValue({
+      data: [{ batch_id: 'b1', status: 'LOADED' }],
+    });
+
+    renderWithProviders(<ReconciliationPanel engagementId="eng-1" />);
+
+    expect(screen.getByText('No reconciliation data yet')).toBeTruthy();
+    expect(screen.getByText('Run Reconciliation')).toBeTruthy();
+  });
+
+  it('shows empty state without button when no loaded batch exists', () => {
+    (useReconciliationSummary as any).mockReturnValue({
+      data: null,
+      isLoading: false,
+      isError: false,
+    });
+    (useBatches as any).mockReturnValue({ data: [] });
+
+    renderWithProviders(<ReconciliationPanel engagementId="eng-1" />);
+
+    expect(screen.getByText('No reconciliation data yet')).toBeTruthy();
+    expect(screen.getByText(/Complete a batch load first/)).toBeTruthy();
+    expect(screen.queryByText('Run Reconciliation')).toBeNull();
+  });
 });
