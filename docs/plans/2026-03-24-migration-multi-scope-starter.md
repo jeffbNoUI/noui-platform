@@ -3,8 +3,7 @@
 ## Context
 
 Session 27 populated all 21 PRISM source tables with seed data (PR #158, merged).
-Previously only `prism_member` had data, so batch execution only worked for
-ACTIVE_MEMBERS scope. Now all tables are populated:
+All tables are now populated with realistic data:
 
 - 100 members, 173 addresses, 160 service credit records
 - 820 pre-1998 annual salary + contribution records each
