@@ -1,5 +1,65 @@
 # noui-platform — Build History
 
+## Session 30: Tier 2/3 Reconciliation Fixes + Seed Data + JWT Tests (2026-03-24)
+
+**Branch:** `claude/affectionate-bell`
+
+### What Was Done
+
+**1. Seed Data Generation — Unblocked Docker pipeline**
+- Ran `prism_data_generator.py` → 69K INSERT statements, 100 members
+- Ran `generate_pas_scenarios.py` → 310K INSERT statements, 100 members
+- Root cause: seed files are generated (not checked in), scripts had never been run
+- Docker `prism-source` and `pas-source` now fully populated on fresh `docker compose up`
+
+**2. Tier 3 Reconciliation — Fixed column name bugs (1 file)**
+- `computeBenchmarks()` in `reconciliation_handlers.go` used wrong column names:
+  - `period_start` → `salary_year`, `amount` → `salary_amount` (salary query)
+  - `amount` → `contribution_amount` (contribution query)
+- Silent failures — errors swallowed by `if err == nil` pattern
+- Now produces 126 advisory results (salary outliers + service credit discrepancies)
+
+**3. Tier 2 Reconciliation — Fixed data gap + NULL scan (3 files)**
+- `prism_data_generator.py`: Added 6 orphan payment members (payments without stored calcs)
+- `source_loader.go`: Added `backfillCanonicalBenefitFromPayments()` — sets canonical_benefit from most recent REGULAR payment for members with NULL canonical_benefit
+- `reconciliation_detail.go`: Fixed `Priority string` → `*string` (NULL scan crash)
+- Now produces 6 Tier 2 results with payment amount verification
+
+**4. E2E Timing Fix (1 file)**
+- Added 5s wait before reconcile call for async source reference data loaders
+- `LoadSourceReferenceData` runs in goroutine after batch status=LOADED
+
+**5. JWT 401 Refresh Tests (1 file, +89 lines)**
+- 3 new unit tests in `apiClient.test.ts`:
+  - Token refresh on 401 → retry with fresh token
+  - No retry without registered refresher
+  - Error fallthrough when refresh itself fails
+
+### Verification
+
+- Go migration: 11/11 packages pass (short mode)
+- Frontend: 235/235 test files, 1861/1861 tests pass, typecheck clean
+- Docker E2E: 54/54 migration tests pass (Tier 2=6, Tier 3=126)
+- Pre-commit hooks: lint, format, tests all pass
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `platform/migration/api/reconciliation_handlers.go` | Fix column names in computeBenchmarks |
+| `platform/migration/batch/source_loader.go` | Add backfillCanonicalBenefitFromPayments |
+| `platform/migration/db/reconciliation_detail.go` | Fix NULL priority scan (*string) |
+| `migration-simulation/sources/prism/prism_data_generator.py` | Add orphan payments for Tier 2 |
+| `frontend/src/lib/__tests__/apiClient.test.ts` | JWT 401 refresh unit tests |
+| `tests/e2e/migration_e2e.sh` | 5s loader wait before reconcile |
+
+### What's Next
+
+- Merge PR → Docker rebuild picks up all fixes
+- WebSocket reconnection investigation (shows "Polling")
+- Migration sidebar navigation intermittent failure
+- Intelligence service pattern detection integration
+
 ## Session 29: Auth Bypass + Tier 2/3 E2E Verification (2026-03-24)
 
 **Branch:** `claude/modest-euler`

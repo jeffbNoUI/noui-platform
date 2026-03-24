@@ -315,6 +315,13 @@ REDUCTION_T12 = {55:0.70, 56:0.73, 57:0.76, 58:0.79, 59:0.82,
                  60:0.85, 61:0.88, 62:0.91, 63:0.94, 64:0.97, 65:1.00}
 REDUCTION_T3 = {60:0.70, 61:0.76, 62:0.82, 63:0.88, 64:0.94, 65:1.00}
 
+# Identify ~6 retired/disabled members whose benefit calcs will be SKIPPED.
+# These members will still have payment history records (orphan payments) and
+# exercise the Tier 2 reconciliation path (payment history without stored calcs).
+orphan_calc_count = 0
+ORPHAN_CALC_TARGET = 6
+orphan_payment_members = []  # will get payments but no stored calc
+
 for m in members:
     if m["ret_dt"] or m["disability"]:
         as_of = m["ret_dt"] or datetime.date(2023, 1, 1)
@@ -338,6 +345,16 @@ for m in members:
         calc_type = "D" if m["disability"] else "R"
         ret_type = "DSB" if m["disability"] else ("ERY" if age_at_ret < 65 else "NRM")
         calc_dt = datetime.datetime(as_of.year, as_of.month, min(as_of.day, 28), 10, 0, 0)
+
+        # Skip benefit calc for a subset — simulates legacy system data gap where
+        # payment records exist but no formal benefit calculation was stored.
+        if orphan_calc_count < ORPHAN_CALC_TARGET and not m["disability"]:
+            orphan_calc_count += 1
+            orphan_payment_members.append({
+                "mbr_nbr": m["mbr_nbr"], "as_of_dt": as_of,
+                "calc_type": calc_type, "benefit": round(benefit, 2),
+            })
+            continue
 
         emit(
             f"INSERT INTO src_prism.PRISM_BENEFIT_CALC "
@@ -418,6 +435,50 @@ for c in calcs:
             f"({pmt_hist_id}, {this_sched_id}, {c['mbr_nbr']}, {sql_date(pmt_dt)}, "
             f"{sql_date(pmt_dt + datetime.timedelta(days=random.randint(0, 5)))}, "
             f"{sql_str(pmt_status)}, {gross_amt}, {net_amt}, "
+            f"{round(gross_amt * 0.15, 2)}, {round(gross_amt * 0.05, 2)}, 'ACH');"
+        )
+        pmt_history.append(pmt_hist_id)
+        pmt_hist_id += 1
+
+# Orphan payments — members with payment history but no benefit calc.
+# These exercise the Tier 2 reconciliation path.
+emit("-- ORPHAN PAYMENTS (no benefit calc — Tier 2 test data)")
+for om in orphan_payment_members:
+    sched_typ = "REGR"
+    eff_dt = om["as_of_dt"]
+    tax_fed = min(round(om["benefit"] * 0.15, 2), 999.99)
+    tax_ste = min(round(om["benefit"] * 0.05, 2), 999.99)
+
+    emit(
+        f"INSERT INTO src_prism.PRISM_PMT_SCHEDULE "
+        f"(PMT_SCHED_ID, MBR_NBR, SCHED_TYP, EFF_DT, MONTHLY_AMT, PAY_FREQ_CD, "
+        f"PMT_METHOD, BANK_ABA, BANK_ACCT, TAX_ELECT_FED, TAX_ELECT_STE, "
+        f"COLA_ELIGIBLE, LINKED_CALC_ID) VALUES "
+        f"({pmt_sched_id}, {om['mbr_nbr']}, {sql_str(sched_typ)}, {sql_date(eff_dt)}, "
+        f"{om['benefit']}, 'MO', 'ACH', '021000021', '1234567890', "
+        f"{tax_fed}, {tax_ste}, 'Y', NULL);"
+    )
+    this_sched_id = pmt_sched_id
+    pmt_sched_id += 1
+
+    n_payments = random.randint(6, 12)
+    for p in range(n_payments):
+        pmt_month = eff_dt.month + p
+        pmt_year = eff_dt.year + (pmt_month - 1) // 12
+        pmt_month = ((pmt_month - 1) % 12) + 1
+        if pmt_year > 2024:
+            break
+        pmt_dt = datetime.date(pmt_year, pmt_month, 1)
+        variance = random.uniform(-2.0, 5.0) if p > 3 else 0.0
+        gross_amt = round(om["benefit"] + variance, 2)
+        net_amt = round(gross_amt * 0.78, 2)
+        emit(
+            f"INSERT INTO src_prism.PRISM_PMT_HIST "
+            f"(PMT_HIST_ID, PMT_SCHED_ID, MBR_NBR, PAY_PRD_DT, PMT_DT, PMT_STATUS, "
+            f"GROSS_AMT, NET_AMT, FED_TAX_WH, STE_TAX_WH, PMT_METHOD) VALUES "
+            f"({pmt_hist_id}, {this_sched_id}, {om['mbr_nbr']}, {sql_date(pmt_dt)}, "
+            f"{sql_date(pmt_dt + datetime.timedelta(days=random.randint(0, 5)))}, "
+            f"'I', {gross_amt}, {net_amt}, "
             f"{round(gross_amt * 0.15, 2)}, {round(gross_amt * 0.05, 2)}, 'ACH');"
         )
         pmt_history.append(pmt_hist_id)

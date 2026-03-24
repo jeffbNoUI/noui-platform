@@ -91,6 +91,13 @@ func LoadSourceReferenceData(migrationDB *sql.DB, batchID, sourceSystem, sourceD
 			"source_system", sourceSystem, "resolved", resolved, "batch_id", batchID)
 	}
 
+	// Backfill canonical_benefit from the most recent REGULAR payment for
+	// members that still have NULL canonical_benefit. This enables Tier 2
+	// reconciliation for members whose source record lacks a benefit field.
+	if err := backfillCanonicalBenefitFromPayments(migrationDB, batchID); err != nil {
+		slog.Warn("source_loader: canonical_benefit backfill failed (non-fatal)", "error", err, "batch_id", batchID)
+	}
+
 	return nil
 }
 
@@ -601,5 +608,35 @@ func parsePRISMDate(s string) interface{} {
 		}
 	}
 	slog.Warn("source_loader: unparseable PRISM date", "value", s)
+	return nil
+}
+
+// backfillCanonicalBenefitFromPayments sets canonical_benefit from the most
+// recent REGULAR payment's gross_amount for members that still have NULL
+// canonical_benefit. This enables Tier 2 reconciliation for source systems
+// where the member record lacks a benefit field.
+func backfillCanonicalBenefitFromPayments(migrationDB *sql.DB, batchID string) error {
+	result, err := migrationDB.Exec(`
+		UPDATE migration.canonical_members cm
+		SET canonical_benefit = ph.gross_amount
+		FROM (
+			SELECT DISTINCT ON (member_id)
+				member_id, gross_amount
+			FROM migration.payment_history
+			WHERE batch_id = $1 AND payment_type = 'REGULAR'
+			ORDER BY member_id, payment_date DESC
+		) ph
+		WHERE cm.batch_id = $1
+		  AND cm.member_id = ph.member_id
+		  AND cm.canonical_benefit IS NULL
+	`, batchID)
+	if err != nil {
+		return fmt.Errorf("backfill canonical_benefit: %w", err)
+	}
+	n, _ := result.RowsAffected()
+	if n > 0 {
+		slog.Info("source_loader: backfilled canonical_benefit from payment history",
+			"batch_id", batchID, "count", n)
+	}
 	return nil
 }
