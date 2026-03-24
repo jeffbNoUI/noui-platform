@@ -36,6 +36,32 @@ func LoadVocabulary() (Vocabulary, error) {
 	return vocab, nil
 }
 
+// FalseCognateIndex provides fast lookup: does a matched term have a warning
+// for a given concept tag and slot? Key format: "concept_tag\x00slot\x00term".
+type FalseCognateIndex map[string]FalseCognate
+
+// BuildFalseCognateIndex creates a lookup from the full vocabulary.
+func BuildFalseCognateIndex(vocab Vocabulary) FalseCognateIndex {
+	idx := make(FalseCognateIndex)
+	for section, slots := range vocab {
+		for slotName, vs := range slots {
+			for _, fc := range vs.FalseCognates {
+				key := section + "\x00" + slotName + "\x00" + strings.ToLower(fc.Term)
+				idx[key] = fc
+			}
+		}
+	}
+	return idx
+}
+
+// Lookup returns a false cognate warning if the term is flagged for the given
+// concept tag and canonical column. Returns zero value and false if not found.
+func (idx FalseCognateIndex) Lookup(conceptTag, canonicalColumn, term string) (FalseCognate, bool) {
+	key := conceptTag + "\x00" + canonicalColumn + "\x00" + strings.ToLower(term)
+	fc, ok := idx[key]
+	return fc, ok
+}
+
 // mergeVocabulary expands ExpectedNames in registry slots using vocabulary terms.
 // It matches vocabulary sections to registry templates by concept tag, then
 // matches vocabulary slot names to template slot CanonicalColumn names.
