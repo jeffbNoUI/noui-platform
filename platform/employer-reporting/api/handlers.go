@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/noui/platform/apiresponse"
+	"github.com/noui/platform/auth"
 	erdb "github.com/noui/platform/employer-reporting/db"
 	"github.com/noui/platform/employer-reporting/domain"
 	"github.com/noui/platform/validation"
@@ -165,7 +166,7 @@ func (h *Handler) ManualEntry(w http.ResponseWriter, r *http.Request) {
 	// Create the file record.
 	file := &erdb.ContributionFile{
 		OrgID:        req.OrgID,
-		UploadedBy:   "", // will be set from auth context in production
+		UploadedBy:   auth.UserID(r.Context()),
 		FileName:     "manual-entry",
 		FileType:     "MANUAL_ENTRY",
 		FileStatus:   "VALIDATING",
@@ -369,8 +370,7 @@ func (h *Handler) ResolveException(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Use a placeholder for resolved_by — in production this comes from auth context.
-	err := h.store.ResolveException(r.Context(), id, "", req.Note)
+	err := h.store.ResolveException(r.Context(), id, auth.UserID(r.Context()), req.Note)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			apiresponse.WriteError(w, http.StatusNotFound, serviceName, "NOT_FOUND", "exception not found or already resolved")
@@ -510,7 +510,7 @@ func (h *Handler) SubmitCorrection(w http.ResponseWriter, r *http.Request) {
 	// Create correction file that references the original.
 	file := &erdb.ContributionFile{
 		OrgID:          req.OrgID,
-		UploadedBy:     "",
+		UploadedBy:     auth.UserID(r.Context()),
 		FileName:       "correction",
 		FileType:       "MANUAL_ENTRY",
 		FileStatus:     "UPLOADED",
