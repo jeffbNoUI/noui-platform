@@ -165,6 +165,13 @@ func (h *Handler) GenerateMappings(w http.ResponseWriter, r *http.Request) {
 		// 3b. Run local template matching.
 		templateMatches := mapper.MatchColumns(sourceCols, template)
 
+		// 3b-2. Attach false cognate warnings from vocabulary.
+		vocab, err := mapper.LoadVocabulary()
+		if err == nil {
+			idx := mapper.BuildFalseCognateIndex(vocab)
+			mapper.AttachFalseCognateWarnings(templateMatches, tbl.ConceptTag, idx)
+		}
+
 		// 3c. Call intelligence service for signal scoring.
 		var signalMatches []mapper.ScoredMapping
 		if h.IntelClient != nil {

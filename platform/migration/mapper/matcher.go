@@ -4,11 +4,12 @@ import "strings"
 
 // ColumnMatch represents a proposed mapping from source to canonical.
 type ColumnMatch struct {
-	SourceColumn    string  `json:"source_column"`
-	SourceType      string  `json:"source_type"`
-	CanonicalColumn string  `json:"canonical_column"`
-	Confidence      float64 `json:"confidence"`
-	MatchMethod     string  `json:"match_method"` // "exact", "pattern", "similarity", "type_only"
+	SourceColumn    string           `json:"source_column"`
+	SourceType      string           `json:"source_type"`
+	CanonicalColumn string           `json:"canonical_column"`
+	Confidence      float64          `json:"confidence"`
+	MatchMethod     string           `json:"match_method"` // "exact", "pattern", "similarity", "type_only"
+	Warnings        []MappingWarning `json:"warnings,omitempty"`
 }
 
 // SourceColumn represents a column discovered in the source database.
@@ -171,6 +172,27 @@ func MatchColumns(sourceColumns []SourceColumn, template MappingTemplate) []Colu
 	}
 
 	return matches
+}
+
+// AttachFalseCognateWarnings checks each match result against the false cognate
+// index and attaches warnings where the matched source term is a known false
+// cognate for that slot. Warnings are informational only — they do not change
+// confidence or block matching. Pass nil index to skip (no-op).
+func AttachFalseCognateWarnings(matches []ColumnMatch, conceptTag string, idx FalseCognateIndex) {
+	if idx == nil {
+		return
+	}
+	for i := range matches {
+		srcLower := strings.ToLower(matches[i].SourceColumn)
+		fc, ok := idx.Lookup(conceptTag, matches[i].CanonicalColumn, srcLower)
+		if ok {
+			matches[i].Warnings = append(matches[i].Warnings, MappingWarning{
+				Term:    fc.Term,
+				Warning: fc.Warning,
+				Risk:    fc.Risk,
+			})
+		}
+	}
 }
 
 // TypeCompatible checks if a source database type is compatible with a target
