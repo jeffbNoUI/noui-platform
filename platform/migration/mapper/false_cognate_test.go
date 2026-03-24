@@ -193,6 +193,84 @@ func TestAttachWarnings_NoFalseCognate(t *testing.T) {
 	}
 }
 
+func TestAttachWarnings_QualifyingService(t *testing.T) {
+	// qualifying_service matched to eligibility_service_years — HIGH risk (STRS Ohio narrower scope)
+	matches := []ColumnMatch{
+		{
+			SourceColumn:    "qualifying_service",
+			SourceType:      "decimal(6,2)",
+			CanonicalColumn: "eligibility_service_years",
+			Confidence:      0.9,
+			MatchMethod:     "pattern",
+		},
+	}
+
+	vocab, _ := LoadVocabulary()
+	idx := BuildFalseCognateIndex(vocab)
+	AttachFalseCognateWarnings(matches, "service-credit", idx)
+
+	if len(matches[0].Warnings) == 0 {
+		t.Fatal("expected warning for qualifying_service → eligibility_service_years, got none")
+	}
+	if matches[0].Warnings[0].Risk != "HIGH" {
+		t.Errorf("qualifying_service risk = %q, want HIGH", matches[0].Warnings[0].Risk)
+	}
+	if !strings.Contains(matches[0].Warnings[0].Warning, "STRS Ohio") {
+		t.Error("qualifying_service warning should mention STRS Ohio")
+	}
+}
+
+func TestAttachWarnings_CompensationCap(t *testing.T) {
+	// compensation_cap matched to anti_spiking_cap_pct — MEDIUM risk (IRC §401(a)(17) ambiguity)
+	matches := []ColumnMatch{
+		{
+			SourceColumn:    "compensation_cap",
+			SourceType:      "decimal(5,2)",
+			CanonicalColumn: "anti_spiking_cap_pct",
+			Confidence:      0.9,
+			MatchMethod:     "pattern",
+		},
+	}
+
+	vocab, _ := LoadVocabulary()
+	idx := BuildFalseCognateIndex(vocab)
+	AttachFalseCognateWarnings(matches, "salary-history", idx)
+
+	if len(matches[0].Warnings) == 0 {
+		t.Fatal("expected warning for compensation_cap → anti_spiking_cap_pct, got none")
+	}
+	if matches[0].Warnings[0].Risk != "MEDIUM" {
+		t.Errorf("compensation_cap risk = %q, want MEDIUM", matches[0].Warnings[0].Risk)
+	}
+	if !strings.Contains(matches[0].Warnings[0].Warning, "401(a)(17)") {
+		t.Error("compensation_cap warning should mention IRC 401(a)(17)")
+	}
+}
+
+func TestAttachWarnings_TotalServiceCredit(t *testing.T) {
+	// total_service_credit matched to benefit_service_years — MEDIUM risk
+	matches := []ColumnMatch{
+		{
+			SourceColumn:    "total_service_credit",
+			SourceType:      "decimal(6,2)",
+			CanonicalColumn: "benefit_service_years",
+			Confidence:      0.9,
+			MatchMethod:     "pattern",
+		},
+	}
+
+	vocab, _ := LoadVocabulary()
+	idx := BuildFalseCognateIndex(vocab)
+	AttachFalseCognateWarnings(matches, "service-credit", idx)
+
+	if len(matches[0].Warnings) == 0 {
+		t.Fatal("expected warning for total_service_credit → benefit_service_years, got none")
+	}
+	if matches[0].Warnings[0].Risk != "MEDIUM" {
+		t.Errorf("total_service_credit risk = %q, want MEDIUM", matches[0].Warnings[0].Risk)
+	}
+}
+
 func TestAttachWarnings_EndToEnd_MatchColumns(t *testing.T) {
 	// Full pipeline: MatchColumns → AttachFalseCognateWarnings
 	// membership_service should match credited_years_total via pattern, then get a warning

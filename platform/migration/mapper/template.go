@@ -2,10 +2,11 @@ package mapper
 
 // MappingTemplate defines expected canonical columns for a concept-tagged table.
 type MappingTemplate struct {
-	ConceptTag     string         `json:"concept_tag"`
-	CanonicalTable string         `json:"canonical_table"`
-	Description    string         `json:"description"`
-	Slots          []TemplateSlot `json:"slots"`
+	ConceptTag     string            `json:"concept_tag"`
+	CanonicalTable string            `json:"canonical_table"`
+	Description    string            `json:"description"`
+	Slots          []TemplateSlot    `json:"slots"`
+	Metadata       map[string]string `json:"metadata,omitempty"` // Concept-level annotations (e.g., benefit model notes)
 }
 
 // MappingWarning flags a false cognate — a term that matched but has different

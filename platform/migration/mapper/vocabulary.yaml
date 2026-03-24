@@ -111,6 +111,44 @@ service-credit:
       - prp
       - service_transfers
 
+  eligibility_service_years:
+    terms:
+      - eligibility_service
+      - earned_service
+      - qualifying_service
+      - vesting_service
+      - rule_of_n_service
+      - earned_service_credit
+      - qualifying_service_credit
+      - membership_service_years
+      - contributory_service
+      - active_service_credit
+    false_cognates:
+      - term: qualifying_service
+        warning: "In STRS Ohio, narrower than general eligibility service; may exclude certain part-time periods"
+        risk: HIGH
+      - term: membership_service_years
+        warning: "In Montana PERA, 1 full month per any contribution — not proportional to hours worked"
+        risk: HIGH
+
+  benefit_service_years:
+    terms:
+      - benefit_service
+      - total_service_credit
+      - total_credited_service
+      - benefit_calculation_service
+      - formula_service
+      - credited_service_for_benefit
+      - total_service_years
+      - combined_service_credit
+    false_cognates:
+      - term: total_service_credit
+        warning: "May include unfunded or provisional service not yet validated for benefit calculation"
+        risk: MEDIUM
+      - term: combined_service_credit
+        warning: "In multi-system contexts, may refer to inter-system reciprocal service rather than within-plan total"
+        risk: MEDIUM
+
   service_type:
     terms:
       - service_category
@@ -145,6 +183,41 @@ salary-history:
       - creditable_compensation
       - earnable_compensation
       - covered_wages
+
+  fac_window_months:
+    terms:
+      - fac_window
+      - fas_window
+      - averaging_period
+      - ams_window_months
+      - fac_period_months
+      - salary_averaging_window
+      - highest_average_period
+
+  anti_spiking_cap_pct:
+    terms:
+      - anti_spiking_cap
+      - compensation_cap
+      - salary_cap_pct
+      - spike_limit
+      - salary_increase_cap
+      - compensation_growth_limit
+    false_cognates:
+      - term: compensation_cap
+        warning: "May refer to IRC section 401(a)(17) annual compensation limit, not anti-spiking percentage"
+        risk: MEDIUM
+      - term: salary_cap_pct
+        warning: "May refer to pensionable salary ceiling rather than year-over-year increase cap"
+        risk: MEDIUM
+
+  compensation_inclusions:
+    terms:
+      - compensation_inclusions
+      - comp_inclusions
+      - pensionable_components
+      - pay_inclusions
+      - includable_compensation
+      - earnable_components
 
   period_start:
     terms:
