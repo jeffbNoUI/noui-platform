@@ -1,5 +1,53 @@
 # noui-platform — Build History
 
+## Session 31: WebSocket Reconnection + Sidebar Nav Race Condition (2026-03-24)
+
+**Branch:** `fix/ws-reconnect-sidebar-nav`
+
+### What Was Done
+
+**1. WebSocket Reconnection — Fixed (1 file)**
+- After exhausting 5 reconnect attempts, the hook permanently fell back to polling
+  with no recovery path. Added three-tier recovery:
+  - Periodic probe every 30s while in fallback mode (lightweight single-attempt)
+  - Immediate reconnect probe on `visibilitychange` (laptop wake, network restore)
+  - Successful probe resets to full WebSocket mode, clears fallback state
+- Probe has 5s timeout to avoid hanging connections
+
+**2. Sidebar Nav Race Condition — Fixed (1 file)**
+- `defaultTab` useEffect fired on every `engagement.status` refetch, overwriting
+  user tab clicks during async data loads
+- Added `useRef` to track user intent — `handleTabChange` sets the flag
+- Auto-select only fires on initial load or when `engagementId` changes
+- Flag resets on engagement navigation
+
+**3. PR #163 Created** — `claude/affectionate-bell` → main
+- Tier 2/3 recon column fixes, nullable Priority, canonical benefit backfill
+- Orphan payment seed data, JWT refresh tests, auth bypass, E2E assertions
+
+### Verification
+
+- Frontend: 235/235 test files, 1858/1858 tests pass
+- ESLint + Prettier: pass (pre-commit hook)
+- Dev server: Migration Management page renders, no console errors from changes
+- No new TypeScript errors introduced
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `frontend/src/hooks/useMigrationEvents.ts` | Periodic reconnect probe + visibility listener |
+| `frontend/src/components/migration/engagement/EngagementDetail.tsx` | `useRef` user intent tracking |
+| `docs/plans/2026-03-24-post-ws-sidebar-starter.md` | Next session starter |
+
+### What's Next
+
+- Risk Register encoding fix (needs Docker + seed data)
+- Seed data Docker auto-loading (02_seed.sql not loading)
+- JWT 401 refresh E2E with Docker
+- WebSocket server auth + broadcast wiring (security gap)
+- Starter prompt: `docs/plans/2026-03-24-post-ws-sidebar-starter.md`
+
 ## Session 29: Auth Bypass + Tier 2/3 E2E Verification (2026-03-24)
 
 **Branch:** `claude/modest-euler`
