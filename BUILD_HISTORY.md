@@ -1,5 +1,63 @@
 # noui-platform — Build History
 
+## Session 33: Mapper Vocabulary Enrichment — D1 (2026-03-24)
+
+**Branch:** `claude/strange-ride`
+
+### What Was Done
+
+**Deliverable 1 from pension glossary integration design** — Expanded mapper ExpectedNames from 299 to 431 entries using the 25-system pension terminology crosswalk.
+
+**1. vocabulary.yaml (1 file, 257 lines)**
+- Structured YAML crosswalk covering 7 concept sections: service-credit (5 slots), salary-history (3 slots), benefit-payment (2 slots), employee-master (1 slot), benefit-deduction (2 slots), fac-abbreviations (1 slot), contribution-accounts (1 slot)
+- 8 false cognate definitions with risk levels (HIGH/MEDIUM) for D2 warning system
+- All terms lowercase, underscore-separated, matching registry convention
+- Embedded via `//go:embed` in mapper package
+
+**2. vocabulary.go — Loader + merge (1 file, 83 lines)**
+- `LoadVocabulary()` parses embedded YAML into `Vocabulary` type
+- `mergeVocabulary()` expands ExpectedNames in registry slots with deduplication
+- Called non-fatally from `NewRegistry()` — registry works with base names if YAML fails
+- Sections not matching a template (fac-abbreviations, contribution-accounts) silently ignored for future D3
+
+**3. New service-credit slots (registry.go, +21 lines)**
+- `purchased_years` (DECIMAL, optional) — 36 ExpectedNames after merge
+- `military_service_years` (DECIMAL, optional) — 12 ExpectedNames after merge
+- `transferred_service` (DECIMAL, optional) — 13 ExpectedNames after merge
+
+**4. Pension glossary added (docs/pension-glossary.md, 522 lines)**
+- 25-system crosswalk covering service credit, FAC, and contribution terminology
+- Layer 1 (term inventory), Layer 2 (synonym clusters), Layer 3 (bidirectional crosswalk)
+- False cognate flags, anti-spiking rules, compensation inclusion/exclusion matrix
+
+### Verification
+
+- Migration: 12/12 packages pass (short mode)
+- Mapper: 56 tests pass (43 existing + 13 new), zero regressions
+- Frontend: typecheck clean
+- ExpectedNames: 299 → 431 (44% increase)
+- Glossary terms (CREDITABLE_SERVICE, PENSIONABLE_COMPENSATION, COVERED_WAGES, MEMBER_DEPOSITS, CITY_CONTRIBUTIONS) all match at Pass 2 confidence 0.9
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `platform/migration/mapper/vocabulary.yaml` | New — 257-line glossary crosswalk |
+| `platform/migration/mapper/vocabulary.go` | New — embed + parse + merge |
+| `platform/migration/mapper/vocabulary_test.go` | New — 6 vocabulary tests |
+| `platform/migration/mapper/vocabulary_count_test.go` | New — 4 count verification tests |
+| `platform/migration/mapper/registry.go` | 3 new service-credit slots + mergeVocabulary call |
+| `platform/migration/mapper/registry_test.go` | TestServiceCreditHasNewSlots |
+| `platform/migration/mapper/matcher_test.go` | 3 glossary confidence tests + assertMatchMethod helper |
+| `docs/pension-glossary.md` | New — 25-system terminology crosswalk |
+
+### What's Next
+
+- **D2: False cognate warning system** — Add `Warnings []MappingWarning` to ColumnMatch, runtime checks against vocabulary false_cognates, frontend yellow badges
+- **D3: Canonical model evolution** — Dual service fields, TMRS accumulation pathway, FAC metadata
+- fac-abbreviations and contribution-accounts vocabulary sections will merge once D3 adds templates
+- Starter prompt: `docs/plans/2026-03-24-post-vocabulary-enrichment-starter.md`
+
 ## Session 32: ESLint CI Fix, WebSocket Auth + Broadcast, Glossary Design (2026-03-24)
 
 **Branch:** `claude/charming-dhawan` → PR #165 (merged)

@@ -1,0 +1,257 @@
+# vocabulary.yaml — Pension terminology crosswalk for mapper enrichment
+#
+# Source: 25-system pension glossary analysis (PERA, CalPERS, TMRS, OPERS,
+#         TRS, NYSLRS, SERS, MassPRIM, etc.)
+#
+# Structure:
+#   Top-level keys are concept tags matching registry template ConceptTag values.
+#   Second-level keys are slot names matching TemplateSlot.CanonicalColumn values.
+#   terms: list of lowercase underscore-separated expected column names
+#   false_cognates: list of {term, warning, risk} for D2 warning system
+#
+# Embedded into Go binary via //go:embed. Merged with registry ExpectedNames
+# at startup — duplicates are deduplicated automatically.
+
+service-credit:
+  credited_years_total:
+    terms:
+      - service_credit
+      - credited_service
+      - creditable_service
+      - membership_service
+      - retirement_credit
+      - allowable_service
+      - qualifying_service_credit
+      - contributing_months
+      - earned_service_credit
+      - equivalent_membership_service_credit
+      - eligibility_points
+      - sc
+      - cs
+      - qsc
+      - ep
+    false_cognates:
+      - term: membership_service
+        warning: "In some systems refers to membership status period, not credited service time"
+        risk: HIGH
+      - term: allowable_service
+        warning: "May refer to service categories eligible for purchase rather than credited time"
+        risk: MEDIUM
+      - term: service_credit
+        warning: "In TMRS, refers to a monetary account balance, not time-based service units"
+        risk: HIGH
+
+  purchased_years:
+    terms:
+      - purchased_service
+      - purchasing_service_credit
+      - purchase_of_service_credit
+      - purchase_service_credit
+      - psc
+      - buy_back
+      - buyback
+      - buy_back_service_credit
+      - redeposit_of_withdrawn_contributions
+      - refund_buyback
+      - reinstated_service
+      - restored_withdrawn_credit
+      - service_prior_to_membership
+      - spm
+      - optional_service_credit
+      - qualified_employment
+      - nonqualified_employment
+      - prior_governmental_service
+      - nongovernmental_service
+      - one_for_five_service
+      - permissive_service_credit
+      - full_cost_purchase
+      - prior_service_credit
+      - restricted_prior_service_credit
+      - rpsc
+      - prior_service
+      - additional_retirement_credit
+      - arc
+      - additional_retirement_service_credit
+      - arsc
+      - non_qualifying_part_time
+      - nqpt
+      - multiple_service
+      - combined_service
+      - joint_service_credit
+    false_cognates:
+      - term: prior_service
+        warning: "Ambiguous — may refer to credited service before a plan change, not purchased service"
+        risk: MEDIUM
+      - term: prior_service_credit
+        warning: "In TMRS, refers to a monetary credit (updated service credits), not purchased time"
+        risk: HIGH
+
+  military_service_years:
+    terms:
+      - military_service_credit
+      - military_leave_of_absence
+      - us_military_leave
+      - userra_service_credit
+      - userra
+      - granted_military_service
+      - free_military_service_credit
+      - prior_active_military_service
+      - wartime_service
+
+  transferred_service:
+    terms:
+      - reciprocity
+      - transferred_service
+      - transfer
+      - combined_service_annuity
+      - csa
+      - reciprocal_service
+      - joint_service_credit
+      - proportionate_retirement_program
+      - prp
+      - service_transfers
+
+  service_type:
+    terms:
+      - service_category
+      - leave_type
+      - benefit_protection_leave
+      - salary_continuance
+      - workers_compensation_credit
+      - lwop
+      - leave_without_pay
+
+salary-history:
+  gross_amount:
+    terms:
+      - pensionable_pay
+      - compensation_earnable
+      - pensionable_compensation
+      - pensionable_salary
+      - pensionable_comp
+      - covered_wages
+      - earnable_compensation
+      - earnable_salary
+      - creditable_compensation
+      - base_pay
+      - annual_salary
+
+  pensionable_amount:
+    terms:
+      - pera_includable_salary
+      - compensation_earnable
+      - pensionable_compensation
+      - pensionable_salary
+      - creditable_compensation
+      - earnable_compensation
+      - covered_wages
+
+  period_start:
+    terms:
+      - sal_eff_dt
+      - pay_start_date
+      - earnings_start_date
+
+benefit-payment:
+  gross_amount:
+    terms:
+      - benefit_amount
+      - monthly_benefit
+      - retirement_benefit
+      - pension_payment
+      - benefit_payment_amount
+
+  pay_period_date:
+    terms:
+      - benefit_effective_date
+      - retirement_date
+
+employee-master:
+  original_hire_date:
+    terms:
+      - membership_date
+      - enrollment_date
+      - plan_entry_date
+
+benefit-deduction:
+  ee_amount:
+    terms:
+      - basic_member_contributions
+      - bmc
+      - additional_member_contributions
+      - amc
+      - member_deposits
+      - retirement_deductions
+      - regular_contributions
+      - mandatory_contributions
+      - required_employee_contributions
+
+  er_amount:
+    terms:
+      - state_contribution
+      - city_contributions
+      - city_matching_funds
+      - uniform_contribution_rate
+      - aed
+      - saed
+      - employer_pay_contribution
+      - epc
+      - normal_cost
+      - employer_paid_member_contributions
+      - pick_up
+
+# --- Non-registry concepts (stored for D2/D3 enrichment) ---
+
+fac-abbreviations:
+  salary_average:
+    terms:
+      - has
+      - ams
+      - fac
+      - fas
+      - afc
+      - fre
+      - amc
+      - hac
+      - final_average_salary
+      - final_average_compensation
+      - average_final_compensation
+      - final_compensation
+      - final_rate_of_earnings
+      - highest_average_salary
+      - average_monthly_salary
+      - average_monthly_compensation
+      - highest_average_compensation
+      - high_five_average_salary
+    false_cognates:
+      - term: afc
+        warning: "Average Final Compensation vs. Annual Fire Compensation in some municipal systems"
+        risk: HIGH
+      - term: fas
+        warning: "Final Average Salary vs. Financial Accounting Standards in non-pension contexts"
+        risk: MEDIUM
+      - term: updated_service_credits
+        warning: "In TMRS, this is a monetary account value, not a salary average"
+        risk: HIGH
+
+contribution-accounts:
+  accumulated_balance:
+    terms:
+      - accumulated_contributions
+      - accumulated_deductions
+      - contributions_and_interest
+      - member_contribution_account
+      - db_plan_account
+      - individual_member_contribution_account
+      - member_account
+      - account_balance
+      - tmrs_account
+      - teachers_savings_fund
+      - regular_account
+      - iap_account
+      - cash_balance_account
+      - member_account_balance
+      - annuity_savings_fund
+      - member_contributions_accumulation_fund
+      - employee_contributions_account
+      - deductions_plus_interest

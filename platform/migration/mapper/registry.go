@@ -11,6 +11,9 @@ type Registry struct {
 func NewRegistry() *Registry {
 	r := &Registry{templates: make(map[string]MappingTemplate)}
 	r.registerAll()
+	// Merge external vocabulary terms into registry slots.
+	// Errors are non-fatal — registry works with base names if YAML fails.
+	_ = mergeVocabulary(r)
 	return r
 }
 
@@ -278,6 +281,24 @@ func (r *Registry) registerAll() {
 				DataTypeFamily:  "VARCHAR",
 				Required:        false,
 				ExpectedNames:   []string{"service_type", "service_unit_type", "credit_type", "svc_typ_cd", "service_type_code"},
+			},
+			{
+				CanonicalColumn: "purchased_years",
+				DataTypeFamily:  "DECIMAL",
+				Required:        false,
+				ExpectedNames:   []string{"purchased_years", "purchased_service", "buy_back", "psc"},
+			},
+			{
+				CanonicalColumn: "military_service_years",
+				DataTypeFamily:  "DECIMAL",
+				Required:        false,
+				ExpectedNames:   []string{"military_service_years", "military_service", "userra_service"},
+			},
+			{
+				CanonicalColumn: "transferred_service",
+				DataTypeFamily:  "DECIMAL",
+				Required:        false,
+				ExpectedNames:   []string{"transferred_service", "reciprocal_service", "transfer_service"},
 			},
 		},
 	})

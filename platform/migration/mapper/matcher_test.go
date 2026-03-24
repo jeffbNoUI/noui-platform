@@ -153,6 +153,82 @@ func TestMatchMethod_Pattern(t *testing.T) {
 	t.Error("ssn not matched")
 }
 
+// assertMatchMethod verifies the match method for a given source column.
+func assertMatchMethod(t *testing.T, matches []ColumnMatch, sourceCol, wantMethod string) {
+	t.Helper()
+	srcLower := strings.ToLower(sourceCol)
+	for _, m := range matches {
+		if strings.ToLower(m.SourceColumn) == srcLower {
+			if m.MatchMethod != wantMethod {
+				t.Errorf("%s: expected match method %q, got %q (confidence %.2f)",
+					sourceCol, wantMethod, m.MatchMethod, m.Confidence)
+			}
+			return
+		}
+	}
+	t.Errorf("%s not matched at all", sourceCol)
+}
+
+func TestMatchColumns_GlossaryTerms_ServiceCredit(t *testing.T) {
+	source := []SourceColumn{
+		{Name: "MBR_NBR", DataType: "integer", IsKey: true},
+		{Name: "EFFECTIVE_DATE", DataType: "date"},
+		{Name: "CREDITABLE_SERVICE", DataType: "decimal(6,2)"},
+		{Name: "SVC_TYP_CD", DataType: "varchar(10)"},
+	}
+	reg := NewRegistry()
+	tmpl, _ := reg.Get("service-credit")
+	matches := MatchColumns(source, tmpl)
+
+	// CREDITABLE_SERVICE should match credited_years_total via pattern (0.9)
+	for _, m := range matches {
+		if m.SourceColumn == "CREDITABLE_SERVICE" {
+			if m.Confidence < 0.9 {
+				t.Errorf("CREDITABLE_SERVICE should match at 0.9 (pattern), got %.2f (%s)",
+					m.Confidence, m.MatchMethod)
+			}
+			if m.CanonicalColumn != "credited_years_total" {
+				t.Errorf("CREDITABLE_SERVICE should map to credited_years_total, got %q",
+					m.CanonicalColumn)
+			}
+			return
+		}
+	}
+	t.Error("CREDITABLE_SERVICE not matched at all")
+}
+
+func TestMatchColumns_GlossaryTerms_SalaryHistory(t *testing.T) {
+	source := []SourceColumn{
+		{Name: "MBR_NBR", DataType: "integer", IsKey: true},
+		{Name: "PAY_START_DATE", DataType: "date"},
+		{Name: "PENSIONABLE_COMPENSATION", DataType: "decimal(12,2)"},
+		{Name: "COVERED_WAGES", DataType: "decimal(12,2)"},
+		{Name: "MONTHLY", DataType: "varchar(10)"},
+	}
+	reg := NewRegistry()
+	tmpl, _ := reg.Get("salary-history")
+	matches := MatchColumns(source, tmpl)
+
+	assertMatchMethod(t, matches, "PENSIONABLE_COMPENSATION", "pattern")
+	assertMatchMethod(t, matches, "COVERED_WAGES", "pattern")
+}
+
+func TestMatchColumns_GlossaryTerms_Contributions(t *testing.T) {
+	source := []SourceColumn{
+		{Name: "MBR_NBR", DataType: "integer", IsKey: true},
+		{Name: "PAY_PERIOD", DataType: "date"},
+		{Name: "MEMBER_DEPOSITS", DataType: "decimal(10,2)"},
+		{Name: "CITY_CONTRIBUTIONS", DataType: "decimal(10,2)"},
+		{Name: "MONTHLY", DataType: "varchar(10)"},
+	}
+	reg := NewRegistry()
+	tmpl, _ := reg.Get("benefit-deduction")
+	matches := MatchColumns(source, tmpl)
+
+	assertMatchMethod(t, matches, "MEMBER_DEPOSITS", "pattern")
+	assertMatchMethod(t, matches, "CITY_CONTRIBUTIONS", "pattern")
+}
+
 // Helper
 func assertMatch(t *testing.T, matches []ColumnMatch, sourceCol, canonicalCol string) {
 	t.Helper()

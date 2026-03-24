@@ -159,6 +159,26 @@ func TestEverySlotHasExpectedNames(t *testing.T) {
 	}
 }
 
+func TestServiceCreditHasNewSlots(t *testing.T) {
+	r := NewRegistry()
+	tmpl, ok := r.Get("service-credit")
+	if !ok {
+		t.Fatal("service-credit not found")
+	}
+
+	wantSlots := []string{"purchased_years", "military_service_years", "transferred_service"}
+	slotMap := make(map[string]bool)
+	for _, slot := range tmpl.Slots {
+		slotMap[slot.CanonicalColumn] = true
+	}
+
+	for _, want := range wantSlots {
+		if !slotMap[want] {
+			t.Errorf("service-credit missing slot %q", want)
+		}
+	}
+}
+
 func TestEverySlotHasDataTypeFamily(t *testing.T) {
 	r := NewRegistry()
 	validTypes := map[string]bool{
