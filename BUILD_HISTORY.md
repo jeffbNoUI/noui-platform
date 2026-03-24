@@ -1,5 +1,61 @@
 # noui-platform — Build History
 
+## Session 27: Populate All 21 PRISM Source Tables with Seed Data (2026-03-24)
+
+**Branch:** `claude/jovial-zhukovsky`
+
+### What Was Done
+
+Extended the PRISM data generator (`prism_data_generator.py`) to produce seed data for
+all 21 source tables. Previously only 11 tables had data, blocking batch execution for
+scopes beyond ACTIVE_MEMBERS.
+
+**10 new table generators added:**
+
+| Table | Rows | Purpose |
+|-------|------|---------|
+| PRISM_MEMBER_ADDR | 173 | Address history (1-3 per member, ~15% malformed zip) |
+| PRISM_SVC_CREDIT | 160 | Running-total balances + OPUS 1998 boundary records |
+| PRISM_CONTRIB_LEGACY | 820 | Pre-1998 annual contributions (P-09 duplicate) |
+| PRISM_CONTRIB_HIST | 20,496 | Post-1998 monthly contributions |
+| PRISM_BENEFICIARY | 154 | Designations + QDRO overload (P-08), birth date chaos (P-02) |
+| PRISM_QDRO | 4 | Domestic relations orders with orphan records (P-08) |
+| PRISM_DISABILITY | 5 | Disability records with calc linkage |
+| PRISM_NOTES | 154 | Free-text notes (MIGRT guaranteed for OPUS members) |
+| PRISM_LIFE_EVENTS | 158 | Life event triggers (HIRE, RETIR, DEATH, DISB_ON, etc.) |
+| PRISM_COLA_HIST | 396 | COLA adjustments with banking logic |
+
+**Schema fixes (3 column width bugs):**
+- `EVENT_TYP_CD`: `VARCHAR(6)` → `VARCHAR(10)` (documented codes like `ADDR_CHG` are 8 chars)
+- `DISB_TYP_CD`: `CHAR(4)` → `VARCHAR(5)` (codes like `OCCUP`, `NON_O` are 5 chars)
+- `CONTRIB_SRC_CD`: `CHAR(4)` → `VARCHAR(6)` (codes like `PAYRL`, `ADJST` are 5 chars)
+
+**Disability generation fix:** Separated disability into its own `random.random()` draw
+so it isn't masked by the retirement condition (which consumed all `r < 0.60` for eligible
+members, starving the disability path).
+
+### Verification
+
+- 69,160 INSERT statements across all 21 tables, zero SQL errors
+- All data loaded into Docker `prism-source` container
+- Migration E2E: **47/47 pass**
+- Employer E2E: **49/49 pass**
+- Total: **96/96 — zero regressions**
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `migration-simulation/sources/prism/prism_data_generator.py` | +505 lines: 10 new table generators, stats update, disability fix |
+| `migration-simulation/sources/prism/init/01_schema.sql` | 3 column width fixes |
+
+### What's Next
+
+- Fix JWT expiry silent failure (batch status stuck at RUNNING)
+- Tier 2/3 reconciliation with payment history + demographic data
+- Browser walkthrough with all 21 tables discoverable
+- Run batch execution for additional scopes (BENEFICIARIES, SALARY_HISTORY)
+
 ## Session 26: Migration Full Lifecycle — 2 Bugs Fixed, Certification E2E (2026-03-23)
 
 **Branch:** `claude/gracious-pike`
