@@ -61,9 +61,10 @@ export default function CRMWorkspace({ initialMemberId, onBack }: CRMWorkspacePr
   useEffect(() => {
     if (initialContact && !didAutoSelect.current) {
       didAutoSelect.current = true;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time init from async data, guarded by ref
       handleContactSelect(initialContact);
     }
-  }, [initialContact]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [initialContact]);
 
   const handleSelectConversation = (convId: string, index: number) => {
     setSelectedConversationId(convId);

@@ -27,10 +27,19 @@ import ParallelRunPanel from '../ParallelRunPanel';
 describe('ParallelRunPanel', () => {
   beforeEach(() => {
     mockMutate.mockReset();
-    (useReconciliationSummary as any).mockReturnValue({ data: { gate_score: 0.9 } });
-    (useP1Issues as any).mockReturnValue({ data: [] });
-    (useCertification as any).mockReturnValue({ data: null });
-    (useCertifyEngagement as any).mockReturnValue({ mutate: mockMutate, isPending: false });
+    vi.mocked(useReconciliationSummary).mockReturnValue({
+      data: { gate_score: 0.9 },
+    } as unknown as ReturnType<typeof useReconciliationSummary>);
+    vi.mocked(useP1Issues).mockReturnValue({ data: [] } as unknown as ReturnType<
+      typeof useP1Issues
+    >);
+    vi.mocked(useCertification).mockReturnValue({ data: null } as unknown as ReturnType<
+      typeof useCertification
+    >);
+    vi.mocked(useCertifyEngagement).mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+    } as unknown as ReturnType<typeof useCertifyEngagement>);
   });
 
   it('renders 5 checklist items', () => {
@@ -44,7 +53,9 @@ describe('ParallelRunPanel', () => {
   });
 
   it('auto-checks recon score item when gate_score >= 0.95', () => {
-    (useReconciliationSummary as any).mockReturnValue({ data: { gate_score: 0.97 } });
+    vi.mocked(useReconciliationSummary).mockReturnValue({
+      data: { gate_score: 0.97 },
+    } as unknown as ReturnType<typeof useReconciliationSummary>);
 
     renderWithProviders(<ParallelRunPanel engagementId="eng-1" />);
 
@@ -57,7 +68,9 @@ describe('ParallelRunPanel', () => {
   });
 
   it('auto-checks P1 item when no unresolved P1 issues exist', () => {
-    (useP1Issues as any).mockReturnValue({ data: [] });
+    vi.mocked(useP1Issues).mockReturnValue({ data: [] } as unknown as ReturnType<
+      typeof useP1Issues
+    >);
 
     renderWithProviders(<ParallelRunPanel engagementId="eng-1" />);
 
@@ -68,8 +81,12 @@ describe('ParallelRunPanel', () => {
   });
 
   it('certify button is disabled when manual checks are unchecked', () => {
-    (useReconciliationSummary as any).mockReturnValue({ data: { gate_score: 0.97 } });
-    (useP1Issues as any).mockReturnValue({ data: [] });
+    vi.mocked(useReconciliationSummary).mockReturnValue({
+      data: { gate_score: 0.97 },
+    } as unknown as ReturnType<typeof useReconciliationSummary>);
+    vi.mocked(useP1Issues).mockReturnValue({ data: [] } as unknown as ReturnType<
+      typeof useP1Issues
+    >);
 
     renderWithProviders(<ParallelRunPanel engagementId="eng-1" />);
 
@@ -78,8 +95,12 @@ describe('ParallelRunPanel', () => {
   });
 
   it('all 5 checks pass — certify button is enabled', () => {
-    (useReconciliationSummary as any).mockReturnValue({ data: { gate_score: 0.97 } });
-    (useP1Issues as any).mockReturnValue({ data: [] });
+    vi.mocked(useReconciliationSummary).mockReturnValue({
+      data: { gate_score: 0.97 },
+    } as unknown as ReturnType<typeof useReconciliationSummary>);
+    vi.mocked(useP1Issues).mockReturnValue({ data: [] } as unknown as ReturnType<
+      typeof useP1Issues
+    >);
 
     renderWithProviders(<ParallelRunPanel engagementId="eng-1" />);
 
@@ -94,8 +115,12 @@ describe('ParallelRunPanel', () => {
   });
 
   it('calls certifyMutation.mutate when Certify Complete is clicked', () => {
-    (useReconciliationSummary as any).mockReturnValue({ data: { gate_score: 0.97 } });
-    (useP1Issues as any).mockReturnValue({ data: [] });
+    vi.mocked(useReconciliationSummary).mockReturnValue({
+      data: { gate_score: 0.97 },
+    } as unknown as ReturnType<typeof useReconciliationSummary>);
+    vi.mocked(useP1Issues).mockReturnValue({ data: [] } as unknown as ReturnType<
+      typeof useP1Issues
+    >);
 
     renderWithProviders(<ParallelRunPanel engagementId="eng-1" />);
 
@@ -126,7 +151,7 @@ describe('ParallelRunPanel', () => {
   });
 
   it('shows Already Certified state when existing certification exists', () => {
-    (useCertification as any).mockReturnValue({
+    vi.mocked(useCertification).mockReturnValue({
       data: {
         certified_by: 'user-abc',
         certified_at: '2026-03-22T10:00:00Z',
@@ -138,7 +163,7 @@ describe('ParallelRunPanel', () => {
           rollback_plan: true,
         },
       },
-    });
+    } as unknown as ReturnType<typeof useCertification>);
 
     renderWithProviders(<ParallelRunPanel engagementId="eng-1" />);
 
@@ -152,7 +177,7 @@ describe('ParallelRunPanel', () => {
   });
 
   it('disables manual checkboxes when already certified', () => {
-    (useCertification as any).mockReturnValue({
+    vi.mocked(useCertification).mockReturnValue({
       data: {
         certified_by: 'user-abc',
         certified_at: '2026-03-22T10:00:00Z',
@@ -164,7 +189,7 @@ describe('ParallelRunPanel', () => {
           rollback_plan: true,
         },
       },
-    });
+    } as unknown as ReturnType<typeof useCertification>);
 
     renderWithProviders(<ParallelRunPanel engagementId="eng-1" />);
 

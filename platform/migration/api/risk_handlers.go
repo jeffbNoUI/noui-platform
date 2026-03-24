@@ -70,6 +70,9 @@ func (h *Handler) CreateRisk(w http.ResponseWriter, r *http.Request) {
 	}
 
 	apiresponse.WriteSuccess(w, http.StatusCreated, "migration", risk)
+	if req.EngagementID != nil {
+		h.broadcast(*req.EngagementID, "risk_created", map[string]string{"risk_id": risk.RiskID, "severity": risk.Severity})
+	}
 }
 
 // UpdateRisk handles PUT /api/v1/migration/risks/{id}.
@@ -112,6 +115,9 @@ func (h *Handler) UpdateRisk(w http.ResponseWriter, r *http.Request) {
 	}
 
 	apiresponse.WriteSuccess(w, http.StatusOK, "migration", risk)
+	if risk.EngagementID != nil {
+		h.broadcast(*risk.EngagementID, "risk_updated", map[string]string{"risk_id": risk.RiskID, "status": risk.Status})
+	}
 }
 
 // DeleteRisk handles DELETE /api/v1/migration/risks/{id}.

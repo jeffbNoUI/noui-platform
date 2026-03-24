@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import type { TourStep } from './tourSteps';
 
 export interface TourSpotlightProps {
@@ -7,20 +7,10 @@ export interface TourSpotlightProps {
 }
 
 export default function TourSpotlight({ step, children }: TourSpotlightProps) {
-  const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
-
-  useEffect(() => {
-    if (!step) {
-      setTargetRect(null);
-      return;
-    }
-
+  const targetRect = useMemo(() => {
+    if (!step) return null;
     const el = document.querySelector(`[data-tour-id="${step.targetId}"]`);
-    if (el) {
-      setTargetRect(el.getBoundingClientRect());
-    } else {
-      setTargetRect(null);
-    }
+    return el ? el.getBoundingClientRect() : null;
   }, [step]);
 
   if (!step) return null;

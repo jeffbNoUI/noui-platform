@@ -7,7 +7,7 @@ const MAX_RECONNECT_ATTEMPTS = 5;
 const BASE_RECONNECT_DELAY = 1000;
 const POLL_INTERVAL = 5000;
 
-export function useMigrationEvents(engagementId: string | null) {
+export function useMigrationEvents(engagementId: string | null, token?: string) {
   const [connected, setConnected] = useState(false);
   const [lastEvent, setLastEvent] = useState<WSEvent | null>(null);
   const [events, setEvents] = useState<WSEvent[]>([]);
@@ -23,22 +23,29 @@ export function useMigrationEvents(engagementId: string | null) {
       switch (event.type) {
         case 'batch_started':
         case 'batch_completed':
+        case 'batch_failed':
         case 'batch_halted':
           queryClient.invalidateQueries({ queryKey: ['migration', 'engagement'] });
           queryClient.invalidateQueries({ queryKey: ['migration', 'dashboard'] });
           break;
         case 'reconciliation_complete':
+        case 'reconciliation_completed':
           queryClient.invalidateQueries({ queryKey: ['migration', 'reconciliation'] });
           queryClient.invalidateQueries({ queryKey: ['migration', 'recon-summary'] });
           queryClient.invalidateQueries({ queryKey: ['migration', 'p1-issues'] });
           break;
         case 'risk_detected':
         case 'risk_resolved':
+        case 'risk_created':
+        case 'risk_updated':
           queryClient.invalidateQueries({ queryKey: ['migration', 'risks'] });
           break;
         case 'engagement_status_changed':
+        case 'phase_changed':
           queryClient.invalidateQueries({ queryKey: ['migration', 'engagement'] });
           queryClient.invalidateQueries({ queryKey: ['migration', 'engagements'] });
+          queryClient.invalidateQueries({ queryKey: ['migration', 'gate-status'] });
+          queryClient.invalidateQueries({ queryKey: ['migration', 'gate-history'] });
           break;
         case 'exception_cluster':
           queryClient.invalidateQueries({ queryKey: ['migration', 'clusters'] });
@@ -65,7 +72,10 @@ export function useMigrationEvents(engagementId: string | null) {
     if (!engagementId || useFallback) return;
 
     const connect = () => {
-      const ws = new WebSocket(`${WS_BASE}/${engagementId}`);
+      const url = token
+        ? `${WS_BASE}/${engagementId}?token=${encodeURIComponent(token)}`
+        : `${WS_BASE}/${engagementId}`;
+      const ws = new WebSocket(url);
       wsRef.current = ws;
 
       ws.onopen = () => {
@@ -107,7 +117,7 @@ export function useMigrationEvents(engagementId: string | null) {
       clearTimeout(reconnectTimer.current);
       wsRef.current?.close();
     };
-  }, [engagementId, useFallback, handleMessage]);
+  }, [engagementId, useFallback, handleMessage, token]);
 
   // Polling fallback
   useEffect(() => {

@@ -84,14 +84,16 @@ export default function RetirementApplication({
     const prev = syncedWith.current;
     if (!prev || prev.caseId !== caseId || prev.stageCount !== stages.length) {
       const initial = computeInitialState(caseData.stageIdx, stages, flags.hasDRO);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time init from async case data, guarded by ref
       setActiveIdx(initial.activeIdx);
       setCompleted(initial.completed);
       syncedWith.current = { caseId, stageCount: stages.length };
     }
   }, [caseData, stages, flags.hasDRO, caseId]);
 
-  // Reset position when stages change significantly
+  // Clamp activeIdx when stages shrink
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- bounds correction when stage list contracts
     if (activeIdx >= stages.length) setActiveIdx(stages.length - 1);
   }, [stages.length, activeIdx]);
 

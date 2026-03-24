@@ -74,20 +74,34 @@ const mockP1Issues = [
 ];
 
 function setupDefaultMocks() {
-  (useReconciliationSummary as any).mockReturnValue({
+  vi.mocked(useReconciliationSummary).mockReturnValue({
     data: mockSummary,
     isLoading: false,
     isError: false,
-  });
-  (useP1Issues as any).mockReturnValue({ data: mockP1Issues, isLoading: false });
-  (useReconciliation as any).mockReturnValue({ data: [], isLoading: false });
-  (useRootCauseAnalysis as any).mockReturnValue({ data: null });
-  (useReconciliationPatterns as any).mockReturnValue({
+  } as unknown as ReturnType<typeof useReconciliationSummary>);
+  vi.mocked(useP1Issues).mockReturnValue({
+    data: mockP1Issues,
+    isLoading: false,
+  } as unknown as ReturnType<typeof useP1Issues>);
+  vi.mocked(useReconciliation).mockReturnValue({
+    data: [],
+    isLoading: false,
+  } as unknown as ReturnType<typeof useReconciliation>);
+  vi.mocked(useRootCauseAnalysis).mockReturnValue({ data: null } as unknown as ReturnType<
+    typeof useRootCauseAnalysis
+  >);
+  vi.mocked(useReconciliationPatterns).mockReturnValue({
     data: { patterns: [], count: 0 },
-  });
-  (useBatches as any).mockReturnValue({ data: [] });
-  (useReconcileBatch as any).mockReturnValue({ mutate: vi.fn(), isPending: false });
-  (useResolvePattern as any).mockReturnValue({ mutate: vi.fn(), isPending: false });
+  } as unknown as ReturnType<typeof useReconciliationPatterns>);
+  vi.mocked(useBatches).mockReturnValue({ data: [] } as unknown as ReturnType<typeof useBatches>);
+  vi.mocked(useReconcileBatch).mockReturnValue({
+    mutate: vi.fn(),
+    isPending: false,
+  } as unknown as ReturnType<typeof useReconcileBatch>);
+  vi.mocked(useResolvePattern).mockReturnValue({
+    mutate: vi.fn(),
+    isPending: false,
+  } as unknown as ReturnType<typeof useResolvePattern>);
 }
 
 describe('ReconciliationPanel', () => {
@@ -130,17 +144,17 @@ describe('ReconciliationPanel', () => {
 
   it('shows feedback banner after successful reconcile', () => {
     let capturedOnSuccess: (() => void) | undefined;
-    const mutateFn = vi.fn((_batchId: string, opts: any) => {
+    const mutateFn = vi.fn((_batchId: string, opts: { onSuccess?: () => void }) => {
       capturedOnSuccess = opts.onSuccess;
     });
 
-    (useBatches as any).mockReturnValue({
+    vi.mocked(useBatches).mockReturnValue({
       data: [{ batch_id: 'b1', status: 'LOADED' }],
-    });
-    (useReconcileBatch as any).mockReturnValue({
+    } as unknown as ReturnType<typeof useBatches>);
+    vi.mocked(useReconcileBatch).mockReturnValue({
       mutate: mutateFn,
       isPending: false,
-    });
+    } as unknown as ReturnType<typeof useReconcileBatch>);
 
     renderWithProviders(<ReconciliationPanel engagementId="eng-1" />);
 
@@ -158,11 +172,11 @@ describe('ReconciliationPanel', () => {
   });
 
   it('shows error banner when summary query has isError: true', () => {
-    (useReconciliationSummary as any).mockReturnValue({
+    vi.mocked(useReconciliationSummary).mockReturnValue({
       data: null,
       isLoading: false,
       isError: true,
-    });
+    } as unknown as ReturnType<typeof useReconciliationSummary>);
 
     renderWithProviders(<ReconciliationPanel engagementId="eng-1" />);
 
@@ -180,10 +194,10 @@ describe('ReconciliationPanel', () => {
       suspected_domain: 'service',
     };
 
-    (useP1Issues as any).mockReturnValue({
+    vi.mocked(useP1Issues).mockReturnValue({
       data: [salaryIssue, serviceIssue],
       isLoading: false,
-    });
+    } as unknown as ReturnType<typeof useP1Issues>);
 
     const mockPatterns = [
       {
@@ -206,9 +220,9 @@ describe('ReconciliationPanel', () => {
       },
     ];
 
-    (useReconciliationPatterns as any).mockReturnValue({
+    vi.mocked(useReconciliationPatterns).mockReturnValue({
       data: { patterns: mockPatterns, count: 1 },
-    });
+    } as unknown as ReturnType<typeof useReconciliationPatterns>);
 
     renderWithProviders(<ReconciliationPanel engagementId="eng-1" />);
 
@@ -227,7 +241,7 @@ describe('ReconciliationPanel', () => {
   });
 
   it('shows empty state with Run Reconciliation button when a loaded batch exists', () => {
-    (useReconciliationSummary as any).mockReturnValue({
+    vi.mocked(useReconciliationSummary).mockReturnValue({
       data: {
         total_records: 0,
         gate_score: 0,
@@ -238,10 +252,10 @@ describe('ReconciliationPanel', () => {
       },
       isLoading: false,
       isError: false,
-    });
-    (useBatches as any).mockReturnValue({
+    } as unknown as ReturnType<typeof useReconciliationSummary>);
+    vi.mocked(useBatches).mockReturnValue({
       data: [{ batch_id: 'b1', status: 'LOADED' }],
-    });
+    } as unknown as ReturnType<typeof useBatches>);
 
     renderWithProviders(<ReconciliationPanel engagementId="eng-1" />);
 
@@ -250,12 +264,12 @@ describe('ReconciliationPanel', () => {
   });
 
   it('shows empty state without button when no loaded batch exists', () => {
-    (useReconciliationSummary as any).mockReturnValue({
+    vi.mocked(useReconciliationSummary).mockReturnValue({
       data: null,
       isLoading: false,
       isError: false,
-    });
-    (useBatches as any).mockReturnValue({ data: [] });
+    } as unknown as ReturnType<typeof useReconciliationSummary>);
+    vi.mocked(useBatches).mockReturnValue({ data: [] } as unknown as ReturnType<typeof useBatches>);
 
     renderWithProviders(<ReconciliationPanel engagementId="eng-1" />);
 

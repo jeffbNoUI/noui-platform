@@ -72,16 +72,25 @@ const mockPatterns = [
 
 describe('ReconciliationPanel — Systematic Patterns', () => {
   beforeEach(() => {
-    (useReconciliationSummary as any).mockReturnValue(mockSummary);
-    (useP1Issues as any).mockReturnValue({ data: [], isLoading: false });
-    (useReconciliation as any).mockReturnValue({ data: [], isLoading: false });
-    (useRootCauseAnalysis as any).mockReturnValue({ data: null });
+    vi.mocked(useReconciliationSummary).mockReturnValue(
+      mockSummary as unknown as ReturnType<typeof useReconciliationSummary>,
+    );
+    vi.mocked(useP1Issues).mockReturnValue({ data: [], isLoading: false } as unknown as ReturnType<
+      typeof useP1Issues
+    >);
+    vi.mocked(useReconciliation).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useReconciliation>);
+    vi.mocked(useRootCauseAnalysis).mockReturnValue({ data: null } as unknown as ReturnType<
+      typeof useRootCauseAnalysis
+    >);
   });
 
   it('renders pattern cards when patterns exist', () => {
-    (useReconciliationPatterns as any).mockReturnValue({
+    vi.mocked(useReconciliationPatterns).mockReturnValue({
       data: { patterns: mockPatterns, count: 1 },
-    });
+    } as unknown as ReturnType<typeof useReconciliationPatterns>);
 
     renderWithProviders(<ReconciliationPanel engagementId="eng-1" />);
 
@@ -93,9 +102,9 @@ describe('ReconciliationPanel — Systematic Patterns', () => {
   });
 
   it('hides patterns section when no patterns', () => {
-    (useReconciliationPatterns as any).mockReturnValue({
+    vi.mocked(useReconciliationPatterns).mockReturnValue({
       data: { patterns: [], count: 0 },
-    });
+    } as unknown as ReturnType<typeof useReconciliationPatterns>);
 
     renderWithProviders(<ReconciliationPanel engagementId="eng-1" />);
 

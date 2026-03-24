@@ -1,9 +1,10 @@
-import { Component, useState, useMemo, useEffect, useCallback } from 'react';
+import { Component, useState, useMemo, useCallback } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { C, BODY, DISPLAY } from '@/lib/designSystem';
 import { useEngagement, useAttentionItems } from '@/hooks/useMigrationApi';
 import { useMigrationEvents } from '@/hooks/useMigrationEvents';
+import { useAuth } from '@/contexts/AuthContext';
 import type { EngagementStatus } from '@/types/Migration';
 import PhaseStepper from './PhaseStepper';
 
@@ -145,10 +146,12 @@ interface Props {
 
 export default function EngagementDetail({ engagementId, onBack, onSelectBatch }: Props) {
   const queryClient = useQueryClient();
+  const { token } = useAuth();
   const { data: engagement, isLoading } = useEngagement(engagementId);
-  const { connected, events, useFallback } = useMigrationEvents(engagementId);
+  const { connected, events, useFallback } = useMigrationEvents(engagementId, token);
   const { data: attentionItems } = useAttentionItems(engagementId);
   const [activeTab, setActiveTab] = useState<Tab>('discovery');
+  const [prevEngagementKey, setPrevEngagementKey] = useState<string | null>(null);
 
   // Invalidate gate status + engagement cache on tab change so the stepper
   // and gate dialog always reflect the latest server state.
@@ -168,12 +171,12 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
 
   const attentionCount = attentionItems?.length ?? 0;
 
-  // Set default tab based on engagement status
-  useEffect(() => {
-    if (engagement) {
-      setActiveTab(defaultTab(engagement.status));
-    }
-  }, [engagementId, engagement?.status]);
+  // Set default tab based on engagement status (replaces useEffect)
+  const engagementKey = engagement ? `${engagementId}:${engagement.status}` : null;
+  if (engagementKey && engagementKey !== prevEngagementKey) {
+    setPrevEngagementKey(engagementKey);
+    setActiveTab(defaultTab(engagement!.status));
+  }
 
   const connectionDot = useMemo(() => {
     if (connected) return { color: C.sage, label: 'Live' };

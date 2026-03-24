@@ -18,25 +18,38 @@ interface CommandPaletteProps {
 export default function CommandPalette({ commands, isOpen, onClose }: CommandPaletteProps) {
   const [query, setQuery] = useState('');
   const [selectedIdx, setSelectedIdx] = useState(0);
+  const [prevIsOpen, setPrevIsOpen] = useState(false);
+  const [prevQuery, setPrevQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Reset query + selection when palette opens (replaces useEffect)
+  if (isOpen && !prevIsOpen) {
+    setQuery('');
+    setSelectedIdx(0);
+  }
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
+  }
+
+  // Focus input when palette opens
+  useEffect(() => {
+    if (isOpen) {
+      const timer = setTimeout(() => inputRef.current?.focus(), 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  // Reset selection when query changes (replaces useEffect)
+  if (query !== prevQuery) {
+    setPrevQuery(query);
+    setSelectedIdx(0);
+  }
 
   const filtered = commands.filter(
     (c) =>
       c.label.toLowerCase().includes(query.toLowerCase()) ||
-      c.category.toLowerCase().includes(query.toLowerCase())
+      c.category.toLowerCase().includes(query.toLowerCase()),
   );
-
-  useEffect(() => {
-    if (isOpen) {
-      setQuery('');
-      setSelectedIdx(0);
-      setTimeout(() => inputRef.current?.focus(), 50);
-    }
-  }, [isOpen]);
-
-  useEffect(() => {
-    setSelectedIdx(0);
-  }, [query]);
 
   const executeSelected = useCallback(() => {
     if (filtered[selectedIdx]) {
@@ -123,7 +136,9 @@ export default function CommandPalette({ commands, isOpen, onClose }: CommandPal
                       }}
                       onMouseEnter={() => setSelectedIdx(globalIdx)}
                       className={`w-full flex items-center justify-between px-4 py-2.5 text-left transition-colors ${
-                        isSelected ? 'bg-iw-sageLight/50 text-iw-sage' : 'text-gray-700 hover:bg-gray-50'
+                        isSelected
+                          ? 'bg-iw-sageLight/50 text-iw-sage'
+                          : 'text-gray-700 hover:bg-gray-50'
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -146,7 +161,9 @@ export default function CommandPalette({ commands, isOpen, onClose }: CommandPal
         {/* Footer */}
         <div className="border-t border-gray-200 px-4 py-2 flex items-center justify-between text-[10px] text-gray-400">
           <span>↑↓ navigate · ↵ select · esc close</span>
-          <span>{filtered.length} command{filtered.length !== 1 ? 's' : ''}</span>
+          <span>
+            {filtered.length} command{filtered.length !== 1 ? 's' : ''}
+          </span>
         </div>
       </div>
     </div>

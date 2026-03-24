@@ -211,6 +211,15 @@ func writeUnauthorized(w http.ResponseWriter, message string) {
 	})
 }
 
+// Claims holds the extracted JWT payload fields.
+type Claims = tokenClaims
+
+// ValidateToken verifies a JWT string using the environment secret and returns claims.
+// Used by WebSocket handlers that can't use the HTTP middleware.
+func ValidateToken(token string) (*Claims, error) {
+	return validateTokenWithSecret(token, getSecret())
+}
+
 // TenantID returns the tenant ID from the request context, or empty string if not present.
 func TenantID(ctx context.Context) string {
 	v, _ := ctx.Value(keyTenantID).(string)
