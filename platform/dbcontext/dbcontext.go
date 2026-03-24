@@ -194,6 +194,16 @@ func DBMiddleware(db *sql.DB, extract ClaimsExtractor) func(http.Handler) http.H
 				return
 			}
 
+			// Deferred Rollback is a no-op after successful Commit but
+			// guarantees cleanup when the handler's SQL fails or panics.
+			// Without this, a failed transaction leaves the pooled connection
+			// in a dirty state, poisoning subsequent requests.
+			defer func() {
+				if rbErr := tx.Rollback(); rbErr != nil && rbErr != sql.ErrTxDone {
+					slog.Warn("dbcontext: deferred rollback failed", "error", rbErr)
+				}
+			}()
+
 			ctx := WithConn(r.Context(), conn)
 			ctx = WithTx(ctx, tx)
 			next.ServeHTTP(w, r.WithContext(ctx))

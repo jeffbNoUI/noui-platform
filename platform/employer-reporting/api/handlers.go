@@ -510,7 +510,7 @@ func (h *Handler) SubmitCorrection(w http.ResponseWriter, r *http.Request) {
 	// Create correction file that references the original.
 	file := &erdb.ContributionFile{
 		OrgID:          req.OrgID,
-		UploadedBy:     "",
+		UploadedBy:     auth.UserID(r.Context()),
 		FileName:       "correction",
 		FileType:       "MANUAL_ENTRY",
 		FileStatus:     "UPLOADED",
