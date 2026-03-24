@@ -93,7 +93,7 @@ elif [ "$HTTP_CODE" = "409" ] || [ "$HTTP_CODE" = "500" ]; then
   PASS_COUNT=$((PASS_COUNT + 1))
   USERS_RESP=$(do_get "/api/v1/employer/users?org_id=${ORG_ID}&limit=10")
   extract_http "$USERS_RESP"
-  PORTAL_USER_ID=$(echo "$BODY" | jq -r '.data.items[0].id // .items[0].id // empty' 2>/dev/null || echo "")
+  PORTAL_USER_ID=$(echo "$BODY" | jq -r '.data[0].id // .data.items[0].id // empty' 2>/dev/null || echo "")
 else
   echo -e "  ${RED}✗${NC} POST /employer/users — expected 200/201, got $HTTP_CODE"
   echo "  Response: $(echo "$BODY" | head -c 200)"
@@ -157,9 +157,10 @@ assert_status "GET /reporting/files (list)" "200" "$HTTP_CODE"
 MANUAL_ENTRY_PAYLOAD=$(cat <<EOF
 {
   "orgId": "${ORG_ID}",
+  "uploadedBy": "${PORTAL_USER_ID}",
   "periodStart": "2026-01-01",
   "periodEnd": "2026-01-31",
-  "divisionCode": "SD",
+  "divisionCode": "STATE",
   "records": [
     {
       "ssnHash": "${SSN_HASH}",
@@ -237,7 +238,7 @@ ENROLLMENT_PAYLOAD=$(cat <<EOF
   "dateOfBirth": "1990-05-15",
   "hireDate": "2025-01-01",
   "planCode": "DB",
-  "divisionCode": "SD",
+  "divisionCode": "STATE",
   "email": "e2e-${TS}@test.example",
   "phone": "5551234567",
   "isSafetyOfficer": false,
