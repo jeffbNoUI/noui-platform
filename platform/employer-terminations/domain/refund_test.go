@@ -3,7 +3,6 @@ package domain
 import (
 	"math/big"
 	"testing"
-	"time"
 )
 
 // TestCalculateRefund_BasicCase tests a straightforward refund:
@@ -326,10 +325,6 @@ func TestCountJune30s(t *testing.T) {
 			}
 		})
 	}
-}
-
-func parseDate(s string) (t time.Time, err error) {
-	return time.Parse("2006-01-02", s)
 }
 
 // TestRatPow verifies the big.Rat exponentiation helper.
