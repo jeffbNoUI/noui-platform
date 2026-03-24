@@ -1,6 +1,6 @@
 # noui-platform — Build History
 
-## Session 32: Mapper Vocabulary Enrichment — D1 (2026-03-24)
+## Session 33: Mapper Vocabulary Enrichment — D1 (2026-03-24)
 
 **Branch:** `claude/strange-ride`
 
@@ -56,6 +56,91 @@
 - **D2: False cognate warning system** — Add `Warnings []MappingWarning` to ColumnMatch, runtime checks against vocabulary false_cognates, frontend yellow badges
 - **D3: Canonical model evolution** — Dual service fields, TMRS accumulation pathway, FAC metadata
 - fac-abbreviations and contribution-accounts vocabulary sections will merge once D3 adds templates
+- Starter prompt: `docs/plans/2026-03-24-post-vocabulary-enrichment-starter.md`
+
+## Session 32: ESLint CI Fix, WebSocket Auth + Broadcast, Glossary Design (2026-03-24)
+
+**Branch:** `claude/charming-dhawan` → PR #165 (merged)
+
+### What Was Done
+
+**1. ESLint CI Fix — 78 → 22 warnings (16 files)**
+- Fixed 10 `react-hooks/set-state-in-effect` warnings across 8 components (App.tsx, CommandPalette, CRMWorkspace, RetirementApplication, EngagementDetail, ParallelRunPanel, TourSpotlight, MemberSearch)
+- Fixed `react-hooks/refs` error in CommandPalette (ref access moved to useEffect)
+- Removed 4 stale `eslint-disable` directives
+- Fixed 22 `no-explicit-any` warnings in test files + production hooks
+- DemoCases.tsx: replaced useEffect prop sync with key-based reset at call site
+- CI lint threshold: 50 max, now at 22 warnings — PRs unblocked
+
+**2. WebSocket Server Authentication (4 backend + 3 frontend files)**
+- Exported `ValidateToken()` + `Claims` type from `platform/auth/auth.go`
+- `ws/handler.go`: JWT validation from Authorization header or `?token=` query param
+- `ws/handler.go`: CORS origin check (was `CheckOrigin: true`)
+- `ws/client.go`: Added `tenantID` field for audit logging
+- Frontend: `useMigrationEvents` passes JWT token in WS URL
+- Frontend: `EngagementDetail` gets token from AuthContext
+
+**3. WebSocket Broadcast Wiring (4 backend + 3 frontend files)**
+- `handlers.go`: Nil-safe `broadcast()` helper method
+- `batch_handlers.go`: `batch_completed`/`batch_failed` after async execution
+- `reconciliation_handlers.go`: `reconciliation_completed` after reconcile
+- `gate_handlers.go`: `phase_changed` on advance/regress
+- `risk_handlers.go`: `risk_created`/`risk_updated` on mutations
+- Frontend: 5 new `WSEventType` values, event handler with query invalidation
+- Frontend: ActivityLog labels for new event types
+
+**4. Pension Glossary Integration Design (new design doc)**
+- Read and analyzed `docs/pension-glossary.md` (25-system crosswalk, 500+ lines)
+- Created `docs/plans/2026-03-24-pension-glossary-integration-design.md`
+- Three deliverables: mapper synonym enrichment, false cognate warnings, canonical model evolution
+- Per-engagement vocabulary customization: 3-tier resolution (platform → engagement overrides → analyst decisions)
+
+**5. Investigated — No Code Changes Needed**
+- Risk Register encoding: Windows cp1252 terminal issue, not a code bug
+- Seed data Docker: `02_seed.sql` correctly mounted but gitignored; needs `python3 prism_data_generator.py` before `docker compose up`
+
+### Verification
+
+- Go auth: 1/1 pass
+- Go migration: 11/11 packages pass (short mode)
+- Frontend: 235/235 test files, 1858/1858 tests pass
+- Frontend: typecheck clean, lint 22 warnings (under 50 threshold)
+- Pre-commit hooks: lint-staged, prettier, gofmt, Go tests all green
+- Preview: app loads, Demo Cases renders, no React errors
+
+### Files Changed (24 files, +257 -144 lines + design doc)
+
+| File | Change |
+|------|--------|
+| `frontend/src/pages/DemoCases.tsx` | Key-based state reset |
+| `frontend/src/App.tsx` | Derived effectiveViewMode, key on DemoCasesPage |
+| `frontend/src/components/CommandPalette.tsx` | Render-time state sync, focus in useEffect |
+| `frontend/src/components/CRMWorkspace.tsx` | eslint-disable + remove stale directive |
+| `frontend/src/components/RetirementApplication.tsx` | Remove unused eslint-disable |
+| `frontend/src/components/migration/engagement/EngagementDetail.tsx` | Render-time tab sync, pass WS token |
+| `frontend/src/components/migration/engagement/ParallelRunPanel.tsx` | Render-time state sync |
+| `frontend/src/components/portal/tour/TourSpotlight.tsx` | useMemo instead of useState+useEffect |
+| `frontend/src/components/staff/MemberSearch.tsx` | Render-time selectedIdx sync |
+| `frontend/src/hooks/useMigrationApi.ts` | Typed casts instead of `as any` |
+| `frontend/src/hooks/useMigrationEvents.ts` | Token param, new event types |
+| `frontend/src/types/Migration.ts` | 5 new WSEventType values |
+| `frontend/src/components/migration/engagement/ActivityLog.tsx` | Labels for new events |
+| `frontend/src/components/migration/engagement/__tests__/*.test.tsx` | Fix explicit-any (3 files) |
+| `platform/auth/auth.go` | Export ValidateToken + Claims |
+| `platform/migration/ws/handler.go` | JWT auth + CORS origin check |
+| `platform/migration/ws/client.go` | Add tenantID field |
+| `platform/migration/api/handlers.go` | broadcast() helper |
+| `platform/migration/api/batch_handlers.go` | Broadcast batch events |
+| `platform/migration/api/reconciliation_handlers.go` | Broadcast reconciliation events |
+| `platform/migration/api/gate_handlers.go` | Broadcast phase change events |
+| `platform/migration/api/risk_handlers.go` | Broadcast risk events |
+| `docs/plans/2026-03-24-pension-glossary-integration-design.md` | Glossary integration design |
+
+### What's Next
+
+- **Sprint 13 — Deliverable 1**: Extract pension glossary into `vocabulary.yaml`, enrich mapper ExpectedNames (~355 → 600+), seed intelligence corpus. Starter prompt in the design doc.
+- Merge PRs #163 and #164 (lint fix should unblock them)
+- Docker E2E with `docker compose down -v && docker compose up --build` to verify WS auth + seed data end-to-end
 
 ## Session 31: WebSocket Reconnection + Sidebar Nav Race Condition (2026-03-24)
 
