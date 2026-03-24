@@ -11,7 +11,7 @@ base64url_encode() {
 # Generate a valid dev JWT. Accepts optional overrides:
 #   generate_dev_jwt [sub] [role] [tenant_id] [exp_offset_secs]
 generate_dev_jwt() {
-  local sub="${1:-dev-admin-001}"
+  local sub="${1:-a0000000-0000-0000-0000-000000000001}"
   local role="${2:-admin}"
   local tid="${3:-${TENANT_ID}}"
   local exp_offset="${4:-3600}"
@@ -34,7 +34,7 @@ generate_dev_jwt() {
 generate_expired_jwt() {
   local header payload header_b64 payload_b64 signature
   header='{"alg":"HS256","typ":"JWT"}'
-  payload="{\"sub\":\"dev-admin-001\",\"tenant_id\":\"${TENANT_ID}\",\"role\":\"admin\",\"member_id\":\"\",\"exp\":$(($(date +%s) - 3600))}"
+  payload="{\"sub\":\"a0000000-0000-0000-0000-000000000001\",\"tenant_id\":\"${TENANT_ID}\",\"role\":\"admin\",\"member_id\":\"\",\"exp\":$(($(date +%s) - 3600))}"
 
   header_b64=$(printf '%s' "$header" | base64url_encode)
   payload_b64=$(printf '%s' "$payload" | base64url_encode)
