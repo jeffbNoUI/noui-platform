@@ -1,5 +1,72 @@
 # noui-platform — Build History
 
+## Session 29: Nginx Route, Row Count Fix, Recon Empty State, PgBouncer Tuning (2026-03-24)
+
+**Branch:** `claude/brave-elbakyan` → PR #161 (merged)
+
+### What Was Done
+
+Worked through all open items from the post-JWT/recon/polish starter prompt.
+
+**1. Nginx error reporting route**
+Added `/api/v1/errors` location block proxying to `issues:8092`. Previously
+`POST /api/v1/errors/report` fell through to the SPA catch-all, returning HTML
+instead of reaching the issues service.
+
+**2. 0-row profiling display (PostgreSQL + MSSQL)**
+- PostgreSQL: Replaced `pg_stat_user_tables.n_live_tup` (empty until ANALYZE runs)
+  with `pg_class.reltuples` (always populated). Falls back to `COUNT(*)` if pg_class
+  query fails. Silent error swallowing replaced with `slog.Warn`.
+- MSSQL: Fixed broken `@p1`/`@p2` parameter binding — was passing positional args to
+  named params, causing `OBJECT_ID()` to get NULLs. Rewrote to use `sql.Named("p1", ...)`
+  with `sys.schemas`/`sys.tables` JOIN.
+
+**3. ReconciliationPanel empty state**
+Replaced dead-end "No data" message with context-aware UI: shows "Run Reconciliation"
+button when a LOADED batch exists, explains the prerequisite otherwise. Added 2 new
+tests covering both scenarios.
+
+**4. PgBouncer pool tuning**
+16+ services starting simultaneously caused `query_wait_timeout` failures. Increased
+`default_pool_size` 20→30, `query_wait_timeout` 10→30s, `reserve_pool_size` 5→10.
+
+**5. Seed data generated**
+Ran `prism_data_generator.py` to create `02_seed.sql` (69,160 INSERT statements).
+All 21 PRISM source tables populated: 100 members, 44,902 salary periods, 20,496
+contributions, 529 payments, etc. Future Docker builds auto-load this via init dir.
+
+**6. Risk Register encoding — investigated, NOT a bug**
+Garbled characters were caused by Windows Git Bash sending command-line arguments in
+cp1252 instead of UTF-8. Browser `fetch()` sends proper UTF-8 — verified by sending
+UTF-8 payload from file (all characters stored and retrieved correctly). No code fix
+needed.
+
+### Verification
+
+- Go migration: 11/11 packages pass
+- Frontend: 235/235 test files, 1858/1858 tests pass (2 new), typecheck clean
+- Docker: 24-container stack healthy after pgbouncer tuning
+- API: Fresh engagement discovery returns correct row counts for all 21 tables
+- Nginx: `/api/v1/errors/report` returns 401 (hits service) instead of HTML
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `frontend/nginx.conf` | Add `/api/v1/errors` location block |
+| `platform/migration/db/source.go` | pg_class.reltuples + MSSQL sql.Named params + slog.Warn |
+| `frontend/.../ReconciliationPanel.tsx` | Context-aware empty state with action button |
+| `frontend/.../__tests__/ReconciliationPanel.test.tsx` | 2 new tests for 0-record scenarios |
+| `infrastructure/pgbouncer/pgbouncer.ini` | Pool size + timeout tuning |
+| `docs/plans/2026-03-24-post-polish-e2e-starter.md` | Next session starter |
+
+### What's Next
+
+- E2E Tier 2/3 reconciliation with populated seed data (full pipeline)
+- Error reporting auth bypass (`/api/v1/errors/report` should be exempt from auth)
+- JWT 401 refresh E2E verification
+- Starter prompt: `docs/plans/2026-03-24-post-polish-e2e-starter.md`
+
 ## Session 28: JWT Recovery, Tier 2/3 Recon Loaders, Polish (2026-03-24)
 
 **Branch:** `claude/nervous-mccarthy`
