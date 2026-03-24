@@ -168,6 +168,7 @@ func DBMiddleware(db *sql.DB, extract ClaimsExtractor) func(http.Handler) http.H
 				writeInternalError(w)
 				return
 			}
+			defer tx.Rollback() // no-op after successful Commit; cleans failed txns
 
 			// set_config with local=true keeps variables scoped to this transaction,
 			// which pgbouncer transaction pooling handles correctly.
