@@ -133,17 +133,82 @@ export default function ReconciliationPanel({ engagementId }: Props) {
   }
 
   if (!summary || summary.total_records === 0) {
+    const hasLoadedBatch = latestBatch && latestBatch.status === 'LOADED';
     return (
       <div
         style={{
           padding: '48px 24px',
           textAlign: 'center',
-          color: C.textSecondary,
-          fontSize: 14,
           fontFamily: BODY,
         }}
       >
-        No reconciliation data available. Run reconciliation on a completed batch.
+        {feedback && (
+          <div
+            style={{
+              padding: '10px 16px',
+              borderRadius: 8,
+              marginBottom: 16,
+              fontSize: 13,
+              fontWeight: 500,
+              color: '#fff',
+              background: feedback.type === 'success' ? C.sage : C.coral,
+            }}
+          >
+            {feedback.message}
+          </div>
+        )}
+        <div
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: '50%',
+            background: C.borderLight,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 12px',
+            fontSize: 20,
+          }}
+        >
+          =
+        </div>
+        <p style={{ color: C.textSecondary, fontSize: 14, margin: '0 0 4px' }}>
+          No reconciliation data yet
+        </p>
+        <p style={{ color: C.textTertiary, fontSize: 12, margin: '0 0 16px' }}>
+          {hasLoadedBatch
+            ? 'A loaded batch is ready. Run reconciliation to compare source and canonical data.'
+            : 'Complete a batch load first, then run reconciliation from here.'}
+        </p>
+        {hasLoadedBatch && (
+          <button
+            onClick={() =>
+              reconcileBatch.mutate(latestBatch.batch_id, {
+                onSuccess: () =>
+                  setFeedback({
+                    type: 'success',
+                    message: 'Reconciliation completed successfully.',
+                  }),
+                onError: (err: Error) =>
+                  setFeedback({ type: 'error', message: `Reconciliation failed: ${err.message}` }),
+              })
+            }
+            disabled={reconcileBatch.isPending}
+            style={{
+              background: C.sage,
+              color: '#fff',
+              border: 'none',
+              borderRadius: 6,
+              padding: '8px 20px',
+              cursor: 'pointer',
+              fontFamily: BODY,
+              fontWeight: 600,
+              fontSize: 13,
+            }}
+          >
+            {reconcileBatch.isPending ? 'Reconciling...' : 'Run Reconciliation'}
+          </button>
+        )}
       </div>
     );
   }

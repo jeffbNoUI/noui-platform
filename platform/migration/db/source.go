@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/url"
 
 	_ "github.com/lib/pq"
@@ -153,14 +154,26 @@ func discoverPostgresTables(srcDB *sql.DB) ([]models.SourceTable, error) {
 		if err := rows.Scan(&st.SchemaName, &st.TableName, &st.ColumnCount); err != nil {
 			return nil, fmt.Errorf("scan table: %w", err)
 		}
-		// Approximate row count from pg_stat_user_tables.
+		// Approximate row count from pg_class (always populated, unlike pg_stat_user_tables
+		// which requires ANALYZE to have run).
 		var rowCount int64
 		err := srcDB.QueryRow(
-			`SELECT COALESCE(n_live_tup, 0) FROM pg_stat_user_tables WHERE schemaname = $1 AND relname = $2`,
+			`SELECT GREATEST(c.reltuples::bigint, 0)
+			   FROM pg_class c
+			   JOIN pg_namespace n ON n.oid = c.relnamespace
+			  WHERE n.nspname = $1 AND c.relname = $2`,
 			st.SchemaName, st.TableName,
 		).Scan(&rowCount)
 		if err != nil {
-			rowCount = 0
+			slog.Warn("row count estimate failed, falling back to COUNT(*)",
+				"schema", st.SchemaName, "table", st.TableName, "error", err)
+			// Fallback: exact count (slower but guaranteed correct)
+			if err2 := srcDB.QueryRow(
+				fmt.Sprintf(`SELECT COUNT(*) FROM %q.%q`, st.SchemaName, st.TableName),
+			).Scan(&rowCount); err2 != nil {
+				slog.Warn("COUNT(*) fallback also failed", "error", err2)
+				rowCount = 0
+			}
 		}
 		st.RowCount = rowCount
 		tables = append(tables, st)
@@ -198,15 +211,25 @@ func discoverMSSQLTables(srcDB *sql.DB) ([]models.SourceTable, error) {
 			return nil, fmt.Errorf("scan table: %w", err)
 		}
 		// Approximate row count from sys.dm_db_partition_stats.
+		// go-mssqldb uses positional @p1/@p2 params that map to arguments in order.
 		var rowCount int64
 		err := srcDB.QueryRow(`
-			SELECT ISNULL(SUM(row_count), 0)
-			FROM sys.dm_db_partition_stats
-			WHERE object_id = OBJECT_ID(QUOTENAME(@p1) + '.' + QUOTENAME(@p2))
-			  AND index_id IN (0, 1)
-		`, st.SchemaName, st.TableName).Scan(&rowCount)
+			SELECT ISNULL(SUM(p.row_count), 0)
+			FROM sys.dm_db_partition_stats p
+			JOIN sys.tables t ON t.object_id = p.object_id
+			JOIN sys.schemas s ON s.schema_id = t.schema_id
+			WHERE s.name = @p1 AND t.name = @p2
+			  AND p.index_id IN (0, 1)
+		`, sql.Named("p1", st.SchemaName), sql.Named("p2", st.TableName)).Scan(&rowCount)
 		if err != nil {
-			rowCount = 0
+			slog.Warn("MSSQL row count estimate failed, falling back to COUNT(*)",
+				"schema", st.SchemaName, "table", st.TableName, "error", err)
+			if err2 := srcDB.QueryRow(
+				fmt.Sprintf(`SELECT COUNT(*) FROM [%s].[%s]`, st.SchemaName, st.TableName),
+			).Scan(&rowCount); err2 != nil {
+				slog.Warn("COUNT(*) fallback also failed", "error", err2)
+				rowCount = 0
+			}
 		}
 		st.RowCount = rowCount
 		tables = append(tables, st)
