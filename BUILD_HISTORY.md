@@ -1,5 +1,66 @@
 # noui-platform — Build History
 
+## Session 34: False Cognate Warning System — D2 Backend (2026-03-24)
+
+**Branch:** `claude/upbeat-heyrovsky` → PR #167 (merged)
+
+### What Was Done
+
+**Deliverable 2 backend** of the pension glossary integration — runtime false cognate warnings attached to mapper match results.
+
+**1. MappingWarning type (template.go, +8 lines)**
+- `MappingWarning` struct: `Term`, `Warning`, `Risk` (HIGH/MEDIUM/LOW)
+- Added `Warnings []MappingWarning` field to `ColumnMatch` with `json:"warnings,omitempty"`
+
+**2. FalseCognateIndex (vocabulary.go, +24 lines)**
+- Composite key index: `conceptTag\x00slot\x00term` for O(1) lookup
+- `BuildFalseCognateIndex(vocab)` builds from loaded vocabulary
+- `Lookup(conceptTag, canonicalColumn, term)` — case-insensitive on term
+
+**3. AttachFalseCognateWarnings (matcher.go, +16 lines)**
+- Post-processing function — runs after `MatchColumns`, does not modify matching logic
+- Nil-safe: passes through with no warnings if index is nil
+- Warnings are informational only — no confidence reduction or match blocking
+
+**4. API wiring (mapping_handlers.go, +5 lines)**
+- Loads vocabulary and builds index after `MatchColumns` call
+- Non-fatal: if vocabulary fails to parse, matching proceeds without warnings
+
+**5. Tests (false_cognate_test.go, 10 tests)**
+- Index build + lookup + case insensitivity + miss detection
+- Key false cognates: membership_service (HIGH), prior_service (MEDIUM), service_credit/TMRS (HIGH), afc (HIGH)
+- Nil index safety, no-false-positive for normal terms
+- End-to-end: MatchColumns → AttachFalseCognateWarnings pipeline
+
+### Key Decisions
+
+- **Post-processing over parameter change**: `AttachFalseCognateWarnings` is separate from `MatchColumns` to keep the existing API stable (1 API caller + 9 test call sites unchanged)
+- **`omitempty` on Warnings**: JSON responses omit the field entirely when no warnings — clean for the ~95% of matches with no false cognate
+- **Per-request vocabulary load**: Embedded YAML parse is <1ms, no caching needed
+
+### Verification
+
+- Mapper: 66/66 tests pass (56 existing + 10 new)
+- All 12 migration packages pass (pre-commit hook)
+- Frontend: typecheck clean
+- Zero regressions
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `platform/migration/mapper/template.go` | `MappingWarning` struct |
+| `platform/migration/mapper/matcher.go` | `Warnings` field + `AttachFalseCognateWarnings()` |
+| `platform/migration/mapper/vocabulary.go` | `FalseCognateIndex` type + `BuildFalseCognateIndex()` + `Lookup()` |
+| `platform/migration/mapper/false_cognate_test.go` | New — 10 false cognate tests |
+| `platform/migration/api/mapping_handlers.go` | Wired warnings into mapping endpoint |
+| `docs/plans/2026-03-24-d2-frontend-starter.md` | New — D2 frontend starter prompt |
+
+### What's Next
+
+- **D2 Frontend**: Yellow/amber warning badges on mapping rows, warning detail popover, analyst acknowledgment gate before approving mappings. Starter prompt: `docs/plans/2026-03-24-d2-frontend-starter.md`
+- **D3: Canonical model evolution** — Dual service fields, TMRS accumulation pathway, FAC metadata
+
 ## Session 33: Mapper Vocabulary Enrichment — D1 (2026-03-24)
 
 **Branch:** `claude/strange-ride`
