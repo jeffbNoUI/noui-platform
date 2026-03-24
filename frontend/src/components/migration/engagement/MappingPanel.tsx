@@ -5,6 +5,7 @@ import {
   useCodeMappings,
   useUpdateMapping,
   useGenerateMappings,
+  useAcknowledgeWarning,
   useMappingCorpusContext,
 } from '@/hooks/useMigrationApi';
 import CorpusIndicator from '../ai/CorpusIndicator';
@@ -38,19 +39,23 @@ export default function MappingPanel({ engagementId }: Props) {
   const updateMapping = useUpdateMapping();
   const generateMappings = useGenerateMappings();
 
+  const acknowledgeWarning = useAcknowledgeWarning();
+
   const [showCodeMappings, setShowCodeMappings] = useState(false);
   const [filterAgreement, setFilterAgreement] = useState<AgreementStatus | ''>('');
   const [sortField, setSortField] = useState<SortField>('source');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
-  const [acknowledgedMappings, setAcknowledgedMappings] = useState<Set<string>>(new Set());
 
-  const handleAcknowledge = useCallback((mappingId: string) => {
-    setAcknowledgedMappings((prev) => new Set(prev).add(mappingId));
-  }, []);
+  const handleAcknowledge = useCallback(
+    (mappingId: string) => {
+      acknowledgeWarning.mutate({ engagementId, mappingId });
+    },
+    [acknowledgeWarning, engagementId],
+  );
 
   const hasUnacknowledgedWarnings = useCallback(
-    (m: FieldMapping) => (m.warnings?.length ?? 0) > 0 && !acknowledgedMappings.has(m.mapping_id),
-    [acknowledgedMappings],
+    (m: FieldMapping) => (m.warnings?.length ?? 0) > 0 && !m.acknowledged,
+    [],
   );
 
   const handleSort = (field: SortField) => {
@@ -309,7 +314,7 @@ export default function MappingPanel({ engagementId }: Props) {
                         {m.warnings && m.warnings.length > 0 && (
                           <WarningBadge
                             warnings={m.warnings}
-                            acknowledged={acknowledgedMappings.has(m.mapping_id)}
+                            acknowledged={!!m.acknowledged}
                             onAcknowledge={() => handleAcknowledge(m.mapping_id)}
                           />
                         )}

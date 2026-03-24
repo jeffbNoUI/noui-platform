@@ -100,6 +100,13 @@ export const migrationAPI = {
   updateMapping: (engagementId: string, mappingId: string, req: UpdateMappingRequest) =>
     putAPI<FieldMapping>(`${BASE}/engagements/${engagementId}/mappings/${mappingId}`, req, RAW),
 
+  acknowledgeWarning: (engagementId: string, mappingId: string) =>
+    postAPI<{ mapping_id: string; acknowledged: boolean }>(
+      `${BASE}/engagements/${engagementId}/mappings/${mappingId}/acknowledge`,
+      {},
+      RAW,
+    ),
+
   // ─── Code Mappings ──────────────────────────────────────────────────────
   listCodeMappings: (id: string) =>
     fetchAPI<CodeMapping[]>(`${BASE}/engagements/${id}/code-mappings`, RAW),

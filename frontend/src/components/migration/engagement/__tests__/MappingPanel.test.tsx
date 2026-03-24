@@ -10,6 +10,7 @@ vi.mock('@/hooks/useMigrationApi', async () => {
     useCodeMappings: vi.fn(),
     useUpdateMapping: vi.fn(),
     useGenerateMappings: vi.fn(),
+    useAcknowledgeWarning: vi.fn(),
     useMappingCorpusContext: vi.fn(),
   };
 });
@@ -19,6 +20,7 @@ import {
   useCodeMappings,
   useUpdateMapping,
   useGenerateMappings,
+  useAcknowledgeWarning,
   useMappingCorpusContext,
 } from '@/hooks/useMigrationApi';
 import type { FieldMapping } from '@/types/Migration';
@@ -60,6 +62,9 @@ beforeEach(() => {
   );
   vi.mocked(useGenerateMappings).mockReturnValue(
     baseMutation as unknown as ReturnType<typeof useGenerateMappings>,
+  );
+  vi.mocked(useAcknowledgeWarning).mockReturnValue(
+    baseMutation as unknown as ReturnType<typeof useAcknowledgeWarning>,
   );
   vi.mocked(useMappingCorpusContext).mockReturnValue({
     data: undefined,
@@ -116,12 +121,13 @@ describe('MappingPanel — false cognate warnings', () => {
     expect(approveBtn).toBeDisabled();
   });
 
-  it('enables approve button after acknowledging warnings', () => {
+  it('enables approve button when warnings are acknowledged (server state)', () => {
     vi.mocked(useMappings).mockReturnValue({
       data: makeMappings([
         {
           source_column: 'membership_service',
           approval_status: 'PROPOSED',
+          acknowledged: true,
           warnings: [
             {
               term: 'membership_service',
@@ -135,11 +141,6 @@ describe('MappingPanel — false cognate warnings', () => {
     } as unknown as ReturnType<typeof useMappings>);
 
     renderWithProviders(<MappingPanel engagementId="eng-1" />);
-
-    // Open popover
-    fireEvent.click(screen.getByTestId('warning-badge'));
-    // Acknowledge
-    fireEvent.click(screen.getByTestId('acknowledge-btn'));
 
     const approveBtn = screen.getByText('Approve');
     expect(approveBtn).not.toBeDisabled();

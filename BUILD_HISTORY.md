@@ -1,5 +1,55 @@
 # noui-platform — Build History
 
+## Session 36: Warning Acknowledgment Persistence — D3-A (2026-03-24)
+
+**Branch:** `claude/crazy-pascal`
+
+### What Was Done
+
+**D3-A: Acknowledgment Persistence (8 files + 1 migration)**
+
+Analyst acknowledgments of false cognate warnings now persist in the database instead of local React state. Previously, navigating away from the mapping page reset all acknowledgments.
+
+**Backend (3 files + 1 migration):**
+- New migration `031_warning_acknowledgment.sql`: `migration.warning_acknowledgment` table with composite PK `(engagement_id, mapping_id)` — enforces one acknowledgment per mapping at DB level
+- `AcknowledgeMapping` handler: `POST .../mappings/{mapping_id}/acknowledge` — idempotent via `ON CONFLICT DO NOTHING`, reads `user_id` from JWT context
+- `ListMappings` enriched: LEFT JOIN on `warning_acknowledgment` adds `acknowledged: true/false` to every mapping response
+- Route registered in `handlers.go`
+
+**Frontend (5 files):**
+- `FieldMapping` type: added `acknowledged?: boolean`
+- `migrationApi.ts`: added `acknowledgeWarning()` API method
+- `useMigrationApi.ts`: added `useAcknowledgeWarning()` mutation hook with query invalidation
+- `MappingPanel.tsx`: replaced `useState<Set<string>>` with server-backed `m.acknowledged`, wired `onAcknowledge` to the mutation
+- `MappingPanel.test.tsx`: updated to mock `useAcknowledgeWarning`, test verifies server-persisted acknowledgment state
+
+### Verification
+
+- Go migration: 11/11 packages pass (short mode)
+- Frontend: 236/236 test files, 1863/1863 tests pass
+- Frontend: typecheck clean
+- Dev server: Migration Management page renders, no React errors
+
+### Files Changed (9 files)
+
+| File | Change |
+|------|--------|
+| `db/migrations/031_warning_acknowledgment.sql` | New table |
+| `platform/migration/api/mapping_handlers.go` | AcknowledgeMapping handler + ListMappings LEFT JOIN |
+| `platform/migration/api/handlers.go` | Route registration |
+| `platform/migration/api/mapping_handlers_test.go` | Updated sqlmock for 14-column result set |
+| `frontend/src/types/Migration.ts` | `acknowledged` field |
+| `frontend/src/lib/migrationApi.ts` | `acknowledgeWarning` API method |
+| `frontend/src/hooks/useMigrationApi.ts` | `useAcknowledgeWarning` hook |
+| `frontend/src/components/migration/engagement/MappingPanel.tsx` | Server-backed acknowledgment state |
+| `frontend/src/components/migration/engagement/__tests__/MappingPanel.test.tsx` | Updated for server-persisted ack |
+
+### What's Next
+
+- **D3-B: Canonical Model Evolution** — dual service fields (`earned_service` + `purchased_service`), TMRS accumulation metadata, FAC anti-spiking metadata
+- Or pivot to other Sprint 13 deliverables
+- Starter prompt: `docs/plans/2026-03-24-post-d3-acknowledgment-starter.md`
+
 ## Session 35: False Cognate Warning Badges — D2 Frontend (2026-03-24)
 
 **Branch:** `claude/lucid-kirch` → PR #TBD

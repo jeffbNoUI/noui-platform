@@ -100,6 +100,7 @@ export interface FieldMapping {
   approved_by: string | null;
   approved_at: string | null;
   warnings?: MappingWarning[];
+  acknowledged?: boolean;
 }
 
 export interface CodeMapping {
