@@ -1,7 +1,7 @@
 import { Component, useState, useMemo, useEffect } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { C, BODY, DISPLAY } from '@/lib/designSystem';
-import { useEngagement, useAttentionItems } from '@/hooks/useMigrationApi';
+import { useEngagement, useAttentionItems, useGateStatus } from '@/hooks/useMigrationApi';
 import { useMigrationEvents } from '@/hooks/useMigrationEvents';
 import type { EngagementStatus } from '@/types/Migration';
 import PhaseStepper from './PhaseStepper';
@@ -143,9 +143,10 @@ interface Props {
 }
 
 export default function EngagementDetail({ engagementId, onBack, onSelectBatch }: Props) {
-  const { data: engagement, isLoading } = useEngagement(engagementId);
+  const { data: engagement, isLoading, refetch: refetchEngagement } = useEngagement(engagementId);
   const { connected, events, useFallback } = useMigrationEvents(engagementId);
   const { data: attentionItems } = useAttentionItems(engagementId);
+  const { refetch: refetchGate } = useGateStatus(engagementId);
   const [activeTab, setActiveTab] = useState<Tab>('discovery');
   const [gateDialog, setGateDialog] = useState<{
     open: boolean;
@@ -161,6 +162,13 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
       setActiveTab(defaultTab(engagement.status));
     }
   }, [engagementId, engagement?.status]);
+
+  // Refetch engagement + gate status on tab switch to keep stepper in sync
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    refetchEngagement();
+    refetchGate();
+  };
 
   const connectionDot = useMemo(() => {
     if (connected) return { color: C.sage, label: 'Live' };
@@ -368,7 +376,7 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
           {TABS.map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => handleTabChange(tab.key)}
               style={{
                 padding: '10px 16px',
                 fontSize: 13,

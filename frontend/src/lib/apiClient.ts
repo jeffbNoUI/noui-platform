@@ -126,6 +126,16 @@ async function rawRequest(
           status: res.status,
           message,
         });
+
+        // Surface 401 to the user immediately — token has expired or is invalid
+        if (res.status === 401 && typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('api:unauthorized', {
+              detail: { url, message },
+            }),
+          );
+        }
+
         reportError({
           requestId,
           url,

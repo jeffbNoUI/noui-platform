@@ -1,5 +1,81 @@
 # noui-platform — Build History
 
+## Session 27: Migration Polish — 8 Fixes (2026-03-23)
+
+**Branch:** `claude/frosty-khorana` → PR #153
+
+### What Was Done
+
+Worked through the full 8-item polish list from the Session 26 starter prompt.
+
+**1. Seed data for all 21 PRISM tables** — Extended `prism_data_generator.py` with 10
+missing tables: MEMBER_ADDR (147 rows), SVC_CREDIT (2623), CONTRIB_LEGACY (965),
+CONTRIB_HIST (19956), BENEFICIARY (102), QDRO (4), DISABILITY (0 — realistic),
+NOTES (57), LIFE_EVENTS (145), COLA_HIST (295). Total: 69K INSERT statements, 15MB.
+Also regenerated PAS baseline seed (123MB).
+
+**2. JWT expiry feedback** — Added `api:unauthorized` custom event dispatch on 401 in
+`apiClient.ts`. Created global `Toast` component that shows "Session expired — please
+refresh" message. Wired into App root with slide-in animation.
+
+**3. Tier 3 demographic reconciliation** — Migration 042 creates `demographic_snapshot`
+staging table. Added PRISM + PAS loaders in `source_loader.go` that pull member name,
+birth date, SSN last 4, gender, marital status, employer, hire date, status, address,
+email from source DBs. Joins latest residential address via DISTINCT ON.
+
+**4. Risk Register encoding** — Investigated: the diamond character is in the data, not
+the component code. RiskPanel renders `risk.description` directly. Needs Docker DB
+inspection to confirm and fix the source data.
+
+**5. Error reporting 405** — Added nginx proxy: `/api/v1/errors` → `issues:8092`. The
+frontend error reporter was POSTing to a path that matched the SPA fallback, which
+doesn't handle POST → 405.
+
+**6. Phase stepper reliability** — Added `handleTabChange()` in EngagementDetail that
+calls `refetchEngagement()` + `refetchGate()` on every tab switch, keeping the stepper's
+phase state fresh.
+
+**7. 0-row profiling** — `pg_stat_user_tables.n_live_tup` is 0 on fresh containers
+before ANALYZE runs. Fixed `source.go` to fall back to actual `COUNT(*)` when stats
+return 0, with `slog.Warn` logging.
+
+**8. Reconciliation panel 0-record UX** — Replaced dead-end "No data" message with
+actionable state: shows "Run Reconciliation" button when a loaded batch exists, or
+guidance text otherwise. Includes success/error feedback.
+
+### Verification
+
+- Go: 11/11 migration packages pass
+- Frontend: 235 test files, 1856 tests pass
+- TypeScript: clean
+- Preview: Toast renders on 401 event, dismisses correctly
+- CI: Pre-existing failures (lint warning count, healthagg timeout) — not from our changes
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `frontend/nginx.conf` | Add `/api/v1/errors` proxy route |
+| `frontend/src/App.tsx` | Wire Toast component |
+| `frontend/src/components/Toast.tsx` | NEW — Global toast notifications |
+| `frontend/src/index.css` | Toast slide-in animation |
+| `frontend/src/lib/apiClient.ts` | Dispatch `api:unauthorized` on 401 |
+| `frontend/.../EngagementDetail.tsx` | Tab change refetch for stepper |
+| `frontend/.../ReconciliationPanel.tsx` | Actionable 0-record state |
+| `migration-simulation/.../prism_data_generator.py` | 10 new table generators |
+| `platform/migration/batch/source_loader.go` | Tier 3 demographic loaders |
+| `platform/migration/db/source.go` | COUNT(*) fallback for row counts |
+| `platform/migration/db/migrations/042_demographic_snapshot.sql` | NEW — Tier 3 table |
+
+### What's Next
+
+- Docker E2E verification of all 8 fixes with full stack
+- Verify PRISM seed data loads all 21 tables with correct row counts
+- Tier 3 reconciliation end-to-end through the UI
+- Fix CI lint warning count (pre-existing, not from this PR)
+- Intelligence service integration (pattern detection, AI recommendations)
+- Starter prompt: `docs/plans/2026-03-23-session27-next.md`
+
 ## Session 26: Migration Full Lifecycle — 2 Bugs Fixed, Certification E2E (2026-03-23)
 
 **Branch:** `claude/gracious-pike`

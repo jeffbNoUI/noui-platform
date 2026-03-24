@@ -136,14 +136,60 @@ export default function ReconciliationPanel({ engagementId }: Props) {
     return (
       <div
         style={{
-          padding: '48px 24px',
+          padding: '32px 24px',
           textAlign: 'center',
-          color: C.textSecondary,
-          fontSize: 14,
           fontFamily: BODY,
         }}
       >
-        No reconciliation data available. Run reconciliation on a completed batch.
+        <div style={{ color: C.textSecondary, fontSize: 14, marginBottom: 16 }}>
+          No reconciliation data yet.
+        </div>
+        {latestBatch && latestBatch.status === 'LOADED' ? (
+          <button
+            onClick={() =>
+              reconcileBatch.mutate(latestBatch.batch_id, {
+                onSuccess: () =>
+                  setFeedback({ type: 'success', message: 'Reconciliation completed.' }),
+                onError: (err) =>
+                  setFeedback({ type: 'error', message: `Reconciliation failed: ${err.message}` }),
+              })
+            }
+            disabled={reconcileBatch.isPending}
+            style={{
+              padding: '10px 24px',
+              borderRadius: 8,
+              border: 'none',
+              background: reconcileBatch.isPending ? C.border : C.sky,
+              color: C.textOnDark,
+              fontSize: 14,
+              fontWeight: 600,
+              fontFamily: BODY,
+              cursor: reconcileBatch.isPending ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {reconcileBatch.isPending ? 'Running...' : 'Run Reconciliation'}
+          </button>
+        ) : (
+          <div style={{ fontSize: 12, color: C.textTertiary }}>
+            Execute a batch first, then run reconciliation.
+          </div>
+        )}
+        {feedback && (
+          <div
+            style={{
+              padding: '8px 14px',
+              borderRadius: 6,
+              marginTop: 12,
+              fontSize: 13,
+              fontWeight: 500,
+              color: '#fff',
+              background: feedback.type === 'success' ? C.sage : C.coral,
+              display: 'inline-block',
+            }}
+          >
+            {feedback.message}
+          </div>
+        )}
       </div>
     );
   }

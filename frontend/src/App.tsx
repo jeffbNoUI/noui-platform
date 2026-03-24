@@ -12,6 +12,7 @@ import DeathBenefitPanel from '@/components/DeathBenefitPanel';
 import EmploymentTimeline from '@/components/EmploymentTimeline';
 import CommandPalette from '@/components/CommandPalette';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import Toast from '@/components/Toast';
 import type { ViewMode, UserRole } from '@/types/auth';
 import { ROLE_DEFAULT_VIEW } from '@/types/auth';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
@@ -158,6 +159,7 @@ export default function App() {
   return (
     <AuthProvider>
       <AppInner />
+      <Toast />
     </AuthProvider>
   );
 }

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/url"
 
 	_ "github.com/lib/pq"
@@ -153,14 +154,23 @@ func discoverPostgresTables(srcDB *sql.DB) ([]models.SourceTable, error) {
 		if err := rows.Scan(&st.SchemaName, &st.TableName, &st.ColumnCount); err != nil {
 			return nil, fmt.Errorf("scan table: %w", err)
 		}
-		// Approximate row count from pg_stat_user_tables.
+		// Row count: try pg_stat_user_tables first (fast), fall back to COUNT(*) if stats are stale.
+		// On freshly seeded containers, n_live_tup is 0 until ANALYZE runs.
 		var rowCount int64
 		err := srcDB.QueryRow(
 			`SELECT COALESCE(n_live_tup, 0) FROM pg_stat_user_tables WHERE schemaname = $1 AND relname = $2`,
 			st.SchemaName, st.TableName,
 		).Scan(&rowCount)
-		if err != nil {
-			rowCount = 0
+		if err != nil || rowCount == 0 {
+			// Stats unavailable or stale — use actual count
+			countQuery := fmt.Sprintf(
+				`SELECT COUNT(*) FROM %q.%q`,
+				st.SchemaName, st.TableName,
+			)
+			if cErr := srcDB.QueryRow(countQuery).Scan(&rowCount); cErr != nil {
+				slog.Warn("row count failed", "schema", st.SchemaName, "table", st.TableName, "error", cErr)
+				rowCount = 0
+			}
 		}
 		st.RowCount = rowCount
 		tables = append(tables, st)

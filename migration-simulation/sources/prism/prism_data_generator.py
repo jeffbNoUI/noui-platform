@@ -480,6 +480,364 @@ for m in members:
 emit("")
 
 # ---------------------------------------------------------------------------
+# PRISM_MEMBER_ADDR — addresses (residential + mailing)
+# ---------------------------------------------------------------------------
+emit("-- PRISM_MEMBER_ADDR")
+addr_seq = 1
+streets = ["123 Main St", "456 Oak Ave", "789 Pine Rd", "321 Elm Blvd", "654 Maple Dr",
+           "111 Cedar Ln", "222 Birch Way", "333 Spruce Ct", "444 Walnut Pl", "555 Ash St"]
+cities = ["Riverside", "Corona", "Moreno Valley", "Temecula", "Murrieta", "Perris", "Hemet"]
+addr_rows = 0
+for m in members:
+    # Each member gets 1-2 addresses
+    n_addr = 1 if random.random() < 0.6 else 2
+    for a in range(n_addr):
+        addr_typ = "RES" if a == 0 else "MAL"
+        eff_dt = m["hire_dt"] + datetime.timedelta(days=random.randint(0, 365))
+        end_dt = None if a == 0 else (eff_dt + datetime.timedelta(days=random.randint(365, 3000)))
+        vrfy = eff_dt + datetime.timedelta(days=random.randint(30, 365)) if random.random() < 0.3 else None
+        emit(
+            f"INSERT INTO src_prism.PRISM_MEMBER_ADDR "
+            f"(ADDR_SEQ_NBR, MBR_NBR, ADDR_TYP_CD, ADDR_LINE1, ADDR_LINE2, CITY, STATE_CD, "
+            f"ZIP_CD, CNTRY_CD, EFF_DT, END_DT, VRFY_DT) VALUES "
+            f"({addr_seq}, {m['mbr_nbr']}, {sql_str(addr_typ)}, "
+            f"{sql_str(random.choice(streets))}, NULL, "
+            f"{sql_str(random.choice(cities))}, 'CA', "
+            f"{sql_str(f'9{random.randint(2500, 2599)}')}, NULL, "
+            f"{sql_date(eff_dt)}, {sql_date(end_dt)}, {sql_date(vrfy)});"
+        )
+        addr_seq += 1
+        addr_rows += 1
+emit("")
+
+# ---------------------------------------------------------------------------
+# PRISM_SVC_CREDIT — cumulative service credit balances
+# ---------------------------------------------------------------------------
+emit("-- PRISM_SVC_CREDIT")
+svc_cr_id = 1
+svc_credit_rows = 0
+for m in members:
+    # Each active/retired member gets annual service credit records
+    hire_yr = m["hire_dt"].year
+    end_yr = 2024
+    if m["ret_dt"]:
+        end_yr = m["ret_dt"].year
+    elif m["terminated"]:
+        end_yr = min(hire_yr + random.randint(3, 20), 2024)
+    # One balance record per year (snapshot)
+    cumulative = 0.0
+    for yr in range(hire_yr, min(end_yr + 1, 2025)):
+        ytd = 1.0 if yr <= end_yr else 0.0
+        cumulative += ytd
+        svc_typ = "ACTV"
+        prch_amt = None
+        # ~5% have purchased service
+        if random.random() < 0.05 and yr > hire_yr + 3:
+            svc_typ = "PRCH"
+            prch_amt = round(random.uniform(2000, 15000), 2)
+            cumulative += round(random.uniform(0.5, 2.0), 4)
+        as_of = datetime.date(yr, 12, 31)
+        emit(
+            f"INSERT INTO src_prism.PRISM_SVC_CREDIT "
+            f"(SVC_CR_ID, MBR_NBR, AS_OF_DT, SVC_CR_BAL, SVC_CR_YTD, SVC_TYP_CD, "
+            f"PRCH_AMT, NOTES, LST_UPD_DT) VALUES "
+            f"({svc_cr_id}, {m['mbr_nbr']}, {sql_date(as_of)}, "
+            f"{round(cumulative, 4)}, {round(ytd, 4)}, {sql_str(svc_typ)}, "
+            f"{sql_num(prch_amt)}, NULL, NULL);"
+        )
+        svc_cr_id += 1
+        svc_credit_rows += 1
+emit("")
+
+# ---------------------------------------------------------------------------
+# PRISM_CONTRIB_LEGACY — pre-1998 annual contributions
+# ---------------------------------------------------------------------------
+emit("-- PRISM_CONTRIB_LEGACY")
+ctrib_leg_id = 1
+contrib_legacy_rows = 0
+for m in members:
+    hire_yr = m["hire_dt"].year
+    if hire_yr < 1998:
+        for yr in range(hire_yr, 1998):
+            growth = 1.025 ** (yr - hire_yr)
+            ee_contrib = round(m["base_sal"] * growth * 0.085, 2)
+            er_contrib = round(m["base_sal"] * growth * 0.12, 2) if random.random() < 0.4 else None
+            rate = 0.0850 if random.random() < 0.7 else None
+            emit(
+                f"INSERT INTO src_prism.PRISM_CONTRIB_LEGACY "
+                f"(CTRIB_LEG_ID, MBR_NBR, TAX_YR, EE_CONTRIB, ER_CONTRIB, CONTRIB_RATE, INT_CREDITED) VALUES "
+                f"({ctrib_leg_id}, {m['mbr_nbr']}, {yr}, {ee_contrib}, "
+                f"{sql_num(er_contrib)}, {sql_num(rate)}, NULL);"
+            )
+            ctrib_leg_id += 1
+            contrib_legacy_rows += 1
+emit("")
+
+# ---------------------------------------------------------------------------
+# PRISM_CONTRIB_HIST — post-1998 monthly contributions
+# ---------------------------------------------------------------------------
+emit("-- PRISM_CONTRIB_HIST")
+ctrib_seq = 1
+contrib_hist_rows = 0
+for m in members:
+    hire_yr = m["hire_dt"].year
+    end_yr = 2024
+    if m["ret_dt"]:
+        end_yr = m["ret_dt"].year
+    elif m["terminated"]:
+        end_yr = min(hire_yr + random.randint(3, 20), 2024)
+    for yr in range(max(hire_yr, 1998), min(end_yr + 1, 2025)):
+        growth = 1.025 ** (yr - hire_yr)
+        monthly_sal = round(m["base_sal"] * growth / 12.0, 2)
+        # Generate monthly contributions (12 per year)
+        for mo in range(1, 13):
+            ee_amt = round(monthly_sal * 0.085, 2)
+            er_amt = round(monthly_sal * 0.12, 2)
+            prd = datetime.date(yr, mo, 1)
+            src = random.choice(["PAYR", "PAYR", "PAYR", "MANU"]) if random.random() < 0.02 else "PAYR"
+            posted = prd + datetime.timedelta(days=random.randint(5, 20))
+            emit(
+                f"INSERT INTO src_prism.PRISM_CONTRIB_HIST "
+                f"(CTRIB_SEQ, MBR_ID, CONTRIB_PRD, EE_CONTRIB_AMT, ER_CONTRIB_AMT, "
+                f"CONTRIB_RATE, PENSION_SAL_BS, INT_AMT, CONTRIB_SRC_CD, POSTED_DT) VALUES "
+                f"({ctrib_seq}, {m['mbr_nbr']}, {sql_date(prd)}, {ee_amt}, {er_amt}, "
+                f"0.0850, {monthly_sal}, NULL, {sql_str(src)}, {sql_date(posted)});"
+            )
+            ctrib_seq += 1
+            contrib_hist_rows += 1
+emit("")
+
+# ---------------------------------------------------------------------------
+# PRISM_BENEFICIARY — designated beneficiaries
+# ---------------------------------------------------------------------------
+emit("-- PRISM_BENEFICIARY")
+bene_id = 1
+bene_rows = 0
+bene_first_names = ["Sarah","Michael","Emily","David","Jessica","Robert","Ashley","James","Amanda","Daniel"]
+bene_last_names = ["Anderson","Brown","Clark","Davis","Evans","Foster","Green","Hill","Irwin","Jensen"]
+for m in members:
+    # ~70% of members have beneficiary designations
+    if random.random() < 0.30:
+        continue
+    n_bene = random.choices([1, 2, 3], weights=[50, 35, 15])[0]
+    remaining_pct = 100.0
+    for b in range(n_bene):
+        if b == n_bene - 1:
+            share = remaining_pct
+        else:
+            share = round(random.uniform(20, remaining_pct - (n_bene - b - 1) * 10), 2)
+            remaining_pct -= share
+        bene_typ = "PRIM" if b == 0 else "CONT"
+        rel = random.choice(["spouse", "wife", "husband", "child", "son", "daughter", "partner"])
+        eff_dt = m["hire_dt"] + datetime.timedelta(days=random.randint(30, 1000))
+        bdt = (m["birth_dt"] + datetime.timedelta(days=random.randint(-3650, 7300)))
+        bdt_str = format_birth_dt(bdt, m["orig_sys"])
+        emit(
+            f"INSERT INTO src_prism.PRISM_BENEFICIARY "
+            f"(BENE_ID, MBR_NBR, BENE_TYP_CD, LAST_NM, FIRST_NM, TRUST_NM, NATL_ID, "
+            f"BIRTH_DT, RELATIONSHIP, SHARE_PCT, EFF_DT, REVOC_FLG, QDRO_ORD_NBR, QDRO_SHARE_TYP) VALUES "
+            f"({bene_id}, {m['mbr_nbr']}, {sql_str(bene_typ)}, "
+            f"{sql_str(random.choice(bene_last_names))}, {sql_str(random.choice(bene_first_names))}, "
+            f"NULL, {sql_str(gen_ssn())}, {sql_str(bdt_str)}, "
+            f"{sql_str(rel)}, {round(share, 2)}, {sql_date(eff_dt)}, "
+            f"'N', NULL, NULL);"
+        )
+        bene_id += 1
+        bene_rows += 1
+emit("")
+
+# ---------------------------------------------------------------------------
+# PRISM_QDRO — Qualified Domestic Relations Orders
+# ---------------------------------------------------------------------------
+emit("-- PRISM_QDRO")
+qdro_id = 1
+qdro_rows = 0
+for m in members:
+    # ~3% of members have QDROs
+    if random.random() >= 0.03 or m["status_cd"] in ("I",):
+        continue
+    ord_dt = m["hire_dt"] + datetime.timedelta(days=random.randint(1825, 7300))
+    if ord_dt > datetime.date(2024, 12, 31):
+        continue
+    ord_nbr = f"DRO-{m['mbr_nbr']}-{ord_dt.year}"
+    status = random.choice(["Q", "Q", "Q", "P", "R"])
+    share_typ = random.choice(["PCTG", "DLRM"])
+    share_amt = round(random.uniform(25, 50), 4) if share_typ == "PCTG" else round(random.uniform(500, 2000), 4)
+    pmt_start = ord_dt + datetime.timedelta(days=random.randint(60, 365)) if status == "Q" else None
+    emit(
+        f"INSERT INTO src_prism.PRISM_QDRO "
+        f"(QDRO_ID, MBR_NBR, ORD_NBR, ORD_DT, ORD_STATUS, AP_LAST_NM, AP_FIRST_NM, "
+        f"AP_NATL_ID, AP_BIRTH_DT, SHARE_TYP, SHARE_AMT, SHARE_EFF_DT, PMT_START_DT, "
+        f"PMT_END_DT, LINKED_PMT_SCHED) VALUES "
+        f"({qdro_id}, {m['mbr_nbr']}, {sql_str(ord_nbr)}, {sql_date(ord_dt)}, "
+        f"{sql_str(status)}, {sql_str(random.choice(bene_last_names))}, "
+        f"{sql_str(random.choice(bene_first_names))}, {sql_str(gen_ssn())}, "
+        f"{sql_str(format_birth_dt(rand_date(1960, 1985), None))}, "
+        f"{sql_str(share_typ)}, {share_amt}, {sql_date(ord_dt)}, "
+        f"{sql_date(pmt_start)}, NULL, NULL);"
+    )
+    qdro_id += 1
+    qdro_rows += 1
+emit("")
+
+# ---------------------------------------------------------------------------
+# PRISM_DISABILITY — disability records
+# ---------------------------------------------------------------------------
+emit("-- PRISM_DISABILITY")
+disb_id = 1
+disb_rows = 0
+for m in members:
+    if not m["disability"]:
+        continue
+    eff_dt = m["ret_dt"] or (m["hire_dt"] + datetime.timedelta(days=random.randint(1825, 7300)))
+    disb_typ = random.choice(["OCCU", "NON_", "PART"])
+    benefit = 0
+    # Find matching calc for benefit amount
+    for c in calcs:
+        if c["mbr_nbr"] == m["mbr_nbr"] and c["calc_type"] == "D":
+            benefit = c["benefit"]
+            break
+    disb_pct = round(random.uniform(40, 100), 2) if disb_typ == "PART" else None
+    rtw_dt = None
+    cert_exp = eff_dt + datetime.timedelta(days=random.randint(365, 1095))
+    emit(
+        f"INSERT INTO src_prism.PRISM_DISABILITY "
+        f"(DISB_ID, MBR_NBR, DISB_EFF_DT, DISB_TYP_CD, DISB_STATUS, DISB_BENEFIT, "
+        f"DISB_PCT, RTW_DT, CERT_EXP_DT, INS_CARRIER) VALUES "
+        f"({disb_id}, {m['mbr_nbr']}, {sql_date(eff_dt)}, {sql_str(disb_typ)}, "
+        f"'A', {sql_num(benefit)}, {sql_num(disb_pct)}, {sql_date(rtw_dt)}, "
+        f"{sql_date(cert_exp)}, NULL);"
+    )
+    disb_id += 1
+    disb_rows += 1
+emit("")
+
+# ---------------------------------------------------------------------------
+# PRISM_NOTES — member case notes
+# ---------------------------------------------------------------------------
+emit("-- PRISM_NOTES")
+note_id = 1
+note_rows = 0
+note_templates = [
+    "Member called to inquire about retirement benefit estimate.",
+    "Address change processed per member request.",
+    "Beneficiary designation updated - added spouse.",
+    "Service credit purchase inquiry - sent forms.",
+    "Annual statement discrepancy reported, investigating.",
+    "MIGRT: Record migrated from OPUS system 1998-01-15. Original ID: {mbr}.",
+    "Calculation override applied per supervisor approval. Ref: CALC-{year}.",
+    "DRO documentation received from court. Under review.",
+    "COBRA continuation election received and processed.",
+    "Member requested benefit projection for age 62.",
+]
+for m in members:
+    # 30% of members get 1-3 notes
+    if random.random() < 0.70:
+        continue
+    n_notes = random.randint(1, 3)
+    for _ in range(n_notes):
+        note_dt = rand_date(max(m["hire_dt"].year, 2000), 2024)
+        note_ts = datetime.datetime(note_dt.year, note_dt.month, min(note_dt.day, 28),
+                                    random.randint(8, 17), random.randint(0, 59), 0)
+        note_typ = random.choice(["GENRL", "MIGRT", "CALC", "EXCP", "CORR", "LGCY"])
+        text = random.choice(note_templates).format(mbr=m["mbr_nbr"], year=note_dt.year)
+        emit(
+            f"INSERT INTO src_prism.PRISM_NOTES "
+            f"(NOTE_ID, MBR_NBR, NOTE_DT, NOTE_TYP_CD, NOTE_TEXT, ENTERED_BY) VALUES "
+            f"({note_id}, {m['mbr_nbr']}, {sql_ts(note_ts)}, {sql_str(note_typ)}, "
+            f"{sql_str(text)}, 'SYSTEM');"
+        )
+        note_id += 1
+        note_rows += 1
+emit("")
+
+# ---------------------------------------------------------------------------
+# PRISM_LIFE_EVENTS — life events
+# ---------------------------------------------------------------------------
+emit("-- PRISM_LIFE_EVENTS")
+event_id = 1
+event_rows = 0
+for m in members:
+    # HIRE event for everyone
+    emit(
+        f"INSERT INTO src_prism.PRISM_LIFE_EVENTS "
+        f"(EVENT_ID, MBR_NBR, EVENT_DT, EVENT_TYP_CD, EVENT_STATUS, EFF_DT, "
+        f"RELATED_ID, RELATED_TBL, NOTES, PROC_BY, PROC_DT) VALUES "
+        f"({event_id}, {m['mbr_nbr']}, {sql_date(m['hire_dt'])}, 'HIRE', 'C', "
+        f"{sql_date(m['hire_dt'])}, NULL, NULL, NULL, 'SYSTEM', {sql_ts(datetime.datetime(m['hire_dt'].year, m['hire_dt'].month, min(m['hire_dt'].day, 28), 9, 0, 0))});"
+    )
+    event_id += 1
+    event_rows += 1
+    # Retirement event
+    if m["ret_dt"]:
+        evt_typ = "DISB_" if m["disability"] else "RETIR"
+        emit(
+            f"INSERT INTO src_prism.PRISM_LIFE_EVENTS "
+            f"(EVENT_ID, MBR_NBR, EVENT_DT, EVENT_TYP_CD, EVENT_STATUS, EFF_DT, "
+            f"RELATED_ID, RELATED_TBL, NOTES, PROC_BY, PROC_DT) VALUES "
+            f"({event_id}, {m['mbr_nbr']}, {sql_date(m['ret_dt'])}, {sql_str(evt_typ)}, 'C', "
+            f"{sql_date(m['ret_dt'])}, NULL, NULL, NULL, 'SYSTEM', NULL);"
+        )
+        event_id += 1
+        event_rows += 1
+    # Death event
+    if m["death_dt"]:
+        emit(
+            f"INSERT INTO src_prism.PRISM_LIFE_EVENTS "
+            f"(EVENT_ID, MBR_NBR, EVENT_DT, EVENT_TYP_CD, EVENT_STATUS, EFF_DT, "
+            f"RELATED_ID, RELATED_TBL, NOTES, PROC_BY, PROC_DT) VALUES "
+            f"({event_id}, {m['mbr_nbr']}, {sql_date(m['death_dt'])}, 'DEATH', 'C', "
+            f"{sql_date(m['death_dt'])}, NULL, NULL, NULL, 'SYSTEM', NULL);"
+        )
+        event_id += 1
+        event_rows += 1
+    # Termination event
+    if m["terminated"]:
+        term_dt = rand_date(max(m["hire_dt"].year + 1, 2000), min(2022, m["hire_dt"].year + 20))
+        emit(
+            f"INSERT INTO src_prism.PRISM_LIFE_EVENTS "
+            f"(EVENT_ID, MBR_NBR, EVENT_DT, EVENT_TYP_CD, EVENT_STATUS, EFF_DT, "
+            f"RELATED_ID, RELATED_TBL, NOTES, PROC_BY, PROC_DT) VALUES "
+            f"({event_id}, {m['mbr_nbr']}, {sql_date(term_dt)}, 'TERM', 'C', "
+            f"{sql_date(term_dt)}, NULL, NULL, NULL, 'SYSTEM', NULL);"
+        )
+        event_id += 1
+        event_rows += 1
+emit("")
+
+# ---------------------------------------------------------------------------
+# PRISM_COLA_HIST — COLA adjustment history
+# ---------------------------------------------------------------------------
+emit("-- PRISM_COLA_HIST")
+cola_id = 1
+cola_rows = 0
+CPI_RATES = {2015: 0.0017, 2016: 0.0212, 2017: 0.0213, 2018: 0.0190,
+             2019: 0.0181, 2020: 0.0123, 2021: 0.0470, 2022: 0.0640, 2023: 0.0340, 2024: 0.0290}
+COLA_CAP = 0.03  # 3% cap from plan params
+for c in calcs:
+    if c["calc_type"] != "R":
+        continue
+    ret_yr = c["as_of_dt"].year
+    running_benefit = c["benefit"]
+    for yr in range(max(ret_yr + 1, 2015), 2025):
+        cpi = CPI_RATES.get(yr, 0.025)
+        applied = min(cpi, COLA_CAP)
+        banked = max(cpi - COLA_CAP, 0)
+        pre_amt = running_benefit
+        post_amt = round(pre_amt * (1 + applied), 2)
+        emit(
+            f"INSERT INTO src_prism.PRISM_COLA_HIST "
+            f"(COLA_ID, MBR_NBR, COLA_EFF_DT, PRE_COLA_AMT, COLA_RATE_APPL, CPI_RATE, "
+            f"BANKED_RATE, POST_COLA_AMT) VALUES "
+            f"({cola_id}, {c['mbr_nbr']}, '{yr}-01-01', {pre_amt}, {round(applied, 4)}, "
+            f"{round(cpi, 4)}, {round(banked, 4)}, {post_amt});"
+        )
+        running_benefit = post_amt
+        cola_id += 1
+        cola_rows += 1
+emit("")
+
+# ---------------------------------------------------------------------------
 # Stats
 # ---------------------------------------------------------------------------
 status_dist = {}
@@ -496,6 +854,16 @@ print(f"PMT_SCHEDULE rows:  {pmt_sched_id - 1}", file=_sys.stderr)
 print(f"PMT_HIST rows:      {len(pmt_history)}", file=_sys.stderr)
 print(f"SAL_ANNUAL rows:    {len(sal_annual)}  (pre-1998, annual only)", file=_sys.stderr)
 print(f"SAL_PERIOD rows:    {len(sal_period)}  (post-1998, biweekly)", file=_sys.stderr)
+print(f"MEMBER_ADDR rows:   {addr_rows}", file=_sys.stderr)
+print(f"SVC_CREDIT rows:    {svc_credit_rows}", file=_sys.stderr)
+print(f"CONTRIB_LEGACY:     {contrib_legacy_rows}", file=_sys.stderr)
+print(f"CONTRIB_HIST rows:  {contrib_hist_rows}", file=_sys.stderr)
+print(f"BENEFICIARY rows:   {bene_rows}", file=_sys.stderr)
+print(f"QDRO rows:          {qdro_rows}", file=_sys.stderr)
+print(f"DISABILITY rows:    {disb_rows}", file=_sys.stderr)
+print(f"NOTES rows:         {note_rows}", file=_sys.stderr)
+print(f"LIFE_EVENTS rows:   {event_rows}", file=_sys.stderr)
+print(f"COLA_HIST rows:     {cola_rows}", file=_sys.stderr)
 
 # ---------------------------------------------------------------------------
 # Write output

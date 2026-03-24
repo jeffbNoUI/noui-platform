@@ -9,24 +9,46 @@
    ═══════════════════════════════════════════════════════ */
 
 @keyframes breathe {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .portal-card {
-  background: #FFFFFF;
-  border: 1px solid #E5E2DC;
+  background: #ffffff;
+  border: 1px solid #e5e2dc;
   border-radius: 16px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .portal-card:hover {
-  border-color: #D0CEC8;
+  border-color: #d0cec8;
   box-shadow: 0 6px 24px rgba(27, 46, 74, 0.06);
 }
 
@@ -35,22 +57,25 @@
   border-radius: 10px;
   border: none;
   background: transparent;
-  color: #6B6760;
+  color: #6b6760;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  font-family:
+    'Plus Jakarta Sans',
+    -apple-system,
+    sans-serif;
 }
 
 .portal-nav-btn:hover {
   background: rgba(91, 138, 114, 0.06);
-  color: #2C2A26;
+  color: #2c2a26;
 }
 
 .portal-nav-btn.active {
-  background: #EDF5F0;
-  color: #5B8A72;
+  background: #edf5f0;
+  color: #5b8a72;
   font-weight: 600;
 }
 
@@ -60,13 +85,13 @@
   gap: 8px;
   padding: 10px 14px;
   border-radius: 12px;
-  border: 1.5px solid #E5E2DC;
-  background: #FFFFFF;
+  border: 1.5px solid #e5e2dc;
+  background: #ffffff;
   transition: border-color 0.2s ease;
 }
 
 .portal-chat-input-wrap:focus-within {
-  border-color: #5B8A72;
+  border-color: #5b8a72;
   box-shadow: 0 0 0 3px rgba(91, 138, 114, 0.1);
 }
 
@@ -76,13 +101,16 @@
   outline: none;
   background: transparent;
   font-size: 13.5px;
-  color: #2C2A26;
-  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  color: #2c2a26;
+  font-family:
+    'Plus Jakarta Sans',
+    -apple-system,
+    sans-serif;
   line-height: 1.4;
 }
 
 .portal-chat-input::placeholder {
-  color: #9C9890;
+  color: #9c9890;
 }
 
 .portal-send-btn {
@@ -90,7 +118,7 @@
   height: 32px;
   border-radius: 8px;
   border: none;
-  background: #5B8A72;
+  background: #5b8a72;
   color: #fff;
   cursor: pointer;
   display: flex;
@@ -102,7 +130,7 @@
 }
 
 .portal-send-btn:hover {
-  background: #4A7360;
+  background: #4a7360;
 }
 
 .portal-send-btn:disabled {
@@ -122,7 +150,7 @@
   top: 0;
   bottom: 0;
   width: 2px;
-  background: #EDEAE4;
+  background: #edeae4;
 }
 
 .portal-tag {
@@ -146,6 +174,6 @@
 }
 
 .portal-card ::-webkit-scrollbar-thumb {
-  background: #E5E2DC;
+  background: #e5e2dc;
   border-radius: 3px;
 }
