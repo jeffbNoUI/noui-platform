@@ -177,6 +177,24 @@ func (r *Registry) registerAll() {
 				Required:        true,
 				ExpectedNames:   []string{"granularity", "frequency", "pay_frequency", "period_type", "salary_granularity", "pay_freq_cd"},
 			},
+			{
+				CanonicalColumn: "fac_window_months",
+				DataTypeFamily:  "INTEGER",
+				Required:        false,
+				ExpectedNames:   []string{"fac_window", "fas_window", "averaging_period", "ams_window_months"},
+			},
+			{
+				CanonicalColumn: "anti_spiking_cap_pct",
+				DataTypeFamily:  "DECIMAL",
+				Required:        false,
+				ExpectedNames:   []string{"anti_spiking_cap", "compensation_cap", "salary_cap_pct", "spike_limit"},
+			},
+			{
+				CanonicalColumn: "compensation_inclusions",
+				DataTypeFamily:  "VARCHAR",
+				Required:        false,
+				ExpectedNames:   []string{"compensation_inclusions", "comp_inclusions", "pensionable_components", "pay_inclusions"},
+			},
 		},
 	})
 
@@ -269,6 +287,9 @@ func (r *Registry) registerAll() {
 		ConceptTag:     "service-credit",
 		CanonicalTable: "service_credit",
 		Description:    "Credited service years including purchased, military, and transfer service",
+		Metadata: map[string]string{
+			"benefit_model_note": "TMRS uses monetary accumulation (account balance + city match), not time-based service × multiplier × FAC",
+		},
 		Slots: []TemplateSlot{
 			{
 				CanonicalColumn: "member_id",
@@ -287,6 +308,18 @@ func (r *Registry) registerAll() {
 				DataTypeFamily:  "DECIMAL",
 				Required:        true,
 				ExpectedNames:   []string{"credited_years_total", "service_units", "credited_service_years", "years_of_service", "yos", "svc_cr_bal"},
+			},
+			{
+				CanonicalColumn: "eligibility_service_years",
+				DataTypeFamily:  "DECIMAL",
+				Required:        false,
+				ExpectedNames:   []string{"eligibility_service", "earned_service", "qualifying_service", "vesting_service", "rule_of_n_service"},
+			},
+			{
+				CanonicalColumn: "benefit_service_years",
+				DataTypeFamily:  "DECIMAL",
+				Required:        false,
+				ExpectedNames:   []string{"benefit_service", "total_service_credit", "total_credited_service", "benefit_calculation_service"},
 			},
 			{
 				CanonicalColumn: "service_type",

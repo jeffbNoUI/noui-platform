@@ -166,7 +166,10 @@ func TestServiceCreditHasNewSlots(t *testing.T) {
 		t.Fatal("service-credit not found")
 	}
 
-	wantSlots := []string{"purchased_years", "military_service_years", "transferred_service"}
+	wantSlots := []string{
+		"purchased_years", "military_service_years", "transferred_service",
+		"eligibility_service_years", "benefit_service_years",
+	}
 	slotMap := make(map[string]bool)
 	for _, slot := range tmpl.Slots {
 		slotMap[slot.CanonicalColumn] = true
@@ -176,6 +179,79 @@ func TestServiceCreditHasNewSlots(t *testing.T) {
 		if !slotMap[want] {
 			t.Errorf("service-credit missing slot %q", want)
 		}
+	}
+}
+
+func TestServiceCreditDualFields(t *testing.T) {
+	r := NewRegistry()
+	tmpl, _ := r.Get("service-credit")
+
+	for _, slot := range tmpl.Slots {
+		switch slot.CanonicalColumn {
+		case "eligibility_service_years":
+			if slot.Required {
+				t.Error("eligibility_service_years must be optional")
+			}
+			if slot.DataTypeFamily != "DECIMAL" {
+				t.Errorf("eligibility_service_years type: want DECIMAL, got %q", slot.DataTypeFamily)
+			}
+		case "benefit_service_years":
+			if slot.Required {
+				t.Error("benefit_service_years must be optional")
+			}
+			if slot.DataTypeFamily != "DECIMAL" {
+				t.Errorf("benefit_service_years type: want DECIMAL, got %q", slot.DataTypeFamily)
+			}
+		}
+	}
+}
+
+func TestSalaryHistoryFACSlots(t *testing.T) {
+	r := NewRegistry()
+	tmpl, ok := r.Get("salary-history")
+	if !ok {
+		t.Fatal("salary-history not found")
+	}
+
+	wantSlots := map[string]string{
+		"fac_window_months":       "INTEGER",
+		"anti_spiking_cap_pct":    "DECIMAL",
+		"compensation_inclusions": "VARCHAR",
+	}
+
+	slotMap := make(map[string]TemplateSlot)
+	for _, slot := range tmpl.Slots {
+		slotMap[slot.CanonicalColumn] = slot
+	}
+
+	for name, wantType := range wantSlots {
+		slot, ok := slotMap[name]
+		if !ok {
+			t.Errorf("salary-history missing slot %q", name)
+			continue
+		}
+		if slot.Required {
+			t.Errorf("slot %q must be optional", name)
+		}
+		if slot.DataTypeFamily != wantType {
+			t.Errorf("slot %q type: want %q, got %q", name, wantType, slot.DataTypeFamily)
+		}
+	}
+}
+
+func TestServiceCreditMetadata(t *testing.T) {
+	r := NewRegistry()
+	tmpl, _ := r.Get("service-credit")
+
+	if tmpl.Metadata == nil {
+		t.Fatal("service-credit Metadata is nil")
+	}
+	note, ok := tmpl.Metadata["benefit_model_note"]
+	if !ok {
+		t.Fatal("service-credit missing benefit_model_note metadata")
+	}
+	if !strings.Contains(note, "TMRS") {
+		t.Errorf("benefit_model_note should mention TMRS, got %q", note)
 	}
 }
 
