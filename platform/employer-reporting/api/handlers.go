@@ -163,10 +163,16 @@ func (h *Handler) ManualEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Resolve uploader: prefer explicit portal user ID from request, fall back to JWT sub.
+	uploaderID := req.UploadedBy
+	if uploaderID == "" {
+		uploaderID = auth.UserID(r.Context())
+	}
+
 	// Create the file record.
 	file := &erdb.ContributionFile{
 		OrgID:        req.OrgID,
-		UploadedBy:   auth.UserID(r.Context()),
+		UploadedBy:   uploaderID,
 		FileName:     "manual-entry",
 		FileType:     "MANUAL_ENTRY",
 		FileStatus:   "VALIDATING",
