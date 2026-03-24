@@ -403,14 +403,7 @@ if [ -n "$REFUND_ID" ] && [ "$REFUND_ID" != "null" ]; then
   CALC_PAYLOAD='{"interestRatePercent": "0.03"}'
   RESPONSE=$(do_post "/api/v1/terminations/refunds/${REFUND_ID}/calculate" "$CALC_PAYLOAD")
   extract_http "$RESPONSE"
-  TOTAL_COUNT=$((TOTAL_COUNT + 1))
-  if [ "$HTTP_CODE" = "200" ]; then
-    echo -e "  ${GREEN}✓${NC} POST /terminations/refunds/:id/calculate (HTTP $HTTP_CODE)"
-    PASS_COUNT=$((PASS_COUNT + 1))
-  else
-    echo -e "  ${RED}✗${NC} POST /terminations/refunds/:id/calculate — expected 200, got $HTTP_CODE"
-    FAIL_COUNT=$((FAIL_COUNT + 1))
-  fi
+  assert_status "POST /terminations/refunds/:id/calculate" "200" "$HTTP_CODE"
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
