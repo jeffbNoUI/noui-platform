@@ -317,8 +317,8 @@ func TestCountJune30s(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			hire, _ := parseDate(tt.hire)
-			term, _ := parseDate(tt.term)
+			hire, _ := parseFlexDate(tt.hire)
+			term, _ := parseFlexDate(tt.term)
 			got := countJune30s(hire, term)
 			if got != tt.expected {
 				t.Errorf("countJune30s(%s, %s) = %d, want %d", tt.hire, tt.term, got, tt.expected)
