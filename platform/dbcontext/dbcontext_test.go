@@ -288,6 +288,68 @@ func TestDBMiddleware_DefaultsApplied(t *testing.T) {
 	}
 }
 
+func TestDBMiddleware_RollbackOnHandlerError(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping DB test in -short mode")
+	}
+	db := testDB(t)
+
+	// Ensure a clean temp table exists for the test.
+	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS _dbctx_test (id TEXT PRIMARY KEY)`)
+	if err != nil {
+		t.Fatalf("create table: %v", err)
+	}
+	t.Cleanup(func() { db.Exec(`DROP TABLE IF EXISTS _dbctx_test`) })
+	db.Exec(`DELETE FROM _dbctx_test`)
+
+	extract := func(r *http.Request) Params {
+		return Params{TenantID: "tenant-rb", UserRole: "admin"}
+	}
+
+	// Handler that causes a transaction failure via duplicate key INSERT.
+	failHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		q := DB(r.Context(), db)
+		// First insert succeeds.
+		_, _ = q.ExecContext(r.Context(), `INSERT INTO _dbctx_test (id) VALUES ('dup')`)
+		// Second insert hits duplicate key — puts tx in failed state.
+		_, _ = q.ExecContext(r.Context(), `INSERT INTO _dbctx_test (id) VALUES ('dup')`)
+		w.WriteHeader(http.StatusConflict)
+	})
+
+	// Handler that does a simple read — should succeed if connection is clean.
+	readHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		q := DB(r.Context(), db)
+		var n int
+		if err := q.QueryRowContext(r.Context(), `SELECT 1`).Scan(&n); err != nil {
+			t.Errorf("read after rollback failed: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+
+	// Force the pool to a single connection so both requests use the same one.
+	db.SetMaxOpenConns(1)
+	defer db.SetMaxOpenConns(0) // restore default
+
+	failMW := DBMiddleware(db, extract)(failHandler)
+	readMW := DBMiddleware(db, extract)(readHandler)
+
+	// Request 1: trigger the failed transaction.
+	req1 := httptest.NewRequest(http.MethodPost, "/api/v1/test-fail", nil)
+	rec1 := httptest.NewRecorder()
+	failMW.ServeHTTP(rec1, req1)
+
+	// Request 2: should succeed — the deferred rollback cleaned up the connection.
+	req2 := httptest.NewRequest(http.MethodGet, "/api/v1/test-read", nil)
+	rec2 := httptest.NewRecorder()
+	readMW.ServeHTTP(rec2, req2)
+
+	if rec2.Code != http.StatusOK {
+		t.Errorf("second request status = %d, want 200 (connection should be clean after rollback)", rec2.Code)
+	}
+}
+
 func TestDBMiddleware_ErrorReturns500(t *testing.T) {
 	// Use a closed DB to force ScopedConn failure.
 	db, err := sql.Open("postgres", "host=localhost port=59999 user=x password=x dbname=x sslmode=disable")

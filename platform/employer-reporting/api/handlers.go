@@ -166,7 +166,7 @@ func (h *Handler) ManualEntry(w http.ResponseWriter, r *http.Request) {
 	// Resolve uploader: prefer explicit portal user ID from request, fall back to JWT sub.
 	uploaderID := req.UploadedBy
 	if uploaderID == "" {
-		uploaderID = auth.UserID(r.Context())
+		uploaderID = userIDOrDefault(r)
 	}
 
 	// Create the file record.
@@ -376,7 +376,7 @@ func (h *Handler) ResolveException(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.store.ResolveException(r.Context(), id, auth.UserID(r.Context()), req.Note)
+	err := h.store.ResolveException(r.Context(), id, userIDOrDefault(r), req.Note)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			apiresponse.WriteError(w, http.StatusNotFound, serviceName, "NOT_FOUND", "exception not found or already resolved")
@@ -516,7 +516,7 @@ func (h *Handler) SubmitCorrection(w http.ResponseWriter, r *http.Request) {
 	// Create correction file that references the original.
 	file := &erdb.ContributionFile{
 		OrgID:          req.OrgID,
-		UploadedBy:     auth.UserID(r.Context()),
+		UploadedBy:     userIDOrDefault(r),
 		FileName:       "correction",
 		FileType:       "MANUAL_ENTRY",
 		FileStatus:     "UPLOADED",
@@ -578,6 +578,34 @@ func strPtrNonEmpty(s string) *string {
 		return nil
 	}
 	return &s
+}
+
+// defaultUserID is used when the JWT sub claim is absent or not a valid UUID
+// to avoid PostgreSQL rejecting it on UUID-typed columns.
+const defaultUserID = "00000000-0000-0000-0000-000000000001"
+
+// uuidLen is 36: 8-4-4-4-12 hex digits with hyphens.
+func isUUID(s string) bool {
+	if len(s) != 36 {
+		return false
+	}
+	for i, c := range s {
+		if i == 8 || i == 13 || i == 18 || i == 23 {
+			if c != '-' {
+				return false
+			}
+		} else if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return false
+		}
+	}
+	return true
+}
+
+func userIDOrDefault(r *http.Request) string {
+	if uid := auth.UserID(r.Context()); uid != "" && isUUID(uid) {
+		return uid
+	}
+	return defaultUserID
 }
 
 func sumAmounts(entry erdb.ManualEntryRecord) string {

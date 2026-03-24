@@ -8,7 +8,8 @@
 # CI-ready: exit 0 on pass, exit 1 on fail.
 set -euo pipefail
 
-HEALTHAGG_URL="http://localhost:8091"
+# Route through nginx proxy — no direct host port access to services
+HEALTHAGG_URL="http://localhost:3000"
 TIMEOUT=120
 POLL_INTERVAL=5
 PASS=0
@@ -32,25 +33,21 @@ docker compose up -d --build 2>&1 | tail -5
 
 # ─── Phase 2: Wait for healthagg ─────────────────────────────────────────────
 echo ""
-echo "--- Phase 2: Wait for healthagg ---"
+echo "--- Phase 2: Wait for nginx + healthagg ---"
 elapsed=0
 while true; do
-  if curl -sf "${HEALTHAGG_URL}/healthz" > /dev/null 2>&1; then
-    echo "  healthagg reachable after ${elapsed}s"
+  if curl -sf "${HEALTHAGG_URL}/api/v1/health/aggregate" > /dev/null 2>&1; then
+    echo "  health aggregate reachable via nginx after ${elapsed}s"
     break
   fi
   if [ "$elapsed" -ge "$TIMEOUT" ]; then
-    echo "  FATAL: healthagg not reachable after ${TIMEOUT}s"
-    docker compose logs healthagg 2>&1 | tail -20
+    echo "  FATAL: health aggregate not reachable after ${TIMEOUT}s"
+    docker compose logs frontend healthagg 2>&1 | tail -30
     exit 1
   fi
   sleep "$POLL_INTERVAL"
   elapsed=$((elapsed + POLL_INTERVAL))
 done
-
-# Give all backend services time to finish starting and become healthy
-echo "  Waiting 10s for all services to stabilize..."
-sleep 10
 
 # ─── Phase 3: Aggregate health check ────────────────────────────────────────
 echo ""

@@ -459,7 +459,7 @@ func TestQuoteIdent_ValidIdentifiers(t *testing.T) {
 	}{
 		{"members", `"members"`},
 		{"first_name", `"first_name"`},
-		{"src_pas.member", `"src_pas.member"`},
+		{"src_pas.member", `"src_pas"."member"`},
 		{"BIRTH_DT", `"BIRTH_DT"`},
 		{"col1", `"col1"`},
 	}

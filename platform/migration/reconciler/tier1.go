@@ -12,14 +12,14 @@ const tier1Query = `
 SELECT
 	cm.member_id,
 	cm.member_status,
-	sc.yos_used,
-	sc.fas_used,
-	sc.age_at_calc,
-	sc.plan_code,
-	sc.stored_benefit,
-	cm.canonical_benefit
-FROM canonical_members cm
-JOIN stored_calculations sc ON sc.member_id = cm.member_id
+	COALESCE(sc.yos_used, '0'),
+	COALESCE(sc.fas_used, '0'),
+	COALESCE(sc.age_at_calc, 0),
+	COALESCE(sc.plan_code, 'DB_MAIN'),
+	COALESCE(sc.stored_benefit, '0'),
+	COALESCE(cm.canonical_benefit, '0')
+FROM migration.canonical_members cm
+JOIN migration.stored_calculations sc ON sc.member_id = cm.member_id AND sc.batch_id = cm.batch_id
 WHERE cm.batch_id = $1
 ORDER BY cm.member_id
 `
@@ -40,7 +40,7 @@ type tier1Row struct {
 // members in a batch. It recomputes each member's benefit from stored inputs,
 // then compares the recomputed value against both the legacy stored value and
 // the canonical migrated value.
-func ReconcileTier1(db *sql.DB, batchID string) ([]ReconciliationResult, error) {
+func ReconcileTier1(db *sql.DB, batchID string, planConfig *PlanConfig) ([]ReconciliationResult, error) {
 	rows, err := db.Query(tier1Query, batchID)
 	if err != nil {
 		return nil, fmt.Errorf("reconciler: tier1 query failed: %w", err)
@@ -64,7 +64,7 @@ func ReconcileTier1(db *sql.DB, batchID string) ([]ReconciliationResult, error) 
 			return nil, fmt.Errorf("reconciler: tier1 scan failed: %w", err)
 		}
 
-		result, err := reconcileTier1Row(r, batchID)
+		result, err := reconcileTier1Row(r, batchID, planConfig)
 		if err != nil {
 			// Record the error as an ERROR-category result rather than
 			// aborting the entire batch.
@@ -91,7 +91,7 @@ func ReconcileTier1(db *sql.DB, batchID string) ([]ReconciliationResult, error) 
 // reconcileTier1Row processes a single member's stored calculation data:
 // recomputes the benefit, compares against the source (legacy) stored value,
 // and returns a ReconciliationResult based on the variance.
-func reconcileTier1Row(r tier1Row, batchID string) (*ReconciliationResult, error) {
+func reconcileTier1Row(r tier1Row, batchID string, planConfig *PlanConfig) (*ReconciliationResult, error) {
 	yos := new(big.Rat)
 	if _, ok := yos.SetString(r.YOSUsed); !ok {
 		return nil, fmt.Errorf("invalid yos_used %q for member %s", r.YOSUsed, r.MemberID)
@@ -102,7 +102,7 @@ func reconcileTier1Row(r tier1Row, batchID string) (*ReconciliationResult, error
 		return nil, fmt.Errorf("invalid fas_used %q for member %s", r.FASUsed, r.MemberID)
 	}
 
-	recomputed := RecomputeFromStoredInputs(yos, fas, r.AgeAtCalc, r.PlanCode)
+	recomputed := RecomputeFromStoredInputs(yos, fas, r.AgeAtCalc, r.PlanCode, planConfig)
 	if recomputed == nil {
 		return nil, fmt.Errorf("unknown plan_code %q for member %s", r.PlanCode, r.MemberID)
 	}

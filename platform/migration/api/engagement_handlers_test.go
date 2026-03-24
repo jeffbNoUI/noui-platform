@@ -11,10 +11,11 @@ import (
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
 )
 
-// engagementCols matches the 9-column RETURNING clause used by engagement queries.
+// engagementCols matches the 10-column RETURNING clause used by engagement queries.
 var engagementCols = []string{
 	"engagement_id", "tenant_id", "source_system_name", "canonical_schema_version",
-	"status", "quality_baseline_approved_at", "source_connection", "created_at", "updated_at",
+	"status", "source_platform_type", "quality_baseline_approved_at", "source_connection",
+	"created_at", "updated_at",
 }
 
 // newTestHandler creates a Handler backed by a sqlmock DB.
@@ -51,10 +52,10 @@ func TestCreateEngagement_Success(t *testing.T) {
 	now := time.Now().UTC()
 
 	mock.ExpectQuery("INSERT INTO migration.engagement").
-		WithArgs(defaultTenantID, "LegacyPAS").
+		WithArgs(defaultTenantID, "LegacyPAS", nil).
 		WillReturnRows(sqlmock.NewRows(engagementCols).AddRow(
 			"eng-001", defaultTenantID, "LegacyPAS", "1.0",
-			"PROFILING", nil, nil, now, now,
+			"PROFILING", nil, nil, nil, now, now,
 		))
 
 	body, _ := json.Marshal(map[string]string{"source_system_name": "LegacyPAS"})
@@ -126,7 +127,7 @@ func TestGetEngagement_Success(t *testing.T) {
 		WithArgs("eng-001").
 		WillReturnRows(sqlmock.NewRows(engagementCols).AddRow(
 			"eng-001", "tenant-1", "LegacyPAS", "1.0",
-			"PROFILING", nil, nil, now, now,
+			"PROFILING", nil, nil, nil, now, now,
 		))
 
 	w := serve(h, "GET", "/api/v1/migration/engagements/eng-001", nil)
@@ -167,14 +168,14 @@ func TestUpdateEngagement_ValidTransition(t *testing.T) {
 		WithArgs("eng-001").
 		WillReturnRows(sqlmock.NewRows(engagementCols).AddRow(
 			"eng-001", "tenant-1", "LegacyPAS", "1.0",
-			"PROFILING", nil, nil, now, now,
+			"PROFILING", nil, nil, nil, now, now,
 		))
 	// Then: UPDATE to MAPPING
 	mock.ExpectQuery("UPDATE migration.engagement").
 		WithArgs("eng-001", "MAPPING").
 		WillReturnRows(sqlmock.NewRows(engagementCols).AddRow(
 			"eng-001", "tenant-1", "LegacyPAS", "1.0",
-			"MAPPING", nil, nil, now, now,
+			"MAPPING", nil, nil, nil, now, now,
 		))
 
 	body, _ := json.Marshal(map[string]string{"status": "MAPPING"})
@@ -197,7 +198,7 @@ func TestUpdateEngagement_InvalidTransition(t *testing.T) {
 		WithArgs("eng-001").
 		WillReturnRows(sqlmock.NewRows(engagementCols).AddRow(
 			"eng-001", "tenant-1", "LegacyPAS", "1.0",
-			"PROFILING", nil, nil, now, now,
+			"PROFILING", nil, nil, nil, now, now,
 		))
 
 	body, _ := json.Marshal(map[string]string{"status": "TRANSFORMING"})
@@ -241,8 +242,8 @@ func TestListEngagements_Success(t *testing.T) {
 	now := time.Now().UTC()
 
 	rows := sqlmock.NewRows(engagementCols).
-		AddRow("eng-002", defaultTenantID, "SystemB", "1.0", "PROFILING", nil, nil, now, now).
-		AddRow("eng-001", defaultTenantID, "SystemA", "1.0", "MAPPING", nil, nil, now.Add(-time.Hour), now)
+		AddRow("eng-002", defaultTenantID, "SystemB", "1.0", "PROFILING", nil, nil, nil, now, now).
+		AddRow("eng-001", defaultTenantID, "SystemA", "1.0", "MAPPING", nil, nil, nil, now.Add(-time.Hour), now)
 
 	mock.ExpectQuery("SELECT .+ FROM migration.engagement").
 		WithArgs(defaultTenantID).

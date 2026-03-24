@@ -7,14 +7,17 @@ import (
 
 	"github.com/noui/platform/apiresponse"
 	"github.com/noui/platform/migration/intelligence"
+	"github.com/noui/platform/migration/reconciler"
 	"github.com/noui/platform/migration/ws"
 )
 
 // Handler holds dependencies for API handlers.
 type Handler struct {
 	DB          *sql.DB
-	IntelClient intelligence.Scorer // nil-safe: handlers degrade to template-only if nil
-	Hub         *ws.Hub             // WebSocket hub for broadcasting events (nil-safe)
+	IntelClient intelligence.Scorer    // nil-safe: handlers degrade to template-only if nil
+	Analyzer    intelligence.Analyzer  // nil-safe: pattern detection degrades if nil
+	Hub         *ws.Hub                // WebSocket hub for broadcasting events (nil-safe)
+	PlanConfig  *reconciler.PlanConfig // nil-safe: reconciliation degrades if not loaded
 }
 
 // NewHandler creates a Handler with the given database connection.
@@ -56,6 +59,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/batches", h.CreateBatch)
 	mux.HandleFunc("GET /api/v1/migration/batches/{id}", h.GetBatch)
 	mux.HandleFunc("GET /api/v1/migration/batches/{id}/exceptions", h.ListExceptions)
+	mux.HandleFunc("POST /api/v1/migration/batches/{id}/execute", h.ExecuteBatchHandler)
 
 	// Retransform
 	mux.HandleFunc("POST /api/v1/migration/batches/{id}/retransform", h.RetransformBatch)
@@ -64,6 +68,8 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/migration/batches/{id}/reconcile", h.ReconcileBatch)
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/reconciliation", h.GetReconciliation)
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/reconciliation/p1", h.GetP1Issues)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/reconciliation/patterns", h.GetReconciliationPatterns)
+	mux.HandleFunc("PATCH /api/v1/migration/reconciliation/patterns/{id}/resolve", h.ResolvePattern)
 
 	// Dashboard
 	mux.HandleFunc("GET /api/v1/migration/dashboard/summary", h.DashboardSummary)
@@ -108,6 +114,20 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/ai/batch-sizing", h.HandleGetBatchSizing)
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/ai/remediation", h.HandleGetRemediation)
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/reconciliation/root-cause", h.HandleGetRootCause)
+
+	// Coverage report (target-anchored profiling)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/coverage-report", h.CoverageReport)
+
+	// Mapping specification document (auditable artifact)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/reports/mapping-spec", h.MappingSpec)
+
+	// Certification
+	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/certify", h.HandleCertify)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/certification", h.HandleGetCertification)
+
+	// Lineage
+	mux.HandleFunc("GET /api/v1/migration/batches/{id}/lineage", h.HandleGetLineage)
+	mux.HandleFunc("GET /api/v1/migration/batches/{id}/lineage/summary", h.HandleGetLineageSummary)
 
 	// Notifications
 	mux.HandleFunc("GET /api/v1/migration/notifications", h.HandleGetNotifications)

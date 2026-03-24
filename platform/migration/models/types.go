@@ -66,6 +66,7 @@ type Engagement struct {
 	SourceSystemName          string            `json:"source_system_name"`
 	CanonicalSchemaVersion    string            `json:"canonical_schema_version"`
 	Status                    EngagementStatus  `json:"status"`
+	SourcePlatformType        *string           `json:"source_platform_type"`
 	QualityBaselineApprovedAt *time.Time        `json:"quality_baseline_approved_at"`
 	SourceConnection          *SourceConnection `json:"source_connection"`
 	CreatedAt                 time.Time         `json:"created_at"`
@@ -74,12 +75,14 @@ type Engagement struct {
 
 // CreateEngagementRequest is the JSON body for creating a new engagement.
 type CreateEngagementRequest struct {
-	SourceSystemName string `json:"source_system_name"`
+	SourceSystemName   string  `json:"source_system_name"`
+	SourcePlatformType *string `json:"source_platform_type,omitempty"`
 }
 
 // UpdateEngagementRequest is the JSON body for updating an engagement.
 type UpdateEngagementRequest struct {
-	Status string `json:"status,omitempty"`
+	Status             string  `json:"status,omitempty"`
+	SourcePlatformType *string `json:"source_platform_type,omitempty"`
 }
 
 // Risk represents a migration risk (dynamic or analyst-created).
@@ -288,9 +291,31 @@ type Notification struct {
 
 // RootCauseResponse contains a root-cause analysis for reconciliation mismatches.
 type RootCauseResponse struct {
-	Analysis      string  `json:"analysis"`
-	AffectedCount int     `json:"affected_count"`
-	Confidence    float64 `json:"confidence"`
+	Analysis      string                  `json:"analysis"`
+	AffectedCount int                     `json:"affected_count"`
+	Confidence    float64                 `json:"confidence"`
+	Patterns      []ReconciliationPattern `json:"patterns,omitempty"`
+}
+
+// ReconciliationPattern represents a systematic mismatch pattern detected by
+// the intelligence service after reconciliation.
+type ReconciliationPattern struct {
+	PatternID        string   `json:"pattern_id"`
+	BatchID          string   `json:"batch_id"`
+	SuspectedDomain  string   `json:"suspected_domain"`
+	PlanCode         string   `json:"plan_code"`
+	Direction        string   `json:"direction"`
+	MemberCount      int      `json:"member_count"`
+	MeanVariance     string   `json:"mean_variance"`
+	CoefficientOfVar float64  `json:"coefficient_of_var"`
+	AffectedMembers  []string `json:"affected_members"`
+	CorrectionType   *string  `json:"correction_type"`
+	AffectedField    *string  `json:"affected_field"`
+	Confidence       *float64 `json:"confidence"`
+	Evidence         *string  `json:"evidence"`
+	Resolved         bool     `json:"resolved"`
+	ResolvedAt       *string  `json:"resolved_at"`
+	CreatedAt        string   `json:"created_at"`
 }
 
 // MigrationBatch represents a transformation batch.
@@ -327,8 +352,50 @@ type MigrationException struct {
 	ResolvedAt         *time.Time `json:"resolved_at"`
 }
 
+// CertificationRecord represents a parallel run Go/No-Go certification.
+type CertificationRecord struct {
+	ID            string                 `json:"id"`
+	EngagementID  string                 `json:"engagement_id"`
+	GateScore     float64                `json:"gate_score"`
+	P1Count       int                    `json:"p1_count"`
+	ChecklistJSON map[string]interface{} `json:"checklist_json"`
+	CertifiedBy   string                 `json:"certified_by"`
+	CertifiedAt   time.Time              `json:"certified_at"`
+	Notes         string                 `json:"notes,omitempty"`
+	CreatedAt     time.Time              `json:"created_at"`
+}
+
+// CertifyRequest is the JSON body for creating a certification record.
+type CertifyRequest struct {
+	GateScore float64                `json:"gate_score"`
+	P1Count   int                    `json:"p1_count"`
+	Checklist map[string]interface{} `json:"checklist"`
+	Notes     string                 `json:"notes,omitempty"`
+}
+
 // CreateBatchRequest is the JSON body for creating a transformation batch.
 type CreateBatchRequest struct {
 	BatchScope     string `json:"batch_scope"`
 	MappingVersion string `json:"mapping_version"`
+}
+
+// LineageRecord represents a single data lineage entry tracking a transformation.
+type LineageRecord struct {
+	LineageID   string `json:"lineage_id"`
+	BatchID     string `json:"batch_id"`
+	RowKey      string `json:"row_key"`
+	HandlerName string `json:"handler_name"`
+	ColumnName  string `json:"column_name"`
+	SourceValue string `json:"source_value"`
+	ResultValue string `json:"result_value"`
+	CreatedAt   string `json:"created_at"`
+}
+
+// LineageSummary provides aggregate statistics for lineage records in a batch.
+type LineageSummary struct {
+	TotalRecords        int      `json:"total_records"`
+	UniqueMembers       int      `json:"unique_members"`
+	FieldsCovered       int      `json:"fields_covered"`
+	TransformationTypes []string `json:"transformation_types"`
+	ExceptionCount      int      `json:"exception_count"`
 }

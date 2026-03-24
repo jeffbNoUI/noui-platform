@@ -1,0 +1,9 @@
+{
+  "available_scenarios": [
+    "baseline",
+    "multi_migration_legacy",
+    "code_table_chaos",
+    "bad_payroll_system"
+  ],
+  "recommended_start": "python generate_pas_scenarios.py --members 500 --scenario multi_migration_legacy --output-dir ./pas_seed_output"
+}

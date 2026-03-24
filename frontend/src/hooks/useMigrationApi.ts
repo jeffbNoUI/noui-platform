@@ -33,6 +33,7 @@ import type {
   AttentionSummary,
   GateStatusResponse,
   RootCauseResponse,
+  ReconciliationPattern,
   AdvancePhaseRequest,
   RegressPhaseRequest,
 } from '@/types/Migration';
@@ -57,6 +58,11 @@ export function useEngagements() {
   return useQuery<MigrationEngagement[]>({
     queryKey: ['migration', 'engagements'],
     queryFn: () => migrationAPI.listEngagements(),
+    select: (data) =>
+      data.map((e) => ({
+        ...e,
+        status: (e.status?.toUpperCase() ?? e.status) as MigrationEngagement['status'],
+      })),
   });
 }
 
@@ -65,6 +71,10 @@ export function useEngagement(id: string) {
     queryKey: ['migration', 'engagement', id],
     queryFn: () => migrationAPI.getEngagement(id),
     enabled: !!id,
+    select: (data) => ({
+      ...data,
+      status: (data.status?.toUpperCase() ?? data.status) as MigrationEngagement['status'],
+    }),
   });
 }
 
@@ -85,18 +95,24 @@ export function useCodeMappings(engagementId: string) {
 }
 
 export function useReconciliation(engagementId: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return useQuery<Reconciliation[]>({
     queryKey: ['migration', 'reconciliation', engagementId],
     queryFn: () => migrationAPI.getReconciliation(engagementId),
     enabled: !!engagementId,
+    // API returns { records: [...], count, engagement_id } — extract the array
+    select: (data) => (Array.isArray(data) ? data : ((data as any)?.records ?? [])),
   });
 }
 
 export function useP1Issues(engagementId: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return useQuery<Reconciliation[]>({
     queryKey: ['migration', 'p1-issues', engagementId],
     queryFn: () => migrationAPI.getP1Issues(engagementId),
     enabled: !!engagementId,
+    // API returns { p1_issues: [...], count, engagement_id } — extract the array
+    select: (data) => (Array.isArray(data) ? data : ((data as any)?.p1_issues ?? [])),
   });
 }
 
@@ -109,10 +125,12 @@ export function useReconciliationSummary(engagementId: string) {
 }
 
 export function useReconciliationByTier(engagementId: string, tier: number) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return useQuery<Reconciliation[]>({
     queryKey: ['migration', 'recon-tier', engagementId, tier],
     queryFn: () => migrationAPI.getReconciliationByTier(engagementId, tier),
     enabled: !!engagementId,
+    select: (data) => (Array.isArray(data) ? data : ((data as any)?.records ?? [])),
   });
 }
 
@@ -296,6 +314,17 @@ export function useApplyCluster() {
   });
 }
 
+export function useExecuteBatch() {
+  const queryClient = useQueryClient();
+  return useMutation<MigrationBatch, Error, string>({
+    mutationFn: (batchId) => migrationAPI.executeBatch(batchId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['migration', 'batch'] });
+      queryClient.invalidateQueries({ queryKey: ['migration', 'engagement'] });
+    },
+  });
+}
+
 export function useRetransformBatch() {
   const queryClient = useQueryClient();
   return useMutation<MigrationBatch, Error, string>({
@@ -461,6 +490,58 @@ export function useRootCauseAnalysis(engagementId: string | undefined) {
   return useQuery<RootCauseResponse>({
     queryKey: ['migration', 'ai', 'root-cause', engagementId],
     queryFn: () => migrationAPI.getRootCauseAnalysis(engagementId!),
+    enabled: !!engagementId,
+    staleTime: 60_000,
+  });
+}
+
+export function useResolvePattern() {
+  const queryClient = useQueryClient();
+  return useMutation<ReconciliationPattern, Error, string>({
+    mutationFn: (patternId) => migrationAPI.resolvePattern(patternId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['migration', 'patterns'] });
+    },
+  });
+}
+
+// ─── Certification hooks ────────────────────────────────────────────────────
+
+export function useCertification(engagementId: string) {
+  return useQuery<Record<string, unknown> | null>({
+    queryKey: ['migration', 'certification', engagementId],
+    queryFn: () => migrationAPI.getCertification(engagementId),
+    enabled: !!engagementId,
+  });
+}
+
+export function useCertifyEngagement() {
+  const queryClient = useQueryClient();
+  return useMutation<
+    void,
+    Error,
+    {
+      engagementId: string;
+      body: {
+        gate_score: number;
+        p1_count: number;
+        checklist: Record<string, boolean>;
+        notes?: string;
+      };
+    }
+  >({
+    mutationFn: ({ engagementId, body }) => migrationAPI.certifyEngagement(engagementId, body),
+    onSuccess: (_, { engagementId }) => {
+      queryClient.invalidateQueries({ queryKey: ['migration', 'certification', engagementId] });
+      queryClient.invalidateQueries({ queryKey: ['migration', 'engagement', engagementId] });
+    },
+  });
+}
+
+export function useReconciliationPatterns(engagementId: string | undefined) {
+  return useQuery<{ patterns: ReconciliationPattern[]; count: number }>({
+    queryKey: ['migration', 'reconciliation', 'patterns', engagementId],
+    queryFn: () => migrationAPI.getReconciliationPatterns(engagementId!),
     enabled: !!engagementId,
     staleTime: 60_000,
   });

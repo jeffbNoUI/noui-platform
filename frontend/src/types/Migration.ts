@@ -57,6 +57,7 @@ export interface MigrationEngagement {
   source_system_name: string;
   canonical_schema_version: string;
   status: EngagementStatus;
+  source_platform_type: string | null;
   quality_baseline_approved_at: string | null;
   source_connection: SourceConnection | null;
   created_at: string;
@@ -355,14 +356,35 @@ export interface RootCauseResponse {
   confidence: number;
 }
 
+export interface ReconciliationPattern {
+  pattern_id: string;
+  batch_id: string;
+  suspected_domain: string;
+  plan_code: string;
+  direction: string;
+  member_count: number;
+  mean_variance: string;
+  coefficient_of_var: number;
+  affected_members: string[];
+  correction_type: string | null;
+  affected_field: string | null;
+  confidence: number | null;
+  evidence: string | null;
+  resolved: boolean;
+  resolved_at: string | null;
+  created_at: string;
+}
+
 // ─── Request Types ──────────────────────────────────────────────────────────
 
 export interface CreateEngagementRequest {
   source_system_name: string;
+  source_platform_type?: string;
 }
 
 export interface UpdateEngagementRequest {
   status?: EngagementStatus;
+  source_platform_type?: string;
 }
 
 export interface CreateRiskRequest {
@@ -450,4 +472,89 @@ export interface GenerateMappingsSummary {
   template_only: number;
   signal_only: number;
   auto_approved: number;
+}
+
+// ─── Coverage Report (Target-Anchored Profiling) ────────────────────────────
+
+export type CoverageStatus = 'COVERED' | 'TRANSFORMABLE' | 'UNCOVERED';
+
+export interface SourceCandidate {
+  source_table: string;
+  source_column: string;
+  confidence: number;
+  match_method: string;
+  type_compatible: boolean;
+}
+
+export interface CanonicalFieldCoverage {
+  canonical_table: string;
+  canonical_column: string;
+  required: boolean;
+  data_type_family: string;
+  status: CoverageStatus;
+  candidates: SourceCandidate[];
+  best_confidence: number;
+}
+
+export interface CoverageReport {
+  engagement_id: string;
+  total_canonical: number;
+  covered: number;
+  transformable: number;
+  uncovered: number;
+  coverage_rate: number;
+  required_gaps: number;
+  fields: CanonicalFieldCoverage[];
+}
+
+// ─── Mapping Specification Document ─────────────────────────────────────────
+
+export interface FieldMappingSpec {
+  source_table: string;
+  source_column: string;
+  canonical_column: string;
+  confidence: number;
+  agreement_status: string;
+  approval_status: string;
+  approved_by?: string;
+}
+
+export interface CodeMappingSpec {
+  source_table: string;
+  source_column: string;
+  source_value: string;
+  canonical_value: string;
+  approved_by?: string;
+}
+
+export interface TableMappingSpec {
+  canonical_table: string;
+  field_mappings: FieldMappingSpec[];
+  code_mappings: CodeMappingSpec[];
+  exception_count: number;
+}
+
+export interface MappingSpecReport {
+  engagement_id: string;
+  source_system: string;
+  generated_at: string;
+  schema_version: string;
+  tables: TableMappingSpec[];
+  total_mappings: number;
+  approved_count: number;
+  pending_count: number;
+  rejected_count: number;
+  code_mappings: number;
+  assumptions: string[];
+  exclusions: string[];
+}
+
+// ─── Pattern Detection ──────────────────────────────────────────────────────
+
+export interface DetectedPattern {
+  column: string;
+  pattern: string;
+  label: string;
+  match_rate: number;
+  sample_size: number;
 }

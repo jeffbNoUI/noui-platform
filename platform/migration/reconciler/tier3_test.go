@@ -29,7 +29,7 @@ func expectEmptyTier3Queries(mock sqlmock.Sqlmock, batchID string) {
 		WithArgs(batchID).
 		WillReturnRows(sqlmock.NewRows(tier3ContributionColumns).AddRow("0"))
 	// Query 3: service credit
-	mock.ExpectQuery("SELECT member_id, service_credit_years").
+	mock.ExpectQuery("SELECT member_id, COALESCE").
 		WithArgs(batchID).
 		WillReturnRows(sqlmock.NewRows(tier3ServiceCreditColumns))
 	// Query 4: status count
@@ -62,7 +62,7 @@ func TestReconcileTier3_SalaryOutlierDetected(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows(tier3ContributionColumns).AddRow("50000.00"))
 
 	// Service credit — empty
-	mock.ExpectQuery("SELECT member_id, service_credit_years").
+	mock.ExpectQuery("SELECT member_id, COALESCE").
 		WithArgs("batch-t3-001").
 		WillReturnRows(sqlmock.NewRows(tier3ServiceCreditColumns))
 
@@ -132,7 +132,7 @@ func TestReconcileTier3_NoSalaryOutliers(t *testing.T) {
 		WithArgs("batch-t3-002").
 		WillReturnRows(sqlmock.NewRows(tier3ContributionColumns).AddRow("10000.00"))
 
-	mock.ExpectQuery("SELECT member_id, service_credit_years").
+	mock.ExpectQuery("SELECT member_id, COALESCE").
 		WithArgs("batch-t3-002").
 		WillReturnRows(sqlmock.NewRows(tier3ServiceCreditColumns))
 
@@ -174,7 +174,7 @@ func TestReconcileTier3_ContributionTotalMatch(t *testing.T) {
 		WithArgs("batch-t3-003").
 		WillReturnRows(sqlmock.NewRows(tier3ContributionColumns).AddRow("125000.50"))
 
-	mock.ExpectQuery("SELECT member_id, service_credit_years").
+	mock.ExpectQuery("SELECT member_id, COALESCE").
 		WithArgs("batch-t3-003").
 		WillReturnRows(sqlmock.NewRows(tier3ServiceCreditColumns))
 
@@ -214,7 +214,7 @@ func TestReconcileTier3_ContributionTotalMismatch(t *testing.T) {
 		WithArgs("batch-t3-004").
 		WillReturnRows(sqlmock.NewRows(tier3ContributionColumns).AddRow("125500.00"))
 
-	mock.ExpectQuery("SELECT member_id, service_credit_years").
+	mock.ExpectQuery("SELECT member_id, COALESCE").
 		WithArgs("batch-t3-004").
 		WillReturnRows(sqlmock.NewRows(tier3ServiceCreditColumns))
 
@@ -275,7 +275,7 @@ func TestReconcileTier3_ServiceCreditDiscrepancy(t *testing.T) {
 	// Member with 10 years credit but only ~8 years employment span (25% discrepancy)
 	start := time.Date(2015, 1, 1, 0, 0, 0, 0, time.UTC)
 	end := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC) // ~8 years
-	mock.ExpectQuery("SELECT member_id, service_credit_years").
+	mock.ExpectQuery("SELECT member_id, COALESCE").
 		WithArgs("batch-t3-005").
 		WillReturnRows(sqlmock.NewRows(tier3ServiceCreditColumns).
 			AddRow("M050", 10.0, start, end))
@@ -337,7 +337,7 @@ func TestReconcileTier3_MemberCountMismatch(t *testing.T) {
 		WithArgs("batch-t3-006").
 		WillReturnRows(sqlmock.NewRows(tier3ContributionColumns).AddRow("0"))
 
-	mock.ExpectQuery("SELECT member_id, service_credit_years").
+	mock.ExpectQuery("SELECT member_id, COALESCE").
 		WithArgs("batch-t3-006").
 		WillReturnRows(sqlmock.NewRows(tier3ServiceCreditColumns))
 
@@ -437,7 +437,7 @@ func TestReconcileTier3_AllChecksClean(t *testing.T) {
 	// Service credit matches employment span (~10 years each, within 10%)
 	start := time.Date(2013, 6, 1, 0, 0, 0, 0, time.UTC)
 	end := time.Date(2023, 6, 1, 0, 0, 0, 0, time.UTC) // ~10 years
-	mock.ExpectQuery("SELECT member_id, service_credit_years").
+	mock.ExpectQuery("SELECT member_id, COALESCE").
 		WithArgs("batch-t3-clean").
 		WillReturnRows(sqlmock.NewRows(tier3ServiceCreditColumns).
 			AddRow("M001", 10.0, start, end).
@@ -516,7 +516,7 @@ func TestReconcileTier3_ServiceCreditNoDiscrepancy(t *testing.T) {
 	// Member with matching service credit and employment span
 	start := time.Date(2013, 1, 1, 0, 0, 0, 0, time.UTC)
 	end := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC) // ~10 years
-	mock.ExpectQuery("SELECT member_id, service_credit_years").
+	mock.ExpectQuery("SELECT member_id, COALESCE").
 		WithArgs("batch-t3-svc").
 		WillReturnRows(sqlmock.NewRows(tier3ServiceCreditColumns).
 			AddRow("M060", 10.0, start, end))

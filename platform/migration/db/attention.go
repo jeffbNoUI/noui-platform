@@ -28,8 +28,8 @@ func GetAttentionItems(db *sql.DB, engagementID string, priority, source *string
 		       COALESCE(r.priority, 'P2') AS priority, r.calc_name AS summary,
 		       COALESCE('Legacy: ' || r.legacy_value || ' vs Recomputed: ' || r.recomputed_value, '') AS detail,
 		       '' AS suggested_action,
-		       r.batch_id::text AS batch_id, $1 AS engagement_id,
-		       '' AS created_at, (r.resolved) AS resolved
+		       r.batch_id::text AS batch_id, $1::text AS engagement_id,
+		       '' AS created_at, FALSE AS resolved
 		FROM migration.reconciliation r
 		JOIN migration.batch b ON r.batch_id = b.batch_id
 		WHERE b.engagement_id = $1 AND r.priority = 'P1'

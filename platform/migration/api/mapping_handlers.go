@@ -1,18 +1,22 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/noui/platform/apiresponse"
+	"github.com/noui/platform/auth"
 	migrationdb "github.com/noui/platform/migration/db"
 	"github.com/noui/platform/migration/intelligence"
 	"github.com/noui/platform/migration/mapper"
+	"github.com/noui/platform/migration/models"
 )
 
 // --- Request / Response types ---
@@ -103,9 +107,25 @@ func (h *Handler) GenerateMappings(w http.ResponseWriter, r *http.Request) {
 		apiresponse.WriteError(w, http.StatusBadRequest, "migration", "INVALID_BODY", "invalid JSON body")
 		return
 	}
+
+	// Auto-discover tables from source when none provided.
 	if len(req.Tables) == 0 {
-		apiresponse.WriteError(w, http.StatusBadRequest, "migration", "VALIDATION_ERROR", "at least one table is required")
-		return
+		if engagement.SourceConnection == nil {
+			apiresponse.WriteError(w, http.StatusBadRequest, "migration", "NO_SOURCE", "no source connection configured")
+			return
+		}
+		discovered, err := autoDiscoverMappingTables(engagement.SourceConnection)
+		if err != nil {
+			slog.Error("failed to auto-discover tables for mapping", "error", err, "engagement_id", id)
+			apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "DISCOVERY_FAILED", "failed to auto-discover tables: "+err.Error())
+			return
+		}
+		if len(discovered) == 0 {
+			apiresponse.WriteError(w, http.StatusBadRequest, "migration", "NO_TABLES", "no tables found in source database matching known concept tags")
+			return
+		}
+		req.Tables = discovered
+		slog.Info("auto-discovered tables for mapping", "count", len(discovered), "engagement_id", id)
 	}
 
 	registry := mapper.NewRegistry()
@@ -359,4 +379,132 @@ func (h *Handler) UpdateMapping(w http.ResponseWriter, r *http.Request) {
 	}
 
 	apiresponse.WriteSuccess(w, http.StatusOK, "migration", m)
+
+	// Record mapping decision for corpus learning (fire-and-forget).
+	if h.Analyzer != nil {
+		if recorder, ok := h.Analyzer.(intelligence.CorpusRecorder); ok {
+			go func() {
+				ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+				defer cancel()
+				if err := recorder.RecordDecision(ctx, intelligence.RecordDecisionRequest{
+					TenantID:        auth.TenantID(r.Context()),
+					SourceColumn:    m.SourceColumn,
+					CanonicalColumn: m.CanonicalColumn,
+					Decision:        strings.ToLower(req.ApprovalStatus),
+				}); err != nil {
+					slog.Warn("failed to record mapping decision", "error", err, "mapping_id", mappingID)
+				}
+			}()
+		}
+	}
+}
+
+// conceptTagHeuristics maps table name substrings to concept tags.
+var conceptTagHeuristics = map[string]string{
+	"member":      "employee-master",
+	"employee":    "employee-master",
+	"participant": "employee-master",
+	"sal_":        "salary-history",
+	"salary":      "salary-history",
+	"earning":     "salary-history",
+	"emp_spell":   "employment-timeline",
+	"employment":  "employment-timeline",
+	"contrib":     "benefit-deduction",
+	"deduction":   "benefit-deduction",
+	"beneficiary": "beneficiary-designation",
+	"benef":       "beneficiary-designation",
+	"svc_cr":      "service-credit",
+	"service_cr":  "service-credit",
+	"dro":         "domestic-relations-order",
+	"qdro":        "domestic-relations-order",
+	"payment":     "benefit-payment",
+	"pmt_hist":    "benefit-payment",
+	"job_hist":    "employment-timeline",
+	"empr_list":   "payroll-run",
+}
+
+// autoDiscoverMappingTables connects to the source DB, discovers tables, introspects
+// column schemas, and applies concept tag heuristics. Only tables matching a known
+// concept tag are returned.
+func autoDiscoverMappingTables(conn *models.SourceConnection) ([]GenerateMappingsTable, error) {
+	srcDB, err := migrationdb.OpenSourceDB(conn)
+	if err != nil {
+		return nil, fmt.Errorf("open source DB: %w", err)
+	}
+	defer srcDB.Close()
+
+	// Discover tables
+	tables, err := migrationdb.DiscoverSourceTables(conn)
+	if err != nil {
+		return nil, fmt.Errorf("discover tables: %w", err)
+	}
+
+	var result []GenerateMappingsTable
+	for _, tbl := range tables {
+		fullName := tbl.SchemaName + "." + tbl.TableName
+
+		// Determine concept tag via heuristic matching on table name
+		conceptTag := ""
+		lowerTable := strings.ToLower(tbl.TableName)
+		for substr, tag := range conceptTagHeuristics {
+			if strings.Contains(lowerTable, substr) {
+				conceptTag = tag
+				break
+			}
+		}
+		if conceptTag == "" {
+			continue // skip tables that don't match any concept tag
+		}
+
+		// Introspect columns from information_schema
+		cols, err := discoverColumns(srcDB, tbl.SchemaName, tbl.TableName)
+		if err != nil {
+			slog.Warn("failed to introspect columns, skipping table", "table", fullName, "error", err)
+			continue
+		}
+
+		result = append(result, GenerateMappingsTable{
+			SourceTable: fullName,
+			ConceptTag:  conceptTag,
+			Columns:     cols,
+		})
+	}
+
+	return result, nil
+}
+
+// discoverColumns queries information_schema.columns for a table.
+func discoverColumns(db *sql.DB, schema, table string) ([]GenerateMappingsColumn, error) {
+	rows, err := db.Query(`
+		SELECT column_name, data_type, is_nullable,
+		       COALESCE((
+		           SELECT true FROM information_schema.key_column_usage k
+		           JOIN information_schema.table_constraints tc
+		             ON k.constraint_name = tc.constraint_name AND k.table_schema = tc.table_schema
+		           WHERE tc.constraint_type = 'PRIMARY KEY'
+		             AND k.table_schema = c.table_schema AND k.table_name = c.table_name
+		             AND k.column_name = c.column_name
+		           LIMIT 1
+		       ), false) AS is_key
+		FROM information_schema.columns c
+		WHERE table_schema = $1 AND table_name = $2
+		ORDER BY ordinal_position`,
+		schema, table,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var cols []GenerateMappingsColumn
+	for rows.Next() {
+		var c GenerateMappingsColumn
+		var nullable string
+		if err := rows.Scan(&c.Name, &c.DataType, &nullable, &c.IsKey); err != nil {
+			return nil, err
+		}
+		c.IsNullable = nullable == "YES"
+		cols = append(cols, c)
+	}
+	return cols, rows.Err()
 }

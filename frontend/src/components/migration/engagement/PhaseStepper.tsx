@@ -54,6 +54,11 @@ export default function PhaseStepper({
           0%, 100% { box-shadow: 0 0 0 0 rgba(91, 138, 114, 0.4); }
           50% { box-shadow: 0 0 0 6px rgba(91, 138, 114, 0); }
         }
+        @media (max-width: 640px) {
+          .phase-stepper-track { padding: 16px 12px !important; }
+          .phase-stepper-track .phase-connector { width: 16px !important; }
+          .phase-stepper-track .phase-label { font-size: 9px !important; }
+        }
       `}</style>
       <div
         style={{
@@ -63,7 +68,10 @@ export default function PhaseStepper({
           padding: '20px 24px',
           fontFamily: BODY,
           overflowX: 'auto',
+          minWidth: 0,
+          gap: 0,
         }}
+        className="phase-stepper-track"
       >
         {PHASES.map((phase, idx) => {
           const isCompleted = idx < currentIdx;
@@ -163,6 +171,7 @@ export default function PhaseStepper({
                 )}
 
                 <span
+                  className="phase-label"
                   style={{
                     fontSize: 11,
                     fontWeight: isActive ? 600 : 500,
@@ -192,6 +201,7 @@ export default function PhaseStepper({
               {/* Connecting line */}
               {idx < PHASES.length - 1 && (
                 <div
+                  className="phase-connector"
                   style={{
                     width: 32,
                     height: 2,

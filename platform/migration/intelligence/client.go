@@ -96,3 +96,143 @@ func (c *Client) ScoreColumns(ctx context.Context, req ScoreColumnsRequest) (*Sc
 
 	return &result, nil
 }
+
+// --- Mismatch Analysis Types ---
+
+// MismatchRecord describes a single member's reconciliation variance,
+// sent to the intelligence service for pattern detection.
+type MismatchRecord struct {
+	MemberID        string  `json:"member_id"`
+	VarianceAmount  string  `json:"variance_amount"`
+	VariancePct     float64 `json:"variance_pct"`
+	SuspectedDomain string  `json:"suspected_domain"`
+	MemberStatus    string  `json:"member_status"`
+	PlanCode        string  `json:"plan_code"`
+	Category        string  `json:"category"`
+}
+
+// FieldMappingRecord describes a source->canonical field mapping for context.
+type FieldMappingRecord struct {
+	SourceField    string `json:"source_field"`
+	CanonicalField string `json:"canonical_field"`
+	Domain         string `json:"domain"`
+	TransformType  string `json:"transform_type"`
+}
+
+// AnalyzeMismatchesRequest is the request body for POST /intelligence/analyze-mismatches.
+type AnalyzeMismatchesRequest struct {
+	TenantID              string               `json:"tenant_id"`
+	ReconciliationResults []MismatchRecord     `json:"reconciliation_results"`
+	FieldMappings         []FieldMappingRecord `json:"field_mappings"`
+}
+
+// DetectedPattern describes a systematic variance cluster found by the intelligence service.
+type DetectedPattern struct {
+	PatternID       string   `json:"pattern_id"`
+	SuspectedDomain string   `json:"suspected_domain"`
+	PlanCode        string   `json:"plan_code"`
+	Direction       string   `json:"direction"`
+	MemberCount     int      `json:"member_count"`
+	MeanVariance    string   `json:"mean_variance"`
+	CV              float64  `json:"cv"`
+	AffectedMembers []string `json:"affected_members"`
+}
+
+// CorrectionSuggestion describes a proposed fix for a detected pattern.
+type CorrectionSuggestion struct {
+	CorrectionType      string  `json:"correction_type"`
+	AffectedField       string  `json:"affected_field"`
+	CurrentMapping      string  `json:"current_mapping"`
+	ProposedMapping     string  `json:"proposed_mapping"`
+	Confidence          float64 `json:"confidence"`
+	Evidence            string  `json:"evidence"`
+	AffectedMemberCount int     `json:"affected_member_count"`
+}
+
+// AnalyzeMismatchesResponse is the response from POST /intelligence/analyze-mismatches.
+type AnalyzeMismatchesResponse struct {
+	Patterns    []DetectedPattern      `json:"patterns"`
+	Suggestions []CorrectionSuggestion `json:"suggestions"`
+}
+
+// Analyzer defines the interface for mismatch pattern analysis.
+type Analyzer interface {
+	AnalyzeMismatches(ctx context.Context, req AnalyzeMismatchesRequest) (*AnalyzeMismatchesResponse, error)
+}
+
+// AnalyzeMismatches calls POST /intelligence/analyze-mismatches on the Python service.
+func (c *Client) AnalyzeMismatches(ctx context.Context, req AnalyzeMismatchesRequest) (*AnalyzeMismatchesResponse, error) {
+	body, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("marshal request: %w", err)
+	}
+
+	url := c.BaseURL + "/intelligence/analyze-mismatches"
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.HTTPClient.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("intelligence service call: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		return nil, fmt.Errorf("intelligence service returned %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	var result AnalyzeMismatchesResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+
+	return &result, nil
+}
+
+// --- Corpus Learning Types ---
+
+// RecordDecisionRequest is the request body for POST /intelligence/record-decision.
+type RecordDecisionRequest struct {
+	TenantID        string `json:"tenant_id"`
+	SourceColumn    string `json:"source_column"`
+	CanonicalColumn string `json:"canonical_column"`
+	Decision        string `json:"decision"` // "approve" or "reject"
+	SourcePlatform  string `json:"source_platform"`
+}
+
+// CorpusRecorder defines the interface for recording mapping decisions.
+type CorpusRecorder interface {
+	RecordDecision(ctx context.Context, req RecordDecisionRequest) error
+}
+
+// RecordDecision calls POST /intelligence/record-decision on the Python service.
+func (c *Client) RecordDecision(ctx context.Context, req RecordDecisionRequest) error {
+	body, err := json.Marshal(req)
+	if err != nil {
+		return fmt.Errorf("marshal request: %w", err)
+	}
+
+	url := c.BaseURL + "/intelligence/record-decision"
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.HTTPClient.Do(httpReq)
+	if err != nil {
+		return fmt.Errorf("intelligence service call: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		return fmt.Errorf("intelligence service returned %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	return nil
+}

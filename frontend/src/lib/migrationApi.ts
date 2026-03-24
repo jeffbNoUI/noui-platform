@@ -43,6 +43,9 @@ import type {
   RegressPhaseRequest,
   CorpusContext,
   MigrationException,
+  CoverageReport,
+  MappingSpecReport,
+  ReconciliationPattern,
 } from '@/types/Migration';
 
 const BASE = '/api/v1/migration';
@@ -116,6 +119,9 @@ export const migrationAPI = {
   listExceptions: (batchId: string) =>
     fetchAPI<MigrationException[]>(`${BASE}/batches/${batchId}/exceptions`, RAW),
 
+  executeBatch: (batchId: string) =>
+    postAPI<MigrationBatch>(`${BASE}/batches/${batchId}/execute`, {}, RAW),
+
   retransformBatch: (batchId: string) =>
     postAPI<MigrationBatch>(`${BASE}/batches/${batchId}/retransform`, {}, RAW),
 
@@ -138,6 +144,23 @@ export const migrationAPI = {
   getReconciliationByTier: (engagementId: string, tier: number) =>
     fetchAPI<Reconciliation[]>(
       `${BASE}/engagements/${engagementId}/reconciliation/tier/${tier}`,
+      RAW,
+    ),
+
+  // ─── Certification ─────────────────────────────────────────────────────
+  certifyEngagement: (
+    engagementId: string,
+    body: {
+      gate_score: number;
+      p1_count: number;
+      checklist: Record<string, boolean>;
+      notes?: string;
+    },
+  ) => postAPI<void>(`${BASE}/engagements/${engagementId}/certify`, body, RAW),
+
+  getCertification: (engagementId: string) =>
+    fetchAPI<Record<string, unknown> | null>(
+      `${BASE}/engagements/${engagementId}/certification`,
       RAW,
     ),
 
@@ -221,10 +244,31 @@ export const migrationAPI = {
       RAW,
     ),
 
+  getReconciliationPatterns: (engagementId: string) =>
+    fetchAPI<{ patterns: ReconciliationPattern[]; count: number }>(
+      `${BASE}/engagements/${engagementId}/reconciliation/patterns`,
+      RAW,
+    ),
+
+  resolvePattern: (patternId: string) =>
+    patchAPI<ReconciliationPattern>(
+      `${BASE}/reconciliation/patterns/${patternId}/resolve`,
+      {},
+      RAW,
+    ),
+
   // ─── Notifications ────────────────────────────────────────────────────────
   getNotifications: () => fetchAPI<MigrationNotification[]>(`${BASE}/notifications`, RAW),
 
   markNotificationRead: (id: string) => putAPI<void>(`${BASE}/notifications/${id}/read`, {}, RAW),
 
   markAllNotificationsRead: () => putAPI<void>(`${BASE}/notifications/read-all`, {}, RAW),
+
+  // ─── Coverage Report (Target-Anchored Profiling) ──────────────────────────
+  getCoverageReport: (engagementId: string) =>
+    fetchAPI<CoverageReport>(`${BASE}/engagements/${engagementId}/coverage-report`, RAW),
+
+  // ─── Mapping Specification Document ───────────────────────────────────────
+  getMappingSpec: (engagementId: string) =>
+    fetchAPI<MappingSpecReport>(`${BASE}/engagements/${engagementId}/reports/mapping-spec`, RAW),
 };

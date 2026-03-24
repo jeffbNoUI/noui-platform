@@ -16,7 +16,7 @@ import (
 var validIdentifier = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_.]*$`)
 
 // quoteIdent validates and double-quotes a SQL identifier to prevent injection.
-// Returns an error if the identifier contains unsafe characters.
+// Supports schema-qualified names (e.g. "src_prism.prism_member" → "src_prism"."prism_member").
 func quoteIdent(id string) (string, error) {
 	if id == "" {
 		return "", fmt.Errorf("empty identifier")
@@ -24,8 +24,12 @@ func quoteIdent(id string) (string, error) {
 	if !validIdentifier.MatchString(id) {
 		return "", fmt.Errorf("unsafe SQL identifier: %q", id)
 	}
-	// Double-quote to handle reserved words and ensure safety
-	return `"` + strings.ReplaceAll(id, `"`, `""`) + `"`, nil
+	// Handle schema-qualified names: split on dot and quote each part
+	parts := strings.Split(id, ".")
+	for i, p := range parts {
+		parts[i] = `"` + strings.ReplaceAll(p, `"`, `""`) + `"`
+	}
+	return strings.Join(parts, "."), nil
 }
 
 // PatternCheck defines a regex pattern to validate against a column's values.
@@ -69,7 +73,7 @@ func ProfileCompleteness(db *sql.DB, table string, requiredColumns []string) (Qu
 		if err != nil {
 			return dim, fmt.Errorf("profile completeness: %w", err)
 		}
-		query += fmt.Sprintf(", SUM(CASE WHEN %s IS NULL THEN 1 ELSE 0 END)", qc)
+		query += fmt.Sprintf(", COALESCE(SUM(CASE WHEN %s IS NULL THEN 1 ELSE 0 END), 0)", qc)
 	}
 	query += " FROM " + quotedTable
 
@@ -127,7 +131,7 @@ func ProfileAccuracy(db *sql.DB, table string, patternChecks []PatternCheck) (Qu
 			return dim, fmt.Errorf("profile accuracy: %w", err)
 		}
 		query := fmt.Sprintf(
-			"SELECT COUNT(*), SUM(CASE WHEN %s ~ $1 THEN 1 ELSE 0 END) FROM %s WHERE %s IS NOT NULL",
+			"SELECT COUNT(*), COALESCE(SUM(CASE WHEN %s ~ $1 THEN 1 ELSE 0 END), 0) FROM %s WHERE %s IS NOT NULL",
 			qc, quotedTable, qc,
 		)
 		var total, matched int64
@@ -178,7 +182,7 @@ func ProfileConsistency(db *sql.DB, table string, fkRefs []FKReference) (Quality
 		}
 		query := fmt.Sprintf(
 			`SELECT COUNT(*),
-			        SUM(CASE WHEN %s IN (SELECT %s FROM %s) THEN 1 ELSE 0 END)
+			        COALESCE(SUM(CASE WHEN %s IN (SELECT %s FROM %s) THEN 1 ELSE 0 END), 0)
 			 FROM %s WHERE %s IS NOT NULL`,
 			qCol, qRefCol, qRefTable, quotedTable, qCol,
 		)
@@ -226,9 +230,28 @@ func ProfileTimeliness(db *sql.DB, table string, dateColumns []string) (QualityD
 			return dim, fmt.Errorf("profile timeliness: %w", err)
 		}
 		query := fmt.Sprintf("SELECT MAX(%s) FROM %s", qc, quotedTable)
+
+		// Try scanning as native time first, fall back to string parsing
+		// for legacy systems that store dates as VARCHAR.
 		var maxDate sql.NullTime
 		if err := db.QueryRow(query).Scan(&maxDate); err != nil {
-			return dim, fmt.Errorf("profile timeliness for column %s: %w", col, err)
+			// Scan failed — column is likely VARCHAR; retry as string
+			var maxStr sql.NullString
+			if err2 := db.QueryRow(query).Scan(&maxStr); err2 != nil {
+				return dim, fmt.Errorf("profile timeliness for column %s: %w", col, err2)
+			}
+			if maxStr.Valid && maxStr.String != "" {
+				parsed, parseErr := parseFlexibleDate(maxStr.String)
+				if parseErr != nil {
+					// Unparseable date string — skip this column gracefully
+					continue
+				}
+				if !found || parsed.After(mostRecent) {
+					mostRecent = parsed
+					found = true
+				}
+			}
+			continue
 		}
 		if maxDate.Valid {
 			if !found || maxDate.Time.After(mostRecent) {
@@ -256,6 +279,25 @@ func ProfileTimeliness(db *sql.DB, table string, dateColumns []string) (QualityD
 	return dim, nil
 }
 
+// parseFlexibleDate tries common date formats for legacy VARCHAR date columns.
+func parseFlexibleDate(s string) (time.Time, error) {
+	s = strings.TrimSpace(s)
+	formats := []string{
+		"2006-01-02",          // ISO 8601
+		"01/02/2006",          // US format
+		"2006-01-02 15:04:05", // ISO with time
+		"20060102",            // Compact YYYYMMDD
+		"01-02-2006",          // US with dashes
+		"2006/01/02",          // ISO with slashes
+	}
+	for _, f := range formats {
+		if t, err := time.Parse(f, s); err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("unable to parse date: %q", s)
+}
+
 // ProfileValidity measures business rule pass rate.
 // Score = average pass rate across all rules. Returns 1.0 if no rules specified.
 func ProfileValidity(db *sql.DB, table string, rules []BusinessRule) (QualityDimension, error) {
@@ -278,7 +320,7 @@ func ProfileValidity(db *sql.DB, table string, rules []BusinessRule) (QualityDim
 		// system-defined rules, never with user-supplied conditions. The API
 		// handler is responsible for validating or restricting conditions.
 		query := fmt.Sprintf(
-			"SELECT COUNT(*), SUM(CASE WHEN %s THEN 1 ELSE 0 END) FROM %s",
+			"SELECT COUNT(*), COALESCE(SUM(CASE WHEN %s THEN 1 ELSE 0 END), 0) FROM %s",
 			rule.Condition, quotedTable,
 		)
 		var total, passed int64

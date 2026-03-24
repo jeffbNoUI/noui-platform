@@ -40,6 +40,804 @@
 - PR review and merge
 - Phase 5h: Additional employer service hardening or next migration phase
 
+## Session 26: Migration Full Lifecycle — 2 Bugs Fixed, Certification E2E (2026-03-23)
+
+**Branch:** `claude/gracious-pike`
+
+### What Was Done
+
+Full 6-phase migration lifecycle walkthrough through the browser, then repeated
+with 100 real PRISM members to verify reconciliation and certification end-to-end.
+
+**Bug 1 — Exception table schema drift:** `migration.exception` was created with a
+simpler schema (row_key, handler_name, column_name) but Go code expected richer
+columns (source_table, source_id, canonical_table, field_name, disposition, etc.).
+Migration 041 adds the missing columns.
+
+**Bug 2 — Scope-aware batch resolver:** `resolveSourceTable` picked the first
+alphabetical mapping source table (prism_beneficiary, 0 rows) instead of matching
+the batch scope to the right table. Added `scopeCanonicalHints` map:
+`ACTIVE_MEMBERS` → "member", `SALARY_HISTORY` → "sal", `BENEFICIARIES` →
+"beneficiary", etc.
+
+### Verification
+
+- 100 members loaded from prism-source → canonical tables
+- 39 Tier 1 reconciliation records — all MATCH (100% gate score)
+- Certification completed through UI — "Already Certified" persists
+- Go tests: 11/11 packages pass (6 new scope-matching tests)
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `platform/migration/db/migrations/041_exception_schema_align.sql` | Add 10 missing exception columns |
+| `platform/migration/api/batch_handlers.go` | Scope-aware resolveSourceTable with scopeCanonicalHints |
+| `platform/migration/api/batch_handlers_test.go` | 6 new tests for scope matching |
+| `docs/plans/2026-03-23-post-full-lifecycle-next-session.md` | Next session starter |
+
+### What's Next
+
+- Populate all 21 source tables with seed data (not just prism_member)
+- Fix JWT expiry silent failure (batch status stuck at RUNNING)
+- Tier 2/3 reconciliation with payment history + demographic data
+- Starter prompt: `docs/plans/2026-03-23-post-full-lifecycle-next-session.md`
+
+## Session 25: Migration Pipeline Fixes — Batch Scope + NaN Guard (2026-03-23)
+
+**Branch:** `claude/priceless-albattani` → PR #150 (merged)
+
+### What Was Done
+
+Fixed two critical blockers preventing the migration data pipeline from working end-to-end.
+
+**1. Batch Scope → Source Table Mapping (production design — Option B)**
+
+The batch executor treated `batch_scope` ("ACTIVE_MEMBERS") as a literal table name,
+which failed because no such table exists. Implemented a proper resolution chain:
+
+- **Primary**: Extract source table from field mappings (set during Phase 3 Mapping).
+  These are authoritative — created by the user during mapping and reflect actual
+  discovered table names.
+- **Secondary**: Auto-discover primary key from source DB's `information_schema`.
+- **Fallback**: Hard-coded system name → table mapping (PRISM, PAS) for backward
+  compatibility.
+
+**2. NaN% AI Recommendation Display**
+
+`AIRecommendationCard` displayed `NaN%` when recommendation confidence was
+undefined/null. Added type guard: `typeof confidence === 'number' && isFinite()`.
+
+**3. Phase 5g Verification (already complete)**
+
+Confirmed PR #134 already fixed: dbcontext stale connection cascade, uploaded_by UUID
+in employer-reporting, hireDate timestamp parsing in employer-terminations.
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `platform/migration/api/batch_handlers.go` | `resolveSourceTable` reads mappings; `resolvePrimaryKey` auto-discovers from info_schema |
+| `platform/migration/api/batch_handlers_test.go` | 5 new tests for resolve functions |
+| `frontend/src/components/migration/ai/AIRecommendationCard.tsx` | NaN confidence guard |
+
+### Stats
+
+- **Go migration:** 11/11 packages pass
+- **Frontend:** 235 files, 1856 tests pass (0 typecheck errors)
+- **Migration E2E:** 47/47 (baseline, pre-code-change)
+
+### What's Next
+
+- Docker E2E verification of batch execution with new resolve logic
+- Browser walkthrough: batch execute → loaded rows → reconciliation → certification
+- Full employer + migration E2E suites to confirm no regressions
+- Starter prompt: `docs/plans/2026-03-23-migration-pipeline-docker-e2e-starter.md`
+
+## Session 24: Migration UI Walkthrough — 6 Phases, 5 Bugs Fixed (2026-03-23)
+
+**Branch:** `claude/elegant-elion`
+
+### What Was Done
+
+Full end-to-end browser walkthrough of the migration lifecycle (all 6 phases),
+fixing bugs as encountered. Each phase was tested through the Docker-hosted
+frontend with live backend services.
+
+**Phase 1 — Discovery:** Create engagement, configure source (prism-source:5432),
+discover 21 tables, select all, advance to Profiling. **No bugs.**
+
+**Phase 2 — Profiling:** Run quality profile, radar chart renders (ISO 8000
+dimensions), approve baseline. **Bug 1:** ProfileTimeliness crashed on VARCHAR
+date columns in legacy source systems.
+
+**Phase 3 — Mapping:** Generate 67 field mappings via auto-discovery, review
+mapping table with confidence scores. **Bug 2:** Frontend sent empty tables
+array; backend had no auto-discover fallback.
+
+**Phase 4 — Transformation:** Phase gate transitions work, create batch, execute
+batch (202 accepted). **Bug 3:** `normalizeEnums` in `rawRequest` lowercased ALL
+API responses including migration status — defeating the `raw: true` flag. **Bug 4:**
+No Execute Batch button for PENDING batches (only Retransform existed).
+
+**Phase 5 — Reconciliation:** Panel renders empty state correctly. **Bug 5:**
+Reconciliation hooks expected raw arrays but backend returns wrapped objects
+(`{ records: [...], count }`), causing `.filter is not a function` crash.
+
+**Phase 6 — Parallel Run + Certification:** Go/No-Go checklist renders with
+2 auto-checks + 3 manual checks. Certify Complete button disabled until all
+checked. Panel works correctly.
+
+### 5 Bugs Fixed
+
+| # | Bug | Root Cause | Fix |
+|---|-----|-----------|-----|
+| 1 | ProfileTimeliness VARCHAR crash | `sql.NullTime` scan fails on VARCHAR dates | String-scan fallback + `parseFlexibleDate()` |
+| 2 | Generate Mappings 400 on empty tables | Backend required explicit table list | `autoDiscoverMappingTables()` introspects source DB |
+| 3 | Status casing (TRANSFORMING → transforming) | `normalizeEnums` in `rawRequest()` ran on ALL responses | Removed `normalizeEnums` from `rawRequest()` |
+| 4 | No Execute Batch button | Only Retransform existed | Added `useExecuteBatch` + conditional button |
+| 5 | ReconciliationPanel crash | API returns wrapped objects, hooks expected arrays | Added `select()` transforms to extract arrays |
+
+### Stats
+
+- **Frontend:** 1856/1856 tests (235 files)
+- **Migration Go:** 11/11 packages pass
+- **Files changed:** 7 across 2 commits
+- **Browser verified:** All 6 phases render and function correctly
+
+### What's Next
+
+- Batch execution needs a valid source scope (ACTIVE_MEMBERS doesn't map to a real table)
+- Full reconciliation with real data (needs successful batch execution first)
+- Certification end-to-end (needs reconciliation gate score > 0)
+- NaN% display on AI Recommendation in Transformation tab (cosmetic)
+
+## Session 23: Migration Wrap-Up — Certification, Lineage, UI Fixes (2026-03-23)
+
+**Branch:** `claude/lucid-colden` → PR #147 (merged)
+
+### What Was Done
+
+Completed migration wrap-up plan (4 vertical slices) + fixed systemic bugs found
+during browser verification.
+
+**Slice 1 — Reconciliation UI Polish:**
+- Mutation feedback (success/error) for Run Reconciliation and Resolve Pattern
+- P1 issues currency formatting ($X,XXX.XX)
+- Error states when API queries fail
+- Member drill-down from root cause analysis (scroll to P1 table)
+- Pattern card expansion showing affected members list
+- 15 new unit tests (ReconciliationPanel, ParallelRunPanel, TierFunnel)
+
+**Slice 2 — Certification Workflow:**
+- Migration 040: `certification_record` table (immutable, audit trail)
+- POST /certify (validates 5-item Go/No-Go checklist) + GET /certification
+- ParallelRunPanel wired to API — persists checklist, shows "Already Certified" state
+
+**Slice 3 — Lineage API:**
+- GET /batches/{id}/lineage — paginated, filterable by member_id/column_name
+- GET /batches/{id}/lineage/summary — aggregate stats (records, members, fields, types)
+
+**Slice 4 — E2E Hardening:**
+- Seed data readiness poll (prism-source member count check)
+- Mapping approval fix (use valid mapping ID)
+- Phase 12: certification assertions + Phase 13: lineage assertions
+
+**Bug Fixes Found During Browser Testing:**
+- JSONB insert casting: gate.go, pattern.go, certification.go — pq driver sends
+  []byte as bytea, not JSONB. Fixed with string() + ::jsonb cast.
+- Attention query: `r.resolved` column doesn't exist on reconciliation table (FALSE),
+  UNION type mismatch ($1 needs ::text cast)
+- Engagement status casing: lowercaseEnums was converting status despite RAW flag.
+  Added select() normalization in useEngagement/useEngagements hooks.
+- AIRecommendationCard crash: .detail.length and .suggestedActions.length on undefined
+  when batch-sizing API returns different shape than AIRecommendation type.
+- TabErrorBoundary: wraps all tab content in EngagementDetail so panel render errors
+  don't crash the entire engagement view.
+
+### Stats
+
+- **Frontend:** 1856/1856 tests (235 files), 15 new
+- **Migration Go:** 11 packages, all pass
+- **E2E:** 46/46 (up from 40, 6 new assertions)
+- **Browser verified:** Engagement detail loads, Transformation tab active, all tabs work
+
+### What's Next
+
+- **Full UI walkthrough** — test every phase of migration lifecycle through the browser
+  (Discovery → Profiling → Mapping → Transformation → Reconciliation → Certification)
+- See `docs/plans/2026-03-23-migration-e2e-ui-testing-starter.md`
+
+## Session 22: Reconciliation E2E Verification — 40/40 PASSING (2026-03-23)
+
+**Branch:** `claude/sad-goodall`
+
+### What Was Done
+
+Docker E2E verification of the full reconciliation pipeline from Sessions 20-21,
+plus fixing all 3 pre-existing E2E failures to reach 40/40 passing.
+
+**E2E Test Additions (Phase 7b + 7c):**
+1. **POST /batches/:id/reconcile** — trigger full 3-tier reconciliation, verify gate result
+2. **GET /reconciliation/patterns** — verify intelligence-detected patterns endpoint
+3. **PATCH /reconciliation/patterns/:id/resolve** — pattern resolution workflow
+4. **GET /reconciliation/root-cause** — enriched root cause with patterns array
+5. **GET /reconciliation/p1** — P1 priority issues endpoint
+6. **Corpus learning** — mapping approval triggers async RecordDecision
+7. **Intelligence service health** — direct health check on port 8101
+8. **GET /intelligence/corpus-stats** — corpus metrics endpoint
+
+**Pre-existing Failures FIXED:**
+
+| Failure | Root Cause | Fix |
+|---------|-----------|-----|
+| Phase 4: profiling 500 | E2E used `member_master` but source DB has `src_prism.prism_member` | Use schema-qualified table names in E2E payload |
+| Phase 10: mapping-spec 500 | Migration 036 recreated `migration.exception` without `canonical_table` column | Updated `report_handler.go` query to use `handler_name` |
+| Phase 11: source_connection missing | Rate limiting (1 req/s burst 20) exhausted by Phase 10; 429 responses lack data fields | Raised rate limits for Docker dev env + added HTTP status assert |
+
+**Infrastructure Fixes:**
+- Added migration 039 (`reconciliation_patterns.sql`) to docker-compose.yml volume mounts
+- Exposed intelligence service port 8101 to host for direct E2E testing
+- Added intelligence service health check to `--wait` flag (non-blocking)
+- Raised migration service rate limits in Docker for E2E burst traffic
+
+### Files Changed
+
+- `tests/e2e/migration_e2e.sh` — Phase 7b + 7c, fixed table names, added status assert
+- `docker-compose.yml` — Migration 039 mount, intelligence port, rate limit env vars
+- `platform/migration/api/report_handler.go` — Fixed `canonical_table` → `handler_name`
+- `BUILD_HISTORY.md` — Session record
+
+### Stats
+
+- **E2E: 40/40 PASSING** (up from 36/39)
+- New tests: ~15 assertions across Phase 7b + 7c
+- All reconciliation endpoints: 200 OK
+- Intelligence service: healthy, corpus-stats accessible
+- Nil-safe degradation verified: pattern count=0 when no mismatches exist
+
+### What's Next
+
+- Parallel run infrastructure (Phase 4 hardening)
+- Auditor-readable lineage reports
+- Performance testing at 250K+ member scale
+
+## Session 21: Reconciliation Completion — 5 Items (2026-03-22)
+
+**Branch:** `claude/quizzical-murdock`
+
+### What Was Done
+
+Completed all 5 remaining reconciliation items in 2 waves (backend Go sweep, frontend React sweep).
+
+**Wave 1 — Backend (3 items):**
+1. **Enhanced root cause** — `HandleGetRootCause` now includes intelligence-detected patterns
+   in the response payload alongside the deterministic analysis.
+2. **Resolution workflow** — New `PATCH /reconciliation/patterns/{id}/resolve` endpoint.
+   `ResolvePattern()` DB function sets `resolved=TRUE`, `resolved_at`, `resolved_by`.
+3. **Corpus learning** — New `RecordDecision()` method on intelligence client. Wired into
+   `UpdateMapping` handler as fire-and-forget goroutine when analyst approves/rejects a mapping.
+
+**Wave 2 — Frontend (3 items):**
+4. **Rate limit fix** — Removed 3 `useReconciliationByTier` API calls that triggered 429.
+   Tier breakdowns now derived client-side from `useReconciliation` via `useMemo`.
+5. **Resolution workflow UI** — Resolve button on pattern cards, `useResolvePattern` mutation
+   hook, `resolvePattern()` API function. Shows "Resolved" state after resolution.
+6. **Batch trigger button** — "Run Reconciliation" button appears when latest batch is loaded.
+   Uses existing `useReconcileBatch` mutation hook.
+
+### Files Changed
+
+- 12 files changed (+264 lines, -19 lines)
+- Go: `ai_handlers.go`, `pattern_handlers.go`, `handlers.go`, `mapping_handlers.go`,
+  `pattern.go`, `client.go`, `client_test.go`, `types.go`
+- Frontend: `ReconciliationPanel.tsx`, `ReconciliationPatterns.test.tsx`,
+  `useMigrationApi.ts`, `migrationApi.ts`
+
+### Stats
+
+- Migration Go: 11 packages, all pass (short mode)
+- Frontend: 232 test files, 1840 tests passing
+- 6 commits, zero regressions
+
+### What's Next
+
+- Docker E2E verification of full reconciliation flow
+- Parallel run infrastructure (Phase 4 hardening)
+- Auditor-readable lineage reports
+- Performance testing at 250K+ member scale
+
+## Session 20: Migration Intelligence Integration (2026-03-22)
+
+**Branch:** `claude/exciting-jang`
+
+### What Was Done
+
+Wired the Python migration-intelligence service (`POST /intelligence/analyze-mismatches`)
+into the Go reconciler's post-reconciliation flow. After `ReconcileBatch` persists variance
+results, it now calls the Python service asynchronously for pattern detection and persists
+detected patterns to a new `migration.reconciliation_pattern` table.
+
+**Go backend (6 commits):**
+1. Migration 039: `reconciliation_pattern` table with batch FK, pattern fields, correction
+   suggestion columns, resolved tracking, and batch index
+2. `ReconciliationPattern` model type in `models/types.go`
+3. `AnalyzeMismatches()` on intelligence client — new `Analyzer` interface, request/response
+   types (`MismatchRecord`, `DetectedPattern`, `CorrectionSuggestion`), 3 httptest tests
+4. Pattern persistence layer (`PersistPatterns`, `GetPatternsByEngagement`)
+5. Async `analyzePatterns` goroutine in `ReconcileBatch` — nil-safe, 5s timeout, errors
+   logged not propagated, tenant ID passed from request context
+6. `GET /api/v1/migration/engagements/{id}/reconciliation/patterns` endpoint
+
+**Frontend (2 commits):**
+7. `ReconciliationPattern` type, `getReconciliationPatterns` API method,
+   `useReconciliationPatterns` query hook
+8. Systematic Patterns section in `ReconciliationPanel` — domain/plan/direction badges,
+   member count, correction type with confidence, evidence text. Hidden when no patterns.
+9. Integration test: 2 tests (patterns render, empty state hidden)
+
+### Files Changed
+
+**New files (6):**
+- `platform/migration/db/migrations/039_reconciliation_patterns.sql`
+- `platform/migration/db/pattern.go`
+- `platform/migration/db/pattern_test.go`
+- `platform/migration/intelligence/client_test.go`
+- `platform/migration/api/pattern_handlers.go`
+- `frontend/src/components/migration/engagement/__tests__/ReconciliationPatterns.test.tsx`
+
+**Modified files (7):**
+- `platform/migration/models/types.go`
+- `platform/migration/intelligence/client.go`
+- `platform/migration/api/handlers.go`
+- `platform/migration/api/reconciliation_handlers.go`
+- `frontend/src/types/Migration.ts`
+- `frontend/src/lib/migrationApi.ts`
+- `frontend/src/hooks/useMigrationApi.ts`
+- `frontend/src/components/migration/engagement/ReconciliationPanel.tsx`
+
+### Stats
+
+- 9 commits, 6 new files, 8 modified files
+- Migration Go: 11 packages, all pass (short mode)
+- Intelligence client: 8 tests (5 existing + 3 new)
+- Frontend: 232 test files, 1840 tests passing
+- Typecheck: clean
+
+### What's Next
+
+- Docker E2E: verify full reconcile → intelligence → patterns flow with services running
+- Corpus learning: wire analyst decisions back to intelligence service
+- Resolution workflow: mark patterns resolved, track who resolved them
+- Port management Phase 2 (deferred, low priority)
+
+## Session 19: Frontend Polish + Reconciliation UI Enhancement (2026-03-22)
+
+**Branch:** `claude/interesting-hamilton`
+
+### What Was Done
+
+**Phase 5g verification:** Confirmed all 3 reported bugs (dbcontext stale connection,
+uploaded_by UUID, hireDate parsing) were already fixed in the current codebase. No code
+changes needed.
+
+**Frontend polish (2 of 3 items — 1 was already correct):**
+1. **Title truncation on engagement cards** — Added `overflow: hidden`, `textOverflow:
+   ellipsis`, `whiteSpace: nowrap` to EngagementList card titles. Previously titles
+   could overflow the card boundary.
+2. **Default tab for DISCOVERY phase** — Already correct (`defaultTab()` maps DISCOVERY
+   → 'discovery' tab). No change needed.
+3. **Phase stepper responsive overflow** — Added CSS media query for `max-width: 640px`
+   that shrinks connector width (32px → 16px) and label font size (11px → 9px). Added
+   className hooks for media query targeting.
+
+**Reconciliation UI enhancement:**
+- Added **tier score cards** showing per-tier gate scores (T1/T2/T3) with color-coded
+  pass/warn/fail thresholds
+- Added **full variance detail table** (collapsible) showing all reconciliation records
+  with legacy vs. recomputed values side-by-side
+- Added **filter bar** with category (ALL/MATCH/MINOR/MAJOR/ERROR), tier (All/T1/T2/T3),
+  and member ID search
+- Displays **systematic flag** indicator (gold dot) and **resolved** checkmark
+- Shows **suspected domain** column for variance root cause hints
+- Sticky header, scrollable body (max 480px), responsive filter wrapping
+
+### Files Changed
+
+- `frontend/src/components/migration/dashboard/EngagementList.tsx` — title truncation
+- `frontend/src/components/migration/engagement/PhaseStepper.tsx` — responsive CSS
+- `frontend/src/components/migration/engagement/ReconciliationPanel.tsx` — full enhancement
+
+### Stats
+
+- 3 files changed
+- Frontend: typecheck clean, 231 test files, 1838 tests passing
+- Migration Go: 11 packages passing (short mode)
+
+### What's Next
+
+- Migration intelligence integration (wire Python service into Go reconciler)
+- Port management Phase 2 (standardize container ports)
+- Additional reconciliation features: batch-level reconcile button, resolution workflow
+
+## Session 18: Two-Source Proof — Perfect Gate Scores (2026-03-22)
+
+**Branch:** `claude/loving-pike`
+
+### What Was Done
+
+Fixed 6 root causes to achieve perfect reconciliation gate scores (1.0) on both
+PRISM (39/39) and PAS (26/26) sources. Two-Source Proof passes 30/30 checks.
+
+**Root causes fixed:**
+1. **PRISM seed SQL corruption** — `print()` stats leaked via stdout redirect into
+   SQL file. PostgreSQL aborted on `\U` meta-command. Fixed: stats to stderr.
+2. **Profiler NULL scan** — `SUM()` returns NULL on empty tables, crashing `int64`
+   scan. Added `COALESCE(..., 0)` to all 4 dimension queries.
+3. **Gate threshold script** — `bc` unavailable on Windows, silent fallback. Replaced
+   with `awk` for cross-platform support.
+4. **Python formula alignment** — Replaced linear penalty model with lookup-table
+   reduction matching Go reconciler. Updated `PLAN_REGISTRY` to TIER_1/2/3.
+5. **Age truncation** — PostgreSQL `::INTEGER` rounds, Python `int()` truncates.
+   Fixed source_loader to use `FLOOR()::INTEGER`.
+6. **Below-table age clamping** — Ages below reduction table minimum now clamp to
+   lowest factor (0.70) in Go, Python, and both seed generators.
+
+### Files Changed
+
+- `platform/migration/profiler/dimensions.go` — COALESCE on 4 SUM queries
+- `platform/migration/batch/source_loader.go` — FLOOR() for age truncation
+- `platform/migration/reconciler/formula.go` — below-table age clamping
+- `migration-simulation/formula/benefit.py` — lookup-table reduction + clamping
+- `migration-simulation/tests/test_cross_language.py` — tier_code + reduction_factor
+- `migration-simulation/sources/prism/prism_data_generator.py` — stderr + clamping
+- `migration-simulation/sources/pas/generate_pas_scenarios.py` — clamping fix
+- `migration-simulation/sources/prism/init/02_seed.sql` — regenerated clean
+- `migration-simulation/sources/pas/init/02_seed.sql` — regenerated
+- `scripts/run_two_source_proof.sh` — awk replaces bc
+- `docs/plans/2026-03-22-post-proof-next-session.md` — NEW
+
+### Stats
+
+- 11 files changed (1 new, 10 modified)
+- Migration Go: 11 packages, all pass (short mode)
+- Python cross-language: 9/9 pass
+- Two-Source Proof: 30/30 pass, PRISM 39/39, PAS 26/26, both gates=1.0
+
+### What's Next
+
+- Phase 5g: dbcontext stale connection fix + employer service bugs
+- Migration frontend polish (3 minor items)
+- Reconciliation UI enhancement (gate score display, P1 detail table)
+- Starter prompt: `docs/plans/2026-03-22-post-proof-next-session.md`
+
+## Session 17: Universal Plan Config + Reconciler Refactor (2026-03-22)
+
+**Branch:** `claude/charming-chaum`
+
+### What Was Done
+
+Replaced the hardcoded 2-plan reconciler registry with YAML-loaded configuration
+supporting all 3 tiers, and produced two Tier 1 governing architecture documents.
+
+**Architecture research & design:**
+- Researched 11+ pension systems (CalPERS, LACERA, SDCERA, OCERS, NYCERS, OPERS,
+  TRS Texas, HMEPS, FRS, COPERA, 20 California 37 Act county funds)
+- Identified 5 formula types, 7+ COLA structures, FAS periods 1-8 years
+- Designed Universal Plan/Tier Entity Model (System > Plan > Tier with 7 modules)
+- Designed Multi-Tenant Design Framework (25 config surfaces, 12 process domains)
+- Revised 3 items in multi-tenant doc after codebase cross-reference:
+  DB isolation (two-layer), intelligence service split, connector topology
+
+**Implementation (13 tasks, 16 commits):**
+- `planconfig.go`: YAML loader with `LoadPlanConfig()`, `LookupTier()`, `ToBenefitParams()`
+- `formula.go`: Refactored from hardcoded `planRegistry` to YAML-loaded `BenefitParams`
+  with lookup-table reduction (replacing formula-based 6%/yr penalty)
+- 3 tiers: TIER_1 (2.0%), TIER_2 (1.5%), TIER_3 (1.5%) with tier-specific reduction tables
+- Source loader: plan code normalization (PRISM DB_MAIN→TIER_1, PAS DB-T1→TIER_1)
+- Migration 038: `source_plan_code` column for UI display of original codes
+- Seed generators aligned with reconciler formula (multipliers, reduction tables, floor)
+- Tier 3 benchmarks computed from canonical data (salary, contributions, member counts)
+- Proof script: gate score threshold assertions (> 0.50)
+- Docker: plan-config.yaml mount + migration 038 volume
+
+### Key Decisions
+
+- **Tier is the fundamental rule unit** — all parameters hang off tiers, not plans
+- **Lookup-table reduction** replaces formula-based penalty (matches statutory tables)
+- **plan-config.yaml** is single source of truth (reconciler section coexists with intelligence service)
+- **Source plan codes preserved** in `source_plan_code` for client-facing display
+- **DB-per-tenant + RLS** two-layer isolation model established
+- **Intelligence service split** into per-tenant Rules Engine + shared Pattern Intelligence Service
+
+### Files Changed
+
+- 24 files changed (+3,394 lines, -230 lines)
+- 2 new architecture docs, 2 new plan docs, 1 new Go file, 1 new test file, 1 new migration
+
+### Stats
+
+- 11 migration test packages, all pass
+- Zero regressions
+- Seed SQL NOT yet regenerated (next session)
+
+### What's Next
+
+1. Regenerate seed SQL (run Python generators)
+2. Docker rebuild + Two-Source Proof
+3. Debug gate scores if needed (rounding, age computation)
+4. Starter prompt: `docs/plans/2026-03-22-plan-config-next-session.md`
+
+## Session 16: Reconciliation Data Alignment — Pipeline Complete (2026-03-22)
+
+**Branch:** `claude/interesting-wu`
+
+### What Was Done
+
+Fixed 6 root causes preventing reconciliation from producing meaningful results.
+The Two-Source Proof now passes **28/28 checks** with real data flowing through
+both PRISM and PAS pipelines end-to-end.
+
+**Root causes fixed:**
+1. **No persistence layer** — `ReconcileBatch` computed results in-memory but never
+   stored them. `migration.reconciliation` table didn't exist. Created Migration 037
+   and added transactional persistence in the handler.
+2. **PAS payment_type mismatch** — PAS stores "PAID"/"HELD" as `payment_status_code`,
+   but tier2 filters on `payment_type = 'REGULAR'`. Normalized in source_loader.
+3. **PRISM payment_type mismatch** — PRISM `SCHED_TYP` is CHAR(4) "REGR" (space-padded),
+   not "REGULAR". Added TRIM + CASE normalization.
+4. **Missing PRISM payment history seed** — Generator never created PMT_SCHEDULE/PMT_HIST.
+   Added 39 schedules + 554 payment records. Fixed NUMERIC(5,2) overflow on tax columns.
+5. **Missing PAS seed data entirely** — `generate_pas_scenarios.py` had never been run.
+   Generated 310K lines of seed SQL (100 members, 26 retirement awards, 248 payments).
+6. **Tier 3 NULL crash** — `service_credit_years` nullable DOUBLE PRECISION scanned into
+   float64. Added COALESCE + NOT NULL filter.
+
+**Additional improvements:**
+- Wired Tier 3 into ReconcileBatch (was TODO)
+- Defensive `batch_id` filter on tier1/tier2 JOINs
+- Source DB readiness retry loop (45K seed statements need time)
+- Data count assertions in proof script
+- Gate score extracted from POST response instead of broken summary endpoint
+- Zero-count warnings in source_loader
+
+### Files Changed
+
+- `platform/migration/db/migrations/037_reconciliation_results.sql` — NEW
+- `platform/migration/api/reconciliation_handlers.go` — Major rewrite (persistence + tier3)
+- `platform/migration/api/reconciliation_handlers_test.go` — Updated for new behavior
+- `platform/migration/batch/source_loader.go` — Payment type normalization + logging
+- `platform/migration/reconciler/tier1.go` — batch_id JOIN filter
+- `platform/migration/reconciler/tier2.go` — batch_id JOIN filters
+- `platform/migration/reconciler/tier3.go` — NULL defense on service credit query
+- `platform/migration/reconciler/tier3_test.go` — Updated mock patterns
+- `migration-simulation/sources/prism/prism_data_generator.py` — PMT_HIST generation
+- `migration-simulation/sources/pas/init/02_seed.sql` — NEW (generated)
+- `scripts/run_two_source_proof.sh` — Gate extraction, retry loop, assertions
+- `docker-compose.yml` — Mount for migration 037
+
+### Stats
+
+- 12 files changed (2 new, 10 modified)
+- Migration unit tests: 12 packages, all pass
+- Two-Source Proof: 28/28 checks pass
+- Gate scores: 0 (expected — seed data formulas don't match reconciler formulas yet)
+
+### What's Next
+
+- Gate score tuning: align seed data benefit formulas with reconciler's RecomputeFromStoredInputs()
+- Tier 3 benchmarks: configure plan-level expectations
+- Starter prompt: `docs/plans/2026-03-22-reconciliation-alignment-complete-next-session.md`
+
+## Session 15: Two-Source Proof — Debug Loop Complete (2026-03-22)
+
+**Branch:** `claude/stoic-franklin`
+
+### What Was Done
+
+Took the Two-Source Proof from 11/19 passing (Session 14 infrastructure) to **23/23 passing**.
+Both PRISM and PAS source databases run the complete migration pipeline end-to-end:
+engagement → profiling → mapping → batch execution → reconciliation → gate scoring.
+
+**Root causes fixed:**
+1. **Schema drift** — Migration 036 reconciled lineage/exception DDL (designed as row-level,
+   code evolved to column-level) and added 6 canonical/reference tables
+2. **Missing canonical output** — Batch executor discarded TransformResult.CanonicalRow;
+   now writes to canonical_members for reconciliation
+3. **Source reference loading** — New source_loader.go bridges PRISM_BENEFIT_CALC / PAS
+   retirement_award into migration.stored_calculations, and payment history for tier 2
+4. **Unqualified table references** — 8 SQL queries in reconciler lacked `migration.` prefix
+5. **NULL defense** — COALESCE in reconciler queries, NULLIF in inserts
+6. **Missing seed data** — Generated PRISM (100 members, 44K SQL statements) and PAS
+   (100 members, 185K records) seed data via Python generators
+7. **Proof script bugs** — Batch status check (LOADED not COMPLETE), PAS column name fix
+
+### Files Changed
+
+- `platform/migration/db/migrations/036_canonical_tables.sql` — NEW (DDL for 8 tables)
+- `platform/migration/batch/batch.go` — writeCanonicalMember, expanded clearPriorBatchData
+- `platform/migration/batch/source_loader.go` — NEW (source reference data loading)
+- `platform/migration/api/batch_handlers.go` — Trigger source data load post-execution
+- `platform/migration/reconciler/tier1.go` — Schema-qualify, COALESCE
+- `platform/migration/reconciler/tier2.go` — Schema-qualify, COALESCE
+- `platform/migration/reconciler/tier3.go` — Schema-qualify
+- `platform/migration/batch/batch_test.go` — Updated sqlmock for new tables
+- `docker-compose.yml` — Volume mount for 036
+- `scripts/run_two_source_proof.sh` — Status check + column name fixes
+
+### Stats
+
+- 10 files changed (2 new, 8 modified)
+- Migration unit tests: 11 packages, all pass
+- Two-Source Proof: 23/23 checks pass
+- Gate scores: 0 (reconciliation data alignment is next step)
+
+### What's Next
+
+- Reconciliation data alignment (member_id format mismatch between canonical_members and stored_calculations)
+- Gate score tuning for meaningful reconciliation results
+- Tier 3 benchmarks
+- Starter prompt: `docs/plans/2026-03-22-two-source-proof-complete-next-session.md`
+
+## Session 14: AMS Competitive Analysis — Governance Documents (2026-03-22)
+
+**Branch:** `claude/lucid-robinson`
+
+### Context
+
+Session 14 competitive analysis compared NoUI against five pension/enterprise platforms
+(Sagitec Xelence, Vitech V3locity, TELUS Health Ariel, Mendix, OutSystems). Identified
+13 capability gaps across six AMS domains. Engineering assessment against the actual
+codebase found: 1 gap already fully built (employer portal), 4 gaps partially addressed,
+3 genuine infrastructure gaps (deferred to Phase 4), 3 wrongly timed, and 2 process concerns.
+
+### Decision: AFS Model NOT Adopted
+
+The "Application Foundation Services" model (six standalone engines modeled after Sagitec)
+was evaluated and rejected. NoUI's 18-service microservices architecture already distributes
+these capabilities with better isolation, independent deployment, and testability. Adding
+"engine" abstractions would reintroduce the coupling that caused the original repo split.
+
+### Documents Produced
+
+**`docs/RBAC_MATRIX.md` — Phase 1 Security Artifact**
+- Documents current enforcement: JWT auth + 43 RLS policies + 2 RLS branches (staff/member)
+- Defines 6 target roles: system_admin, pension_admin, noui_engineer, employer_hr, member, auditor
+- Service access matrix: 21 services x 6 roles (R/W/A/—)
+- Category A/B/C change authorization definitions
+- Data sensitivity tiers + restricted field access rules
+- Enforcement roadmap: Phase 1 (current) → Phase 2 (role-based filtering) → Phase 3 (ABAC)
+- Honest about gap: architecture docs describe 5 roles but RLS only branches on staff/member
+
+**`docs/RELEASE_GOVERNANCE.md` — Platform Release Process**
+- Three release types: quarterly major, monthly patch, emergency
+- Version scheme: YYYY.Q.patch (e.g., 2026.2.0)
+- Promotion pipeline: dev → staging → production with gate requirements
+- Per-plane update procedures (Plane 1: AI, Plane 2: Tenant, Plane 3: Connector)
+- Rollback procedures with time windows
+- Client notification templates and timelines
+- SOC 2 evidence collection per deployment
+- Colorado compliance requirements (breach notification, privacy act)
+
+**`docs/SESSION14_AMS_FINDINGS.md` — Competitive Analysis Reference**
+- Gap register with honest NoUI status for each of 13 items
+- 6 competitive advantages documented (calculation transparency, AI boundary enforcement,
+  migration tooling, degradation model, audit architecture, multi-tenant isolation)
+- Deferred items with trigger conditions (not target dates)
+- Competitive intelligence: Sagitec clients, Vitech TCO claims, TELUS parameter model
+- Positioned as sales/strategy reference, explicitly NOT an engineering backlog
+
+### Stats
+- 3 documents, 0 code changes
+- No tests affected (docs only)
+
+### What's Next
+- Continue migration engine development (Phase 3)
+- Two-Source Proof or Port Management Phase 2
+
+## Port Management Phase 1 + Migration Plan Status (2026-03-22)
+
+**Branch:** `claude/bold-grothendieck`
+
+### What Was Done
+
+**Port Management Phase 1:**
+- Removed host port mappings from 19 Docker services in docker-compose.yml
+- Only frontend (3000), postgres (5432), pgbouncer (6432) retain host mappings
+- All service access goes through nginx proxy at localhost:3000
+- Created `infrastructure/ports.env` — single-source port registry for all 21 services
+- Updated health smoke test to route through nginx (not direct healthagg port)
+- Updated CLAUDE.md service table: replaced port column with API path column
+- Added clarifying comment to vite.config.ts (dev proxy is local-only)
+
+**Migration Engine Plan Status:**
+- Added completion status section to migration engine plan
+- All 26 tasks confirmed code-complete (Tasks 1–24 done, 25 done, 18+26 need integration run)
+- Remaining work: two-source proof (run pipeline against PRISM + PAS databases)
+
+**Bug Fixes (pre-existing, surfaced during E2E):**
+- Missing docker-compose volume mounts for migrations 033-035 (gate_transition,
+  notification, platform_type) — added in #135 but mounts were missed
+- `HTTP_BODY` → `BODY` variable typo in migration E2E Phase 10 coverage report test
+
+### Stats
+- 7 files changed
+- Docker E2E: 169/169 across 5 suites (up from 166 — 3 new migration Phase 10 tests)
+  - Workflows: 20/20
+  - Services Hub: 50/50
+  - Correspondence: 24/24
+  - Migration: 26/26 (up from 23)
+  - Employer: 49/49
+- Host port `localhost:8081` confirmed unreachable (port removal verified)
+- No pgbouncer timeout cascades on startup (clean single-pass boot)
+
+### What's Next
+- Two-Source Proof: run migration pipeline against PRISM + PAS databases end-to-end
+- Or: Port Management Phase 2 (standardize container ports to :8080)
+- Starter prompt: `docs/plans/2026-03-22-next-session-starter.md`
+
+## Migration Phase 5g: dbcontext Connection Recovery + Employer Fixes (2026-03-22)
+
+**Branch:** `claude/intelligent-mclaren`
+
+### What Was Done
+
+**dbcontext Stale Connection Recovery (Systemic — All 17 Services):**
+- Added `defer tx.Rollback()` after `BeginTx` in `DBMiddleware` to prevent connection
+  pool poisoning when handler queries fail (e.g., duplicate key INSERT)
+- Without this fix, failed transactions stayed open and the next request on the pooled
+  connection got `pq: could not complete operation in a failed transaction`
+- Removed redundant explicit `tx.Rollback()` on set_config failure (defer handles it)
+
+**Employer Reporting: uploaded_by UUID Fix:**
+- Replaced hardcoded `UploadedBy: ""` with `auth.UserID(r.Context())` via `userIDOrDefault()`
+- Added `isUUID()` validation — dev JWT `sub` claim ("dev-admin-001") is not a valid UUID,
+  so non-UUID values fall back to default system UUID
+- Same fix applied to `resolved_by` in `ResolveException` handler
+
+**Employer Terminations: hireDate Timestamp Parsing:**
+- Added `parseFlexDate()` helper that accepts both date-only ("2006-01-02") and RFC3339
+  ("2006-01-02T00:00:00Z") formats
+- PostgreSQL `timestamptz` columns return full timestamps, but the refund calculator
+  only accepted date-only format
+
+**Employer E2E Script Fixes:**
+- Removed 3 skip tolerances (alerts stale conn, manual-entry UUID, refund date parse)
+- JWT regeneration: after portal user creation, regenerate JWT with real user UUID as
+  `sub` claim so FK constraints on `uploaded_by` are satisfied
+- Fixed jq path: `.data[0].id` (not `.data.items[0].id`) matching actual API response
+- Fixed division code: "STATE" (not "SD") matching seeded `employer_division` table
+
+**Port Management Plan:**
+- Created `docs/plans/2026-03-22-port-management-phase1.md` — plan for removing host
+  port mappings, creating single port registry, and fixing CRM port anomaly
+
+### Tests Added
+- `TestDBMiddleware_RollbackOnHandlerError` — single-connection pool, duplicate key trigger,
+  verifies next request succeeds (DB-dependent, skipped with -short)
+- `TestCalculateRefund_RFC3339Dates` — full calculation with timestamp inputs
+- `TestParseFlexDate` — 4 format variations (date-only, RFC3339, with timezone offset)
+
+### Stats
+- 7 files changed (+182 lines)
+- All 3 modified Go packages: tests passing (short mode)
+- Docker E2E: 166/166 across 5 suites (up from 163 — 3 previously-skipped tests now real passes)
+  - Workflows: 20/20
+  - Services Hub: 50/50
+  - Correspondence: 24/24
+  - Migration: 23/23
+  - Employer: 49/49 (up from 46)
+
+### Known Issues (Resolved This Session)
+- pgbouncer `query_wait_timeout` on Docker startup — too many services binding host ports
+  simultaneously. All services recovered on second start. Root cause addressed in port
+  management plan (remove host port mappings for internal services).
+
+### What's Next
+- Port Management Phase 1: Remove host port mappings, create port registry, fix CRM anomaly
+  (see `docs/plans/2026-03-22-port-management-phase1.md`)
+- Starter prompt: `docs/plans/2026-03-22-port-management-phase1-starter.md`
+
 ## Migration Phase 5f: Employer Portal E2E + nginx Proxy + Engagement Test Fix (2026-03-22)
 
 **Branch:** `claude/nostalgic-shaw`

@@ -1930,47 +1930,81 @@ git commit -m "[migration] Two-source proof milestone achieved"
 
 ---
 
-## Task Summary
+## Task Summary & Completion Status
 
-| Phase | Task | Description | Dependencies |
-|-------|------|-------------|--------------|
-| 1 | 1 | Fix PAS schema mismatches | None |
-| 1 | 2 | Migration schema DDL | None |
-| 1 | 3 | Go service skeleton | None |
-| 1 | 4 | Engagement CRUD API | Task 2, 3 |
-| 1 | 5 | Template registry | Task 3 |
-| 1 | 6 | Template matcher | Task 5 |
-| 1 | 7 | Python intelligence skeleton | None |
-| 1 | 8 | Signal scorer | Task 7 |
-| 1 | 9 | Agreement analysis | Task 6, 8 |
-| 1 | 10 | ISO 8000 quality profiler | Task 3 |
-| 1 | 11 | Generate mappings endpoint | Task 4, 9, 10 |
-| 1 | 12 | Docker integration | Task 3, 7 |
-| 2 | 13 | Transformation pipeline | Task 11 |
-| 2 | 14 | Batch processor | Task 13 |
-| 2 | 15 | Canonical loader + lineage | Task 14 |
-| 2 | 16 | Re-transformation | Task 15 |
-| 2 | 17 | Code table discovery | Task 13 |
-| 2 | 18 | Phase 2 E2E verification | Task 15, 16, 17 |
-| 3 | 19 | Tier 1 reconciliation | Task 15 |
-| 3 | 20 | Tier 2 reconciliation | Task 19 |
-| 3 | 21 | Tier 3 reconciliation | Task 19 |
-| 3 | 22 | Weighted scoring gate | Task 19, 20, 21 |
-| 3 | 23 | Mismatch analysis + corrections | Task 22 |
-| 3 | 24 | Corpus abstraction | Task 8 |
-| 3 | 25 | Cross-language fixtures | Task 19 |
-| 3 | 26 | Two-source proof E2E | All above |
+> **Last updated:** 2026-03-22
 
-**Parallelizable work:** Tasks 1-3 and 7 can run in parallel (no dependencies). Tasks 5+10 can parallel with 7+8. Task 24 can parallel with 19-22.
+| Phase | Task | Description | Status | Notes |
+|-------|------|-------------|--------|-------|
+| 1 | 1 | Fix PAS schema mismatches | **DONE** | Schema standardized to `src_pas` |
+| 1 | 2 | Migration schema DDL | **DONE** | `030_migration_schema.sql` + 5 follow-on migrations (031–035) |
+| 1 | 3 | Go service skeleton | **DONE** | Full service with 30+ handlers, WebSocket hub |
+| 1 | 4 | Engagement CRUD API | **DONE** | 10-column schema incl. `source_platform_type` |
+| 1 | 5 | Template registry | **DONE** | 18 concept tags, similarity scoring |
+| 1 | 6 | Template matcher | **DONE** | Column-name matching + type compatibility |
+| 1 | 7 | Python intelligence skeleton | **DONE** | FastAPI service on port 8101 |
+| 1 | 8 | Signal scorer | **DONE** | Column profiling + confidence scoring |
+| 1 | 9 | Agreement analysis | **DONE** | Template vs. signal agreement matrix |
+| 1 | 10 | ISO 8000 quality profiler | **DONE** | 6-dimension scoring + pattern auto-detection (7 regex) |
+| 1 | 11 | Generate mappings endpoint | **DONE** | Dual-strategy mapping generation |
+| 1 | 12 | Docker integration | **DONE** | Both services in docker-compose, E2E suite |
+| 2 | 13 | Transformation pipeline | **DONE** | 12 ordered handlers |
+| 2 | 14 | Batch processor | **DONE** | Idempotent with checkpoint/resume |
+| 2 | 15 | Canonical loader + lineage | **DONE** | Row-level provenance tracking |
+| 2 | 16 | Re-transformation | **DONE** | Surgical updates via lineage |
+| 2 | 17 | Code table discovery | **DONE** | Low-cardinality column detection + mapping |
+| 2 | 18 | Phase 2 E2E verification | **CODE WRITTEN** | `test_phase2_e2e.py` exists (403 lines), never run against live services |
+| 3 | 19 | Tier 1 reconciliation | **DONE** | Stored calculation recomputation |
+| 3 | 20 | Tier 2 reconciliation | **DONE** | Payment history reverse-engineering |
+| 3 | 21 | Tier 3 reconciliation | **DONE** | Aggregate statistical validation |
+| 3 | 22 | Weighted scoring gate | **DONE** | 95% threshold, P1 zero-tolerance |
+| 3 | 23 | Mismatch analysis + corrections | **DONE** | Python analysis + correction suggestions |
+| 3 | 24 | Corpus abstraction | **DONE** | k-anonymity quantization, shared model |
+| 3 | 25 | Cross-language fixtures | **DONE** | YAML fixtures + Python tests passing; Go reads same fixtures |
+| 3 | 26 | Two-source proof E2E | **NOT STARTED** | Proof script + orchestrated run + results doc |
+
+### Post-Plan Additions (built but not in original task list)
+
+These capabilities were added after the plan was written and should be verified
+as part of the two-source proof:
+
+| Feature | Files | Status |
+|---------|-------|--------|
+| Coverage report (canonical field scoring) | `profiler/coverage.go`, `api/coverage_handler.go` | Done, E2E tested |
+| Pattern auto-detection (7 pension regexes) | `profiler/patterns.go` | Done, unit tested |
+| Mapping spec document (auditable JSON) | `api/report_handler.go` | Done, E2E tested |
+| Platform type column | `migration 035`, engagement model | Done |
+| WebSocket real-time events | `ws/hub.go`, `ws/handler.go` | Done |
+| Dashboard + operational backend | `api/dashboard_handlers.go`, `api/event_handlers.go`, etc. | Done |
+| Migration E2E bash suite | `tests/e2e/migration_e2e.sh` (26 tests) | Done, passing |
+| Risk + attention + cluster management | `api/risk_handlers.go`, `api/attention_handlers.go`, etc. | Done |
+
+### What Remains — Integration Proving
+
+All code is written. The remaining work is integration-level verification:
+
+1. **Task 18+26 (collapsed): Two-Source Proof Run**
+   - Spin up Docker with PRISM + PAS source databases
+   - Run `test_phase2_e2e.py` against live services — debug any failures
+   - Run reconciliation gate checks on both sources
+   - Verify coverage report + mapping spec for both sources
+   - Document results
+
+2. **Cross-language verification (Task 25 — validation only)**
+   - Confirm Go `formula_test.go` reads shared YAML fixtures
+   - Run both Go and Python tests, verify $0.00 variance
+
+3. **Revert checklist (below) — verify before proof run**
 
 ---
 
 ## Revert Checklist
 
-Before starting Phase 2, revert the canonical schema changes made during simulation:
-- [ ] `service_credit.as_of_date` back to NOT NULL
-- [ ] `service_credit.credited_years_total` back to NOT NULL
-- [ ] `contribution.ee_amount` back to NOT NULL
-- [ ] `reconciliation_result.batch_id` back to NOT NULL
+Before running the two-source proof, verify these canonical schema constraints
+are NOT relaxed (should be handled by the exception system, not schema changes):
+- [ ] `service_credit.as_of_date` — NOT NULL
+- [ ] `service_credit.credited_years_total` — NOT NULL
+- [ ] `contribution.ee_amount` — NOT NULL
+- [ ] `reconciliation_result.batch_id` — NOT NULL
 
 These should be handled by the exception system, not schema relaxation.

@@ -55,7 +55,8 @@ func CalculateRefund(input RefundInput) (*RefundResult, error) {
 	}
 	rate := new(big.Rat).Quo(ratePercent, big.NewRat(100, 1))
 
-	// Parse dates — handle both "2006-01-02" and RFC3339 formats (timestamptz).
+	// Parse dates — accept both "2006-01-02" and RFC3339 ("2006-01-02T00:00:00Z")
+	// since PostgreSQL timestamptz columns return the full timestamp.
 	hireDate, err := parseFlexDate(input.HireDate)
 	if err != nil {
 		return nil, fmt.Errorf("invalid hire date: %w", err)
@@ -174,18 +175,19 @@ func ratPow(base *big.Rat, exp int) *big.Rat {
 	return result
 }
 
+// parseFlexDate accepts both date-only ("2006-01-02") and RFC3339
+// ("2006-01-02T15:04:05Z07:00") formats. PostgreSQL timestamptz columns
+// return the full timestamp, but date columns return date-only.
+func parseFlexDate(s string) (time.Time, error) {
+	if t, err := time.Parse("2006-01-02", s); err == nil {
+		return t, nil
+	}
+	return time.Parse(time.RFC3339, s)
+}
+
 // ratToFixed2 converts a big.Rat to a string with exactly 2 decimal places.
 // This is the ONLY place where rounding occurs in the refund calculation.
 func ratToFixed2(r *big.Rat) string {
 	return r.FloatString(2)
 }
 
-// parseFlexDate parses a date string in either RFC3339 ("2020-01-15T00:00:00Z")
-// or date-only ("2020-01-15") format. PostgreSQL timestamptz columns return the
-// former; date columns return the latter.
-func parseFlexDate(s string) (time.Time, error) {
-	if t, err := time.Parse(time.RFC3339, s); err == nil {
-		return t, nil
-	}
-	return time.Parse("2006-01-02", s)
-}

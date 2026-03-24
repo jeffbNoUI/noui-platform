@@ -14,7 +14,8 @@ func scanEngagement(scanner interface{ Scan(...any) error }) (*models.Engagement
 	var connJSON []byte
 	err := scanner.Scan(
 		&e.EngagementID, &e.TenantID, &e.SourceSystemName, &e.CanonicalSchemaVersion,
-		&e.Status, &e.QualityBaselineApprovedAt, &connJSON, &e.CreatedAt, &e.UpdatedAt,
+		&e.Status, &e.SourcePlatformType, &e.QualityBaselineApprovedAt, &connJSON,
+		&e.CreatedAt, &e.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -31,15 +32,15 @@ func scanEngagement(scanner interface{ Scan(...any) error }) (*models.Engagement
 
 // engagementColumns is the standard column list for engagement queries.
 const engagementColumns = `engagement_id, tenant_id, source_system_name, canonical_schema_version,
-		status, quality_baseline_approved_at, source_connection, created_at, updated_at`
+		status, source_platform_type, quality_baseline_approved_at, source_connection, created_at, updated_at`
 
 // CreateEngagement inserts a new migration engagement and returns the created record.
-func CreateEngagement(db *sql.DB, tenantID, sourceSystemName string) (*models.Engagement, error) {
+func CreateEngagement(db *sql.DB, tenantID, sourceSystemName string, platformType *string) (*models.Engagement, error) {
 	row := db.QueryRow(
-		`INSERT INTO migration.engagement (tenant_id, source_system_name)
-		 VALUES ($1, $2)
+		`INSERT INTO migration.engagement (tenant_id, source_system_name, source_platform_type)
+		 VALUES ($1, $2, $3)
 		 RETURNING `+engagementColumns,
-		tenantID, sourceSystemName,
+		tenantID, sourceSystemName, platformType,
 	)
 	e, err := scanEngagement(row)
 	if err != nil {

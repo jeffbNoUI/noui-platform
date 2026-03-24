@@ -12,19 +12,19 @@ import (
 const tier2Query = `
 SELECT
 	cm.member_id,
-	cm.member_status,
-	ph.gross_amount,
-	cm.canonical_benefit
-FROM canonical_members cm
+	COALESCE(cm.member_status, ''),
+	COALESCE(ph.gross_amount, '0'),
+	COALESCE(cm.canonical_benefit, '0')
+FROM migration.canonical_members cm
 JOIN LATERAL (
 	SELECT ph2.gross_amount
-	FROM payment_history ph2
-	WHERE ph2.member_id = cm.member_id
+	FROM migration.payment_history ph2
+	WHERE ph2.member_id = cm.member_id AND ph2.batch_id = cm.batch_id
 	  AND ph2.payment_type = 'REGULAR'
 	ORDER BY ph2.payment_date DESC
 	LIMIT 1
 ) ph ON true
-LEFT JOIN stored_calculations sc ON sc.member_id = cm.member_id
+LEFT JOIN migration.stored_calculations sc ON sc.member_id = cm.member_id AND sc.batch_id = cm.batch_id
 WHERE cm.batch_id = $1
   AND sc.member_id IS NULL
 ORDER BY cm.member_id

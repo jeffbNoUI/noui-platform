@@ -101,6 +101,13 @@ else
   PORTAL_USER_ID=""
 fi
 
+# Regenerate JWT with real portal user UUID as sub claim so that
+# uploaded_by / resolved_by FK constraints are satisfied.
+if [ -n "$PORTAL_USER_ID" ] && [ "$PORTAL_USER_ID" != "null" ]; then
+  DEV_TOKEN=$(generate_dev_jwt "$PORTAL_USER_ID")
+  AUTH_HEADER="Authorization: Bearer ${DEV_TOKEN}"
+fi
+
 # Update user role (if we have a user ID)
 if [ -n "$PORTAL_USER_ID" ] && [ "$PORTAL_USER_ID" != "null" ]; then
   RESPONSE=$(do_put "/api/v1/employer/users/${PORTAL_USER_ID}/role" '{"portalRole": "SUPER_USER"}')

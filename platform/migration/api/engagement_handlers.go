@@ -38,7 +38,7 @@ func (h *Handler) CreateEngagement(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tid := tenantID(r)
-	engagement, err := migrationdb.CreateEngagement(h.DB, tid, req.SourceSystemName)
+	engagement, err := migrationdb.CreateEngagement(h.DB, tid, req.SourceSystemName, req.SourcePlatformType)
 	if err != nil {
 		slog.Error("failed to create engagement", "error", err, "tenant_id", tid)
 		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to create engagement")
