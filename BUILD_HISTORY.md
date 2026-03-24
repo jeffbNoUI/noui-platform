@@ -1,5 +1,76 @@
 # noui-platform — Build History
 
+## Session 35: False Cognate Warning Badges — D2 Frontend (2026-03-24)
+
+**Branch:** `claude/lucid-kirch` → PR #TBD
+
+### What Was Done
+
+**Deliverable 2 frontend** of the pension glossary integration — warning badges on the mapping review table with analyst acknowledgment gate.
+
+**1. Backend: Warning enrichment on ListMappings (mapping_handlers.go, +15 lines)**
+- Added `Warnings []mapper.MappingWarning` field to API `FieldMapping` struct (`json:"warnings,omitempty"`)
+- `ListMappings` now enriches responses by computing false cognate warnings at read time from vocabulary
+- Uses `ReverseTableMap()` to derive concept_tag from canonical_table for index lookup
+- Non-fatal: vocabulary parse failure returns mappings without warnings
+
+**2. Backend: ReverseTableMap (registry.go, +10 lines)**
+- New `ReverseTableMap()` method on Registry: returns `canonical_table → concept_tag` map
+- Used by ListMappings to look up concept tags for false cognate index queries
+
+**3. Frontend types (Migration.ts, +8 lines)**
+- `WarningRisk` type: `'HIGH' | 'MEDIUM' | 'LOW'`
+- `MappingWarning` interface: `term`, `warning`, `risk`
+- `warnings?: MappingWarning[]` added to `FieldMapping`
+
+**4. WarningBadge component (WarningBadge.tsx, 130 lines)**
+- Colored pill badge: coral for HIGH, gold for MEDIUM, dimmed for acknowledged
+- Click-to-open popover with: term, warning explanation, risk level pill, acknowledge button
+- Click-outside-to-close behavior via `useEffect` + `mousedown` listener
+- Accessible: `aria-label` with warning count, risk level, and acknowledgment state
+- `data-testid` attributes for test targeting
+
+**5. MappingPanel integration (MappingPanel.tsx, +20 lines)**
+- WarningBadge rendered inline with source column when `warnings.length > 0`
+- Acknowledgment state tracked in `useState<Set<string>>` (local, resets on navigation — D3 will persist)
+- Approve button disabled when `hasUnacknowledgedWarnings(mapping)` returns true
+- Disabled button shows gray background + `cursor: not-allowed` + tooltip explaining the gate
+
+**6. Tests (MappingPanel.test.tsx, 5 tests)**
+- Badge shown when mapping has warnings / hidden when no warnings
+- Approve button disabled with unacknowledged warnings
+- Approve button enabled after acknowledging
+- Popover shows term, explanation, and risk level
+
+### Key Decisions
+
+- **Enrich on read, not persist**: Warnings computed from vocabulary at `ListMappings` time rather than stored in DB. This means new vocabulary entries automatically apply to all mappings without re-generation.
+- **Local acknowledgment state**: `useState<Set<string>>` intentionally resets on navigation — forces analysts to review warnings each visit. Persistent acknowledgment deferred to D3.
+- **No popover library**: Built lightweight click-toggle popover with positioned `div` + click-outside detection, matching codebase convention of zero external UI dependencies.
+
+### Verification
+
+- Mapper: all tests pass (short mode)
+- Frontend: typecheck clean, 1863/1863 tests pass (5 new), zero regressions
+- Visual verification: badge renders in all 4 states (HIGH unack, MEDIUM unack, no warning, HIGH acked)
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `platform/migration/mapper/registry.go` | `ReverseTableMap()` method |
+| `platform/migration/api/mapping_handlers.go` | `Warnings` field + ListMappings enrichment |
+| `frontend/src/types/Migration.ts` | `MappingWarning`, `WarningRisk` types |
+| `frontend/src/components/migration/engagement/WarningBadge.tsx` | New — badge + popover |
+| `frontend/src/components/migration/engagement/MappingPanel.tsx` | Badge wiring + acknowledgment gate |
+| `frontend/src/components/migration/engagement/__tests__/MappingPanel.test.tsx` | New — 5 tests |
+| `docs/plans/2026-03-24-d3-acknowledgment-persistence-starter.md` | New — D3 starter prompt |
+
+### What's Next
+
+- **D3 Part A: Acknowledgment persistence** — `migration.warning_acknowledgment` table, POST endpoint, ListMappings join, frontend mutation hook. Starter prompt: `docs/plans/2026-03-24-d3-acknowledgment-persistence-starter.md`
+- **D3 Part B: Canonical model evolution** — Dual service fields, TMRS accumulation pathway, FAC metadata
+
 ## Session 34: False Cognate Warning System — D2 Backend (2026-03-24)
 
 **Branch:** `claude/upbeat-heyrovsky` → PR #167 (merged)

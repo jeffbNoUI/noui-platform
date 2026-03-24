@@ -1,7 +1,14 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { C, BODY, MONO } from '@/lib/designSystem';
-import { useMappings, useCodeMappings, useUpdateMapping, useGenerateMappings, useMappingCorpusContext } from '@/hooks/useMigrationApi';
+import {
+  useMappings,
+  useCodeMappings,
+  useUpdateMapping,
+  useGenerateMappings,
+  useMappingCorpusContext,
+} from '@/hooks/useMigrationApi';
 import CorpusIndicator from '../ai/CorpusIndicator';
+import WarningBadge from './WarningBadge';
 import type { AgreementStatus, FieldMapping } from '@/types/Migration';
 
 const AGREEMENT_COLORS: Record<AgreementStatus, string> = {
@@ -35,6 +42,16 @@ export default function MappingPanel({ engagementId }: Props) {
   const [filterAgreement, setFilterAgreement] = useState<AgreementStatus | ''>('');
   const [sortField, setSortField] = useState<SortField>('source');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
+  const [acknowledgedMappings, setAcknowledgedMappings] = useState<Set<string>>(new Set());
+
+  const handleAcknowledge = useCallback((mappingId: string) => {
+    setAcknowledgedMappings((prev) => new Set(prev).add(mappingId));
+  }, []);
+
+  const hasUnacknowledgedWarnings = useCallback(
+    (m: FieldMapping) => (m.warnings?.length ?? 0) > 0 && !acknowledgedMappings.has(m.mapping_id),
+    [acknowledgedMappings],
+  );
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -283,101 +300,119 @@ export default function MappingPanel({ engagementId }: Props) {
               {sorted.map((m) => {
                 const isAgreed = m.agreement_status === 'AGREED';
                 return (
-                <tr key={m.mapping_id} style={{ borderBottom: `1px solid ${C.borderLight}` }}>
-                  <td style={{ padding: '10px 16px', fontFamily: MONO, color: C.text }}>
-                    {m.source_table}.{m.source_column}
-                  </td>
-                  <td style={{ padding: '10px 16px', fontFamily: MONO, color: C.text }}>
-                    <span>{m.canonical_table}.{m.canonical_column}</span>
-                    <LazyCorpusIndicator engagementId={engagementId} mappingId={m.mapping_id} />
-                  </td>
-                  <td style={{ padding: '10px 12px' }}>
-                    {isAgreed ? (
-                      <span style={{ display: 'flex', justifyContent: 'center' }}>
-                        <span style={{ color: C.sage, fontSize: 14 }}>&#10003;</span>
-                      </span>
-                    ) : (
-                      <ConfidenceBar value={m.template_confidence} />
-                    )}
-                  </td>
-                  <td style={{ padding: '10px 12px' }}>
-                    {isAgreed ? (
-                      <span style={{ display: 'flex', justifyContent: 'center' }}>
-                        <span style={{ color: C.sage, fontSize: 14 }}>&#10003;</span>
-                      </span>
-                    ) : (
-                      <ConfidenceBar value={m.signal_confidence} />
-                    )}
-                  </td>
-                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                    <span
-                      style={{
-                        display: 'inline-block',
-                        padding: '3px 10px',
-                        borderRadius: 12,
-                        fontSize: 11,
-                        fontWeight: 600,
-                        color: AGREEMENT_COLORS[m.agreement_status],
-                        background: AGREEMENT_BG[m.agreement_status],
-                      }}
-                    >
-                      {m.agreement_status.replace('_', ' ')}
-                    </span>
-                  </td>
-                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                    {m.approval_status === 'PROPOSED' ? (
-                      <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
-                        <button
-                          onClick={() => handleApprove(m)}
-                          disabled={updateMapping.isPending}
-                          style={{
-                            padding: '4px 10px',
-                            borderRadius: 4,
-                            border: 'none',
-                            background: C.sage,
-                            color: C.textOnDark,
-                            fontSize: 11,
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => handleReject(m)}
-                          disabled={updateMapping.isPending}
-                          style={{
-                            padding: '4px 10px',
-                            borderRadius: 4,
-                            border: `1px solid ${C.coral}`,
-                            background: 'transparent',
-                            color: C.coral,
-                            fontSize: 11,
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          Reject
-                        </button>
+                  <tr key={m.mapping_id} style={{ borderBottom: `1px solid ${C.borderLight}` }}>
+                    <td style={{ padding: '10px 16px', fontFamily: MONO, color: C.text }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span>
+                          {m.source_table}.{m.source_column}
+                        </span>
+                        {m.warnings && m.warnings.length > 0 && (
+                          <WarningBadge
+                            warnings={m.warnings}
+                            acknowledged={acknowledgedMappings.has(m.mapping_id)}
+                            onAcknowledge={() => handleAcknowledge(m.mapping_id)}
+                          />
+                        )}
                       </div>
-                    ) : (
+                    </td>
+                    <td style={{ padding: '10px 16px', fontFamily: MONO, color: C.text }}>
+                      <span>
+                        {m.canonical_table}.{m.canonical_column}
+                      </span>
+                      <LazyCorpusIndicator engagementId={engagementId} mappingId={m.mapping_id} />
+                    </td>
+                    <td style={{ padding: '10px 12px' }}>
+                      {isAgreed ? (
+                        <span style={{ display: 'flex', justifyContent: 'center' }}>
+                          <span style={{ color: C.sage, fontSize: 14 }}>&#10003;</span>
+                        </span>
+                      ) : (
+                        <ConfidenceBar value={m.template_confidence} />
+                      )}
+                    </td>
+                    <td style={{ padding: '10px 12px' }}>
+                      {isAgreed ? (
+                        <span style={{ display: 'flex', justifyContent: 'center' }}>
+                          <span style={{ color: C.sage, fontSize: 14 }}>&#10003;</span>
+                        </span>
+                      ) : (
+                        <ConfidenceBar value={m.signal_confidence} />
+                      )}
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
                       <span
                         style={{
+                          display: 'inline-block',
+                          padding: '3px 10px',
+                          borderRadius: 12,
                           fontSize: 11,
                           fontWeight: 600,
-                          color:
-                            m.approval_status === 'APPROVED'
-                              ? C.sage
-                              : m.approval_status === 'REJECTED'
-                                ? C.coral
-                                : C.textTertiary,
+                          color: AGREEMENT_COLORS[m.agreement_status],
+                          background: AGREEMENT_BG[m.agreement_status],
                         }}
                       >
-                        {m.approval_status}
+                        {m.agreement_status.replace('_', ' ')}
                       </span>
-                    )}
-                  </td>
-                </tr>
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                      {m.approval_status === 'PROPOSED' ? (
+                        <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                          <button
+                            onClick={() => handleApprove(m)}
+                            disabled={updateMapping.isPending || hasUnacknowledgedWarnings(m)}
+                            title={
+                              hasUnacknowledgedWarnings(m)
+                                ? 'Acknowledge all warnings before approving'
+                                : undefined
+                            }
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: 4,
+                              border: 'none',
+                              background: hasUnacknowledgedWarnings(m) ? C.borderLight : C.sage,
+                              color: hasUnacknowledgedWarnings(m) ? C.textTertiary : C.textOnDark,
+                              fontSize: 11,
+                              fontWeight: 600,
+                              cursor: hasUnacknowledgedWarnings(m) ? 'not-allowed' : 'pointer',
+                            }}
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => handleReject(m)}
+                            disabled={updateMapping.isPending}
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: 4,
+                              border: `1px solid ${C.coral}`,
+                              background: 'transparent',
+                              color: C.coral,
+                              fontSize: 11,
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      ) : (
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 600,
+                            color:
+                              m.approval_status === 'APPROVED'
+                                ? C.sage
+                                : m.approval_status === 'REJECTED'
+                                  ? C.coral
+                                  : C.textTertiary,
+                          }}
+                        >
+                          {m.approval_status}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
                 );
               })}
             </tbody>
@@ -508,7 +543,13 @@ function Th({
   );
 }
 
-function LazyCorpusIndicator({ engagementId, mappingId }: { engagementId: string; mappingId: string }) {
+function LazyCorpusIndicator({
+  engagementId,
+  mappingId,
+}: {
+  engagementId: string;
+  mappingId: string;
+}) {
   const { data } = useMappingCorpusContext(engagementId, mappingId);
   if (!data) return null;
   return (

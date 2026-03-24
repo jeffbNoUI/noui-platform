@@ -23,6 +23,18 @@ func (r *Registry) Get(conceptTag string) (MappingTemplate, bool) {
 	return t, ok
 }
 
+// ReverseTableMap returns a map from canonical_table to concept_tag.
+// Used by ListMappings to look up concept tags for false cognate warnings.
+func (r *Registry) ReverseTableMap() map[string]string {
+	m := make(map[string]string, len(r.templates))
+	for tag, tmpl := range r.templates {
+		if tmpl.CanonicalTable != "" {
+			m[tmpl.CanonicalTable] = tag
+		}
+	}
+	return m
+}
+
 // Tags returns all registered concept tags in sorted order.
 func (r *Registry) Tags() []string {
 	tags := make([]string, 0, len(r.templates))

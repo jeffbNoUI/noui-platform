@@ -25,6 +25,13 @@ export type ExceptionDisposition =
 export type ConfidenceLevel = 'ACTUAL' | 'DERIVED' | 'ESTIMATED' | 'ROLLED_UP';
 export type AgreementStatus = 'AGREED' | 'DISAGREED' | 'TEMPLATE_ONLY' | 'SIGNAL_ONLY';
 export type ApprovalStatus = 'PROPOSED' | 'APPROVED' | 'REJECTED' | 'SUPERSEDED';
+export type WarningRisk = 'HIGH' | 'MEDIUM' | 'LOW';
+
+export interface MappingWarning {
+  term: string;
+  warning: string;
+  risk: WarningRisk;
+}
 export type RiskSource = 'DYNAMIC' | 'STATIC';
 export type RiskSeverity = 'P1' | 'P2' | 'P3';
 export type RiskStatus = 'OPEN' | 'ACKNOWLEDGED' | 'MITIGATED' | 'CLOSED';
@@ -92,6 +99,7 @@ export interface FieldMapping {
   approval_status: ApprovalStatus;
   approved_by: string | null;
   approved_at: string | null;
+  warnings?: MappingWarning[];
 }
 
 export interface CodeMapping {
