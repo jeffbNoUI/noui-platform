@@ -1,5 +1,72 @@
 # noui-platform — Build History
 
+## Session 37: Canonical Model Evolution — D3-B (2026-03-24)
+
+**Branch:** `claude/upbeat-jepsen` → PR #171 (merged)
+
+### What Was Done
+
+**Deliverable 3B** of the pension glossary integration — evolve the mapper canonical schema to handle cross-system pension terminology patterns identified across 25 systems.
+
+**1. Dual service credit fields (registry.go, +15 lines)**
+- `eligibility_service_years` slot (DECIMAL, optional): Earned service only, used for Rule of 75/85/IPR and vesting. Generalizes the DERP "Service Purchase Exclusion" to all 11 systems requiring this split.
+- `benefit_service_years` slot (DECIMAL, optional): Total service for benefit formula (earned + purchased + military + transfer)
+- 10 and 8 vocabulary terms respectively after merge
+
+**2. FAC metadata slots (registry.go, +15 lines)**
+- `fac_window_months` (INTEGER, optional): FAC/FAS/AMS averaging window — systems range 36–96 months
+- `anti_spiking_cap_pct` (DECIMAL, optional): Year-over-year compensation increase cap (110%–125% across systems)
+- `compensation_inclusions` (VARCHAR, optional): What's included in pensionable comp (overtime, leave payout, etc.)
+
+**3. TMRS accumulation metadata (template.go + registry.go, +6 lines)**
+- Added `Metadata map[string]string` field to `MappingTemplate` struct
+- service-credit template annotated with `benefit_model_note` flagging TMRS's monetary accumulation model
+
+**4. Vocabulary enrichment (vocabulary.yaml, +73 lines)**
+- 68 new terms across 5 new slots (468 total ExpectedNames, up from 400)
+- 6 new false cognates: qualifying_service (HIGH, STRS Ohio), membership_service_years (HIGH, Montana PERA), total_service_credit (MEDIUM), combined_service_credit (MEDIUM), compensation_cap (MEDIUM, IRC §401(a)(17)), salary_cap_pct (MEDIUM)
+
+**5. Tests (+9 new tests)**
+- `TestServiceCreditDualFields` — type, optionality verification
+- `TestSalaryHistoryFACSlots` — type, optionality verification
+- `TestServiceCreditMetadata` — Metadata map populated with TMRS note
+- `TestServiceCreditDualFieldNames` — vocabulary enrichment (8+/6+ names)
+- `TestSalaryHistoryFACEnrichedNames` — vocabulary enrichment (5+/5+ names)
+- `TestAttachWarnings_QualifyingService` — HIGH risk, mentions STRS Ohio
+- `TestAttachWarnings_CompensationCap` — MEDIUM risk, mentions IRC 401(a)(17)
+- `TestAttachWarnings_TotalServiceCredit` — MEDIUM risk
+
+### Key Decisions
+
+- **Optional slots, not required**: Source systems may not have separate eligibility/benefit columns. When absent, the transformation engine derives them from `credited_years_total - purchased_years`.
+- **Metadata map over typed fields**: `map[string]string` keeps MappingTemplate generic — only service-credit needs `benefit_model_note` today, but other concepts can carry annotations without struct changes.
+- **No migration SQL**: These are mapper template slots, not DB columns. The mapping UI already renders whatever slots exist.
+
+### Verification
+
+- Go migration: 11/11 packages pass (370 tests, 0 failures)
+- Frontend: typecheck clean (no frontend changes)
+- lint-staged + pre-commit hooks pass
+
+### Files Changed (7 files, +362/-7 lines)
+
+| File | Change |
+|------|--------|
+| `platform/migration/mapper/template.go` | `Metadata` field on `MappingTemplate` |
+| `platform/migration/mapper/registry.go` | 5 new slots + TMRS metadata |
+| `platform/migration/mapper/vocabulary.yaml` | 68 new terms + 6 false cognates |
+| `platform/migration/mapper/registry_test.go` | 4 new tests |
+| `platform/migration/mapper/vocabulary_count_test.go` | Updated threshold + 3 new tests |
+| `platform/migration/mapper/false_cognate_test.go` | 3 new tests |
+| `docs/plans/2026-03-24-post-d3b-canonical-model-starter.md` | Next session starter |
+
+### What's Next
+
+- **D3-C: Zero-contribution member handling** — Nevada PERS (EPC), Utah RS Tier 1 noncontributory
+- **Frontend: Mapping Panel** — visual grouping for dual service fields, FAC metadata display
+- Or pivot to other Sprint 13 deliverables
+- Starter prompt: `docs/plans/2026-03-24-post-d3b-canonical-model-starter.md`
+
 ## Session 36: Warning Acknowledgment Persistence — D3-A (2026-03-24)
 
 **Branch:** `claude/crazy-pascal`
