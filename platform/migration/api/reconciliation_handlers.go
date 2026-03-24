@@ -98,6 +98,15 @@ func (h *Handler) ReconcileBatch(w http.ResponseWriter, r *http.Request) {
 	)
 
 	apiresponse.WriteSuccess(w, http.StatusOK, "migration", gate)
+
+	// Broadcast reconciliation result to connected clients.
+	if b, err := migrationdb.GetBatch(h.DB, batchID); err == nil && b != nil {
+		h.broadcast(b.EngagementID, "reconciliation_completed", map[string]interface{}{
+			"batch_id":      batchID,
+			"gate_passed":   gate.GatePassed,
+			"total_members": gate.TotalMembers,
+		})
+	}
 }
 
 // persistReconciliationResults writes reconciliation results to the

@@ -20,6 +20,7 @@ type Client struct {
 	hub          *Hub
 	conn         *websocket.Conn
 	engagementID string
+	tenantID     string // from JWT claims — used for audit logging
 	send         chan []byte
 }
 

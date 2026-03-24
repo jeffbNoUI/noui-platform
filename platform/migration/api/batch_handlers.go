@@ -193,15 +193,17 @@ func (h *Handler) ExecuteBatchHandler(w http.ResponseWriter, r *http.Request) {
 	sourceSystem := engagement.SourceSystemName
 
 	// Execute async.
+	engID := b.EngagementID
 	go func() {
 		batchObj := &batch.Batch{
 			BatchID:        b.BatchID,
-			EngagementID:   b.EngagementID,
+			EngagementID:   engID,
 			BatchScope:     b.BatchScope,
 			MappingVersion: b.MappingVersion,
 		}
 		if err := batch.ExecuteBatch(h.DB, batchObj, provider, pipeline, tmappings, batch.DefaultThresholds(), nil); err != nil {
 			slog.Error("batch execution failed", "error", err, "batch_id", batchID)
+			h.broadcast(engID, "batch_failed", map[string]string{"batch_id": batchID, "error": err.Error()})
 			return
 		}
 		// After successful batch execution, load source reference data
@@ -209,6 +211,7 @@ func (h *Handler) ExecuteBatchHandler(w http.ResponseWriter, r *http.Request) {
 		if err := batch.LoadSourceReferenceData(h.DB, batchID, sourceSystem, dsn); err != nil {
 			slog.Error("source reference data load failed", "error", err, "batch_id", batchID)
 		}
+		h.broadcast(engID, "batch_completed", map[string]string{"batch_id": batchID, "status": "COMPLETED"})
 	}()
 
 	apiresponse.WriteSuccess(w, http.StatusAccepted, "migration", map[string]string{

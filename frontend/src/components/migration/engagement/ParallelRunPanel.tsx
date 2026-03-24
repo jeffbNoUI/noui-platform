@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
 import {
   useReconciliationSummary,
@@ -37,25 +37,28 @@ export default function ParallelRunPanel({ engagementId, onCertifyComplete }: Pr
     stakeholder_signoff: false,
     rollback_plan: false,
   });
+  const [prevCertId, setPrevCertId] = useState<string | null>(null);
   const [certifyError, setCertifyError] = useState<string | null>(null);
   const [certifySuccess, setCertifySuccess] = useState(false);
 
-  // Restore manual check states from existing certification
-  useEffect(() => {
-    if (existingCert) {
-      const checklist = (existingCert as Record<string, unknown>).checklist_json as
-        | Record<string, boolean>
-        | undefined;
-      if (checklist) {
-        setManualChecks((prev) => ({
-          ...prev,
-          parallel_duration: checklist.parallel_duration ?? prev.parallel_duration,
-          stakeholder_signoff: checklist.stakeholder_signoff ?? prev.stakeholder_signoff,
-          rollback_plan: checklist.rollback_plan ?? prev.rollback_plan,
-        }));
-      }
+  // Restore manual check states from existing certification (replaces useEffect)
+  const certId = existingCert
+    ? (((existingCert as Record<string, unknown>).id as string) ?? 'exists')
+    : null;
+  if (certId && certId !== prevCertId) {
+    setPrevCertId(certId);
+    const checklist = (existingCert as Record<string, unknown>).checklist_json as
+      | Record<string, boolean>
+      | undefined;
+    if (checklist) {
+      setManualChecks((prev) => ({
+        ...prev,
+        parallel_duration: checklist.parallel_duration ?? prev.parallel_duration,
+        stakeholder_signoff: checklist.stakeholder_signoff ?? prev.stakeholder_signoff,
+        rollback_plan: checklist.rollback_plan ?? prev.rollback_plan,
+      }));
     }
-  }, [existingCert]);
+  }
 
   const isCertified = !!existingCert;
 

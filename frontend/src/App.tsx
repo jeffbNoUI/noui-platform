@@ -256,12 +256,9 @@ function AppInner() {
     [handleChangeView],
   );
 
-  // Reset viewMode when role changes (user might be on a view they no longer have access to)
-  useEffect(() => {
-    if (!canAccess(viewMode)) {
-      setViewMode(ROLE_DEFAULT_VIEW[user.role]);
-    }
-  }, [user.role, canAccess, viewMode]);
+  // If the user's role changes and they're on a view they can no longer access,
+  // derive the effective view during render instead of using an effect.
+  const effectiveViewMode = canAccess(viewMode) ? viewMode : ROLE_DEFAULT_VIEW[user.role];
 
   // Global Cmd+K / Ctrl+K handler
   useEffect(() => {
@@ -384,7 +381,7 @@ function AppInner() {
     />
   );
 
-  if (viewMode === 'staff') {
+  if (effectiveViewMode === 'staff') {
     return (
       <>
         {cmdPalette}
@@ -404,7 +401,7 @@ function AppInner() {
 
   // ── Member Dashboard (from member lookup) ──────────────────────────────
 
-  if (viewMode === 'member-dashboard') {
+  if (effectiveViewMode === 'member-dashboard') {
     return (
       <>
         {cmdPalette}
@@ -425,7 +422,7 @@ function AppInner() {
 
   // ── Retirement Application (from Staff Portal case click) ───────────────
 
-  if (viewMode === 'retirement-app') {
+  if (effectiveViewMode === 'retirement-app') {
     return (
       <>
         {cmdPalette}
@@ -449,7 +446,7 @@ function AppInner() {
 
   // ── Member Portal view ──────────────────────────────────────────────────
 
-  if (viewMode === 'portal') {
+  if (effectiveViewMode === 'portal') {
     return (
       <>
         {cmdPalette}
@@ -471,11 +468,15 @@ function AppInner() {
 
   // ── CRM Workspace view ────────────────────────────────────────────────
 
-  if (viewMode === 'crm') {
+  if (effectiveViewMode === 'crm') {
     return (
       <>
         {cmdPalette}
-        <TopNav viewMode={viewMode} onChangeView={handleChangeView} canAccess={canAccess} />
+        <TopNav
+          viewMode={effectiveViewMode}
+          onChangeView={handleChangeView}
+          canAccess={canAccess}
+        />
         <ErrorBoundary portalName="CRM">
           <Suspense fallback={<PortalLoading />}>
             <CRMWorkspace
@@ -491,7 +492,7 @@ function AppInner() {
 
   // ── Employer Portal view ──────────────────────────────────────────────
 
-  if (viewMode === 'employer') {
+  if (effectiveViewMode === 'employer') {
     return (
       <>
         {cmdPalette}
@@ -507,11 +508,15 @@ function AppInner() {
 
   // ── Employer Ops Desktop view ─────────────────────────────────────
 
-  if (viewMode === 'employer-ops') {
+  if (effectiveViewMode === 'employer-ops') {
     return (
       <>
         {cmdPalette}
-        <TopNav viewMode={viewMode} onChangeView={handleChangeView} canAccess={canAccess} />
+        <TopNav
+          viewMode={effectiveViewMode}
+          onChangeView={handleChangeView}
+          canAccess={canAccess}
+        />
         <ErrorBoundary portalName="Employer Ops">
           <Suspense fallback={<PortalLoading />}>
             <EmployerOpsDesktop />
@@ -524,11 +529,15 @@ function AppInner() {
 
   // ── Migration Management view ─────────────────────────────────────────
 
-  if (viewMode === 'migration-management') {
+  if (effectiveViewMode === 'migration-management') {
     return (
       <>
         {cmdPalette}
-        <TopNav viewMode={viewMode} onChangeView={handleChangeView} canAccess={canAccess} />
+        <TopNav
+          viewMode={effectiveViewMode}
+          onChangeView={handleChangeView}
+          canAccess={canAccess}
+        />
         <ErrorBoundary portalName="Migration Management">
           <Suspense fallback={<PortalLoading />}>
             <MigrationManagement />
@@ -541,7 +550,7 @@ function AppInner() {
 
   // ── Rules Explorer view ──────────────────────────────────────────────
 
-  if (viewMode === 'rules-explorer') {
+  if (effectiveViewMode === 'rules-explorer') {
     return (
       <>
         {cmdPalette}
@@ -562,13 +571,14 @@ function AppInner() {
 
   // ── Demo Cases view ──────────────────────────────────────────────
 
-  if (viewMode === 'demo-cases') {
+  if (effectiveViewMode === 'demo-cases') {
     return (
       <>
         {cmdPalette}
         <ErrorBoundary portalName="Demo Cases">
           <Suspense fallback={<PortalLoading />}>
             <DemoCasesPage
+              key={selectedCaseId ?? 'grid'}
               onNavigateToRule={handleNavigateToRule}
               onChangeView={handleChangeView}
               initialCaseId={selectedCaseId}
@@ -582,7 +592,7 @@ function AppInner() {
 
   // ── Vendor Portal view ──────────────────────────────────────────────
 
-  if (viewMode === 'vendor') {
+  if (effectiveViewMode === 'vendor') {
     return (
       <>
         {cmdPalette}
@@ -608,7 +618,7 @@ function AppInner() {
         setRetirementDate={setRetirementDate}
         memberIDInput={memberIDInput}
         setMemberIDInput={setMemberIDInput}
-        viewMode={viewMode}
+        viewMode={effectiveViewMode}
         setViewMode={handleChangeView}
         canAccess={canAccess}
       />

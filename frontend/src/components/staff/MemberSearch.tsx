@@ -15,12 +15,15 @@ export default function MemberSearch({ onSelect }: MemberSearchProps) {
   const { query, setQuery, results, loading } = useMemberSearch();
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(0);
+  const [prevQuery, setPrevQuery] = useState(query);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  // Reset selection when query changes (replaces useEffect)
+  if (query !== prevQuery) {
+    setPrevQuery(query);
     setSelectedIdx(0);
-  }, [query]);
+  }
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {

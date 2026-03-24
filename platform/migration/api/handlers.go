@@ -3,6 +3,7 @@ package api
 
 import (
 	"database/sql"
+	"encoding/json"
 	"net/http"
 
 	"github.com/noui/platform/apiresponse"
@@ -133,6 +134,22 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/migration/notifications", h.HandleGetNotifications)
 	mux.HandleFunc("PUT /api/v1/migration/notifications/{id}/read", h.HandleMarkNotificationRead)
 	mux.HandleFunc("PUT /api/v1/migration/notifications/read-all", h.HandleMarkAllNotificationsRead)
+}
+
+// broadcast sends a WebSocket event to all clients in an engagement room.
+// Nil-safe: no-op if Hub is nil.
+func (h *Handler) broadcast(engagementID, eventType string, payload interface{}) {
+	if h.Hub == nil {
+		return
+	}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return
+	}
+	h.Hub.Broadcast(engagementID, ws.Event{
+		Type:    eventType,
+		Payload: json.RawMessage(data),
+	})
 }
 
 // HealthCheck returns service status information.

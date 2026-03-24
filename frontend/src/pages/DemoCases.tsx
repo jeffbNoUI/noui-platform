@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useDemoCases, useDemoCase } from '@/hooks/useDemoCases';
 import CaseCardGrid from '@/components/demo-cases/CaseCardGrid';
 import CaseDetail from '@/components/demo-cases/CaseDetail';
@@ -18,12 +18,6 @@ export default function DemoCasesPage({
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(initialCaseId ?? null);
   const { data: cases, isLoading, error } = useDemoCases();
   const { data: selectedCase } = useDemoCase(selectedCaseId ?? '');
-
-  useEffect(() => {
-    if (initialCaseId) {
-      setSelectedCaseId(initialCaseId);
-    }
-  }, [initialCaseId]);
 
   if (isLoading) {
     return (

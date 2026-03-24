@@ -200,6 +200,11 @@ func (h *Handler) HandleAdvancePhase(w http.ResponseWriter, r *http.Request) {
 
 	slog.Info("phase advanced", "engagement_id", id, "from", engagement.Status, "to", nextPhase)
 	apiresponse.WriteSuccess(w, http.StatusOK, "migration", created)
+	h.broadcast(id, "phase_changed", map[string]string{
+		"from":      string(engagement.Status),
+		"to":        string(nextPhase),
+		"direction": "ADVANCE",
+	})
 }
 
 // HandleRegressPhase handles POST /api/v1/migration/engagements/{id}/regress-phase.
@@ -288,6 +293,11 @@ func (h *Handler) HandleRegressPhase(w http.ResponseWriter, r *http.Request) {
 
 	slog.Info("phase regressed", "engagement_id", id, "from", engagement.Status, "to", targetStatus)
 	apiresponse.WriteSuccess(w, http.StatusOK, "migration", created)
+	h.broadcast(id, "phase_changed", map[string]string{
+		"from":      string(engagement.Status),
+		"to":        string(targetStatus),
+		"direction": "REGRESS",
+	})
 }
 
 // HandleGetGateHistory handles GET /api/v1/migration/engagements/{id}/gate-history.

@@ -95,24 +95,24 @@ export function useCodeMappings(engagementId: string) {
 }
 
 export function useReconciliation(engagementId: string) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return useQuery<Reconciliation[]>({
     queryKey: ['migration', 'reconciliation', engagementId],
     queryFn: () => migrationAPI.getReconciliation(engagementId),
     enabled: !!engagementId,
     // API returns { records: [...], count, engagement_id } — extract the array
-    select: (data) => (Array.isArray(data) ? data : ((data as any)?.records ?? [])),
+    select: (data) =>
+      Array.isArray(data) ? data : ((data as { records?: Reconciliation[] })?.records ?? []),
   });
 }
 
 export function useP1Issues(engagementId: string) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return useQuery<Reconciliation[]>({
     queryKey: ['migration', 'p1-issues', engagementId],
     queryFn: () => migrationAPI.getP1Issues(engagementId),
     enabled: !!engagementId,
     // API returns { p1_issues: [...], count, engagement_id } — extract the array
-    select: (data) => (Array.isArray(data) ? data : ((data as any)?.p1_issues ?? [])),
+    select: (data) =>
+      Array.isArray(data) ? data : ((data as { p1_issues?: Reconciliation[] })?.p1_issues ?? []),
   });
 }
 
@@ -125,12 +125,12 @@ export function useReconciliationSummary(engagementId: string) {
 }
 
 export function useReconciliationByTier(engagementId: string, tier: number) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return useQuery<Reconciliation[]>({
     queryKey: ['migration', 'recon-tier', engagementId, tier],
     queryFn: () => migrationAPI.getReconciliationByTier(engagementId, tier),
     enabled: !!engagementId,
-    select: (data) => (Array.isArray(data) ? data : ((data as any)?.records ?? [])),
+    select: (data) =>
+      Array.isArray(data) ? data : ((data as { records?: Reconciliation[] })?.records ?? []),
   });
 }
 
