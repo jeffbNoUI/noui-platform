@@ -347,6 +347,13 @@ log_header "Phase 7b: Reconciliation Pipeline (Intelligence Integration)"
 # --- 7b.1: Trigger reconciliation on the batch ---
 if [ -n "$BATCH_ID" ] && [ "$BATCH_ID" != "null" ]; then
 
+  # Wait for source reference data loaders to complete (async goroutine runs
+  # after batch status=LOADED — loads payments, salaries, contributions, service
+  # credit, and backfills canonical_benefit). Without this wait, reconciliation
+  # may run before Tier 2/3 source data is available.
+  echo -e "  ${CYAN}…${NC} Waiting 5s for source reference data loaders..."
+  sleep 5
+
   RESPONSE=$(do_post "/api/v1/migration/batches/${BATCH_ID}/reconcile" "{}")
   extract_http "$RESPONSE"
   assert_status "POST /migration/batches/:id/reconcile" "200" "$HTTP_CODE"

@@ -301,10 +301,10 @@ func computeBenchmarks(db *sql.DB, batchID string) reconciler.PlanBenchmarks {
 
 	// Average salary by year from canonical_salaries.
 	rows, err := db.Query(`
-		SELECT EXTRACT(YEAR FROM period_start)::INT AS yr, AVG(amount::NUMERIC)
+		SELECT salary_year, AVG(salary_amount::NUMERIC)
 		FROM migration.canonical_salaries
 		WHERE batch_id = $1
-		GROUP BY yr`, batchID)
+		GROUP BY salary_year`, batchID)
 	if err == nil {
 		defer rows.Close()
 		benchmarks.AvgSalaryByYear = make(map[int]float64)
@@ -320,7 +320,7 @@ func computeBenchmarks(db *sql.DB, batchID string) reconciler.PlanBenchmarks {
 	// Total contributions from canonical_contributions.
 	var total float64
 	if err := db.QueryRow(`
-		SELECT COALESCE(SUM(amount::NUMERIC), 0)
+		SELECT COALESCE(SUM(contribution_amount), 0)
 		FROM migration.canonical_contributions
 		WHERE batch_id = $1`, batchID).Scan(&total); err == nil {
 		benchmarks.TotalContributions = total

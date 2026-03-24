@@ -58,7 +58,7 @@ type ReconciliationRecord struct {
 	LegacyValue     *string `json:"legacy_value"`
 	RecomputedValue *string `json:"recomputed_value"`
 	Category        string  `json:"category"`
-	Priority        string  `json:"priority"`
+	Priority        *string `json:"priority"`
 	Tier            int     `json:"tier"`
 }
 
