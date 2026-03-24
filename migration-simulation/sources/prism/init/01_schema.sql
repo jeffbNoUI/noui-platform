@@ -239,7 +239,7 @@ CREATE TABLE PRISM_CONTRIB_HIST (
     CONTRIB_RATE    NUMERIC(5,4) NULL,
     PENSION_SAL_BS  NUMERIC(12,2) NULL,      -- Pensionable salary basis for this period
     INT_AMT         NUMERIC(8,2) NULL,       -- Interest for DC plans. NULL for pure DB plans.
-    CONTRIB_SRC_CD  CHAR(4)      NULL,       -- 'PAYRL'=from payroll,'MANUAL'=manual entry,'ADJST'=adjustment
+    CONTRIB_SRC_CD  VARCHAR(6)   NULL,       -- 'PAYRL'=from payroll,'MANUAL'=manual entry,'ADJST'=adjustment
     POSTED_DT       DATE         NULL,
     CONSTRAINT PK_PRISM_CONTRIB_HIST PRIMARY KEY (CTRIB_SEQ)
 );
@@ -394,7 +394,7 @@ CREATE TABLE PRISM_DISABILITY (
     DISB_ID         INT          NOT NULL,
     MBR_NBR         INT          NOT NULL,
     DISB_EFF_DT     DATE         NULL,       -- Disability effective date
-    DISB_TYP_CD     CHAR(4)      NULL,       -- 'OCCUP'=occupational,'NON_O'=non-occupational,'PART'=partial
+    DISB_TYP_CD     VARCHAR(5)   NULL,       -- 'OCCUP'=occupational,'NON_O'=non-occupational,'PART'=partial
     DISB_STATUS     CHAR(1)      NULL,       -- 'A'=active,'R'=recovery,'T'=terminated
     DISB_BENEFIT    NUMERIC(12,2) NULL,      -- Monthly disability benefit amount
     DISB_PCT        NUMERIC(5,2) NULL,       -- Disability percentage (if PART type)
@@ -498,7 +498,7 @@ CREATE TABLE PRISM_LIFE_EVENTS (
     EVENT_ID        INT          NOT NULL,
     MBR_NBR         INT          NOT NULL,
     EVENT_DT        DATE         NOT NULL,
-    EVENT_TYP_CD    VARCHAR(6)   NOT NULL,   -- 'HIRE','TERM','REHIR','RETIR','DEATH','MARR','DIVORC',
+    EVENT_TYP_CD    VARCHAR(10)  NOT NULL,   -- 'HIRE','TERM','REHIR','RETIR','DEATH','MARR','DIVORC',
                                              -- 'DISB_ON','DISB_OFF','QDRO_IN','QDRO_OUT','BENE_CHG',
                                              -- 'ADDR_CHG','NAME_CHG','PLAN_CHG','SVC_ADJ','COLA_ADJ'
     EVENT_STATUS    CHAR(1)      NULL,       -- 'P'=pending,'C'=complete,'V'=voided
