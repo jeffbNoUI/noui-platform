@@ -1,5 +1,48 @@
 # noui-platform — Build History
 
+## Session 26: Migration Full Lifecycle — 2 Bugs Fixed, Certification E2E (2026-03-23)
+
+**Branch:** `claude/gracious-pike`
+
+### What Was Done
+
+Full 6-phase migration lifecycle walkthrough through the browser, then repeated
+with 100 real PRISM members to verify reconciliation and certification end-to-end.
+
+**Bug 1 — Exception table schema drift:** `migration.exception` was created with a
+simpler schema (row_key, handler_name, column_name) but Go code expected richer
+columns (source_table, source_id, canonical_table, field_name, disposition, etc.).
+Migration 041 adds the missing columns.
+
+**Bug 2 — Scope-aware batch resolver:** `resolveSourceTable` picked the first
+alphabetical mapping source table (prism_beneficiary, 0 rows) instead of matching
+the batch scope to the right table. Added `scopeCanonicalHints` map:
+`ACTIVE_MEMBERS` → "member", `SALARY_HISTORY` → "sal", `BENEFICIARIES` →
+"beneficiary", etc.
+
+### Verification
+
+- 100 members loaded from prism-source → canonical tables
+- 39 Tier 1 reconciliation records — all MATCH (100% gate score)
+- Certification completed through UI — "Already Certified" persists
+- Go tests: 11/11 packages pass (6 new scope-matching tests)
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `platform/migration/db/migrations/041_exception_schema_align.sql` | Add 10 missing exception columns |
+| `platform/migration/api/batch_handlers.go` | Scope-aware resolveSourceTable with scopeCanonicalHints |
+| `platform/migration/api/batch_handlers_test.go` | 6 new tests for scope matching |
+| `docs/plans/2026-03-23-post-full-lifecycle-next-session.md` | Next session starter |
+
+### What's Next
+
+- Populate all 21 source tables with seed data (not just prism_member)
+- Fix JWT expiry silent failure (batch status stuck at RUNNING)
+- Tier 2/3 reconciliation with payment history + demographic data
+- Starter prompt: `docs/plans/2026-03-23-post-full-lifecycle-next-session.md`
+
 ## Session 25: Migration Pipeline Fixes — Batch Scope + NaN Guard (2026-03-23)
 
 **Branch:** `claude/priceless-albattani` → PR #150 (merged)

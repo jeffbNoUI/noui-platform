@@ -217,16 +217,49 @@ func (h *Handler) ExecuteBatchHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// scopeCanonicalHints maps batch scopes to canonical table keywords that help
+// identify the correct source table from field mappings.
+var scopeCanonicalHints = map[string][]string{
+	"ACTIVE_MEMBERS":  {"member"},
+	"ALL_MEMBERS":     {"member"},
+	"RETIREES":        {"member"},
+	"SALARY_HISTORY":  {"sal", "salary"},
+	"CONTRIBUTIONS":   {"contrib"},
+	"BENEFICIARIES":   {"beneficiary"},
+	"SERVICE_CREDITS": {"svc_credit", "service"},
+	"BENEFIT_CALCS":   {"benefit_calc"},
+}
+
 // resolveSourceTable determines the schema-qualified source table for batch
-// execution. It checks field mappings first (authoritative — set during Phase 3
-// Mapping), then falls back to hard-coded system name → table mapping.
+// execution. It uses the batch scope to find the best-matching source table
+// from field mappings, then falls back to hard-coded system name → table mapping.
 func resolveSourceTable(sourceSystem, scope string, mappings []FieldMapping) string {
-	// Primary: extract from field mappings — these were set by the user during
-	// the mapping phase and reflect the actual discovered table names.
+	// Primary: match scope to the correct source table via canonical hints.
 	if len(mappings) > 0 {
+		hints := scopeCanonicalHints[scope]
+
+		// If we have hints for this scope, find a mapping whose source table
+		// matches one of the hints (e.g., ACTIVE_MEMBERS → *member*).
+		if len(hints) > 0 {
+			for _, m := range mappings {
+				if m.SourceTable == "" {
+					continue
+				}
+				lower := strings.ToLower(m.SourceTable)
+				for _, hint := range hints {
+					if strings.Contains(lower, hint) {
+						slog.Info("resolveSourceTable: scope-matched source_table",
+							"table", m.SourceTable, "scope", scope, "hint", hint)
+						return m.SourceTable
+					}
+				}
+			}
+		}
+
+		// No scope hints or no match — use first non-empty mapping.
 		for _, m := range mappings {
 			if m.SourceTable != "" {
-				slog.Info("resolveSourceTable: using mapping source_table",
+				slog.Info("resolveSourceTable: using first mapping source_table",
 					"table", m.SourceTable, "scope", scope)
 				return m.SourceTable
 			}
