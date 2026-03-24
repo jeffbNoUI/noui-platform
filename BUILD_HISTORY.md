@@ -56,6 +56,46 @@ members, starving the disability path).
 - Browser walkthrough with all 21 tables discoverable
 - Run batch execution for additional scopes (BENEFICIARIES, SALARY_HISTORY)
 
+## Migration Phase 5g: dbcontext + Employer Defect Fixes (2026-03-24)
+
+**Branch:** `claude/ecstatic-rosalind`
+
+### What Was Done
+
+**dbcontext Stale Connection Fix (systemic, all services):**
+- Added `defer tx.Rollback()` after `BeginTx` in `DBMiddleware` — prevents failed
+  transactions from poisoning pooled connections. One-line fix in `platform/dbcontext/dbcontext.go`.
+
+**Employer Reporting `uploaded_by` Fix:**
+- Wired `auth.UserID(r.Context())` into 3 handlers (ManualEntry, ResolveException, SubmitCorrection)
+- Added `UploadedBy` field to `ManualEntryRequest` — accepts explicit portal user UUID
+  from request body, falls back to JWT sub claim
+- Root cause: DB column `uploaded_by UUID REFERENCES employer_portal_user(id)` requires
+  a valid portal user, not a system user ID
+
+**Employer Terminations Date Parsing Fix:**
+- Added `parseFlexDate()` helper to handle both RFC3339 (`"2020-01-15T00:00:00Z"`)
+  and date-only (`"2020-01-15"`) formats from PostgreSQL
+- Applied to both `HireDate` and `TerminationDate` in `CalculateRefund`
+
+**E2E Test Data Fixes:**
+- JWT `sub` claim changed from `dev-admin-001` to valid UUID (`00000000-...099`)
+- Portal user list jq path fixed (`.data[0].id` not `.data.items[0].id`)
+- Manual-entry payload passes `uploadedBy` with portal user UUID
+- Division code `SD` corrected to `STATE` (matching seed data)
+- All 3 skip tolerances removed — tests now assert strictly
+
+### Stats
+- 7 files changed
+- Go: all employer-reporting and employer-terminations tests passing (short mode)
+- Docker E2E: **167/167** across 5 suites (20+50+24+23+50)
+  - Employer suite grew from 46 to 50 (4 previously-skipped tests now passing)
+  - Zero skips, zero failures
+
+### What's Next
+- PR review and merge
+- Phase 5h: Additional employer service hardening or next migration phase
+
 ## Session 26: Migration Full Lifecycle — 2 Bugs Fixed, Certification E2E (2026-03-23)
 
 **Branch:** `claude/gracious-pike`

@@ -64,7 +64,7 @@ CASE_PAYLOAD=$(cat <<ENDJSON
   "caseType": "retirement",
   "retirementDate": "2026-07-01",
   "priority": "standard",
-  "assignedTo": "dev-admin-001"
+  "assignedTo": "00000000-0000-0000-0000-000000000099"
 }
 ENDJSON
 )
@@ -78,7 +78,7 @@ echo -e "  ${YELLOW}→ Created case: ${CASE_ID}${NC}"
 
 if [ -n "$CASE_ID" ]; then
   # A3. Add a note to the case
-  NOTE_PAYLOAD='{"content":"Initial intake completed. All documents received.","author":"dev-admin-001"}'
+  NOTE_PAYLOAD='{"content":"Initial intake completed. All documents received.","author":"00000000-0000-0000-0000-000000000099"}'
   RESPONSE=$(do_post "/api/v1/cases/${CASE_ID}/notes" "$NOTE_PAYLOAD")
   extract_http "$RESPONSE"
   assert_status "POST /cases/{id}/notes (add note)" "201" "$HTTP_CODE"
@@ -201,7 +201,7 @@ echo -e "  ${YELLOW}→ Created issue: ${ISSUE_ID}${NC}"
 
 if [ -n "$ISSUE_ID" ]; then
   # C2. Add comment
-  COMMENT_PAYLOAD='{"content":"Investigating root cause — appears to be a configuration issue.","author":"dev-admin-001"}'
+  COMMENT_PAYLOAD='{"content":"Investigating root cause — appears to be a configuration issue.","author":"00000000-0000-0000-0000-000000000099"}'
   RESPONSE=$(do_post "/api/v1/issues/${ISSUE_ID}/comments" "$COMMENT_PAYLOAD")
   extract_http "$RESPONSE"
   assert_status "POST /issues/{id}/comments" "201" "$HTTP_CODE"

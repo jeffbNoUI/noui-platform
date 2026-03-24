@@ -116,6 +116,7 @@ type UploadFileRequest struct {
 // ManualEntryRequest contains rows submitted via the manual grid.
 type ManualEntryRequest struct {
 	OrgID        string              `json:"orgId"`
+	UploadedBy   string              `json:"uploadedBy,omitempty"`
 	PeriodStart  string              `json:"periodStart"`
 	PeriodEnd    string              `json:"periodEnd"`
 	DivisionCode string              `json:"divisionCode"`
