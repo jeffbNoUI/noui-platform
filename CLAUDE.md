@@ -231,9 +231,11 @@ When you need guidance beyond this file, read these:
 Slash commands in `.claude/commands/` enforce the delivery workflow:
 
 **Session lifecycle:**
-- `/session-start` — Read context, check builds, establish the session goal
-- `/session-end` — Run tests, update docs, commit, push, verify CI
+- `/session-start` — Context check, dirty gate, stale worktree scan, read starter prompt
+- `/session-end` — Exit gates, worktree disposition, write starter prompt, memory update
 - `/check-quality` — Mid-session quality gate: builds, tests, lint, layer boundaries
+- `/precommit` — Graded 4-category evaluation + persona review (before committing)
+- `/simplify` — Iterative code simplification (up to 3 cycles, after committing)
 
 **Development workflow:**
 - `/plan` — Create a structured implementation plan before coding
@@ -321,6 +323,56 @@ These rules were established from the security/quality review. See `docs/SECURIT
 7. **Middleware that reads config from env must also offer a constructor with explicit parameters** for testability.
 
 8. **JWT validation must check: signature, algorithm (`alg: HS256`), expiration (`exp`), and required claims** (`tenant_id`, `role`).
+
+## Claude Code Workflow
+
+**Planning:** Enter plan mode (Shift+Tab) before any non-trivial implementation.
+Invest in a solid plan so implementation executes cleanly in one pass.
+
+**Verification:** Always provide Claude a way to verify its work:
+- Unit tests: write alongside implementation, never after
+- Go: `go test ./... -v -count=1` in each modified service
+- Frontend: `npx tsc --noEmit && npm test -- --run`
+
+**CLAUDE.md as living document:** After every correction, update this file so the
+mistake does not repeat. Ruthlessly edit over time.
+
+**Parallelization:** Use git worktrees for independent tasks.
+
+**Commits:** Small, frequent commits. Each task step should be committable.
+
+## Session Conventions
+
+**Session naming:** Start every session with a task-based name:
+```
+claude --name "task-id-description"
+```
+
+**Session lifecycle:**
+1. `/session-start` — context check, dirty gate, sync, verify tests, show status
+2. Plan (Shift+Tab) — includes persona review for non-trivial plans
+3. Implement → test → `/precommit` (pre-commit graded evaluation)
+4. Commit
+5. `/simplify` — iterative, up to 3 cycles
+6. `/session-end` — exit gates, worktree disposition, summary, memory update
+
+**Hooks (automatic):**
+- PostCompact: re-injects critical rules + persona review rule + worktree rules after context compression
+- PostToolUse: Go vet on .go edits, tsc on .ts/.tsx edits, layer boundary check, fixture guard
+- PreToolUse: pre-push frontend build check, pre-commit test runner
+- Stop: reminds to verify tests and update CLAUDE.md before closing
+
+**Worktree hygiene (Claude Code app):**
+- Never commit to `master`/`main` directly from a worktree. All work happens on feature branches.
+- After PR merge: `ExitWorktree(action: "remove")` cleans up worktree + local branch automatically. Then `git push origin --delete <branch>` for remote.
+- For WIP or pending PR: `ExitWorktree(action: "keep")` preserves worktree for follow-up.
+- `/session-start` reports worktree context and blocks on dirty state. If stale worktrees exist, clean them before starting work.
+- `/session-end` enforces clean exit: no uncommitted changes, worktree disposition resolved via ExitWorktree.
+- Never switch projects mid-session without explicit user confirmation.
+- Avoid generic names for local commands (`review`, `test`, `build`) — plugins may claim them.
+
+**Behavioral guideline — persona review in plan mode:**
+- Before finalizing any plan that touches UI, data model, API routes, or permission logic, run persona review against `config/rubrics/persona-review.json`. Spawn 3 independent tier reviewers (each sees ONLY its own rubric section), then reconcile with priority T1 > T2 > T3. Do not exit plan mode with unresolved blockers. Skip for trivial plans (config-only, test-only, documentation).
 
 ## When Something Goes Wrong
 

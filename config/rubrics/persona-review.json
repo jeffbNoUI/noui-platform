@@ -1,0 +1,7 @@
+{
+  "version": "1.0",
+  "description": "Persona-based design review rubric — structure only. Run persona design session to populate.",
+  "priority_order": ["tier1", "tier2", "tier3"],
+  "conflict_resolution": "Fixed priority: T1 > T2 > T3. Higher tier wins on conflicts. Most conflicts resolve via role-gating.",
+  "tiers": {}
+}
