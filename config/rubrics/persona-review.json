@@ -1,0 +1,148 @@
+{
+  "version": "1.0",
+  "description": "Persona-based design review rubric for NoUI Platform — pension administration system.",
+  "priority_order": ["tier1_staff", "tier2_member", "tier2_employer", "tier2_vendor"],
+  "conflict_resolution": "T1 (Staff) always wins over T2. Within T2, member/employer/vendor have equal priority — conflicts between them are flagged for human resolution, not auto-resolved.",
+  "tiers": {
+    "tier1_staff": {
+      "persona": "Pension Fund Staff",
+      "concern": "Operational correctness, audit trails, workflow integrity, case management, system configuration. Staff are the primary system operators — if their tools are wrong, everything downstream fails.",
+      "review_prompt": "You are reviewing this plan ONLY from the perspective of a pension fund staff member who operates this system daily. You process cases, configure rules, manage members, and are accountable for audit compliance. Be skeptical. Assume the developer has not thought about your workflow. Ignore member, employer, and vendor concerns — those are someone else's review. Focus exclusively on: Can I do my job correctly with this change? Will my audit trail survive? Does this break my workflow or create ambiguity in case handling?",
+      "criteria": [
+        {
+          "id": "S1",
+          "name": "Audit Trail Integrity",
+          "question": "Does every state-changing action produce an auditable record with who, what, when, and why?",
+          "evidence": "Show the audit log entries this change produces. If a new action is introduced without audit logging, that is a FAIL.",
+          "failure_example": "A case status change happens without recording which staff member made the change or the reason code."
+        },
+        {
+          "id": "S2",
+          "name": "Workflow Correctness",
+          "question": "Does this change preserve correct stage transitions, required approvals, and case lifecycle rules?",
+          "evidence": "Trace the workflow path this change affects. Verify no stage can be skipped, no approval bypassed, no case left in an invalid state.",
+          "failure_example": "A benefit calculation can be finalized without supervisory review, or a case can transition from 'pending' to 'closed' without passing through 'approved'."
+        },
+        {
+          "id": "S3",
+          "name": "Configuration Safety",
+          "question": "Can staff configure this feature without risk of misconfiguration that silently corrupts downstream data?",
+          "evidence": "Show validation rules on configuration inputs. Identify any configuration that could produce incorrect benefit calculations if set wrong.",
+          "failure_example": "A contribution rate field accepts negative values or a plan provision toggle has no confirmation step before affecting active cases."
+        },
+        {
+          "id": "S4",
+          "name": "Operational Visibility",
+          "question": "Can staff see what is happening, what has happened, and what needs attention without digging?",
+          "evidence": "Show how this change surfaces in dashboards, queues, or notifications. If a new process runs silently, that is a WARNING.",
+          "failure_example": "A batch import completes with partial failures but staff see only a success message, missing the 12 records that failed validation."
+        }
+      ]
+    },
+    "tier2_member": {
+      "persona": "Plan Member / Retiree",
+      "concern": "Benefit accuracy, data privacy, clear and timely communications. Members depend on the system producing correct numbers and protecting their personal information.",
+      "review_prompt": "You are reviewing this plan ONLY from the perspective of a plan member or retiree. You have no technical knowledge. You care about: Is my benefit calculated correctly? Is my personal data protected? Can I understand what the system is telling me? Be skeptical — assume the developer prioritized staff convenience over member accuracy. Ignore staff workflow, employer reporting, and vendor concerns entirely. Focus exclusively on: Does this change affect benefit amounts, member data exposure, or communication clarity?",
+      "criteria": [
+        {
+          "id": "M1",
+          "name": "Benefit Calculation Accuracy",
+          "question": "Does this change preserve penny-exact benefit calculations with full precision through the calculation chain?",
+          "evidence": "If the change touches any calculation path, show that big.Rat/scaled integers are used, intermediate values are not rounded, and demo-case fixtures still pass.",
+          "failure_example": "A refactored rate lookup silently converts a string decimal to float64, introducing rounding that changes a monthly benefit by $0.03."
+        },
+        {
+          "id": "M2",
+          "name": "Personal Data Protection",
+          "question": "Does this change maintain member data isolation — no cross-tenant leakage, no unnecessary PII exposure in logs or APIs?",
+          "evidence": "Show that RLS policies cover any new tables, that API responses do not include fields beyond what the consumer needs, and that logs redact SSN/DOB.",
+          "failure_example": "A new API endpoint returns full member records including SSN to a role that only needs name and member ID."
+        },
+        {
+          "id": "M3",
+          "name": "Communication Clarity",
+          "question": "If this change affects member-facing output (correspondence, portal, statements), is the language clear, accurate, and free of jargon?",
+          "evidence": "Show the member-facing text. Verify dollar amounts are formatted consistently, dates are unambiguous, and no internal system terminology leaks through.",
+          "failure_example": "A benefit estimate letter says 'AMS: $4,521.33' instead of 'Your estimated monthly benefit: $4,521.33'."
+        },
+        {
+          "id": "M4",
+          "name": "Service Credit Accuracy",
+          "question": "If this change involves service credit, does it correctly distinguish earned-only vs. total (earned + purchased) for eligibility vs. benefit calculation?",
+          "evidence": "Show explicit type declarations for service credit usage. Purchased credit must count toward benefit amount but NOT toward Rule of 75/85/IPR.",
+          "failure_example": "A member qualifies for unreduced retirement because purchased service credit was counted toward Rule of 75."
+        }
+      ]
+    },
+    "tier2_employer": {
+      "persona": "Employer",
+      "concern": "Data submission accuracy, reporting compliance, enrollment workflows, portal reliability. Employers interact through dedicated portals to submit payroll data, manage enrollments, and fulfill reporting obligations.",
+      "review_prompt": "You are reviewing this plan ONLY from the perspective of an employer HR/payroll administrator who uses the employer portal. You submit contribution data, manage enrollments and terminations, and run reports for compliance. Be skeptical — assume the developer has not considered your data submission workflows or reporting deadlines. Ignore staff internal tools, member-facing features, and vendor concerns entirely. Focus exclusively on: Can I submit data correctly? Will my reports be accurate? Does this break my portal workflow?",
+      "criteria": [
+        {
+          "id": "E1",
+          "name": "Data Submission Integrity",
+          "question": "Does this change preserve correct validation and feedback for employer-submitted data (payroll, enrollments, terminations)?",
+          "evidence": "Show validation rules on employer inputs. Verify that rejected records produce clear error messages with row-level detail, not silent drops.",
+          "failure_example": "A payroll file upload accepts a record with a future termination date without warning, causing downstream calculation errors."
+        },
+        {
+          "id": "E2",
+          "name": "Reporting Accuracy",
+          "question": "Does this change affect any employer-facing reports, and if so, do the numbers reconcile with submitted data?",
+          "evidence": "Show that report totals match sum of detail records. If a new field is added or a calculation changes, verify the report reflects it correctly.",
+          "failure_example": "An employer contribution summary shows a different total than the sum of individual employee contributions due to a rounding difference."
+        },
+        {
+          "id": "E3",
+          "name": "Portal Access Scoping",
+          "question": "Does this change maintain proper employer isolation — each employer sees only their own employees, divisions, and submissions?",
+          "evidence": "Show that queries filter by employer/division. Verify no cross-employer data leakage in API responses or portal views.",
+          "failure_example": "An employer searches for a member by name and sees results from another employer's employee roster."
+        },
+        {
+          "id": "E4",
+          "name": "Workflow Continuity",
+          "question": "Does this change preserve the employer's ability to complete in-progress submissions, or does it break mid-flight workflows?",
+          "evidence": "Show that draft submissions, pending enrollments, and in-progress reports are not invalidated by schema or API changes.",
+          "failure_example": "A schema migration adds a required field to enrollment submissions, causing all pending draft enrollments to fail validation on next save."
+        }
+      ]
+    },
+    "tier2_vendor": {
+      "persona": "Vendor (External Party)",
+      "concern": "Vendor portal access, contract and service visibility, secure data exchange. Vendors are outside parties who need controlled access to specific system functions through the vendor portal.",
+      "review_prompt": "You are reviewing this plan ONLY from the perspective of an external vendor who accesses the system through the vendor portal. You have limited, scoped access. You care about: Can I see what I need to see? Am I blocked from what I should not see? Is my data exchange secure? Be skeptical — assume the developer gave vendors too much or too little access. Ignore staff tools, member benefits, and employer reporting entirely. Focus exclusively on: Is vendor access properly scoped? Is the portal functional for its intended purpose? Is data exchange secure?",
+      "criteria": [
+        {
+          "id": "V1",
+          "name": "Access Scope Enforcement",
+          "question": "Does this change maintain strict scoping — vendors see only data and functions relevant to their contract/service, nothing more?",
+          "evidence": "Show that vendor API endpoints filter by vendor ID. Verify no endpoint returns member PII, staff-internal data, or other vendors' information.",
+          "failure_example": "A vendor portal endpoint returns a list of all system members instead of only those relevant to the vendor's contracted service."
+        },
+        {
+          "id": "V2",
+          "name": "Authentication Boundary",
+          "question": "Does this change preserve the vendor authentication boundary — vendor credentials cannot escalate to staff or employer access?",
+          "evidence": "Show that vendor JWT claims produce a role that is checked at every endpoint. Verify no shared endpoints treat vendor and staff roles identically.",
+          "failure_example": "A vendor token with role 'vendor' can access /api/v1/cases because the endpoint only checks for a valid JWT, not the role claim."
+        },
+        {
+          "id": "V3",
+          "name": "Data Exchange Security",
+          "question": "If this change involves vendor data exchange (uploads, downloads, API calls), is the data validated, logged, and scoped?",
+          "evidence": "Show input validation on vendor-submitted data. Verify that file uploads are scanned/validated and that all vendor data exchanges are audit-logged.",
+          "failure_example": "A vendor can upload a CSV file with no size limit or content validation, and the upload is not recorded in the audit log."
+        },
+        {
+          "id": "V4",
+          "name": "Portal Functionality",
+          "question": "Does this change affect vendor portal features, and if so, can vendors still complete their intended tasks?",
+          "evidence": "Trace the vendor workflow path. Verify that portal pages load, forms submit, and status updates are visible.",
+          "failure_example": "A backend API change removes a field from the response that the vendor portal uses to display contract status, showing 'undefined' instead."
+        }
+      ]
+    }
+  }
+}
