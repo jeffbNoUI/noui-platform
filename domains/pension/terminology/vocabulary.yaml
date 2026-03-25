@@ -1,0 +1,302 @@
+# Pension Terminology Vocabulary
+# Extracted from pension glossary crosswalk tables covering 25 public pension systems.
+# Used by the migration mapper to enrich column name matching (ExpectedNames).
+#
+# Term naming convention: lowercase_with_underscores (matches Go ExpectedNames).
+# Concept tags and slot names match the mapper registry exactly.
+
+version: "1.0"
+source: "docs/pension-glossary.md"
+
+systems:
+  - COPERA
+  - DERP
+  - CalPERS
+  - LACERA
+  - SDCERS
+  - OPERS
+  - IMRF
+  - IPERS
+  - TRS_Texas
+  - TMRS
+  - VRS
+  - KPERS
+  - Nevada_PERS
+  - Utah_RS
+  - Montana_PERA
+  - NYCERS
+  - HMEPS
+  - LAGERS
+  - PSPRS
+  - NHRS
+  - FRS
+  - Oregon_PERS
+  - MSRS
+  - STRS_Ohio
+  - PSERS
+
+concepts:
+
+  # ---------------------------------------------------------------------------
+  # SERVICE CREDIT DOMAIN
+  # ---------------------------------------------------------------------------
+  service-credit:
+
+    credited_years_total:
+      terms:
+        - name: service_credit
+          abbrev: SC
+          systems: [COPERA, DERP, CalPERS, LACERA, SDCERS, OPERS, IMRF, IPERS, TRS_Texas, TMRS, VRS, KPERS, Nevada_PERS, Utah_RS, Montana_PERA]
+        - name: credited_service
+          abbrev: CS
+          systems: [NYCERS, HMEPS, LAGERS, PSPRS]
+        - name: creditable_service
+          systems: [NHRS, FRS, Oregon_PERS, VRS, IMRF]
+        - name: retirement_credit
+          systems: [Oregon_PERS]
+        - name: allowable_service
+          systems: [MSRS]
+        - name: years_of_service
+          abbrev: YOS
+          systems: [KPERS, Utah_RS, TRS_Texas]
+        - name: qualifying_service_credit
+          abbrev: QSC
+          systems: [STRS_Ohio, PSERS]
+        - name: contributing_months
+          systems: [OPERS]
+        - name: earned_service_credit
+          systems: [COPERA, LACERA]
+        - name: eligibility_points
+          abbrev: EP
+          systems: [PSERS]
+        - name: service_units
+          systems: [SDCERS, CalPERS]
+      false_cognates:
+        - term: membership_service
+          warning: "NYCERS/LAGERS = earned service toward benefit; Montana PERA = eligibility-only service that does not count toward benefit calculation"
+          risk: HIGH
+        - term: prior_service
+          warning: "LAGERS/IMRF/KPERS = pre-system service grandfathered in; VRS/PSPRS = purchased service from previous public employment positions"
+          risk: MEDIUM
+        - term: allowable_service
+          warning: "MSRS = total credited service (all types); NYCERS = special plan eligibility-only service"
+          risk: MEDIUM
+        - term: updated_service_credits
+          warning: "TMRS only — monetary account credits (dollar value), not temporal service years; do not map to credited_years_total"
+          risk: HIGH
+
+    service_type:
+      terms:
+        - name: purchased_service_credit
+          abbrev: PSC
+          systems: [COPERA, CalPERS, LACERA, OPERS, IMRF, VRS, KPERS, Utah_RS, STRS_Ohio, PSERS]
+        - name: buy_back
+          systems: [DERP, NYCERS, HMEPS, LAGERS, FRS]
+        - name: redeposit
+          systems: [CalPERS, OPERS, FRS]
+        - name: reinstated_service
+          systems: [COPERA, IMRF, Oregon_PERS]
+        - name: restored_credit
+          systems: [VRS, KPERS]
+        - name: optional_service_credit
+          systems: [CalPERS]
+        - name: permissive_service_credit
+          systems: [CalPERS, LACERA]
+        - name: military_service_credit
+          systems: [COPERA, DERP, CalPERS, OPERS, IMRF, VRS, KPERS, Nevada_PERS, Utah_RS, NHRS, FRS, Oregon_PERS, TRS_Texas]
+        - name: userra_service_credit
+          systems: [COPERA, CalPERS, OPERS, VRS, KPERS, FRS]
+        - name: granted_military_service
+          systems: [NYCERS, HMEPS]
+        - name: prior_active_military_service
+          systems: [LAGERS, PSPRS]
+        - name: reciprocal_service
+          systems: [CalPERS, LACERA, SDCERS, Oregon_PERS]
+        - name: transferred_service
+          systems: [IMRF, IPERS, STRS_Ohio]
+        - name: joint_service_credit
+          systems: [OPERS, STRS_Ohio]
+        - name: proportionate_retirement
+          abbrev: PRP
+          systems: [KPERS, Utah_RS, Montana_PERA]
+
+  # ---------------------------------------------------------------------------
+  # SALARY / COMPENSATION DOMAIN
+  # ---------------------------------------------------------------------------
+  salary-history:
+
+    gross_amount:
+      terms:
+        - name: pensionable_pay
+          systems: [COPERA, DERP, Montana_PERA]
+        - name: compensation_earnable
+          systems: [CalPERS, LACERA, SDCERS]
+        - name: pensionable_compensation
+          systems: [OPERS, STRS_Ohio, PSERS]
+        - name: pensionable_salary
+          systems: [IMRF, IPERS, NHRS]
+        - name: earnable_compensation
+          systems: [CalPERS]
+        - name: covered_wages
+          systems: [TRS_Texas, TMRS, KPERS]
+        - name: creditable_compensation
+          systems: [FRS, VRS]
+        - name: reportable_compensation
+          systems: [Nevada_PERS, Utah_RS]
+        - name: base_pay
+          systems: [NYCERS, HMEPS, LAGERS, PSPRS]
+        - name: annual_salary
+          systems: [Oregon_PERS, MSRS]
+        - name: pensionable_comp
+          systems: [COPERA, DERP]
+      false_cognates:
+        - term: compensation_earnable
+          warning: "CalPERS/LACERA specific — includes items other systems exclude (e.g., certain special pay); verify inclusions/exclusions match target system definition"
+          risk: MEDIUM
+
+    pensionable_amount:
+      terms:
+        - name: highest_average_salary
+          abbrev: HAS
+          systems: [COPERA, DERP, Montana_PERA]
+        - name: average_monthly_salary
+          abbrev: AMS
+          systems: [COPERA, DERP]
+        - name: final_average_compensation
+          abbrev: FAC
+          systems: [NHRS, NYCERS, IMRF, IPERS]
+        - name: final_average_salary
+          abbrev: FAS
+          systems: [CalPERS, LACERA, SDCERS, Oregon_PERS, MSRS, KPERS]
+        - name: average_final_compensation
+          abbrev: AFC
+          systems: [FRS, VRS]
+        - name: final_rate_of_earnings
+          abbrev: FRE
+          systems: [OPERS, STRS_Ohio]
+        - name: average_monthly_compensation
+          abbrev: AMC
+          systems: [TRS_Texas, TMRS]
+        - name: highest_average_compensation
+          abbrev: HAC
+          systems: [PSERS, Utah_RS]
+        - name: high_five_salary
+          systems: [Nevada_PERS]
+      false_cognates:
+        - term: afc
+          warning: "AFC averaging window varies by system: NHRS = 3 or 5 years by tier; FRS = 5 or 8 years by class; VRS = 36 or 60 months by hire date — always verify window"
+          risk: HIGH
+        - term: fas
+          warning: "FAS window ranges from 36 months (CalPERS classic) to 96 months (KPERS Tier 3) across systems; do not assume a standard window"
+          risk: MEDIUM
+        - term: fre
+          warning: "OPERS/STRS Ohio specific — Final Rate of Earnings uses different averaging rules than FAS/FAC; not interchangeable"
+          risk: MEDIUM
+
+    period_start:
+      terms:
+        - name: sal_eff_dt
+          systems: [COPERA, DERP, Montana_PERA]
+        - name: pay_start_date
+          systems: [CalPERS, LACERA, SDCERS]
+        - name: salary_effective_date
+          systems: [OPERS, IMRF, IPERS, STRS_Ohio]
+        - name: earnings_start_date
+          systems: [FRS, VRS, Oregon_PERS]
+        - name: comp_period_start
+          systems: [NYCERS, HMEPS, LAGERS, PSPRS]
+
+    period_end:
+      terms:
+        - name: sal_end_dt
+          systems: [COPERA, DERP, Montana_PERA]
+        - name: pay_end_date
+          systems: [CalPERS, LACERA, SDCERS]
+        - name: salary_end_date
+          systems: [OPERS, IMRF, IPERS, STRS_Ohio]
+        - name: earnings_end_date
+          systems: [FRS, VRS, Oregon_PERS]
+        - name: comp_period_end
+          systems: [NYCERS, HMEPS, LAGERS, PSPRS]
+
+  # ---------------------------------------------------------------------------
+  # CONTRIBUTION DOMAIN
+  # ---------------------------------------------------------------------------
+  benefit-deduction:
+
+    ee_amount:
+      terms:
+        - name: basic_member_contributions
+          abbrev: BMC
+          systems: [COPERA, DERP]
+        - name: retirement_deductions
+          systems: [NYCERS, HMEPS]
+        - name: member_deposits
+          systems: [CalPERS, LACERA, SDCERS]
+        - name: mandatory_contributions
+          systems: [OPERS, STRS_Ohio, PSERS]
+        - name: regular_contributions
+          systems: [IMRF, IPERS, FRS, VRS]
+        - name: member_contribution_amount
+          systems: [TRS_Texas, TMRS, KPERS, Nevada_PERS, Utah_RS, Montana_PERA, Oregon_PERS, MSRS, NHRS, LAGERS, PSPRS]
+
+    er_amount:
+      terms:
+        - name: state_contribution
+          systems: [COPERA, DERP, Montana_PERA, FRS, VRS]
+        - name: city_contributions
+          systems: [NYCERS, HMEPS]
+        - name: city_matching_funds
+          systems: [TMRS]
+        - name: aed
+          systems: [COPERA]
+        - name: saed
+          systems: [COPERA]
+        - name: normal_cost
+          systems: [CalPERS, LACERA, SDCERS, OPERS, STRS_Ohio]
+        - name: uniform_contribution_rate
+          systems: [PSERS]
+      false_cognates:
+        - term: city_matching_funds
+          warning: "TMRS only — employer match is calculated differently from standard employer contribution rates; uses Updated Service Credits accumulation model"
+          risk: MEDIUM
+
+  # ---------------------------------------------------------------------------
+  # BENEFIT PAYMENT DOMAIN
+  # ---------------------------------------------------------------------------
+  benefit-payment:
+
+    gross_amount:
+      terms:
+        - name: benefit_amount
+          systems: [COPERA, DERP, CalPERS, LACERA, OPERS, IMRF, IPERS, VRS, KPERS, Nevada_PERS, Utah_RS]
+        - name: monthly_benefit
+          systems: [COPERA, DERP, Montana_PERA, TRS_Texas, TMRS]
+        - name: pension_payment
+          systems: [NYCERS, HMEPS, LAGERS]
+        - name: retirement_benefit
+          systems: [FRS, Oregon_PERS, MSRS]
+        - name: annuity_payment
+          systems: [STRS_Ohio, PSERS]
+        - name: monthly_allowance
+          systems: [CalPERS, LACERA, SDCERS]
+        - name: benefit_payment_amount
+          systems: [NHRS, PSPRS]
+        - name: gross_benefit
+          systems: [Nevada_PERS, Utah_RS]
+
+  # ---------------------------------------------------------------------------
+  # EMPLOYEE MASTER DOMAIN
+  # ---------------------------------------------------------------------------
+  employee-master:
+
+    original_hire_date:
+      terms:
+        - name: membership_date
+          systems: [COPERA, DERP, Montana_PERA, OPERS, STRS_Ohio]
+        - name: enrollment_date
+          systems: [CalPERS, LACERA, SDCERS, IMRF, IPERS, FRS]
+        - name: system_entry_date
+          systems: [VRS, KPERS, Nevada_PERS, Utah_RS, Oregon_PERS, MSRS]
+        - name: participation_date
+          systems: [NYCERS, HMEPS, LAGERS, PSPRS, NHRS, PSERS, TRS_Texas, TMRS]
