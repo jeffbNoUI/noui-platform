@@ -72,8 +72,9 @@ type ExceptionEntry struct {
 
 // TransformContext carries shared state through the pipeline for a single batch.
 type TransformContext struct {
-	EngagementID   string
-	MappingVersion string
+	EngagementID      string
+	MappingVersion    string
+	ContributionModel string // "standard" or "employer_paid"
 	// CodeMappings maps "table.column" → source_value → canonical_value.
 	CodeMappings map[string]map[string]string
 	Lineage      []LineageEntry
@@ -162,6 +163,7 @@ func (p *Pipeline) transformRow(sourceRow map[string]interface{}, mappings []Fie
 	if sharedCtx != nil {
 		ctx.EngagementID = sharedCtx.EngagementID
 		ctx.MappingVersion = sharedCtx.MappingVersion
+		ctx.ContributionModel = sharedCtx.ContributionModel
 		ctx.CodeMappings = sharedCtx.CodeMappings
 	}
 

@@ -689,6 +689,12 @@ func ValidateConstraintsHandler() TransformHandler {
 		Apply: func(value interface{}, sourceRow map[string]interface{}, mapping FieldMapping, ctx *TransformContext) (interface{}, error) {
 			// NOT NULL check for required fields.
 			if value == nil && mapping.Required {
+				// Employer-paid systems: ee_amount is legitimately NULL.
+				if ctx.ContributionModel == "employer_paid" && mapping.CanonicalColumn == "ee_amount" {
+					ctx.AddLineage("ValidateConstraints", mapping.CanonicalColumn, "<nil>",
+						"<nil> accepted — employer_paid contribution model")
+					return nil, nil
+				}
 				ctx.AddException("ValidateConstraints", mapping.CanonicalColumn, "<nil>", ExceptionMissingRequired,
 					fmt.Sprintf("required column %q is NULL", mapping.CanonicalColumn))
 				return nil, fmt.Errorf("required column %s is NULL", mapping.CanonicalColumn)
