@@ -1,7 +1,17 @@
 import { useState } from 'react';
 import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
-import { useEngagement, useConfigureSource, useDiscoverTables } from '@/hooks/useMigrationApi';
-import type { SourceConnection, SourceTable, SourceDriver } from '@/types/Migration';
+import {
+  useEngagement,
+  useConfigureSource,
+  useDiscoverTables,
+  useUpdateEngagement,
+} from '@/hooks/useMigrationApi';
+import type {
+  SourceConnection,
+  SourceTable,
+  SourceDriver,
+  EngagementStatus,
+} from '@/types/Migration';
 
 interface Props {
   engagementId: string;
@@ -13,9 +23,18 @@ const DRIVERS: { value: SourceDriver; label: string }[] = [
   { value: 'mssql', label: 'SQL Server' },
 ];
 
+const CONTRIBUTION_MODELS = [
+  { value: 'standard' as const, label: 'Standard' },
+  { value: 'employer_paid' as const, label: 'Employer-Paid' },
+];
+
+/** Contribution model is editable only during DISCOVERY and PROFILING */
+const EDITABLE_PHASES: Set<EngagementStatus> = new Set(['DISCOVERY', 'PROFILING']);
+
 export default function DiscoveryPanel({ engagementId, onAdvance }: Props) {
   const { data: engagement, isLoading: engLoading } = useEngagement(engagementId);
   const configureSource = useConfigureSource();
+  const updateEngagement = useUpdateEngagement();
 
   const [form, setForm] = useState<SourceConnection>({
     driver: 'postgres',
@@ -31,10 +50,7 @@ export default function DiscoveryPanel({ engagementId, onAdvance }: Props) {
   const isConnected = engagement?.source_connection != null;
 
   // Only enable discovery once connected
-  const { data: tables, isLoading: tablesLoading } = useDiscoverTables(
-    engagementId,
-    isConnected,
-  );
+  const { data: tables, isLoading: tablesLoading } = useDiscoverTables(engagementId, isConnected);
 
   const [selectedTables, setSelectedTables] = useState<Set<string>>(new Set());
 
@@ -74,6 +90,14 @@ export default function DiscoveryPanel({ engagementId, onAdvance }: Props) {
     }
   };
 
+  const currentModel = engagement?.contribution_model ?? 'standard';
+  const modelEditable = engagement ? EDITABLE_PHASES.has(engagement.status) : false;
+
+  const handleModelChange = (model: 'standard' | 'employer_paid') => {
+    if (!modelEditable || model === currentModel) return;
+    updateEngagement.mutate({ id: engagementId, req: { contribution_model: model } });
+  };
+
   if (engLoading) {
     return (
       <div style={{ padding: 24 }}>
@@ -87,6 +111,75 @@ export default function DiscoveryPanel({ engagementId, onAdvance }: Props) {
 
   return (
     <div style={{ fontFamily: BODY }}>
+      {/* Engagement Settings */}
+      <div
+        style={{
+          background: C.cardBg,
+          borderRadius: 10,
+          border: `1px solid ${C.border}`,
+          padding: 20,
+          marginBottom: 20,
+        }}
+      >
+        <h3
+          style={{
+            fontFamily: DISPLAY,
+            fontSize: 16,
+            fontWeight: 600,
+            color: C.navy,
+            margin: '0 0 16px',
+          }}
+        >
+          Engagement Settings
+        </h3>
+
+        <div>
+          <label style={labelStyle}>Contribution Model</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {CONTRIBUTION_MODELS.map((m) => {
+              const selected = currentModel === m.value;
+              return (
+                <button
+                  key={m.value}
+                  onClick={() => handleModelChange(m.value)}
+                  disabled={!modelEditable}
+                  aria-pressed={selected}
+                  data-testid={`contrib-model-${m.value}`}
+                  style={{
+                    flex: 1,
+                    padding: '10px 16px',
+                    borderRadius: 8,
+                    border: `1px solid ${selected ? C.sky : C.border}`,
+                    background: selected ? C.skyLight : C.cardBg,
+                    color: selected ? C.navy : C.textSecondary,
+                    fontFamily: BODY,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: modelEditable ? 'pointer' : 'not-allowed',
+                    opacity: modelEditable ? 1 : 0.6,
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {m.label}
+                </button>
+              );
+            })}
+          </div>
+          <p
+            style={{
+              margin: '8px 0 0',
+              fontSize: 11,
+              color: C.textTertiary,
+              lineHeight: 1.4,
+            }}
+          >
+            {modelEditable
+              ? 'Select Employer-Paid for systems where the employer pays 100% of contributions (e.g., Nevada PERS, Utah RS Tier 1).'
+              : 'Contribution model is locked after profiling. Change the engagement phase to edit.'}
+          </p>
+        </div>
+      </div>
+
       {/* Connection Section */}
       {!isConnected || showForm ? (
         <div

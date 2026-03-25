@@ -86,3 +86,27 @@ func TestGetEnvInt_ValidValue(t *testing.T) {
 		t.Errorf("envutil.GetEnvInt() = %d, want 99", got)
 	}
 }
+
+// ─── joinStrings ─────────────────────────────────────────────────────────────
+
+func TestJoinStrings_Empty(t *testing.T) {
+	got := joinStrings(nil, ", ")
+	if got != "" {
+		t.Errorf("joinStrings(nil) = %q, want empty", got)
+	}
+}
+
+func TestJoinStrings_Single(t *testing.T) {
+	got := joinStrings([]string{"$2"}, ", ")
+	if got != "$2" {
+		t.Errorf("joinStrings(single) = %q, want %q", got, "$2")
+	}
+}
+
+func TestJoinStrings_Multiple(t *testing.T) {
+	got := joinStrings([]string{"$2", "$3", "$4"}, ", ")
+	want := "$2, $3, $4"
+	if got != want {
+		t.Errorf("joinStrings(multiple) = %q, want %q", got, want)
+	}
+}

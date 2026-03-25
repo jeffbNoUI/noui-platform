@@ -90,6 +90,19 @@ type DQScoreTrend struct {
 	Score float64 `json:"score"`
 }
 
+// DQSuppressionRule defines a context-driven rule for suppressing a DQ check.
+// When the caller provides a matching (context_key, context_value) pair,
+// issues from the matching check_code are excluded from query results.
+type DQSuppressionRule struct {
+	RuleID       string    `json:"ruleId"`
+	TenantID     string    `json:"tenantId"`
+	CheckCode    string    `json:"checkCode"`
+	ContextKey   string    `json:"contextKey"`
+	ContextValue string    `json:"contextValue"`
+	Reason       string    `json:"reason"`
+	CreatedAt    time.Time `json:"createdAt"`
+}
+
 // ============================================================
 // API REQUEST TYPES
 // ============================================================

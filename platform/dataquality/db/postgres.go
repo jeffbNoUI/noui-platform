@@ -457,6 +457,222 @@ func (s *Store) GetIssue(ctx context.Context, issueID string) (*models.DQIssue, 
 	return &iss, nil
 }
 
+// ============================================================
+// SUPPRESSION QUERIES
+// ============================================================
+
+// GetSuppressedCheckCodes returns the check_codes that should be suppressed
+// for the given tenant and context (e.g., context_key="contribution_model", context_value="employer_paid").
+func (s *Store) GetSuppressedCheckCodes(ctx context.Context, tenantID, contextKey, contextValue string) ([]string, error) {
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, `
+		SELECT check_code FROM dq_suppression_rule
+		WHERE tenant_id = $1 AND context_key = $2 AND context_value = $3
+	`, tenantID, contextKey, contextValue)
+	if err != nil {
+		return nil, fmt.Errorf("get suppressed check codes: %w", err)
+	}
+	defer rows.Close()
+
+	var codes []string
+	for rows.Next() {
+		var code string
+		if err := rows.Scan(&code); err != nil {
+			return nil, err
+		}
+		codes = append(codes, code)
+	}
+	return codes, rows.Err()
+}
+
+// ListIssuesWithSuppression returns issues excluding those from suppressed check codes.
+// The suppressedCodes slice contains check_code values (e.g., "CONTRIB_NONNEG") to exclude.
+func (s *Store) ListIssuesWithSuppression(ctx context.Context, tenantID, severity, status string, limit, offset int, suppressedCodes []string) ([]models.DQIssue, int, error) {
+	if len(suppressedCodes) == 0 {
+		return s.ListIssues(ctx, tenantID, severity, status, limit, offset)
+	}
+
+	where := "WHERE i.tenant_id = $1"
+	args := []interface{}{tenantID}
+	argIdx := 2
+
+	if severity != "" {
+		where += fmt.Sprintf(" AND i.severity = $%d", argIdx)
+		args = append(args, severity)
+		argIdx++
+	}
+	if status != "" {
+		where += fmt.Sprintf(" AND i.status = $%d", argIdx)
+		args = append(args, status)
+		argIdx++
+	}
+
+	// Exclude issues whose check_id belongs to a suppressed check_code
+	suppressPlaceholders := make([]string, len(suppressedCodes))
+	for i, code := range suppressedCodes {
+		suppressPlaceholders[i] = fmt.Sprintf("$%d", argIdx)
+		args = append(args, code)
+		argIdx++
+	}
+	where += fmt.Sprintf(` AND i.check_id NOT IN (
+		SELECT d.check_id FROM dq_check_definition d
+		WHERE d.tenant_id = $1 AND d.check_code IN (%s)
+	)`, joinStrings(suppressPlaceholders, ", "))
+
+	var total int
+	if err := dbcontext.DB(ctx, s.DB).QueryRowContext(ctx, "SELECT COUNT(*) FROM dq_issue i "+where, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count issues (suppressed): %w", err)
+	}
+
+	query := fmt.Sprintf(`
+		SELECT i.issue_id, i.result_id, i.check_id, i.tenant_id, i.severity,
+		       i.record_table, i.record_id, i.field_name, i.current_value,
+		       i.expected_pattern, i.description, i.status, i.resolved_at,
+		       i.resolved_by, i.resolution_note, i.created_at, i.updated_at
+		FROM dq_issue i
+		%s
+		ORDER BY
+			CASE i.severity WHEN 'critical' THEN 1 WHEN 'warning' THEN 2 ELSE 3 END,
+			i.created_at DESC
+		LIMIT $%d OFFSET $%d
+	`, where, argIdx, argIdx+1)
+	args = append(args, limit, offset)
+
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list issues (suppressed): %w", err)
+	}
+	defer rows.Close()
+
+	var issues []models.DQIssue
+	for rows.Next() {
+		var iss models.DQIssue
+		if err := rows.Scan(
+			&iss.IssueID, &iss.ResultID, &iss.CheckID, &iss.TenantID, &iss.Severity,
+			&iss.RecordTable, &iss.RecordID, &iss.FieldName, &iss.CurrentValue,
+			&iss.ExpectedPattern, &iss.Description, &iss.Status, &iss.ResolvedAt,
+			&iss.ResolvedBy, &iss.ResolutionNote, &iss.CreatedAt, &iss.UpdatedAt,
+		); err != nil {
+			return nil, 0, fmt.Errorf("scan issue (suppressed): %w", err)
+		}
+		issues = append(issues, iss)
+	}
+
+	return issues, total, rows.Err()
+}
+
+// GetScoreWithSuppression calculates the aggregate DQ score excluding suppressed check codes.
+func (s *Store) GetScoreWithSuppression(ctx context.Context, tenantID string, suppressedCodes []string) (*models.DQScore, error) {
+	if len(suppressedCodes) == 0 {
+		return s.GetScore(ctx, tenantID)
+	}
+
+	// Build the suppression filter
+	args := []interface{}{tenantID}
+	argIdx := 2
+	suppressPlaceholders := make([]string, len(suppressedCodes))
+	for i, code := range suppressedCodes {
+		suppressPlaceholders[i] = fmt.Sprintf("$%d", argIdx)
+		args = append(args, code)
+		argIdx++
+	}
+	suppressFilter := fmt.Sprintf("AND d.check_code NOT IN (%s)", joinStrings(suppressPlaceholders, ", "))
+
+	query := fmt.Sprintf(`
+		SELECT d.category, d.severity, r.pass_rate, r.run_at
+		FROM dq_check_definition d
+		INNER JOIN LATERAL (
+			SELECT pass_rate, run_at
+			FROM dq_check_result
+			WHERE check_id = d.check_id
+			ORDER BY run_at DESC
+			LIMIT 1
+		) r ON true
+		WHERE d.tenant_id = $1 AND d.is_active = true AND d.deleted_at IS NULL
+		%s
+	`, suppressFilter)
+
+	rows, err := dbcontext.DB(ctx, s.DB).QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("get score (suppressed): %w", err)
+	}
+	defer rows.Close()
+
+	categoryTotals := make(map[string]struct{ weightedSum, totalWeight float64 })
+	var totalWeight, weightedSum float64
+	var totalChecks, passingChecks int
+	var lastRunAt *time.Time
+
+	for rows.Next() {
+		var category, sev string
+		var passRate float64
+		var runAt time.Time
+		if err := rows.Scan(&category, &sev, &passRate, &runAt); err != nil {
+			return nil, err
+		}
+
+		weight := 1.0
+		switch sev {
+		case "critical":
+			weight = 3.0
+		case "warning":
+			weight = 2.0
+		}
+
+		totalWeight += weight
+		weightedSum += passRate * weight
+		totalChecks++
+		if passRate >= 95.0 {
+			passingChecks++
+		}
+
+		ct := categoryTotals[category]
+		ct.weightedSum += passRate * weight
+		ct.totalWeight += weight
+		categoryTotals[category] = ct
+
+		if lastRunAt == nil || runAt.After(*lastRunAt) {
+			lastRunAt = &runAt
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	var overall float64
+	if totalWeight > 0 {
+		overall = weightedSum / totalWeight
+	}
+
+	catScores := make(map[string]float64, len(categoryTotals))
+	for cat, ct := range categoryTotals {
+		if ct.totalWeight > 0 {
+			catScores[cat] = ct.weightedSum / ct.totalWeight
+		}
+	}
+
+	score := &models.DQScore{
+		OverallScore:   overall,
+		TotalChecks:    totalChecks,
+		PassingChecks:  passingChecks,
+		CategoryScores: catScores,
+		LastRunAt:      lastRunAt,
+	}
+
+	return score, nil
+}
+
+// joinStrings joins string slices with a separator (avoids importing strings package).
+func joinStrings(strs []string, sep string) string {
+	if len(strs) == 0 {
+		return ""
+	}
+	result := strs[0]
+	for _, s := range strs[1:] {
+		result += sep + s
+	}
+	return result
+}
+
 // UpdateIssue updates an issue's status and resolution fields.
 func (s *Store) UpdateIssue(ctx context.Context, iss *models.DQIssue) error {
 	_, err := dbcontext.DB(ctx, s.DB).ExecContext(ctx, `

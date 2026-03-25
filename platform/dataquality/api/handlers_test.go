@@ -223,3 +223,87 @@ func TestDQScoreJSON(t *testing.T) {
 		t.Errorf("CategoryScores[completeness] = %f, want 95.0", decoded.CategoryScores["completeness"])
 	}
 }
+
+// --- Suppression ---
+
+func TestParseSuppressContext_Valid(t *testing.T) {
+	req := httptest.NewRequest("GET", "/api/v1/dq/issues?suppress_context=contribution_model:employer_paid", nil)
+	key, val := parseSuppressContext(req)
+	if key != "contribution_model" {
+		t.Errorf("key = %q, want %q", key, "contribution_model")
+	}
+	if val != "employer_paid" {
+		t.Errorf("val = %q, want %q", val, "employer_paid")
+	}
+}
+
+func TestParseSuppressContext_Missing(t *testing.T) {
+	req := httptest.NewRequest("GET", "/api/v1/dq/issues", nil)
+	key, val := parseSuppressContext(req)
+	if key != "" || val != "" {
+		t.Errorf("parseSuppressContext(missing) = (%q, %q), want empty", key, val)
+	}
+}
+
+func TestParseSuppressContext_NoColon(t *testing.T) {
+	req := httptest.NewRequest("GET", "/api/v1/dq/issues?suppress_context=invalid", nil)
+	key, val := parseSuppressContext(req)
+	if key != "" || val != "" {
+		t.Errorf("parseSuppressContext(no colon) = (%q, %q), want empty", key, val)
+	}
+}
+
+func TestParseSuppressContext_EmptyKey(t *testing.T) {
+	req := httptest.NewRequest("GET", "/api/v1/dq/issues?suppress_context=:employer_paid", nil)
+	key, val := parseSuppressContext(req)
+	if key != "" || val != "" {
+		t.Errorf("parseSuppressContext(empty key) = (%q, %q), want empty", key, val)
+	}
+}
+
+func TestParseSuppressContext_EmptyValue(t *testing.T) {
+	req := httptest.NewRequest("GET", "/api/v1/dq/issues?suppress_context=contribution_model:", nil)
+	key, val := parseSuppressContext(req)
+	if key != "" || val != "" {
+		t.Errorf("parseSuppressContext(empty value) = (%q, %q), want empty", key, val)
+	}
+}
+
+func TestParseSuppressContext_ColonInValue(t *testing.T) {
+	// Value may contain colons (e.g., "some:complex:value") — SplitN(2) handles this
+	req := httptest.NewRequest("GET", "/api/v1/dq/issues?suppress_context=key:val:extra", nil)
+	key, val := parseSuppressContext(req)
+	if key != "key" {
+		t.Errorf("key = %q, want %q", key, "key")
+	}
+	if val != "val:extra" {
+		t.Errorf("val = %q, want %q", val, "val:extra")
+	}
+}
+
+func TestDQSuppressionRuleJSON(t *testing.T) {
+	rule := models.DQSuppressionRule{
+		RuleID:       "r-001",
+		TenantID:     "t-001",
+		CheckCode:    "CONTRIB_NONNEG",
+		ContextKey:   "contribution_model",
+		ContextValue: "employer_paid",
+		Reason:       "Expected in employer-paid systems",
+	}
+
+	data, err := json.Marshal(rule)
+	if err != nil {
+		t.Fatalf("Marshal DQSuppressionRule: %v", err)
+	}
+
+	var decoded models.DQSuppressionRule
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("Unmarshal DQSuppressionRule: %v", err)
+	}
+	if decoded.CheckCode != "CONTRIB_NONNEG" {
+		t.Errorf("CheckCode = %q, want %q", decoded.CheckCode, "CONTRIB_NONNEG")
+	}
+	if decoded.ContextKey != "contribution_model" {
+		t.Errorf("ContextKey = %q, want %q", decoded.ContextKey, "contribution_model")
+	}
+}
