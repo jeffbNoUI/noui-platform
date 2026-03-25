@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log/slog"
 	"net/http"
 	"os"
@@ -17,12 +18,18 @@ import (
 	"github.com/noui/platform/logging"
 	"github.com/noui/platform/migration/api"
 	"github.com/noui/platform/migration/db"
+	"github.com/noui/platform/migration/jobqueue"
 	"github.com/noui/platform/migration/reconciler"
+	"github.com/noui/platform/migration/worker"
 	"github.com/noui/platform/migration/ws"
 	"github.com/noui/platform/ratelimit"
 )
 
 func main() {
+	embeddedWorker := flag.Bool("embedded-worker", false, "Run an embedded job worker in the API process (dev mode)")
+	workerConcurrency := flag.Int("worker-concurrency", 4, "Number of concurrent jobs for embedded worker")
+	flag.Parse()
+
 	startedAt := time.Now()
 	logger := logging.Setup("migration", nil)
 	slog.SetDefault(logger)
@@ -52,10 +59,32 @@ func main() {
 	hub := ws.NewHub()
 	go hub.Run()
 
+	// Initialize job queue.
+	jq := jobqueue.New(database)
+
+	// Stale job recovery + purge loops (always run in API process).
+	svcCtx, svcCancel := context.WithCancel(context.Background())
+	defer svcCancel()
+	go worker.StaleRecoveryLoop(svcCtx, jq, 1*time.Minute, 5*time.Minute)
+	go worker.PurgeLoop(svcCtx, jq, 1*time.Hour, 30*24*time.Hour)
+
+	// Embedded worker (dev mode).
+	if *embeddedWorker {
+		cfg := worker.DefaultConfig()
+		cfg.Concurrency = *workerConcurrency
+		cfg.WorkerID = "embedded-" + cfg.WorkerID
+		w := worker.New(database, jq, cfg)
+		w.RegisterExecutor("noop", &worker.NoopExecutor{})
+		// Future: register profile_l1, profile_l2, etc. executors here
+		go w.Run(svcCtx)
+		slog.Info("embedded worker started", "concurrency", cfg.Concurrency, "worker_id", cfg.WorkerID)
+	}
+
 	counters := healthutil.NewRequestCounters()
 	handler := api.NewHandler(database)
 	handler.Hub = hub
 	handler.PlanConfig = planConfig
+	handler.JobQueue = jq
 	mux := http.NewServeMux()
 
 	// WebSocket route on bare mux — bypasses auth/ratelimit/dbcontext middleware chain.
