@@ -8,6 +8,7 @@ import (
 
 	"github.com/noui/platform/apiresponse"
 	"github.com/noui/platform/migration/intelligence"
+	"github.com/noui/platform/migration/jobqueue"
 	"github.com/noui/platform/migration/reconciler"
 	"github.com/noui/platform/migration/ws"
 )
@@ -19,6 +20,7 @@ type Handler struct {
 	Analyzer    intelligence.Analyzer  // nil-safe: pattern detection degrades if nil
 	Hub         *ws.Hub                // WebSocket hub for broadcasting events (nil-safe)
 	PlanConfig  *reconciler.PlanConfig // nil-safe: reconciliation degrades if not loaded
+	JobQueue    *jobqueue.Queue        // nil-safe: job endpoints return 503 if nil
 }
 
 // NewHandler creates a Handler with the given database connection.
@@ -135,6 +137,13 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/migration/notifications", h.HandleGetNotifications)
 	mux.HandleFunc("PUT /api/v1/migration/notifications/{id}/read", h.HandleMarkNotificationRead)
 	mux.HandleFunc("PUT /api/v1/migration/notifications/read-all", h.HandleMarkAllNotificationsRead)
+
+	// Job queue
+	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/jobs", h.EnqueueJob)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/jobs", h.ListJobs)
+	mux.HandleFunc("GET /api/v1/migration/jobs/{job_id}", h.GetJob)
+	mux.HandleFunc("POST /api/v1/migration/jobs/{job_id}/cancel", h.CancelJob)
+	mux.HandleFunc("GET /api/v1/migration/workers", h.WorkerHealth)
 }
 
 // broadcast sends a WebSocket event to all clients in an engagement room.
