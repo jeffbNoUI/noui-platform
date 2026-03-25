@@ -5,8 +5,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/noui/platform/apiresponse"
@@ -113,7 +115,9 @@ func (h *Handler) ListResults(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetScore(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantID(r)
 
-	score, err := h.store.GetScore(r.Context(), tenantID)
+	suppressedCodes := h.resolveSuppression(r, tenantID)
+
+	score, err := h.store.GetScoreWithSuppression(r.Context(), tenantID, suppressedCodes)
 	if err != nil {
 		apiresponse.WriteError(w, http.StatusInternalServerError, "dataquality", "DB_ERROR", err.Error())
 		return
@@ -150,7 +154,9 @@ func (h *Handler) ListIssues(w http.ResponseWriter, r *http.Request) {
 	status := r.URL.Query().Get("status")
 	limit, offset := validation.Pagination(intParam(r, "limit", 25), intParam(r, "offset", 0), 100)
 
-	issues, total, err := h.store.ListIssues(r.Context(), tenantID, severity, status, limit, offset)
+	suppressedCodes := h.resolveSuppression(r, tenantID)
+
+	issues, total, err := h.store.ListIssuesWithSuppression(r.Context(), tenantID, severity, status, limit, offset, suppressedCodes)
 	if err != nil {
 		apiresponse.WriteError(w, http.StatusInternalServerError, "dataquality", "DB_ERROR", err.Error())
 		return
@@ -240,4 +246,44 @@ func intParam(r *http.Request, name string, defaultVal int) int {
 		return defaultVal
 	}
 	return v
+}
+
+// parseSuppressContext parses the ?suppress_context=key:value query parameter.
+// Returns ("", "") if the param is missing or malformed.
+func parseSuppressContext(r *http.Request) (string, string) {
+	raw := r.URL.Query().Get("suppress_context")
+	if raw == "" {
+		return "", ""
+	}
+	parts := strings.SplitN(raw, ":", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return "", ""
+	}
+	return parts[0], parts[1]
+}
+
+// resolveSuppression reads the suppress_context param and resolves it to
+// a list of check_codes that should be suppressed. Logs the suppression.
+func (h *Handler) resolveSuppression(r *http.Request, tid string) []string {
+	ctxKey, ctxVal := parseSuppressContext(r)
+	if ctxKey == "" {
+		return nil
+	}
+
+	codes, err := h.store.GetSuppressedCheckCodes(r.Context(), tid, ctxKey, ctxVal)
+	if err != nil {
+		slog.Warn("failed to resolve suppression rules", "error", err, "context_key", ctxKey, "context_value", ctxVal)
+		return nil
+	}
+
+	if len(codes) > 0 {
+		slog.Info("dq_check_suppressed",
+			"check_codes", codes,
+			"context_key", ctxKey,
+			"context_value", ctxVal,
+			"tenant_id", tid,
+		)
+	}
+
+	return codes
 }

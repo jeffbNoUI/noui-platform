@@ -1,5 +1,43 @@
 # noui-platform — Build History
 
+## Session 39: Contribution Model UI + DQ Suppression (2026-03-25)
+
+**Branch:** `claude/dreamy-euclid`
+
+### What Was Done
+
+**Feature 1: Engagement Settings UI — Contribution Model Selector (3 files)**
+
+Analysts can now toggle `contribution_model` between "Standard" and "Employer-Paid" directly in the DiscoveryPanel UI, eliminating the need for raw API calls.
+
+- `frontend/src/types/Migration.ts`: Added `contribution_model` to `CreateEngagementRequest` and `UpdateEngagementRequest`
+- `frontend/src/components/migration/engagement/DiscoveryPanel.tsx`: New "Engagement Settings" card with toggle-button selector, phase-locked after PROFILING (uses `EDITABLE_PHASES` set pattern)
+- `frontend/src/components/migration/engagement/__tests__/DiscoveryPanel.test.tsx`: **New** — 8 tests covering selection state, mutation calls, phase-locking, help text
+
+**Feature 2: DQ Check Suppression for Employer-Paid Systems (7 files)**
+
+Generic query-time suppression mechanism for the Data Quality service. When `contribution_model=employer_paid`, the `CONTRIB_NONNEG` check is excluded from issue lists and score calculations.
+
+- `domains/pension/schema/026_dq_suppression.sql`: **New** — `dq_suppression_rule` table with unique index on (tenant, check_code, context_key, context_value)
+- `domains/pension/seed/006_dq_suppression_seed.sql`: **New** — seed rule suppressing CONTRIB_NONNEG for employer_paid context
+- `platform/dataquality/models/types.go`: Added `DQSuppressionRule` struct
+- `platform/dataquality/db/postgres.go`: Added `GetSuppressedCheckCodes`, `ListIssuesWithSuppression`, `GetScoreWithSuppression`, `joinStrings`
+- `platform/dataquality/api/handlers.go`: Added `parseSuppressContext`, `resolveSuppression`; wired `?suppress_context=key:value` param into `ListIssues` and `GetScore`
+- `platform/dataquality/api/handlers_test.go`: 7 new tests (param parsing edge cases + model serialization)
+- `platform/dataquality/db/postgres_test.go`: 3 new tests (joinStrings helper)
+
+### Verification
+
+- Go dataquality: 40 tests passing (32 api + 8 db), go vet clean
+- Frontend: 237/237 test files, 1873/1873 tests pass
+- Frontend: typecheck clean
+
+### Design Decisions
+
+- **Phase-gated settings (inclusive set):** `EDITABLE_PHASES` uses an inclusive set (DISCOVERY, PROFILING) rather than exclusive (not MAPPING, not TRANSFORMING...) so new phases default to locked — safer
+- **Query-time suppression over write-time:** Issues are still stored in DB; suppression is applied at read time via subquery exclusion. Auditors can always see full data by omitting the suppress_context param
+- **Generic suppression mechanism:** `dq_suppression_rule` table maps (check_code, context_key, context_value) → reason. Domain-agnostic — DQ service doesn't know about engagements, the caller provides context
+
 ## Session 38: Zero-Contribution Member Handling — D3-C (2026-03-24)
 
 **Branch:** `claude/frosty-ptolemy`

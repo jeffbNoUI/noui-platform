@@ -390,11 +390,13 @@ export interface ReconciliationPattern {
 export interface CreateEngagementRequest {
   source_system_name: string;
   source_platform_type?: string;
+  contribution_model?: 'standard' | 'employer_paid';
 }
 
 export interface UpdateEngagementRequest {
   status?: EngagementStatus;
   source_platform_type?: string;
+  contribution_model?: 'standard' | 'employer_paid';
 }
 
 export interface CreateRiskRequest {
