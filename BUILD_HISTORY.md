@@ -1,5 +1,50 @@
 # noui-platform — Build History
 
+## Session 38: Zero-Contribution Member Handling — D3-C (2026-03-24)
+
+**Branch:** `claude/frosty-ptolemy`
+
+### What Was Done
+
+**D3-C: Employer-Paid Contribution Model (10 files + 1 migration)**
+
+Migration engagements can now declare an `employer_paid` contribution model so that zero/NULL employee contributions don't trigger false validation errors or data quality flags. This handles systems like Nevada PERS (EPC) and Utah RS (Tier 1 noncontributory) where the employer pays 100% of contributions.
+
+**Database (1 migration):**
+- Migration `032_contribution_model.sql`: adds `contribution_model VARCHAR(20) DEFAULT 'standard'` with CHECK constraint (`standard`, `employer_paid`)
+
+**Backend — Models + DB + API (6 files):**
+- `models/types.go`: `ContributionModel` field added to `Engagement`, `CreateEngagementRequest`, `UpdateEngagementRequest`
+- `db/engagement.go`: `engagementColumns`, `scanEngagement`, `CreateEngagement` updated; new `UpdateContributionModel` function
+- `api/engagement_handlers.go`: `CreateEngagement` passes contribution model; `UpdateEngagement` supports updating `contribution_model` independently or with status
+- All sqlmock test expectations updated across 3 test files for new 11-column schema
+
+**Backend — Transformer (2 files):**
+- `TransformContext` gains `ContributionModel` field, propagated in `transformRow`
+- `ValidateConstraintsHandler`: when `ContributionModel == "employer_paid"` and column is `ee_amount`, records a lineage entry instead of `MISSING_REQUIRED` exception
+- 3 new tests: standard rejects, employer_paid accepts with lineage, other required fields still enforced
+
+**Backend — Vocabulary (2 files):**
+- `vocabulary.yaml`: 2 new false cognate entries in `contribution-accounts/accumulated_balance` (MEDIUM risk) warning about zero-balance employer-paid systems
+- 1 new false cognate test: `TestAttachWarnings_AccumulatedContributions_ZeroBalance`
+
+**Frontend (3 files):**
+- `Migration.ts`: `contribution_model: 'standard' | 'employer_paid'` added to `MigrationEngagement`
+- `MappingPanel.tsx`: `useEngagement` hook added; blue info badge renders on `ee_amount` rows when `contribution_model === 'employer_paid'`
+- `MappingPanel.test.tsx`: 2 new tests — badge renders when employer_paid, hidden when standard
+
+### Verification
+
+- Go migration: 11/11 packages pass (short mode)
+- Frontend: 236/236 test files, 1865/1865 tests pass
+- Frontend: typecheck clean
+
+### Design Decisions
+
+- **Simple enum over granular:** `standard | employer_paid` (not 3-value enum distinguishing refund eligibility) — YAGNI, refund workflow doesn't exist yet
+- **Engagement-level over plan-level:** single flag per engagement, not per-plan or per-member — aligns with how migration engagements scope to one source system
+- **Lineage over exception:** nil `ee_amount` in employer_paid records a lineage entry (audit trail, no alarm) rather than a suppressed exception — cleaner downstream for DQ scoring
+
 ## Session 36: Warning Acknowledgment Persistence — D3-A (2026-03-24)
 
 **Branch:** `claude/crazy-pascal`

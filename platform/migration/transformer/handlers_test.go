@@ -944,6 +944,56 @@ func TestValidateConstraints_InvalidDate(t *testing.T) {
 	}
 }
 
+// ===== ValidateConstraints — Employer-Paid Contribution Model =====
+
+func TestValidateConstraints_EeAmountNil_Standard_RejectsAsRequired(t *testing.T) {
+	h := ValidateConstraintsHandler()
+	ctx := newTestCtx()
+	ctx.ContributionModel = "standard"
+	m := FieldMapping{CanonicalColumn: "ee_amount", CanonicalType: "DECIMAL", Required: true}
+	_, err := h.Apply(nil, nil, m, ctx)
+	if err == nil {
+		t.Fatal("expected MISSING_REQUIRED error for ee_amount=nil with standard model")
+	}
+	if len(ctx.Exceptions) != 1 {
+		t.Errorf("expected 1 exception, got %d", len(ctx.Exceptions))
+	}
+}
+
+func TestValidateConstraints_EeAmountNil_EmployerPaid_Accepts(t *testing.T) {
+	h := ValidateConstraintsHandler()
+	ctx := newTestCtx()
+	ctx.ContributionModel = "employer_paid"
+	m := FieldMapping{CanonicalColumn: "ee_amount", CanonicalType: "DECIMAL", Required: true}
+	v, err := h.Apply(nil, nil, m, ctx)
+	if err != nil {
+		t.Fatalf("employer_paid should accept nil ee_amount, got error: %v", err)
+	}
+	if v != nil {
+		t.Errorf("expected nil return value, got %v", v)
+	}
+	if len(ctx.Exceptions) != 0 {
+		t.Errorf("expected 0 exceptions, got %d", len(ctx.Exceptions))
+	}
+	if len(ctx.Lineage) != 1 {
+		t.Fatalf("expected 1 lineage entry, got %d", len(ctx.Lineage))
+	}
+	if ctx.Lineage[0].HandlerName != "ValidateConstraints" {
+		t.Errorf("lineage handler = %q, want ValidateConstraints", ctx.Lineage[0].HandlerName)
+	}
+}
+
+func TestValidateConstraints_OtherRequired_EmployerPaid_StillRejects(t *testing.T) {
+	h := ValidateConstraintsHandler()
+	ctx := newTestCtx()
+	ctx.ContributionModel = "employer_paid"
+	m := FieldMapping{CanonicalColumn: "member_id", CanonicalType: "VARCHAR", Required: true}
+	_, err := h.Apply(nil, nil, m, ctx)
+	if err == nil {
+		t.Fatal("employer_paid should NOT skip required check for non-ee_amount columns")
+	}
+}
+
 // helper
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && containsStr(s, substr)

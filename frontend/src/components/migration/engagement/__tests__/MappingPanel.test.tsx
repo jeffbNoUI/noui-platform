@@ -12,6 +12,7 @@ vi.mock('@/hooks/useMigrationApi', async () => {
     useGenerateMappings: vi.fn(),
     useAcknowledgeWarning: vi.fn(),
     useMappingCorpusContext: vi.fn(),
+    useEngagement: vi.fn(),
   };
 });
 
@@ -22,6 +23,7 @@ import {
   useGenerateMappings,
   useAcknowledgeWarning,
   useMappingCorpusContext,
+  useEngagement,
 } from '@/hooks/useMigrationApi';
 import type { FieldMapping } from '@/types/Migration';
 
@@ -69,6 +71,9 @@ beforeEach(() => {
   vi.mocked(useMappingCorpusContext).mockReturnValue({
     data: undefined,
   } as unknown as ReturnType<typeof useMappingCorpusContext>);
+  vi.mocked(useEngagement).mockReturnValue({
+    data: { contribution_model: 'standard' },
+  } as unknown as ReturnType<typeof useEngagement>);
 });
 
 describe('MappingPanel — false cognate warnings', () => {
@@ -172,5 +177,44 @@ describe('MappingPanel — false cognate warnings', () => {
     expect(within(popover).getByText('membership_service')).toBeTruthy();
     expect(within(popover).getByText('May refer to membership status period')).toBeTruthy();
     expect(within(popover).getByText('HIGH')).toBeTruthy();
+  });
+});
+
+describe('MappingPanel — employer-paid badge', () => {
+  it('shows employer-paid badge for ee_amount when contribution_model is employer_paid', () => {
+    vi.mocked(useEngagement).mockReturnValue({
+      data: { contribution_model: 'employer_paid' },
+    } as unknown as ReturnType<typeof useEngagement>);
+    vi.mocked(useMappings).mockReturnValue({
+      data: makeMappings([
+        {
+          canonical_column: 'ee_amount',
+          source_column: 'emp_contrib',
+        },
+      ]),
+      isLoading: false,
+    } as unknown as ReturnType<typeof useMappings>);
+
+    renderWithProviders(<MappingPanel engagementId="eng-1" />);
+    expect(screen.getByTestId('employer-paid-badge')).toBeTruthy();
+    expect(screen.getByText('Employer-paid — zero contributions expected')).toBeTruthy();
+  });
+
+  it('does not show employer-paid badge when contribution_model is standard', () => {
+    vi.mocked(useEngagement).mockReturnValue({
+      data: { contribution_model: 'standard' },
+    } as unknown as ReturnType<typeof useEngagement>);
+    vi.mocked(useMappings).mockReturnValue({
+      data: makeMappings([
+        {
+          canonical_column: 'ee_amount',
+          source_column: 'emp_contrib',
+        },
+      ]),
+      isLoading: false,
+    } as unknown as ReturnType<typeof useMappings>);
+
+    renderWithProviders(<MappingPanel engagementId="eng-1" />);
+    expect(screen.queryByTestId('employer-paid-badge')).toBeNull();
   });
 });

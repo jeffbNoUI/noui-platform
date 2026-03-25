@@ -7,6 +7,7 @@ import {
   useGenerateMappings,
   useAcknowledgeWarning,
   useMappingCorpusContext,
+  useEngagement,
 } from '@/hooks/useMigrationApi';
 import CorpusIndicator from '../ai/CorpusIndicator';
 import WarningBadge from './WarningBadge';
@@ -39,6 +40,7 @@ export default function MappingPanel({ engagementId }: Props) {
   const updateMapping = useUpdateMapping();
   const generateMappings = useGenerateMappings();
 
+  const { data: engagement } = useEngagement(engagementId);
   const acknowledgeWarning = useAcknowledgeWarning();
 
   const [showCodeMappings, setShowCodeMappings] = useState(false);
@@ -318,6 +320,26 @@ export default function MappingPanel({ engagementId }: Props) {
                             onAcknowledge={() => handleAcknowledge(m.mapping_id)}
                           />
                         )}
+                        {engagement?.contribution_model === 'employer_paid' &&
+                          m.canonical_column === 'ee_amount' && (
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                marginLeft: 8,
+                                padding: '2px 8px',
+                                borderRadius: 10,
+                                background: '#e3f2fd',
+                                color: '#1565c0',
+                                fontSize: 10,
+                                fontWeight: 600,
+                              }}
+                              data-testid="employer-paid-badge"
+                            >
+                              Employer-paid — zero contributions expected
+                            </span>
+                          )}
                       </div>
                     </td>
                     <td style={{ padding: '10px 16px', fontFamily: MONO, color: C.text }}>

@@ -38,7 +38,7 @@ func (h *Handler) CreateEngagement(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tid := tenantID(r)
-	engagement, err := migrationdb.CreateEngagement(h.DB, tid, req.SourceSystemName, req.SourcePlatformType)
+	engagement, err := migrationdb.CreateEngagement(h.DB, tid, req.SourceSystemName, req.SourcePlatformType, req.ContributionModel)
 	if err != nil {
 		slog.Error("failed to create engagement", "error", err, "tenant_id", tid)
 		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to create engagement")
@@ -85,35 +85,53 @@ func (h *Handler) UpdateEngagement(w http.ResponseWriter, r *http.Request) {
 	}
 
 	req.Status = strings.TrimSpace(req.Status)
-	if req.Status == "" {
-		apiresponse.WriteError(w, http.StatusBadRequest, "migration", "VALIDATION_ERROR", "status is required")
+	if req.Status == "" && req.ContributionModel == nil {
+		apiresponse.WriteError(w, http.StatusBadRequest, "migration", "VALIDATION_ERROR", "status or contribution_model is required")
 		return
 	}
 
-	// Fetch current engagement to validate the transition.
-	current, err := migrationdb.GetEngagement(h.DB, id)
-	if err != nil {
-		slog.Error("failed to get engagement for update", "error", err, "engagement_id", id)
-		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to get engagement")
-		return
-	}
-	if current == nil {
-		apiresponse.WriteError(w, http.StatusNotFound, "migration", "NOT_FOUND", fmt.Sprintf("engagement %s not found", id))
-		return
+	var updated *models.Engagement
+
+	if req.Status != "" {
+		// Fetch current engagement to validate the transition.
+		current, err := migrationdb.GetEngagement(h.DB, id)
+		if err != nil {
+			slog.Error("failed to get engagement for update", "error", err, "engagement_id", id)
+			apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to get engagement")
+			return
+		}
+		if current == nil {
+			apiresponse.WriteError(w, http.StatusNotFound, "migration", "NOT_FOUND", fmt.Sprintf("engagement %s not found", id))
+			return
+		}
+
+		newStatus := models.EngagementStatus(req.Status)
+		if !current.Status.CanTransitionTo(newStatus) {
+			apiresponse.WriteError(w, http.StatusConflict, "migration", "INVALID_TRANSITION",
+				fmt.Sprintf("cannot transition from %s to %s", current.Status, newStatus))
+			return
+		}
+
+		updated, err = migrationdb.UpdateEngagementStatus(h.DB, id, newStatus)
+		if err != nil {
+			slog.Error("failed to update engagement", "error", err, "engagement_id", id)
+			apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to update engagement")
+			return
+		}
 	}
 
-	newStatus := models.EngagementStatus(req.Status)
-	if !current.Status.CanTransitionTo(newStatus) {
-		apiresponse.WriteError(w, http.StatusConflict, "migration", "INVALID_TRANSITION",
-			fmt.Sprintf("cannot transition from %s to %s", current.Status, newStatus))
-		return
-	}
-
-	updated, err := migrationdb.UpdateEngagementStatus(h.DB, id, newStatus)
-	if err != nil {
-		slog.Error("failed to update engagement", "error", err, "engagement_id", id)
-		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to update engagement")
-		return
+	if req.ContributionModel != nil {
+		var err error
+		updated, err = migrationdb.UpdateContributionModel(h.DB, id, *req.ContributionModel)
+		if err != nil {
+			slog.Error("failed to update contribution model", "error", err, "engagement_id", id)
+			apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to update contribution model")
+			return
+		}
+		if updated == nil {
+			apiresponse.WriteError(w, http.StatusNotFound, "migration", "NOT_FOUND", fmt.Sprintf("engagement %s not found", id))
+			return
+		}
 	}
 
 	apiresponse.WriteSuccess(w, http.StatusOK, "migration", updated)

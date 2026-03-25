@@ -15,7 +15,7 @@ func scanEngagement(scanner interface{ Scan(...any) error }) (*models.Engagement
 	err := scanner.Scan(
 		&e.EngagementID, &e.TenantID, &e.SourceSystemName, &e.CanonicalSchemaVersion,
 		&e.Status, &e.SourcePlatformType, &e.QualityBaselineApprovedAt, &connJSON,
-		&e.CreatedAt, &e.UpdatedAt,
+		&e.ContributionModel, &e.CreatedAt, &e.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -32,15 +32,19 @@ func scanEngagement(scanner interface{ Scan(...any) error }) (*models.Engagement
 
 // engagementColumns is the standard column list for engagement queries.
 const engagementColumns = `engagement_id, tenant_id, source_system_name, canonical_schema_version,
-		status, source_platform_type, quality_baseline_approved_at, source_connection, created_at, updated_at`
+		status, source_platform_type, quality_baseline_approved_at, source_connection,
+		contribution_model, created_at, updated_at`
 
 // CreateEngagement inserts a new migration engagement and returns the created record.
-func CreateEngagement(db *sql.DB, tenantID, sourceSystemName string, platformType *string) (*models.Engagement, error) {
+func CreateEngagement(db *sql.DB, tenantID, sourceSystemName string, platformType *string, contributionModel string) (*models.Engagement, error) {
+	if contributionModel == "" {
+		contributionModel = "standard"
+	}
 	row := db.QueryRow(
-		`INSERT INTO migration.engagement (tenant_id, source_system_name, source_platform_type)
-		 VALUES ($1, $2, $3)
+		`INSERT INTO migration.engagement (tenant_id, source_system_name, source_platform_type, contribution_model)
+		 VALUES ($1, $2, $3, $4)
 		 RETURNING `+engagementColumns,
-		tenantID, sourceSystemName, platformType,
+		tenantID, sourceSystemName, platformType, contributionModel,
 	)
 	e, err := scanEngagement(row)
 	if err != nil {
@@ -82,6 +86,25 @@ func UpdateEngagementStatus(db *sql.DB, engagementID string, newStatus models.En
 	}
 	if err != nil {
 		return nil, fmt.Errorf("update engagement status: %w", err)
+	}
+	return e, nil
+}
+
+// UpdateContributionModel updates an engagement's contribution model.
+func UpdateContributionModel(db *sql.DB, engagementID string, model string) (*models.Engagement, error) {
+	row := db.QueryRow(
+		`UPDATE migration.engagement
+		 SET contribution_model = $2, updated_at = now()
+		 WHERE engagement_id = $1
+		 RETURNING `+engagementColumns,
+		engagementID, model,
+	)
+	e, err := scanEngagement(row)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("update contribution model: %w", err)
 	}
 	return e, nil
 }

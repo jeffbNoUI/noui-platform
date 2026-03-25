@@ -328,3 +328,10 @@ contribution-accounts:
       - member_contributions_accumulation_fund
       - employee_contributions_account
       - deductions_plus_interest
+    false_cognates:
+      - term: accumulated_contributions
+        warning: "In employer-paid systems (Nevada PERS EPC, Utah RS Tier 1 noncontributory), accumulated contributions are zero by design — not a data quality issue"
+        risk: MEDIUM
+      - term: member_account_balance
+        warning: "In employer-paid systems, member account balance may be zero or absent — contributions are employer-held, not refundable to member"
+        risk: MEDIUM
