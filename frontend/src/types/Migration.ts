@@ -65,6 +65,7 @@ export interface MigrationEngagement {
   canonical_schema_version: string;
   status: EngagementStatus;
   source_platform_type: string | null;
+  contribution_model: 'standard' | 'employer_paid';
   quality_baseline_approved_at: string | null;
   source_connection: SourceConnection | null;
   created_at: string;
