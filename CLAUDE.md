@@ -372,7 +372,7 @@ claude --name "task-id-description"
 - Avoid generic names for local commands (`review`, `test`, `build`) — plugins may claim them.
 
 **Behavioral guideline — persona review in plan mode:**
-- Before finalizing any plan that touches UI, data model, API routes, or permission logic, run persona review against `config/rubrics/persona-review.json`. Spawn 3 independent tier reviewers (each sees ONLY its own rubric section), then reconcile with priority T1 > T2 > T3. Do not exit plan mode with unresolved blockers. Skip for trivial plans (config-only, test-only, documentation).
+- Before finalizing any plan that touches UI, data model, API routes, or permission logic, run persona review against `config/rubrics/persona-review.json`. Spawn 4 independent tier reviewers — T1 Staff, T2 Member, T2 Employer, T2 Vendor (each sees ONLY its own rubric section), then reconcile with priority T1 > T2. Within T2, conflicts are flagged for human resolution. Do not exit plan mode with unresolved blockers. Skip for trivial plans (config-only, test-only, documentation).
 
 ## When Something Goes Wrong
 

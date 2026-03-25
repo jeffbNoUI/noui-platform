@@ -35,8 +35,8 @@ cat <<'CONTEXT'
 **Persona Review Rule:**
 - Before finalizing any plan that touches UI, data model, API routes, or permission logic:
   run persona review against `config/rubrics/persona-review.json`
-- Spawn T1, T2, T3 reviewers independently (each sees ONLY its own rubric)
-- Reconcile with fixed priority: T1 > T2 > T3
+- Spawn 4 reviewers independently: T1 Staff, T2 Member, T2 Employer, T2 Vendor (each sees ONLY its own rubric)
+- Reconcile with fixed priority: T1 > T2. Within T2, conflicts flagged for human resolution.
 - Do NOT exit plan mode with unresolved blockers
 
 **Worktree Rules:**
