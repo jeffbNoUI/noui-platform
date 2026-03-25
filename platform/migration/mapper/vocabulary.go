@@ -102,8 +102,8 @@ func EnrichRegistry(r *Registry, v *Vocabulary) int {
 				}
 			}
 		}
-		// Write back the modified template
-		r.templates[conceptTag] = tmpl
+		// Write back the modified template via register()
+		r.register(tmpl)
 	}
 	return added
 }

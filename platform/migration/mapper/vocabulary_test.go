@@ -150,7 +150,7 @@ func TestVocabularyBaselineCount(t *testing.T) {
 	t.Logf("Baseline TermCount: %d", baseline)
 }
 
-func TestEnrichedCountAbove400(t *testing.T) {
+func TestEnrichedCountAbove350(t *testing.T) {
 	path := vocabPath(t)
 	vocab, err := LoadVocabulary(path)
 	if err != nil {
