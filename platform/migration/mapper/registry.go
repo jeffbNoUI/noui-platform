@@ -79,7 +79,7 @@ func (r *Registry) registerAll() {
 				CanonicalColumn: "original_hire_date",
 				DataTypeFamily:  "DATE",
 				Required:        true,
-				ExpectedNames:   []string{"hire_date", "hire_dt", "original_hire_date", "date_of_hire", "employment_date", "original_membership_date", "retirement_system_entry_date"},
+				ExpectedNames:   []string{"hire_date", "hire_dt", "original_hire_date", "date_of_hire", "employment_date", "original_membership_date", "retirement_system_entry_date", "membership_date", "enrollment_date", "system_entry_date", "participation_date"},
 			},
 			{
 				CanonicalColumn: "plan_code",
@@ -148,13 +148,13 @@ func (r *Registry) registerAll() {
 				CanonicalColumn: "gross_amount",
 				DataTypeFamily:  "DECIMAL",
 				Required:        true,
-				ExpectedNames:   []string{"gross_amount", "salary_amount", "sal_amt", "compensation", "pay_amount", "gross_earn", "gross_pay", "reportable_earnings"},
+				ExpectedNames:   []string{"gross_amount", "salary_amount", "sal_amt", "compensation", "pay_amount", "gross_earn", "gross_pay", "reportable_earnings", "pensionable_pay", "compensation_earnable", "pensionable_compensation", "pensionable_salary", "earnable_compensation", "covered_wages", "creditable_compensation", "reportable_compensation", "base_pay", "annual_salary"},
 			},
 			{
 				CanonicalColumn: "pensionable_amount",
 				DataTypeFamily:  "DECIMAL",
 				Required:        false,
-				ExpectedNames:   []string{"pensionable_amount", "base_salary", "base_amount", "covered_salary", "pension_earn", "pension_pay", "pensionable_earnings"},
+				ExpectedNames:   []string{"pensionable_amount", "base_salary", "base_amount", "covered_salary", "pension_earn", "pension_pay", "pensionable_earnings", "highest_average_salary", "average_monthly_salary", "final_average_compensation", "final_average_salary", "average_final_compensation", "final_rate_of_earnings", "average_monthly_compensation", "highest_average_compensation", "high_five_salary", "has", "ams", "fac", "fas", "afc", "fre", "amc", "hac"},
 			},
 			{
 				CanonicalColumn: "granularity",
@@ -232,13 +232,13 @@ func (r *Registry) registerAll() {
 				CanonicalColumn: "ee_amount",
 				DataTypeFamily:  "DECIMAL",
 				Required:        true,
-				ExpectedNames:   []string{"ee_amount", "employee_contribution", "ee_contribution", "member_contribution", "ee_contrib", "ee_contrib_amt", "member_contribution_amount"},
+				ExpectedNames:   []string{"ee_amount", "employee_contribution", "ee_contribution", "member_contribution", "ee_contrib", "ee_contrib_amt", "member_contribution_amount", "basic_member_contributions", "retirement_deductions", "member_deposits", "mandatory_contributions", "regular_contributions"},
 			},
 			{
 				CanonicalColumn: "er_amount",
 				DataTypeFamily:  "DECIMAL",
 				Required:        false,
-				ExpectedNames:   []string{"er_amount", "employer_contribution", "er_contribution", "er_contrib", "er_contrib_amt", "employer_contribution_amount"},
+				ExpectedNames:   []string{"er_amount", "employer_contribution", "er_contribution", "er_contrib", "er_contrib_amt", "employer_contribution_amount", "state_contribution", "city_contributions", "city_matching_funds", "normal_cost", "uniform_contribution_rate"},
 			},
 			{
 				CanonicalColumn: "granularity",
@@ -271,13 +271,13 @@ func (r *Registry) registerAll() {
 				CanonicalColumn: "credited_years_total",
 				DataTypeFamily:  "DECIMAL",
 				Required:        true,
-				ExpectedNames:   []string{"credited_years_total", "service_units", "credited_service_years", "years_of_service", "yos", "svc_cr_bal"},
+				ExpectedNames:   []string{"credited_years_total", "service_units", "credited_service_years", "years_of_service", "yos", "svc_cr_bal", "service_credit", "credited_service", "creditable_service", "retirement_credit", "allowable_service", "qualifying_service_credit", "earned_service_credit", "contributing_months", "eligibility_points", "sc", "cs", "qsc"},
 			},
 			{
 				CanonicalColumn: "service_type",
 				DataTypeFamily:  "VARCHAR",
 				Required:        false,
-				ExpectedNames:   []string{"service_type", "service_unit_type", "credit_type", "svc_typ_cd", "service_type_code"},
+				ExpectedNames:   []string{"service_type", "service_unit_type", "credit_type", "svc_typ_cd", "service_type_code", "purchased_service_credit", "buy_back", "redeposit", "reinstated_service", "military_service_credit", "userra_service_credit", "reciprocal_service", "transferred_service"},
 			},
 		},
 	})
@@ -382,7 +382,7 @@ func (r *Registry) registerAll() {
 				CanonicalColumn: "gross_amount",
 				DataTypeFamily:  "DECIMAL",
 				Required:        true,
-				ExpectedNames:   []string{"gross_amount", "payment_amount", "gross_payment", "gross_amt"},
+				ExpectedNames:   []string{"gross_amount", "payment_amount", "gross_payment", "gross_amt", "benefit_amount", "monthly_benefit", "pension_payment", "retirement_benefit", "annuity_payment", "monthly_allowance", "benefit_payment_amount", "gross_benefit"},
 			},
 			{
 				CanonicalColumn: "net_amount",
