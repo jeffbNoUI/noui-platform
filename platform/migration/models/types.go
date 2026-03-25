@@ -67,6 +67,7 @@ type Engagement struct {
 	CanonicalSchemaVersion    string            `json:"canonical_schema_version"`
 	Status                    EngagementStatus  `json:"status"`
 	SourcePlatformType        *string           `json:"source_platform_type"`
+	ContributionModel         string            `json:"contribution_model"`
 	QualityBaselineApprovedAt *time.Time        `json:"quality_baseline_approved_at"`
 	SourceConnection          *SourceConnection `json:"source_connection"`
 	CreatedAt                 time.Time         `json:"created_at"`
@@ -77,12 +78,14 @@ type Engagement struct {
 type CreateEngagementRequest struct {
 	SourceSystemName   string  `json:"source_system_name"`
 	SourcePlatformType *string `json:"source_platform_type,omitempty"`
+	ContributionModel  string  `json:"contribution_model,omitempty"`
 }
 
 // UpdateEngagementRequest is the JSON body for updating an engagement.
 type UpdateEngagementRequest struct {
 	Status             string  `json:"status,omitempty"`
 	SourcePlatformType *string `json:"source_platform_type,omitempty"`
+	ContributionModel  *string `json:"contribution_model,omitempty"`
 }
 
 // Risk represents a migration risk (dynamic or analyst-created).
