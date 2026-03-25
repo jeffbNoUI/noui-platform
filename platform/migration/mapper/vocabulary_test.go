@@ -24,12 +24,18 @@ func vocabPath(t *testing.T) string {
 	return path
 }
 
-func TestLoadVocabulary(t *testing.T) {
-	path := vocabPath(t)
-	vocab, err := LoadVocabulary(path)
+// loadTestVocab loads vocabulary.yaml for tests, failing if it can't be loaded.
+func loadTestVocab(t *testing.T) *Vocabulary {
+	t.Helper()
+	vocab, err := LoadVocabulary(vocabPath(t))
 	if err != nil {
-		t.Fatalf("LoadVocabulary failed: %v", err)
+		t.Fatalf("LoadVocabulary: %v", err)
 	}
+	return vocab
+}
+
+func TestLoadVocabulary(t *testing.T) {
+	vocab := loadTestVocab(t)
 	if vocab.Version != "1.0" {
 		t.Errorf("expected version 1.0, got %q", vocab.Version)
 	}
@@ -39,11 +45,7 @@ func TestLoadVocabulary(t *testing.T) {
 }
 
 func TestVocabularyConceptsMatchRegistry(t *testing.T) {
-	path := vocabPath(t)
-	vocab, err := LoadVocabulary(path)
-	if err != nil {
-		t.Fatalf("LoadVocabulary failed: %v", err)
-	}
+	vocab := loadTestVocab(t)
 	r := NewRegistry()
 	for conceptTag, slots := range vocab.Concepts {
 		tmpl, ok := r.Get(conceptTag)
@@ -64,11 +66,7 @@ func TestVocabularyConceptsMatchRegistry(t *testing.T) {
 }
 
 func TestEnrichRegistryAddsTerms(t *testing.T) {
-	path := vocabPath(t)
-	vocab, err := LoadVocabulary(path)
-	if err != nil {
-		t.Fatalf("LoadVocabulary failed: %v", err)
-	}
+	vocab := loadTestVocab(t)
 	r := NewRegistry()
 	before := r.TermCount()
 	added := EnrichRegistry(r, vocab)
@@ -84,11 +82,7 @@ func TestEnrichRegistryAddsTerms(t *testing.T) {
 }
 
 func TestEnrichRegistryNoDuplicates(t *testing.T) {
-	path := vocabPath(t)
-	vocab, err := LoadVocabulary(path)
-	if err != nil {
-		t.Fatalf("LoadVocabulary failed: %v", err)
-	}
+	vocab := loadTestVocab(t)
 	r := NewRegistry()
 	EnrichRegistry(r, vocab)
 
@@ -107,11 +101,7 @@ func TestEnrichRegistryNoDuplicates(t *testing.T) {
 }
 
 func TestEnrichRegistryIdempotent(t *testing.T) {
-	path := vocabPath(t)
-	vocab, err := LoadVocabulary(path)
-	if err != nil {
-		t.Fatalf("LoadVocabulary failed: %v", err)
-	}
+	vocab := loadTestVocab(t)
 	r := NewRegistry()
 	added1 := EnrichRegistry(r, vocab)
 	added2 := EnrichRegistry(r, vocab)
@@ -125,11 +115,7 @@ func TestEnrichRegistryIdempotent(t *testing.T) {
 }
 
 func TestAllVocabTermsAreLowercase(t *testing.T) {
-	path := vocabPath(t)
-	vocab, err := LoadVocabulary(path)
-	if err != nil {
-		t.Fatalf("LoadVocabulary failed: %v", err)
-	}
+	vocab := loadTestVocab(t)
 	for concept, slots := range vocab.Concepts {
 		for slot, vs := range slots {
 			for _, term := range vs.Terms {
@@ -151,11 +137,7 @@ func TestVocabularyBaselineCount(t *testing.T) {
 }
 
 func TestEnrichedCountAbove350(t *testing.T) {
-	path := vocabPath(t)
-	vocab, err := LoadVocabulary(path)
-	if err != nil {
-		t.Fatalf("LoadVocabulary failed: %v", err)
-	}
+	vocab := loadTestVocab(t)
 	r := NewRegistry()
 	EnrichRegistry(r, vocab)
 	total := r.TermCount()
@@ -166,11 +148,7 @@ func TestEnrichedCountAbove350(t *testing.T) {
 }
 
 func TestFalseCognatesLoaded(t *testing.T) {
-	path := vocabPath(t)
-	vocab, err := LoadVocabulary(path)
-	if err != nil {
-		t.Fatalf("LoadVocabulary failed: %v", err)
-	}
+	vocab := loadTestVocab(t)
 	// Service credit should have false cognates
 	scSlots, ok := vocab.Concepts["service-credit"]
 	if !ok {

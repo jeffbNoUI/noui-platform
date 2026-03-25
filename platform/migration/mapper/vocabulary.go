@@ -107,15 +107,3 @@ func EnrichRegistry(r *Registry, v *Vocabulary) int {
 	}
 	return added
 }
-
-// TermCount returns the total number of ExpectedNames entries across all slots.
-func (r *Registry) TermCount() int {
-	count := 0
-	for _, tag := range r.Tags() {
-		tmpl, _ := r.Get(tag)
-		for _, slot := range tmpl.Slots {
-			count += len(slot.ExpectedNames)
-		}
-	}
-	return count
-}

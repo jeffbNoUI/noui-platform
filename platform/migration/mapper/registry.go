@@ -34,6 +34,17 @@ func (r *Registry) register(t MappingTemplate) {
 	r.templates[t.ConceptTag] = t
 }
 
+// TermCount returns the total number of ExpectedNames entries across all slots.
+func (r *Registry) TermCount() int {
+	count := 0
+	for _, tmpl := range r.templates {
+		for _, slot := range tmpl.Slots {
+			count += len(slot.ExpectedNames)
+		}
+	}
+	return count
+}
+
 func (r *Registry) registerAll() {
 	// ----------------------------------------------------------------
 	// Pension-relevant concepts with full slot definitions
