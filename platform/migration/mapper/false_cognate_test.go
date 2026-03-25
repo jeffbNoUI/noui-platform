@@ -307,3 +307,31 @@ func TestAttachWarnings_EndToEnd_MatchColumns(t *testing.T) {
 	}
 	t.Error("membership_service not matched at all")
 }
+
+func TestAttachWarnings_AccumulatedContributions_ZeroBalance(t *testing.T) {
+	// accumulated_contributions matched to accumulated_balance — MEDIUM risk
+	// Employer-paid systems (Nevada PERS EPC, Utah RS Tier 1) have zero accumulated contributions by design
+	matches := []ColumnMatch{
+		{
+			SourceColumn:    "accumulated_contributions",
+			SourceType:      "decimal(12,2)",
+			CanonicalColumn: "accumulated_balance",
+			Confidence:      0.9,
+			MatchMethod:     "pattern",
+		},
+	}
+
+	vocab, _ := LoadVocabulary()
+	idx := BuildFalseCognateIndex(vocab)
+	AttachFalseCognateWarnings(matches, "contribution-accounts", idx)
+
+	if len(matches[0].Warnings) == 0 {
+		t.Fatal("expected warning for accumulated_contributions (zero-balance employer-paid ambiguity), got none")
+	}
+	if matches[0].Warnings[0].Risk != "MEDIUM" {
+		t.Errorf("accumulated_contributions risk = %q, want MEDIUM", matches[0].Warnings[0].Risk)
+	}
+	if !strings.Contains(matches[0].Warnings[0].Warning, "employer-paid") {
+		t.Error("warning should mention employer-paid systems")
+	}
+}
