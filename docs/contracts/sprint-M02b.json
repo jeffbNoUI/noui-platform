@@ -1,0 +1,63 @@
+{
+  "sprint": 3,
+  "goal": "Job queue: execution engine with retry logic and failure recovery",
+  "depends_on": ["M02a"],
+  "layer": "go",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "JobWorker struct polls for pending jobs via DequeueNext, executes them, and updates status on completion or failure",
+      "verification": "cd platform/migration && go test ./batch/... -run TestJobWorkerExecute -count=1 -v"
+    },
+    {
+      "id": "AC-2",
+      "description": "Retry logic: failed jobs with retry_count < max_retries transition to RETRYING with exponential backoff (base 30s, max 15min). Jobs exceeding max_retries transition to FAILED permanently.",
+      "verification": "cd platform/migration && go test ./batch/... -run TestJobRetry -count=1 -v"
+    },
+    {
+      "id": "AC-3",
+      "description": "Stale job recovery: on worker startup, any RUNNING jobs older than 30 minutes are reset to RETRYING (handles service restart mid-execution)",
+      "verification": "cd platform/migration && go test ./batch/... -run TestStaleJobRecovery -count=1 -v"
+    },
+    {
+      "id": "AC-4",
+      "description": "Job execution is type-dispatched: each JobType maps to a handler function. Unknown job types fail immediately with descriptive error.",
+      "verification": "cd platform/migration && go test ./batch/... -run TestJobDispatch -count=1 -v"
+    },
+    {
+      "id": "AC-5",
+      "description": "WebSocket broadcasts job_started, job_completed, job_failed events with job_id and engagement_id",
+      "verification": "cd platform/migration && go test ./batch/... -run TestJobWebSocket -count=1 -v"
+    },
+    {
+      "id": "AC-6",
+      "description": "Graceful shutdown: worker finishes current job before stopping on SIGTERM. Does not pick up new jobs during shutdown.",
+      "verification": "cd platform/migration && go test ./batch/... -run TestGracefulShutdown -count=1 -v"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "Worker runs in a goroutine managed by the main service — not a separate binary",
+      "Job execution sets app.current_user_id on the DB connection for RLS",
+      "Failed jobs record last_error with enough detail to diagnose (not just 'error')",
+      "No panic recovery that swallows errors silently — log and record the failure"
+    ],
+    "high": [
+      "Worker poll interval is configurable via env var (default 5s)",
+      "Exponential backoff uses jitter to prevent thundering herd on mass retry",
+      "Context cancellation propagated to job handlers for clean timeout",
+      "slog structured logging for all job lifecycle events (started, completed, failed, retrying)"
+    ],
+    "medium": [
+      "Metrics endpoint for job queue depth, avg execution time, failure rate"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "platform/migration/batch/job_worker.go",
+    "platform/migration/batch/job_worker_test.go",
+    "platform/migration/batch/job_dispatch.go",
+    "platform/migration/batch/job_dispatch_test.go"
+  ]
+}

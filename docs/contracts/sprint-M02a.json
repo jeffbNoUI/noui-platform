@@ -1,0 +1,60 @@
+{
+  "sprint": 2,
+  "goal": "Job queue: DB schema + Go models for persistent task queue",
+  "depends_on": ["M00"],
+  "layer": "go+db",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "Migration SQL creates migration.job_queue table with columns: job_id, engagement_id, tenant_id, job_type, payload JSONB, status (PENDING/RUNNING/COMPLETED/FAILED/RETRYING), priority, max_retries, retry_count, last_error, created_at, started_at, completed_at, next_retry_at",
+      "verification": "cd platform/migration && go test ./db/... -run TestJobQueueSchema -count=1 -v"
+    },
+    {
+      "id": "AC-2",
+      "description": "Go model types defined: Job, JobStatus enum, JobType enum (BATCH_EXECUTE, RECONCILE, PROFILE, PARALLEL_RUN, CDC_SYNC), JobPayload interface",
+      "verification": "cd platform/migration && go build ./models/..."
+    },
+    {
+      "id": "AC-3",
+      "description": "DB query functions: EnqueueJob, DequeueNext (SELECT FOR UPDATE SKIP LOCKED), UpdateJobStatus, GetJobsByEngagement, GetJobByID",
+      "verification": "cd platform/migration && go test ./db/... -run TestJobQueue -count=1 -v"
+    },
+    {
+      "id": "AC-4",
+      "description": "RLS policy on job_queue table scoped to tenant_id via engagement_members",
+      "verification": "cd platform/migration && go test ./db/... -run TestJobQueueRLS -count=1 -v"
+    },
+    {
+      "id": "AC-5",
+      "description": "DequeueNext uses advisory lock or SELECT FOR UPDATE SKIP LOCKED to prevent double-pickup in concurrent workers",
+      "verification": "cd platform/migration && go test ./db/... -run TestJobQueueConcurrency -count=1 -v"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "RLS enforced on job_queue table — same pattern as all migration tables",
+      "tenant_id column present and NOT NULL",
+      "DequeueNext prevents double-pickup under concurrency (SKIP LOCKED or advisory lock)",
+      "Job status transitions are enforced (PENDING→RUNNING, RUNNING→COMPLETED|FAILED|RETRYING)",
+      "Migration file numbered correctly after existing migrations (check latest number)"
+    ],
+    "high": [
+      "Index on (status, priority, created_at) for efficient dequeue",
+      "Index on (engagement_id) for per-engagement job listing",
+      "payload is JSONB, not TEXT — allows DB-level querying of job params",
+      "next_retry_at populated using exponential backoff formula on RETRYING transition",
+      "Tests use sqlmock or short-mode compatible patterns"
+    ],
+    "medium": [
+      "Dead letter queue concept (jobs exceeding max_retries move to permanent failure)"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "platform/migration/db/migrations/044_job_queue.sql",
+    "platform/migration/models/job.go",
+    "platform/migration/db/job_queue.go",
+    "platform/migration/db/job_queue_test.go"
+  ]
+}

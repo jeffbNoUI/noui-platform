@@ -1,0 +1,82 @@
+{
+  "sprint": 1,
+  "goal": "Attention queue resolve/defer mutations — schema evolution + backend endpoints",
+  "depends_on": ["M00"],
+  "layer": "go+db",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "Migration SQL adds to migration.reconciliation: resolved BOOLEAN NOT NULL DEFAULT FALSE, resolved_by VARCHAR(200), resolution_note TEXT. Adds DEFERRED to migration.risk status CHECK constraint (OPEN|ACKNOWLEDGED|MITIGATED|CLOSED|DEFERRED). Also updates the status validation in risk_handlers.go UpdateRisk handler to accept DEFERRED.",
+      "verification": "cd platform/migration && go test ./db/... -run TestAttentionSchemaEvolution -count=1 -v"
+    },
+    {
+      "id": "AC-2",
+      "description": "PATCH /api/v1/migration/engagements/{id}/attention/{itemId}/resolve accepts {source: 'RISK'|'RECONCILIATION', resolution_note: string}. For RISK source, sets migration.risk.status to 'CLOSED'. For RECONCILIATION source, sets migration.reconciliation.resolved to true. Both set resolved_by from JWT sub claim and resolution_note. Returns 200 with updated attention item JSON.",
+      "verification": "cd platform/migration && go test ./api/... -run TestResolveAttention$ -count=1 -v"
+    },
+    {
+      "id": "AC-3",
+      "description": "PATCH /api/v1/migration/engagements/{id}/attention/{itemId}/defer accepts {source: 'RISK'|'RECONCILIATION', resolution_note: string}. For RISK source, sets status to 'DEFERRED'. For RECONCILIATION source, sets resolution_note recording deferral reason (resolved remains false). Returns 200 with updated attention item JSON.",
+      "verification": "cd platform/migration && go test ./api/... -run TestDeferAttention$ -count=1 -v"
+    },
+    {
+      "id": "AC-4",
+      "description": "Only unresolved items can be resolved or deferred — already-closed risk (status=CLOSED) or already-resolved reconciliation (resolved=true) returns 409 Conflict with {error: 'already_resolved'}.",
+      "verification": "cd platform/migration && go test ./api/... -run TestResolveAlreadyResolved$ -count=1 -v"
+    },
+    {
+      "id": "AC-5",
+      "description": "Invalid source value returns 400 Bad Request with {error: 'invalid_source'}. Item not found returns 404 with {error: 'not_found'}.",
+      "verification": "cd platform/migration && go test ./api/... -run TestAttentionValidation$ -count=1 -v"
+    },
+    {
+      "id": "AC-6",
+      "description": "Both endpoints require auth middleware and editor-or-above role. Unauthorized returns 403 with {error: 'forbidden'}.",
+      "verification": "cd platform/migration && go test ./api/... -run TestAttentionUnauthorized$ -count=1 -v"
+    },
+    {
+      "id": "AC-7",
+      "description": "WebSocket broadcasts attention_resolved and attention_deferred events with {item_id, source, engagement_id} payload to engagement members.",
+      "verification": "cd platform/migration && go test ./api/... -run TestAttentionWebSocket$ -count=1 -v"
+    },
+    {
+      "id": "AC-8",
+      "description": "Activity log event created for each resolve/defer action with actor, item_id, source, and resolution_note.",
+      "verification": "cd platform/migration && go test ./api/... -run TestAttentionEvent$ -count=1 -v"
+    },
+    {
+      "id": "AC-9",
+      "description": "Cross-source ID mismatch: PATCH resolve with a valid risk_id but source='RECONCILIATION' returns 404 (not accidentally resolving the wrong record type). Same for valid recon_id with source='RISK'.",
+      "verification": "cd platform/migration && go test ./api/... -run TestAttentionCrossSourceMismatch$ -count=1 -v"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "Migration adds resolved/resolved_by/resolution_note columns to reconciliation table AND DEFERRED to risk status CHECK",
+      "PATCH endpoints use auth middleware — editor or owner role required",
+      "Resolve/defer dispatches to correct underlying table based on source field (risk vs reconciliation)",
+      "RLS enforced — risk table scoped via engagement_id, reconciliation via batch.engagement_id join",
+      "resolved_by comes from JWT sub claim, not request body",
+      "Only unresolved items can transition — enforce at DB query level with WHERE clause, not just handler"
+    ],
+    "high": [
+      "WebSocket broadcasts attention_resolved/attention_deferred to engagement members",
+      "Tests cover: resolve RISK success, resolve RECONCILIATION success, defer both, already-resolved (409), unauthorized (403), not-found (404), invalid source (400)",
+      "Activity log event created for audit trail",
+      "Routes registered in RegisterRoutes() in api/handlers.go — required for serve() test helper to work"
+    ],
+    "medium": [
+      "Bulk resolve/defer endpoint for multiple items in one request"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "platform/migration/db/migrations/043_attention_resolve.sql",
+    "platform/migration/api/attention_handlers.go",
+    "platform/migration/api/attention_handlers_test.go",
+    "platform/migration/api/handlers.go",
+    "platform/migration/api/risk_handlers.go",
+    "platform/migration/db/attention.go"
+  ]
+}

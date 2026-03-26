@@ -1,0 +1,41 @@
+{
+  "sprint": 6,
+  "goal": "Regression checkpoint: full test suite after job queue infrastructure",
+  "depends_on": ["M02d"],
+  "layer": "tests",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "All Go migration tests pass: go test ./... -short -count=1 in platform/migration/",
+      "verification": "cd platform/migration && go test ./... -short -count=1"
+    },
+    {
+      "id": "AC-2",
+      "description": "All frontend tests pass: npm test -- --run in frontend/",
+      "verification": "cd frontend && npm test -- --run"
+    },
+    {
+      "id": "AC-3",
+      "description": "Frontend typecheck passes with zero errors",
+      "verification": "cd frontend && npx tsc --noEmit"
+    },
+    {
+      "id": "AC-4",
+      "description": "Go build succeeds for all platform services that have been modified",
+      "verification": "cd platform/migration && go build ./..."
+    },
+    {
+      "id": "AC-5",
+      "description": "No new ESLint errors introduced (warning count stable or decreased)",
+      "verification": "cd frontend && npx eslint src/ --max-warnings 30"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [],
+    "high": [],
+    "medium": []
+  },
+  "quality_workflow": [],
+  "files_hint": []
+}

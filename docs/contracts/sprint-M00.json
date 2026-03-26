@@ -1,0 +1,50 @@
+{
+  "sprint": 0,
+  "goal": "Add RLS policies to all migration schema tables — CLAUDE.md compliance",
+  "depends_on": [],
+  "layer": "db",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "RLS enabled on ALL migration.* content tables: engagement, quality_profile, field_mapping, code_mapping, batch, lineage, exception, reconciliation, correction, analyst_decision, gate_transition, notification, risk, event, certification_record, exception_cluster, canonical_members, canonical_salaries, canonical_contributions, stored_calculations, payment_history, reconciliation_pattern. Policy pattern matches CLAUDE.md Section 6: tenant scoping via engagement_members join. The DDL verification test must enumerate every table to catch future additions.",
+      "verification": "cd platform/migration && go test ./db/... -run TestMigrationRLSPolicies$ -count=1 -v"
+    },
+    {
+      "id": "AC-2",
+      "description": "DDL verification test: parses migration SQL file and asserts that every table listed in AC-1 has ENABLE ROW LEVEL SECURITY, FORCE ROW LEVEL SECURITY, and a CREATE POLICY statement. This test works in -short mode without a database.",
+      "verification": "cd platform/migration && go test ./db/... -short -run TestRLSDDLVerification$ -count=1 -v"
+    },
+    {
+      "id": "AC-3",
+      "description": "All existing migration API tests still pass with RLS enabled — no test relies on cross-tenant data access",
+      "verification": "cd platform/migration && go test ./... -short -count=1"
+    },
+    {
+      "id": "AC-4",
+      "description": "Integration test (skipped in -short mode): verifies that a query with tenant A's context cannot read tenant B's engagement data. Guarded by: if testing.Short() { t.Skip('requires database') }",
+      "verification": "cd platform/migration && go test ./db/... -run TestRLSIsolation$ -count=1 -v"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "Every migration content table has an RLS policy — no exceptions",
+      "RLS policies use current_setting('app.current_tenant_id'), matching the platform's auth middleware pattern",
+      "Tables without direct tenant_id column use a join path that is covered by an index",
+      "Force row-level security enabled (ALTER TABLE ... FORCE ROW LEVEL SECURITY)"
+    ],
+    "high": [
+      "Migration file numbered correctly after the latest existing migration",
+      "Existing tests updated to set app.current_tenant_id in test DB context",
+      "No performance regression — RLS join paths use indexed columns"
+    ],
+    "medium": [
+      "Document the RLS policy pattern in a code comment for future migration table additions"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "platform/migration/db/migrations/042_rls_policies.sql",
+    "platform/migration/db/rls_test.go"
+  ]
+}
