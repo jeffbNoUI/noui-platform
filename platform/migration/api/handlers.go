@@ -132,6 +132,12 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/reports/mapping-spec", h.MappingSpec)
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/reports/mapping-spec/pdf", h.MappingSpecPDF)
 
+	// Lineage traceability report (M07b)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/reports/lineage/{batch_id}/pdf", h.LineageReportPDF)
+
+	// Reconciliation summary report (M07b)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/reports/reconciliation/pdf", h.ReconciliationReportPDF)
+
 	// Certification
 	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/certify", h.HandleCertify)
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/certification", h.HandleGetCertification)

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Lineage Traceability Report - {{.EngagementID}}</title>
+<style>
+  @page {
+    size: A4;
+    margin: 0;
+    @bottom-center {
+      content: "Page " counter(page) " of " counter(pages);
+      font-size: 9px;
+      color: #666;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 11px;
+    color: #1a1a1a;
+    line-height: 1.5;
+  }
+
+  /* Title page */
+  .title-page {
+    page-break-after: always;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 90vh;
+    text-align: center;
+    padding: 40px;
+  }
+  .title-page h1 { font-size: 28px; color: #1e3a5f; margin-bottom: 8px; }
+  .title-page .subtitle { font-size: 16px; color: #666; margin-bottom: 40px; }
+  .title-page .meta-table { border-collapse: collapse; margin: 0 auto; text-align: left; }
+  .title-page .meta-table td { padding: 6px 16px; font-size: 13px; }
+  .title-page .meta-table td:first-child { font-weight: 600; color: #333; }
+
+  /* Section headers */
+  .section { padding: 20px 40px; }
+  .section h2 {
+    font-size: 18px;
+    color: #1e3a5f;
+    margin: 24px 0 12px 0;
+    border-bottom: 2px solid #1e3a5f;
+    padding-bottom: 6px;
+    page-break-after: avoid;
+  }
+  .section h3 {
+    font-size: 14px;
+    color: #2c5282;
+    margin: 16px 0 8px 0;
+    page-break-after: avoid;
+  }
+
+  /* Data tables */
+  table.data {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+    font-size: 10px;
+  }
+  table.data th {
+    background-color: #1e3a5f;
+    color: #fff;
+    padding: 6px 8px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 10px;
+  }
+  table.data td {
+    padding: 5px 8px;
+    border-bottom: 1px solid #e2e8f0;
+    word-break: break-word;
+  }
+  table.data tr:nth-child(even) td { background-color: #f7fafc; }
+  table.data tr:hover td { background-color: #edf2f7; }
+
+  /* Summary stats */
+  .stats-row {
+    display: flex;
+    gap: 16px;
+    margin: 12px 0 20px 0;
+    flex-wrap: wrap;
+  }
+  .stat-card {
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 12px 20px;
+    text-align: center;
+    min-width: 120px;
+  }
+  .stat-card .value { font-size: 24px; font-weight: 700; color: #1e3a5f; }
+  .stat-card .label { font-size: 10px; color: #718096; text-transform: uppercase; }
+
+  /* Exception note */
+  .exception-note {
+    background: #fffbeb;
+    border-left: 3px solid #d69e2e;
+    padding: 8px 12px;
+    margin: 8px 0;
+    font-size: 10px;
+    color: #744210;
+  }
+
+  /* Truncation notice */
+  .truncation-notice {
+    background: #ebf8ff;
+    border-left: 3px solid #3182ce;
+    padding: 8px 12px;
+    margin: 8px 0;
+    font-size: 10px;
+    color: #2a4365;
+  }
+
+  /* Footer */
+  .page-footer {
+    font-size: 9px;
+    color: #a0aec0;
+    text-align: center;
+    padding: 8px 0;
+    border-top: 1px solid #e2e8f0;
+    margin-top: 20px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Title Page -->
+<div class="title-page">
+  <h1>Lineage Traceability Report</h1>
+  <div class="subtitle">Data Transformation Audit Trail</div>
+  <table class="meta-table">
+    <tr><td>Engagement</td><td>{{.EngagementID}}</td></tr>
+    <tr><td>Source System</td><td>{{.SourceSystem}}</td></tr>
+    <tr><td>Batch ID</td><td>{{.BatchID}}</td></tr>
+    <tr><td>Batch Status</td><td>{{.BatchStatus}}</td></tr>
+    <tr><td>Generated</td><td>{{.GeneratedAt}}</td></tr>
+  </table>
+</div>
+
+<!-- Executive Summary -->
+<div class="section">
+  <h2>Executive Summary</h2>
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="value">{{.Summary.TotalRecords}}</div>
+      <div class="label">Total Records</div>
+    </div>
+    <div class="stat-card">
+      <div class="value">{{.Summary.UniqueMembers}}</div>
+      <div class="label">Unique Members</div>
+    </div>
+    <div class="stat-card">
+      <div class="value">{{.Summary.FieldsCovered}}</div>
+      <div class="label">Fields Covered</div>
+    </div>
+    <div class="stat-card">
+      <div class="value">{{len .Summary.TransformationTypes}}</div>
+      <div class="label">Transformation Types</div>
+    </div>
+    <div class="stat-card">
+      <div class="value">{{.Summary.ExceptionCount}}</div>
+      <div class="label">Exceptions</div>
+    </div>
+  </div>
+
+  {{if gt .Summary.ExceptionCount 0}}
+  <div class="exception-note">
+    {{.Summary.ExceptionCount}} exception(s) were recorded during this batch transformation.
+  </div>
+  {{end}}
+</div>
+
+<!-- Per-Handler Transformation Sections -->
+{{range .HandlerGroups}}
+<div class="section">
+  <h2>{{.HandlerName}}</h2>
+  <p style="font-size: 10px; color: #666; margin-bottom: 12px;">{{len .Entries}} transformation record(s)</p>
+
+  <table class="data">
+    <thead>
+      <tr>
+        <th>Member ID</th>
+        <th>Column</th>
+        <th>Source Value</th>
+        <th>Result Value</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Entries}}
+      <tr>
+        <td>{{.RowKey}}</td>
+        <td>{{.ColumnName}}</td>
+        <td>{{.SourceValue}}</td>
+        <td>{{.ResultValue}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+
+  {{if .Truncated}}
+  <div class="truncation-notice">
+    Showing {{len .Entries}} of {{.TotalCount}} entries for this handler. Use the JSON API for the complete dataset.
+  </div>
+  {{end}}
+</div>
+{{end}}
+
+<div class="page-footer">
+  Generated by NoUI Migration Engine &mdash; {{.GeneratedAt}}
+</div>
+
+</body>
+</html>
