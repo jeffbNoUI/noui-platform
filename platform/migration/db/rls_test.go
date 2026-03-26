@@ -39,6 +39,9 @@ var allMigrationTables = []string{
 	"profiling_run",
 	"job",
 	"warning_acknowledgment",
+	// Tier B+: FK to engagement via parallel_run
+	"parallel_run",
+	"parallel_run_result",
 	// Tier C: FK to batch
 	"lineage",
 	"exception",
@@ -67,15 +70,33 @@ func rlsMigrationPath(t *testing.T) string {
 	return filepath.Join(filepath.Dir(thisFile), migrationRLSFile)
 }
 
-// readMigrationSQL reads the RLS migration file and returns its contents.
+// readMigrationSQL reads all migration SQL files and returns their concatenated contents.
+// This allows RLS policies to be defined in any migration file (not just 043).
 func readMigrationSQL(t *testing.T) string {
 	t.Helper()
-	path := rlsMigrationPath(t)
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("failed to read migration file %s: %v", path, err)
+	_, thisFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("cannot determine test file path")
 	}
-	return string(data)
+	migDir := filepath.Join(filepath.Dir(thisFile), "migrations")
+	entries, err := os.ReadDir(migDir)
+	if err != nil {
+		t.Fatalf("failed to read migrations directory: %v", err)
+	}
+
+	var combined strings.Builder
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".sql") {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(migDir, entry.Name()))
+		if err != nil {
+			t.Fatalf("failed to read %s: %v", entry.Name(), err)
+		}
+		combined.Write(data)
+		combined.WriteByte('\n')
+	}
+	return combined.String()
 }
 
 // TestRLSDDLVerification parses the RLS migration SQL file and asserts that
@@ -291,4 +312,3 @@ func TestRLSIsolation(t *testing.T) {
 		})
 	}
 }
-
