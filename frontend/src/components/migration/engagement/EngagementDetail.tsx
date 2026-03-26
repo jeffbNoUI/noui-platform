@@ -62,6 +62,7 @@ import DiscoveryPanel from './DiscoveryPanel';
 import ParallelRunPanel from './ParallelRunPanel';
 import PhaseGateDialog from './PhaseGateDialog';
 import AttentionQueue from '../attention/AttentionQueue';
+import JobQueuePanel from './JobQueuePanel';
 import ActivityLog from './ActivityLog';
 
 type Tab =
@@ -72,7 +73,8 @@ type Tab =
   | 'reconciliation'
   | 'parallel-run'
   | 'risks'
-  | 'attention';
+  | 'attention'
+  | 'jobs';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'discovery', label: 'Discovery' },
@@ -83,6 +85,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'parallel-run', label: 'Parallel Run' },
   { key: 'risks', label: 'Risks' },
   { key: 'attention', label: 'Attention' },
+  { key: 'jobs', label: 'Jobs' },
 ];
 
 const STATUS_COLOR: Record<EngagementStatus, string> = {
@@ -442,6 +445,7 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
             {activeTab === 'parallel-run' && <ParallelRunPanel engagementId={engagementId} />}
             {activeTab === 'risks' && <RisksPlaceholder engagementId={engagementId} />}
             {activeTab === 'attention' && <AttentionQueue engagementId={engagementId} />}
+            {activeTab === 'jobs' && <JobQueuePanel engagementId={engagementId} />}
           </TabErrorBoundary>
         </div>
       </div>

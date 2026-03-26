@@ -46,6 +46,8 @@ import type {
   CoverageReport,
   MappingSpecReport,
   ReconciliationPattern,
+  Job,
+  JobSummary,
 } from '@/types/Migration';
 
 const BASE = '/api/v1/migration';
@@ -292,4 +294,22 @@ export const migrationAPI = {
   // ─── Mapping Specification Document ───────────────────────────────────────
   getMappingSpec: (engagementId: string) =>
     fetchAPI<MappingSpecReport>(`${BASE}/engagements/${engagementId}/reports/mapping-spec`, RAW),
+
+  // ─── Job Queue ──────────────────────────────────────────────────────────────
+  getJobs: (engagementId: string, params?: { limit?: number; offset?: number }) =>
+    fetchAPI<Job[]>(
+      `${BASE}/engagements/${engagementId}/jobs${params ? toQueryString(params) : ''}`,
+      RAW,
+    ),
+
+  getJob: (jobId: string) => fetchAPI<Job>(`${BASE}/jobs/${jobId}`, RAW),
+
+  getJobSummary: (engagementId: string) =>
+    fetchAPI<JobSummary>(`${BASE}/engagements/${engagementId}/jobs/summary`, RAW),
+
+  cancelJob: (engagementId: string, jobId: string) =>
+    postAPI<Job>(`${BASE}/engagements/${engagementId}/jobs/${jobId}/cancel`, {}, RAW),
+
+  retryJob: (engagementId: string, jobId: string) =>
+    postAPI<Job>(`${BASE}/engagements/${engagementId}/jobs/${jobId}/retry`, {}, RAW),
 };

@@ -435,6 +435,32 @@ export interface RegressPhaseRequest {
   notes: string;
 }
 
+// ─── Job Queue Types ────────────────────────────────────────────────────────
+
+export type JobStatus = 'PENDING' | 'CLAIMED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+
+export type JobType = 'PROFILE' | 'TRANSFORM' | 'RECONCILE' | 'LOAD' | 'VALIDATE';
+
+export interface Job {
+  job_id: string;
+  engagement_id: string;
+  job_type: JobType;
+  status: JobStatus;
+  attempt: number;
+  max_attempts: number;
+  error_message: string | null;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+export interface JobSummary {
+  pending: number;
+  running: number;
+  completed: number;
+  failed: number;
+}
+
 // ─── WebSocket Event Types ──────────────────────────────────────────────────
 
 export type WSEventType =
@@ -456,7 +482,11 @@ export type WSEventType =
   | 'mapping_agreement_updated'
   | 'phase_transition'
   | 'gate_recommendation'
-  | 'ai_insight';
+  | 'ai_insight'
+  | 'job_started'
+  | 'job_completed'
+  | 'job_failed'
+  | 'job_cancelled';
 
 export interface WSEvent {
   type: WSEventType;

@@ -11,11 +11,11 @@ vi.mock('@/hooks/useMigrationApi', async () => {
 });
 
 vi.mock('@/lib/migrationApi', async () => {
-  const actual = await vi.importActual('@/lib/migrationApi');
+  const actual = await vi.importActual<Record<string, unknown>>('@/lib/migrationApi');
   return {
     ...actual,
     migrationAPI: {
-      ...(actual as Record<string, unknown>).migrationAPI,
+      ...(actual.migrationAPI as Record<string, unknown>),
       resolveAttentionItem: vi.fn(),
       deferAttentionItem: vi.fn(),
     },
@@ -225,9 +225,7 @@ describe('AttentionQueue', () => {
 
     // Verify API was called — the optimistic update + refetch handles removal
     await waitFor(() => {
-      expect(migrationAPI.resolveAttentionItem).toHaveBeenCalledWith(
-        'eng-1', 'r1', 'RISK', '',
-      );
+      expect(migrationAPI.resolveAttentionItem).toHaveBeenCalledWith('eng-1', 'r1', 'RISK', '');
     });
   });
 
