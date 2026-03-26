@@ -1,0 +1,71 @@
+{
+  "sprint": 14,
+  "goal": "Reconciliation rules: versioned rule definitions with audit trail and activation lifecycle",
+  "depends_on": [],
+  "layer": "go",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "ReconRuleSet model in models/types.go: ruleset_id (UUID), engagement_id, version (integer, auto-incremented per engagement), label (human-readable version name, e.g. 'v3 - adjusted tier 2 thresholds'), status ('DRAFT'|'ACTIVE'|'SUPERSEDED'|'ARCHIVED'), rules (JSONB — array of ReconRule), created_by, created_at, activated_at, superseded_at. ReconRule sub-model (within JSONB): rule_id (string, unique within set), tier (1|2|3), calc_name (string, e.g. 'monthly_benefit'), comparison_type ('EXACT'|'TOLERANCE_ABS'|'TOLERANCE_PCT'|'ROUND_THEN_COMPARE'), tolerance_value (string — decimal precision, e.g. '0.01' for $0.01 absolute or '0.005' for 0.5%), priority_if_mismatch ('P1'|'P2'|'P3'), enabled (bool). Only one ACTIVE ruleset per engagement at any time.",
+      "verification": "cd platform/migration && go test ./models/... -run TestReconRuleSetModel -count=1 -v"
+    },
+    {
+      "id": "AC-2",
+      "description": "Migration 049_recon_rules.sql creates migration.recon_rule_set table. UUID PK, engagement_id FK, version INT NOT NULL, label VARCHAR(200), status CHECK ('DRAFT','ACTIVE','SUPERSEDED','ARCHIVED'), rules JSONB NOT NULL DEFAULT '[]', created_by VARCHAR(100) NOT NULL, created_at TIMESTAMPTZ DEFAULT now(), activated_at TIMESTAMPTZ, superseded_at TIMESTAMPTZ. UNIQUE(engagement_id, version) — no duplicate version numbers per engagement. RLS Tier B (engagement_id → engagement → tenant_id). Index on (engagement_id, status) for fast ACTIVE lookup. BEFORE DELETE trigger raises EXCEPTION 'recon_rule_set records cannot be deleted' — immutable audit trail.",
+      "verification": "cd platform/migration && go test ./db/... -run TestReconRuleSetRLS -count=1 -v"
+    },
+    {
+      "id": "AC-3",
+      "description": "POST /api/v1/migration/engagements/{id}/recon-rules creates a new ruleset in DRAFT status. Request body: {label, rules: [{tier, calc_name, comparison_type, tolerance_value, priority_if_mismatch, enabled}]}. Auto-assigns version = MAX(version) + 1 for this engagement (or 1 if first). Validates: rules array non-empty, each rule has valid tier (1-3), valid comparison_type, valid priority. rule_id auto-generated as '{tier}_{calc_name}' (must be unique within the set — 422 if duplicates). Returns 201 with the created ruleset including generated rule_ids and version number.",
+      "verification": "cd platform/migration && go test ./api/... -run TestCreateReconRuleSet -count=1 -v"
+    },
+    {
+      "id": "AC-4",
+      "description": "POST /api/v1/migration/engagements/{id}/recon-rules/{rulesetId}/activate transitions a DRAFT ruleset to ACTIVE. If another ruleset is currently ACTIVE for this engagement, it is transitioned to SUPERSEDED (with superseded_at = now()) in the same transaction. The newly activated ruleset gets activated_at = now(). Returns 409 if the ruleset is not in DRAFT status. Returns 409 if the ruleset is already ACTIVE. Gate_transition record inserted: from_phase = current engagement status, to_phase = same (no phase change), direction = 'ADVANCE', gate_metrics includes {ruleset_version, rule_count, tier1_rules, tier2_rules, tier3_rules}, authorized_by from JWT. WebSocket broadcast: recon_rules_activated with engagement_id, ruleset_id, version.",
+      "verification": "cd platform/migration && go test ./api/... -run TestActivateReconRuleSet -count=1 -v"
+    },
+    {
+      "id": "AC-5",
+      "description": "GET /api/v1/migration/engagements/{id}/recon-rules returns all rulesets for the engagement, newest first. Supports ?status= filter (DRAFT, ACTIVE, SUPERSEDED, ARCHIVED). GET /api/v1/migration/engagements/{id}/recon-rules/active returns the currently ACTIVE ruleset (or 404 if none). GET /api/v1/migration/engagements/{id}/recon-rules/{rulesetId} returns a single ruleset with full rule details. PATCH /api/v1/migration/engagements/{id}/recon-rules/{rulesetId} allows updating label and rules on DRAFT rulesets only — returns 409 if status != DRAFT (immutable after activation).",
+      "verification": "cd platform/migration && go test ./api/... -run TestReconRuleSetEndpoints -count=1 -v"
+    },
+    {
+      "id": "AC-6",
+      "description": "POST /api/v1/migration/engagements/{id}/recon-rules/{rulesetId}/archive transitions SUPERSEDED → ARCHIVED (soft lifecycle cleanup). Returns 409 if status is not SUPERSEDED. Audit integration: all mutations (create, activate, update, archive) log to audit_log with entity_type='recon_rule_set'. The before_state and after_state JSONB captures the full ruleset including rules array — auditors can reconstruct the exact rule configuration at any point in history. GET /api/v1/migration/engagements/{id}/recon-rules/{rulesetId}/diff?compare_to={otherRulesetId} returns a structured diff showing added rules, removed rules, and modified rules (tolerance changes, priority changes, enabled/disabled toggles) between two rulesets.",
+      "verification": "cd platform/migration && go test ./api/... -run TestReconRuleSetAuditAndDiff -count=1 -v"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "Only one ACTIVE ruleset per engagement — enforced in activation transaction (supersede old, activate new)",
+      "BEFORE DELETE trigger prevents deletion — immutable audit trail, status lifecycle only",
+      "DRAFT rulesets are editable, all other statuses are immutable — 409 on mutation attempts",
+      "Rules JSONB stores complete rule configuration — auditors can reconstruct any historical state from audit_log",
+      "RLS Tier B on recon_rule_set — tenant isolation enforced",
+      "Activation is transactional: old ACTIVE → SUPERSEDED and new DRAFT → ACTIVE in one tx"
+    ],
+    "high": [
+      "Version auto-increment per engagement — no gaps, monotonically increasing",
+      "rule_id generated deterministically as {tier}_{calc_name} — enables stable diff comparison",
+      "Diff endpoint compares two rulesets structurally — shows tolerance/priority/enabled changes per rule",
+      "WebSocket broadcast on activation — UI can refresh rule display",
+      "Gate_transition record on activation — rule changes are part of the engagement audit trail"
+    ],
+    "medium": [
+      "comparison_type enum validated: EXACT, TOLERANCE_ABS, TOLERANCE_PCT, ROUND_THEN_COMPARE",
+      "tolerance_value stored as string for decimal precision (not float64)",
+      "Archive is optional lifecycle cleanup — SUPERSEDED rulesets remain queryable indefinitely"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "platform/migration/db/migrations/049_recon_rules.sql",
+    "platform/migration/db/recon_rules.go",
+    "platform/migration/db/recon_rules_test.go",
+    "platform/migration/api/recon_rule_handlers.go",
+    "platform/migration/api/recon_rule_handlers_test.go",
+    "platform/migration/models/types.go",
+    "platform/migration/api/handlers.go"
+  ]
+}
