@@ -27,6 +27,7 @@ var allMigrationTables = []string{
 	"analyst_decision",
 	"notification",
 	"risk",
+	"schema_version",
 	// Tier B: FK to engagement
 	"quality_profile",
 	"field_mapping",
@@ -55,6 +56,8 @@ var allMigrationTables = []string{
 	"canonical_contributions",
 	"stored_calculations",
 	"payment_history",
+	// Tier B-SV: FK to schema_version
+	"schema_version_field",
 	// Tier D: deep FK chain
 	"source_table",
 	"source_column",
