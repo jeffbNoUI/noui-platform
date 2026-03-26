@@ -52,23 +52,32 @@ Every autonomous session follows this lifecycle:
 5. Re-submit to reviewer if changes were significant
 6. Log final design review verdict
 
-### Phase 2: Implement
+### Phase 2: Red — Write Tests First (TDD)
 
-7. Implement against reviewed design
-8. Run `/validate` after each significant change
+7. Write test files from contract acceptance criteria — every AC becomes a test
+8. Create minimal stubs so tests compile but fail
+9. Run tests — verify ALL FAIL (Red). If any pass, the test is wrong.
+10. Commit failing tests as checkpoint
 
-### Phase 3: Quality Gates
+### Phase 3: Green — Make Tests Pass
 
-9. `/validate` — full lint + typecheck + test suite
-10. `/simplify` — up to 3 cycles of code cleanup
-11. `/validate` — confirm simplify didn't break anything
-12. `/precommit` — 4-category graded evaluation (spec adherence, type safety, data isolation, test coverage)
-13. If any FAIL → fix and re-run from step 9
+11. Implement one AC at a time, simplest first
+12. Run `/validate` after each AC turns green
+13. All AC verification commands must pass before proceeding
 
-### Phase 4: Ship
+### Phase 4: Refactor — Quality Gates
 
-14. Commit + push + create PR
-15. `/session-end` — exit gates, starter prompt for next session
+14. `/validate` — full lint + typecheck + test suite
+15. `/simplify` — up to 3 cycles of code cleanup (the Refactor step)
+16. `/validate` — confirm simplify didn't break anything
+17. `/precommit` — 4-category graded evaluation
+18. If any FAIL → fix and re-run from step 14
+
+### Phase 5: Ship
+
+19. Squash RED + GREEN + refactor into single clean commit
+20. Push + create PR
+21. `/session-end` — exit gates, starter prompt for next session
 
 ---
 
@@ -76,9 +85,10 @@ Every autonomous session follows this lifecycle:
 
 ### Per-Contract Quality
 1. **Dual-agent design review** — architectural flaws, security, layer violations
-2. **Incremental validation** — `/validate` during implementation
-3. **Code quality** — `/simplify` + `/validate` post-implementation
-4. **Pre-commit grading** — `/precommit` 4-category evaluation
+2. **TDD Red phase** — tests written first from ACs, verified to fail before implementation
+3. **TDD Green phase** — incremental implementation with `/validate` after each AC
+4. **TDD Refactor phase** — `/simplify` cleans up, `/validate` confirms no regressions
+5. **Pre-commit grading** — `/precommit` 4-category evaluation
 
 ### Cross-Contract Quality (periodic)
 5. **Regression checkpoint** — full test suite every 5th contract

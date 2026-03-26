@@ -58,43 +58,76 @@ Follow this workflow exactly. Do not skip steps.
 13. Log the final design review verdict in your session notes.
 14. Only proceed to Phase 2 when all CRITICAL pass and all feasible HIGH pass.
 
-### Phase 2: Implement
+### Phase 2: Red — Write Tests First (TDD)
 
 15. Create a worktree named after the contract: use `EnterWorktree` with name `migration-{contract-id}` (e.g., `migration-M01`, `migration-M02a`). If this is a resume session, skip this step — you're already on the branch.
 16. After entering the worktree, ensure it's up to date:
     ```bash
     git fetch origin && git rebase origin/main
     ```
-17. Implement against the reviewed design
-18. Run `/validate` after each significant change (new file, new test, new endpoint)
-19. Do not proceed past a failing `/validate` — fix it before continuing
-
-### Phase 3: Quality Gates
-
-20. **WIP commit** — stage and commit all changes before running quality gates.
-    Stage only the files you created or modified (never use `git add -A` — it can capture debug artifacts, .env files, or binaries):
+17. **Write test files first.** For each acceptance criterion in the contract:
+    - Create the test file (e.g., `attention_handlers_test.go`, `JobQueuePanel.test.tsx`)
+    - Write test functions matching the verification commands (e.g., `TestResolveAttention`)
+    - Tests should assert the expected behavior described in the AC
+    - For Go: write test functions with the expected HTTP status codes, response shapes, and DB state assertions
+    - For frontend: write test cases with expected renders, user interactions, and API call assertions
+    - Include at minimum: happy path, primary error path (e.g., 409, 403), and edge case per AC
+18. **Create minimal stubs** so tests compile but fail:
+    - Go: empty handler functions that return 501 Not Implemented, empty DB query functions that return errors
+    - Frontend: component shells that render nothing, API functions that throw "not implemented"
+19. **Run tests — verify they ALL FAIL (Red).** This confirms your tests actually test something:
     ```bash
-    git add platform/migration/... frontend/src/... # adjust to match your actual changes
-    git commit -m "WIP: [migration/{contract-id}] implementation complete, running quality gates"
+    # Go:
+    cd platform/migration && go test ./... -run "TestResolveAttention|TestDeferAttention|..." -count=1 -v
+    # Frontend:
+    cd frontend && npm test -- --run -t "AttentionQueue|JobQueuePanel|..."
     ```
-    This ensures `/simplify` can diff against the correct baseline.
-21. Run `/validate` — full lint + typecheck + test suite
-22. Run `/simplify` — up to 3 cycles of code cleanup
-23. Run `/validate` — confirm simplify didn't break anything
-24. Run `/precommit` — 4-category graded evaluation
-25. If any category grades FAIL:
+    If any test passes at this stage, the test is not asserting the right behavior — fix the test.
+20. **Commit the failing tests** as a checkpoint:
+    ```bash
+    git add <test files and stubs>
+    git commit -m "RED: [migration/{contract-id}] test scaffolding — all tests failing"
+    ```
+
+### Phase 3: Green — Make Tests Pass
+
+21. Implement the actual logic, one AC at a time:
+    - Pick the simplest AC first (build confidence, establish patterns)
+    - Write just enough code to make that AC's tests pass
+    - Run `/validate` after each AC is green
+    - Do not proceed past a failing `/validate` — fix it before continuing
+22. After all ACs are green, run the full verification suite:
+    ```bash
+    # Run every verification command from the contract's acceptance_criteria
+    ```
+    Every AC verification command must pass.
+
+### Phase 4: Refactor — Quality Gates
+
+23. **Squash into a clean commit** before running quality gates:
+    ```bash
+    git add <all implementation files>
+    git commit -m "GREEN: [migration/{contract-id}] all tests passing"
+    ```
+24. Run `/validate` — full lint + typecheck + test suite
+25. Run `/simplify` — up to 3 cycles of code cleanup (the Refactor in Red-Green-Refactor)
+26. Run `/validate` — confirm simplify didn't break anything
+27. Run `/precommit` — 4-category graded evaluation
+28. If any category grades FAIL:
     - Fix the issue
-    - Re-run from step 21
+    - Re-run from step 24
     - Maximum 3 fix-and-rerun cycles
-    - If still failing after 3 cycles, create a **draft** PR (not ready for review), document the unresolved issue in the PR description, and proceed to Phase 4
+    - If still failing after 3 cycles, create a **draft** PR (not ready for review), document the unresolved issue in the PR description, and proceed to Phase 5
 
-### Phase 4: Ship
+### Phase 5: Ship
 
-26. Amend the WIP commit with the final changes and a proper message:
+29. Squash all commits (RED + GREEN + refactor) into a single clean commit:
     ```bash
-    git add -A && git commit --amend -m "[migration/{contract-id}] {goal from contract}"
+    git rebase -i --autosquash HEAD~N  # squash RED/GREEN/refactor into one
+    # Or simply:
+    git reset --soft HEAD~N && git commit -m "[migration/{contract-id}] {goal from contract}"
     ```
-27. Push and create PR:
+30. Push and create PR:
     - Branch: `migration-{contract-id}`
     - Base: `main`
     - Title: `[migration/{contract-id}] {goal}`
@@ -105,7 +138,7 @@ Follow this workflow exactly. Do not skip steps.
       - Test results summary
       - Files changed list
     - If quality gates failed after 3 cycles, create as **draft** PR
-28. Run `/session-end`
+31. Run `/session-end`
 
 ### Standard Design Review Rubric (applied to EVERY contract)
 
