@@ -486,7 +486,9 @@ export type WSEventType =
   | 'job_started'
   | 'job_completed'
   | 'job_failed'
-  | 'job_cancelled';
+  | 'job_cancelled'
+  | 'recon_rules_activated'
+  | 'recon_execution_completed';
 
 export interface WSEvent {
   type: WSEventType;
@@ -604,4 +606,105 @@ export interface DetectedPattern {
   label: string;
   match_rate: number;
   sample_size: number;
+}
+
+// ─── Reconciliation Rules ───────────────────────────────────────────────────
+
+export type ReconRuleSetStatus = 'DRAFT' | 'ACTIVE' | 'SUPERSEDED' | 'ARCHIVED';
+
+export type ComparisonType = 'EXACT' | 'TOLERANCE_ABS' | 'TOLERANCE_PCT' | 'ROUND_THEN_COMPARE';
+
+export interface ReconRule {
+  rule_id: string;
+  tier: 1 | 2 | 3;
+  calc_name: string;
+  comparison_type: ComparisonType;
+  tolerance_value: string;
+  priority_if_mismatch: RiskSeverity;
+  enabled: boolean;
+}
+
+export interface ReconRuleSet {
+  ruleset_id: string;
+  engagement_id: string;
+  version: number;
+  label: string;
+  status: ReconRuleSetStatus;
+  rules: ReconRule[];
+  created_by: string;
+  created_at: string;
+  activated_at: string | null;
+  superseded_at: string | null;
+}
+
+export interface CreateReconRuleSetRequest {
+  label: string;
+  rules: Omit<ReconRule, 'rule_id'>[];
+}
+
+export interface UpdateReconRuleSetRequest {
+  label?: string;
+  rules?: Omit<ReconRule, 'rule_id'>[];
+}
+
+export interface ReconRuleDiffItem {
+  rule_id: string;
+  change: 'added' | 'removed' | 'modified';
+  fields?: Record<string, { old: string | number | boolean; new: string | number | boolean }>;
+  rule?: ReconRule;
+}
+
+export interface ReconRuleDiff {
+  from_version: number;
+  to_version: number;
+  added: ReconRuleDiffItem[];
+  removed: ReconRuleDiffItem[];
+  modified: ReconRuleDiffItem[];
+}
+
+// ─── Reconciliation Execution ───────────────────────────────────────────────
+
+export type ReconExecutionStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+
+export interface ReconExecution {
+  execution_id: string;
+  engagement_id: string;
+  ruleset_id: string;
+  ruleset_version: number;
+  parallel_run_id: string;
+  status: ReconExecutionStatus;
+  match_count: number;
+  mismatch_count: number;
+  p1_count: number;
+  p2_count: number;
+  p3_count: number;
+  started_at: string;
+  completed_at: string | null;
+  error_message: string | null;
+}
+
+export interface ReconMismatch {
+  mismatch_id: string;
+  execution_id: string;
+  priority: RiskSeverity;
+  member_id: string;
+  canonical_entity: string;
+  field_name: string;
+  legacy_value: string;
+  new_value: string;
+  variance_amount: string | null;
+  comparison_type: ComparisonType;
+  tolerance_value: string;
+}
+
+export interface ReconMismatchPage {
+  mismatches: ReconMismatch[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface TriggerReconExecutionRequest {
+  parallel_run_id: string;
+  ruleset_id?: string;
 }

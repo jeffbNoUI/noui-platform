@@ -15,6 +15,10 @@ vi.mock('@/hooks/useMigrationApi', async () => {
     useBatches: vi.fn(),
     useReconcileBatch: vi.fn(),
     useResolvePattern: vi.fn(),
+    useReconExecutions: vi.fn(),
+    useReconExecutionMismatches: vi.fn(),
+    useReconRuleSets: vi.fn(),
+    useTriggerReconExecution: vi.fn(),
   };
 });
 
@@ -27,6 +31,10 @@ import {
   useBatches,
   useReconcileBatch,
   useResolvePattern,
+  useReconExecutions,
+  useReconExecutionMismatches,
+  useReconRuleSets,
+  useTriggerReconExecution,
 } from '@/hooks/useMigrationApi';
 
 import ReconciliationPanel from '../ReconciliationPanel';
@@ -102,6 +110,22 @@ function setupDefaultMocks() {
     mutate: vi.fn(),
     isPending: false,
   } as unknown as ReturnType<typeof useResolvePattern>);
+  vi.mocked(useReconExecutions).mockReturnValue({
+    data: [],
+    isLoading: false,
+  } as unknown as ReturnType<typeof useReconExecutions>);
+  vi.mocked(useReconExecutionMismatches).mockReturnValue({
+    data: undefined,
+    isLoading: false,
+  } as unknown as ReturnType<typeof useReconExecutionMismatches>);
+  vi.mocked(useReconRuleSets).mockReturnValue({
+    data: [],
+    isLoading: false,
+  } as unknown as ReturnType<typeof useReconRuleSets>);
+  vi.mocked(useTriggerReconExecution).mockReturnValue({
+    mutate: vi.fn(),
+    isPending: false,
+  } as unknown as ReturnType<typeof useTriggerReconExecution>);
 }
 
 describe('ReconciliationPanel', () => {
@@ -276,5 +300,118 @@ describe('ReconciliationPanel', () => {
     expect(screen.getByText('No reconciliation data yet')).toBeTruthy();
     expect(screen.getByText(/Complete a batch load first/)).toBeTruthy();
     expect(screen.queryByText('Run Reconciliation')).toBeNull();
+  });
+
+  // ─── Recon Execution Section Tests ──────────────────────────────────────────
+
+  it('renders Rule-Based Execution section header', () => {
+    renderWithProviders(<ReconciliationPanel engagementId="eng-1" />);
+    expect(screen.getByText('Rule-Based Execution')).toBeTruthy();
+    expect(screen.getByText('Run Recon Execution')).toBeTruthy();
+  });
+
+  it('shows empty message when no executions exist', () => {
+    renderWithProviders(<ReconciliationPanel engagementId="eng-1" />);
+    expect(screen.getByText(/No recon executions yet/)).toBeTruthy();
+  });
+
+  it('renders execution list with match/mismatch counts', () => {
+    vi.mocked(useReconExecutions).mockReturnValue({
+      data: [
+        {
+          execution_id: 'exec-001',
+          engagement_id: 'eng-1',
+          ruleset_id: 'rs-1',
+          ruleset_version: 3,
+          parallel_run_id: 'b1',
+          status: 'COMPLETED',
+          match_count: 100,
+          mismatch_count: 5,
+          p1_count: 1,
+          p2_count: 2,
+          p3_count: 2,
+          started_at: '2026-03-26T14:00:00Z',
+          completed_at: '2026-03-26T14:05:00Z',
+          error_message: null,
+        },
+      ],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useReconExecutions>);
+
+    renderWithProviders(<ReconciliationPanel engagementId="eng-1" />);
+
+    expect(screen.getByText('v3')).toBeTruthy();
+    expect(screen.getByText('COMPLETED')).toBeTruthy();
+    expect(screen.getByText('100')).toBeTruthy();
+    expect(screen.getByText('5')).toBeTruthy();
+  });
+
+  it('renders p1/p2/p3 colored pills in execution row', () => {
+    vi.mocked(useReconExecutions).mockReturnValue({
+      data: [
+        {
+          execution_id: 'exec-001',
+          engagement_id: 'eng-1',
+          ruleset_id: 'rs-1',
+          ruleset_version: 1,
+          parallel_run_id: 'b1',
+          status: 'COMPLETED',
+          match_count: 50,
+          mismatch_count: 3,
+          p1_count: 1,
+          p2_count: 1,
+          p3_count: 1,
+          started_at: '2026-03-26T14:00:00Z',
+          completed_at: '2026-03-26T14:05:00Z',
+          error_message: null,
+        },
+      ],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useReconExecutions>);
+
+    renderWithProviders(<ReconciliationPanel engagementId="eng-1" />);
+
+    // P1, P2, P3 count pills should all show "1"
+    const ones = screen.getAllByText('1');
+    expect(ones.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('opens run execution dialog with batch and ruleset selects', () => {
+    vi.mocked(useBatches).mockReturnValue({
+      data: [
+        { batch_id: 'b1', batch_scope: 'full', status: 'LOADED' },
+        { batch_id: 'b2', batch_scope: 'partial', status: 'PENDING' },
+      ],
+    } as unknown as ReturnType<typeof useBatches>);
+    vi.mocked(useReconRuleSets).mockReturnValue({
+      data: [
+        {
+          ruleset_id: 'rs-1',
+          version: 1,
+          label: 'v1 rules',
+          status: 'ACTIVE',
+          rules: [],
+          engagement_id: 'eng-1',
+          created_by: 'u1',
+          created_at: '2026-03-26T10:00:00Z',
+          activated_at: null,
+          superseded_at: null,
+        },
+      ],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useReconRuleSets>);
+
+    renderWithProviders(<ReconciliationPanel engagementId="eng-1" />);
+
+    // Click the button in the section header
+    const runButtons = screen.getAllByText('Run Recon Execution');
+    fireEvent.click(runButtons[0]);
+    // Dialog should now be open — there will be multiple "Run Recon Execution" elements
+    expect(runButtons.length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/Parallel Run/)).toBeTruthy();
+    expect(screen.getByText(/Ruleset/)).toBeTruthy();
+    // Only LOADED batch should be available (not PENDING)
+    expect(screen.getByText('full (LOADED)')).toBeTruthy();
+    expect(screen.queryByText('partial (PENDING)')).toBeNull();
   });
 });
