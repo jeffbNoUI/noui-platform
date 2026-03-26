@@ -12,6 +12,7 @@ import (
 
 	"github.com/noui/platform/apiresponse"
 	migrationdb "github.com/noui/platform/migration/db"
+	"github.com/noui/platform/migration/models"
 	"github.com/noui/platform/migration/report"
 )
 
@@ -350,6 +351,191 @@ func sanitizeFilename(s string) string {
 // Engagements with more than this many field mappings must use JSON export.
 const maxPDFFieldCount = 5000
 
+// maxLineageEntriesPerHandler is the truncation limit per handler group in the
+// lineage report (AC-1). Prevents unbounded PDF generation for large batches.
+const maxLineageEntriesPerHandler = 500
+
+// maxReconRecordsPerTier is the truncation limit per tier in the reconciliation
+// report (AC-4). Prevents unbounded PDF generation for large engagements.
+const maxReconRecordsPerTier = 200
+
+// maxReconTotalForPDF is the guard for total reconciliation records (AC-6).
+// Engagements with more than this many records must use filtered JSON export.
+const maxReconTotalForPDF = 10000
+
+// --- Lineage Traceability Report types ---
+
+// LineageReport is the data structure for the lineage traceability PDF.
+type LineageReport struct {
+	EngagementID  string                `json:"engagement_id"`
+	SourceSystem  string                `json:"source_system"`
+	BatchID       string                `json:"batch_id"`
+	BatchStatus   string                `json:"batch_status"`
+	GeneratedAt   string                `json:"generated_at"`
+	Summary       models.LineageSummary `json:"summary"`
+	HandlerGroups []HandlerGroup        `json:"handler_groups"`
+}
+
+// HandlerGroup groups lineage entries by handler_name for the report.
+type HandlerGroup struct {
+	HandlerName string                 `json:"handler_name"`
+	Entries     []models.LineageRecord `json:"entries"`
+	Truncated   bool                   `json:"truncated"`
+	TotalCount  int                    `json:"total_count"`
+}
+
+// ReconciliationReport is the data structure for the reconciliation summary PDF.
+type ReconciliationReport struct {
+	EngagementID   string                             `json:"engagement_id"`
+	SourceSystem   string                             `json:"source_system"`
+	SchemaVersion  string                             `json:"schema_version"`
+	GeneratedAt    string                             `json:"generated_at"`
+	Summary        models.ReconciliationSummaryResult `json:"summary"`
+	TierBreakdowns []TierBreakdown                    `json:"tier_breakdowns"`
+	Patterns       []models.ReconciliationPattern     `json:"patterns"`
+}
+
+// TierBreakdown contains reconciliation records for a single tier.
+type TierBreakdown struct {
+	Tier       int                                `json:"tier"`
+	Records    []migrationdb.ReconciliationRecord `json:"records"`
+	Truncated  bool                               `json:"truncated"`
+	TotalCount int                                `json:"total_count"`
+}
+
+// BuildLineageReport assembles the lineage traceability report for a specific batch.
+// Exported for cross-package use by the PDF renderer (AC-1).
+func BuildLineageReport(db *sql.DB, engagementID, batchID, batchScope string) (*LineageReport, error) {
+	summary, err := migrationdb.GetLineageSummary(db, batchID)
+	if err != nil {
+		return nil, fmt.Errorf("lineage summary: %w", err)
+	}
+
+	rpt := &LineageReport{
+		EngagementID:  engagementID,
+		BatchID:       batchID,
+		BatchStatus:   batchScope,
+		GeneratedAt:   time.Now().UTC().Format(time.RFC3339),
+		Summary:       *summary,
+		HandlerGroups: make([]HandlerGroup, 0),
+	}
+
+	// Build per-handler groups from the summary's transformation types.
+	for _, handler := range summary.TransformationTypes {
+		entries, err := queryLineageByHandler(db, batchID, handler, maxLineageEntriesPerHandler+1)
+		if err != nil {
+			return nil, fmt.Errorf("lineage entries for %s: %w", handler, err)
+		}
+
+		group := HandlerGroup{
+			HandlerName: handler,
+			TotalCount:  len(entries),
+		}
+
+		if len(entries) > maxLineageEntriesPerHandler {
+			group.Entries = entries[:maxLineageEntriesPerHandler]
+			group.Truncated = true
+		} else {
+			group.Entries = entries
+		}
+
+		rpt.HandlerGroups = append(rpt.HandlerGroups, group)
+	}
+
+	return rpt, nil
+}
+
+// BuildReconciliationReport assembles the reconciliation summary for an engagement (AC-4).
+func BuildReconciliationReport(db *sql.DB, engagementID, sourceSystem, schemaVersion string) (*ReconciliationReport, error) {
+	summary, err := migrationdb.GetReconciliationSummary(db, engagementID)
+	if err != nil {
+		return nil, fmt.Errorf("reconciliation summary: %w", err)
+	}
+
+	rpt := &ReconciliationReport{
+		EngagementID:   engagementID,
+		SourceSystem:   sourceSystem,
+		SchemaVersion:  schemaVersion,
+		GeneratedAt:    time.Now().UTC().Format(time.RFC3339),
+		Summary:        *summary,
+		TierBreakdowns: make([]TierBreakdown, 0, 3),
+	}
+
+	// Per-tier breakdown.
+	for tier := 1; tier <= 3; tier++ {
+		records, err := migrationdb.GetReconciliationByTier(db, engagementID, tier)
+		if err != nil {
+			return nil, fmt.Errorf("reconciliation tier %d: %w", tier, err)
+		}
+		if records == nil {
+			records = []migrationdb.ReconciliationRecord{}
+		}
+
+		bd := TierBreakdown{
+			Tier:       tier,
+			TotalCount: len(records),
+		}
+
+		if len(records) > maxReconRecordsPerTier {
+			bd.Records = records[:maxReconRecordsPerTier]
+			bd.Truncated = true
+		} else {
+			bd.Records = records
+		}
+
+		rpt.TierBreakdowns = append(rpt.TierBreakdowns, bd)
+	}
+
+	// Pattern analysis.
+	patterns, err := migrationdb.GetPatternsByEngagement(db, engagementID)
+	if err != nil {
+		// Patterns are non-critical — log but don't fail.
+		rpt.Patterns = []models.ReconciliationPattern{}
+	} else if patterns == nil {
+		rpt.Patterns = []models.ReconciliationPattern{}
+	} else {
+		rpt.Patterns = patterns
+	}
+
+	return rpt, nil
+}
+
+// queryLineageByHandler fetches lineage records for a specific handler name,
+// ordered by column_name then row_key. Internal query helper consistent with
+// queryMappingSpecFields and queryMappingSpecCodes.
+func queryLineageByHandler(db *sql.DB, batchID, handlerName string, limit int) ([]models.LineageRecord, error) {
+	rows, err := db.Query(
+		`SELECT lineage_id, batch_id, row_key, handler_name, column_name,
+		        COALESCE(source_value, ''), COALESCE(result_value, ''),
+		        created_at::TEXT
+		 FROM migration.lineage
+		 WHERE batch_id = $1 AND handler_name = $2
+		 ORDER BY column_name, row_key
+		 LIMIT $3`,
+		batchID, handlerName, limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var records []models.LineageRecord
+	for rows.Next() {
+		var rec models.LineageRecord
+		if err := rows.Scan(
+			&rec.LineageID, &rec.BatchID, &rec.RowKey, &rec.HandlerName,
+			&rec.ColumnName, &rec.SourceValue, &rec.ResultValue, &rec.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		records = append(records, rec)
+	}
+	if records == nil {
+		records = []models.LineageRecord{}
+	}
+	return records, rows.Err()
+}
+
 // pdfTimeout is 5 seconds shorter than the server's 30s WriteTimeout,
 // guaranteeing the handler can write a JSON error before the connection dies.
 const pdfTimeout = 25 * time.Second
@@ -438,6 +624,195 @@ func (h *Handler) MappingSpecPDF(w http.ResponseWriter, r *http.Request) {
 	name := sanitizeFilename(engagement.SourceSystemName)
 	date := time.Now().Format("2006-01-02")
 	filename := fmt.Sprintf("mapping-spec-%s-%s.pdf", name, date)
+
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(pdfBytes)))
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(pdfBytes)
+}
+
+// LineageReportPDF handles GET /api/v1/migration/engagements/{id}/reports/lineage/{batch_id}/pdf.
+// AC-3: Returns the lineage traceability report as a PDF for a specific batch.
+func (h *Handler) LineageReportPDF(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	batchID := r.PathValue("batch_id")
+	if id == "" || batchID == "" {
+		apiresponse.WriteError(w, http.StatusBadRequest, "migration", "VALIDATION_ERROR", "engagement id and batch_id are required")
+		return
+	}
+
+	if h.Renderer == nil {
+		apiresponse.WriteError(w, http.StatusServiceUnavailable, "migration", "RENDERER_UNAVAILABLE", "PDF rendering is not available")
+		return
+	}
+
+	engagement, err := migrationdb.GetEngagement(h.DB, id)
+	if err != nil {
+		slog.Error("lineage report pdf: failed to get engagement", "error", err, "engagement_id", id)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to get engagement")
+		return
+	}
+	if engagement == nil {
+		apiresponse.WriteError(w, http.StatusNotFound, "migration", "NOT_FOUND", fmt.Sprintf("engagement %s not found", id))
+		return
+	}
+
+	batch, err := migrationdb.GetBatch(h.DB, batchID)
+	if err != nil {
+		slog.Error("lineage report pdf: failed to get batch", "error", err, "batch_id", batchID)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to get batch")
+		return
+	}
+	if batch == nil {
+		apiresponse.WriteError(w, http.StatusNotFound, "migration", "NOT_FOUND", fmt.Sprintf("batch %s not found", batchID))
+		return
+	}
+
+	start := time.Now()
+	rpt, err := BuildLineageReport(h.DB, id, batchID, batch.BatchScope)
+	if err != nil {
+		slog.Error("lineage report pdf: failed to build report", "error", err, "engagement_id", id, "batch_id", batchID)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "QUERY_FAILED", "failed to build lineage report")
+		return
+	}
+
+	if rpt.Summary.TotalRecords == 0 {
+		apiresponse.WriteError(w, http.StatusNotFound, "migration", "NO_LINEAGE", "no lineage records found for this batch")
+		return
+	}
+
+	rpt.SourceSystem = engagement.SourceSystemName
+
+	html, err := report.RenderLineageReportHTML(rpt)
+	if err != nil {
+		slog.Error("lineage report pdf: template render failed", "error", err, "engagement_id", id)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "TEMPLATE_ERROR", "failed to render lineage report template")
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), pdfTimeout)
+	defer cancel()
+
+	opts := report.DefaultPDFOptions()
+	pdfBytes, err := h.Renderer.RenderHTML(ctx, html, opts)
+	if err != nil {
+		duration := time.Since(start)
+		if ctx.Err() == context.DeadlineExceeded {
+			slog.Warn("lineage report pdf: generation timed out", "engagement_id", id, "batch_id", batchID, "duration", duration)
+			apiresponse.WriteError(w, http.StatusGatewayTimeout, "migration", "PDF_GENERATION_TIMEOUT", "pdf generation timed out")
+			return
+		}
+		slog.Error("lineage report pdf: render failed", "error", err, "engagement_id", id, "duration", duration)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "RENDER_FAILED", "failed to generate PDF")
+		return
+	}
+
+	duration := time.Since(start)
+	slog.Info("lineage report pdf generated",
+		"engagement_id", id,
+		"batch_id", batchID,
+		"duration", duration,
+		"file_size", len(pdfBytes),
+		"total_records", rpt.Summary.TotalRecords,
+	)
+
+	date := time.Now().Format("2006-01-02")
+	filename := fmt.Sprintf("lineage-%s-%s.pdf", sanitizeFilename(batchID), date)
+
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(pdfBytes)))
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(pdfBytes)
+}
+
+// ReconciliationReportPDF handles GET /api/v1/migration/engagements/{id}/reports/reconciliation/pdf.
+// AC-6: Returns the reconciliation summary as a PDF download.
+func (h *Handler) ReconciliationReportPDF(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		apiresponse.WriteError(w, http.StatusBadRequest, "migration", "VALIDATION_ERROR", "engagement id is required")
+		return
+	}
+
+	if h.Renderer == nil {
+		apiresponse.WriteError(w, http.StatusServiceUnavailable, "migration", "RENDERER_UNAVAILABLE", "PDF rendering is not available")
+		return
+	}
+
+	engagement, err := migrationdb.GetEngagement(h.DB, id)
+	if err != nil {
+		slog.Error("reconciliation report pdf: failed to get engagement", "error", err, "engagement_id", id)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to get engagement")
+		return
+	}
+	if engagement == nil {
+		apiresponse.WriteError(w, http.StatusNotFound, "migration", "NOT_FOUND", fmt.Sprintf("engagement %s not found", id))
+		return
+	}
+
+	// Guard: check total record count before building full report.
+	summary, err := migrationdb.GetReconciliationSummary(h.DB, id)
+	if err != nil {
+		slog.Error("reconciliation report pdf: failed to get summary", "error", err, "engagement_id", id)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "QUERY_FAILED", "failed to get reconciliation summary")
+		return
+	}
+	if summary.TotalRecords == 0 {
+		apiresponse.WriteError(w, http.StatusNotFound, "migration", "NO_RECONCILIATION", "no reconciliation data found for this engagement")
+		return
+	}
+	if summary.TotalRecords > maxReconTotalForPDF {
+		apiresponse.WriteError(w, http.StatusUnprocessableEntity, "migration", "TOO_LARGE",
+			fmt.Sprintf("engagement has %d reconciliation records (max %d for PDF); use filtered JSON export instead",
+				summary.TotalRecords, maxReconTotalForPDF))
+		return
+	}
+
+	start := time.Now()
+	rpt, err := BuildReconciliationReport(h.DB, id, engagement.SourceSystemName, engagement.CanonicalSchemaVersion)
+	if err != nil {
+		slog.Error("reconciliation report pdf: failed to build report", "error", err, "engagement_id", id)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "QUERY_FAILED", "failed to build reconciliation report")
+		return
+	}
+
+	html, err := report.RenderReconciliationReportHTML(rpt)
+	if err != nil {
+		slog.Error("reconciliation report pdf: template render failed", "error", err, "engagement_id", id)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "TEMPLATE_ERROR", "failed to render reconciliation report template")
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), pdfTimeout)
+	defer cancel()
+
+	opts := report.DefaultPDFOptions()
+	pdfBytes, err := h.Renderer.RenderHTML(ctx, html, opts)
+	if err != nil {
+		duration := time.Since(start)
+		if ctx.Err() == context.DeadlineExceeded {
+			slog.Warn("reconciliation report pdf: generation timed out", "engagement_id", id, "duration", duration)
+			apiresponse.WriteError(w, http.StatusGatewayTimeout, "migration", "PDF_GENERATION_TIMEOUT", "pdf generation timed out")
+			return
+		}
+		slog.Error("reconciliation report pdf: render failed", "error", err, "engagement_id", id, "duration", duration)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "RENDER_FAILED", "failed to generate PDF")
+		return
+	}
+
+	duration := time.Since(start)
+	slog.Info("reconciliation report pdf generated",
+		"engagement_id", id,
+		"duration", duration,
+		"file_size", len(pdfBytes),
+		"total_records", summary.TotalRecords,
+	)
+
+	name := sanitizeFilename(engagement.SourceSystemName)
+	date := time.Now().Format("2006-01-02")
+	filename := fmt.Sprintf("reconciliation-%s-%s.pdf", name, date)
 
 	w.Header().Set("Content-Type", "application/pdf")
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))

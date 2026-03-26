@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Reconciliation Summary - {{.EngagementID}}</title>
+<style>
+  @page {
+    size: A4;
+    margin: 0;
+    @bottom-center {
+      content: "Page " counter(page) " of " counter(pages);
+      font-size: 9px;
+      color: #666;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 11px;
+    color: #1a1a1a;
+    line-height: 1.5;
+  }
+
+  /* Title page */
+  .title-page {
+    page-break-after: always;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 90vh;
+    text-align: center;
+    padding: 40px;
+  }
+  .title-page h1 { font-size: 28px; color: #1e3a5f; margin-bottom: 8px; }
+  .title-page .subtitle { font-size: 16px; color: #666; margin-bottom: 40px; }
+  .title-page .meta-table { border-collapse: collapse; margin: 0 auto; text-align: left; }
+  .title-page .meta-table td { padding: 6px 16px; font-size: 13px; }
+  .title-page .meta-table td:first-child { font-weight: 600; color: #333; }
+
+  /* Section headers */
+  .section { padding: 20px 40px; }
+  .section h2 {
+    font-size: 18px;
+    color: #1e3a5f;
+    margin: 24px 0 12px 0;
+    border-bottom: 2px solid #1e3a5f;
+    padding-bottom: 6px;
+    page-break-after: avoid;
+  }
+  .section h3 {
+    font-size: 14px;
+    color: #2c5282;
+    margin: 16px 0 8px 0;
+    page-break-after: avoid;
+  }
+
+  /* Data tables */
+  table.data {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+    font-size: 10px;
+  }
+  table.data th {
+    background-color: #1e3a5f;
+    color: #fff;
+    padding: 6px 8px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 10px;
+  }
+  table.data td {
+    padding: 5px 8px;
+    border-bottom: 1px solid #e2e8f0;
+    word-break: break-word;
+  }
+  table.data tr:nth-child(even) td { background-color: #f7fafc; }
+  table.data tr:hover td { background-color: #edf2f7; }
+
+  /* Summary stats */
+  .stats-row {
+    display: flex;
+    gap: 16px;
+    margin: 12px 0 20px 0;
+    flex-wrap: wrap;
+  }
+  .stat-card {
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 12px 20px;
+    text-align: center;
+    min-width: 120px;
+  }
+  .stat-card .value { font-size: 24px; font-weight: 700; color: #1e3a5f; }
+  .stat-card .label { font-size: 10px; color: #718096; text-transform: uppercase; }
+
+  /* Gate score colors */
+  .score-green { color: #276749; font-weight: 700; font-size: 28px; }
+  .score-yellow { color: #975a16; font-weight: 700; font-size: 28px; }
+  .score-red { color: #c53030; font-weight: 700; font-size: 28px; }
+
+  /* Priority badges */
+  .badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .badge-p1 { background: #fed7d7; color: #c53030; }
+  .badge-p2 { background: #feebc8; color: #c05621; }
+  .badge-p3 { background: #fefcbf; color: #975a16; }
+  .badge-match { background: #c6f6d5; color: #276749; }
+  .badge-minor { background: #fefcbf; color: #975a16; }
+  .badge-major { background: #feebc8; color: #c05621; }
+  .badge-error { background: #fed7d7; color: #c53030; }
+
+  /* Gate score gauge */
+  .gate-gauge {
+    text-align: center;
+    padding: 20px;
+    margin: 12px 0;
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+  }
+  .gate-gauge .label { font-size: 12px; color: #718096; text-transform: uppercase; margin-bottom: 4px; }
+
+  /* Tier score table */
+  table.tier-scores {
+    width: auto;
+    border-collapse: collapse;
+    margin: 12px 0 20px 0;
+  }
+  table.tier-scores th, table.tier-scores td {
+    padding: 8px 16px;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+    font-size: 12px;
+  }
+  table.tier-scores th { background: #1e3a5f; color: #fff; font-weight: 600; }
+
+  /* Truncation notice */
+  .truncation-notice {
+    background: #ebf8ff;
+    border-left: 3px solid #3182ce;
+    padding: 8px 12px;
+    margin: 8px 0;
+    font-size: 10px;
+    color: #2a4365;
+  }
+
+  /* Pattern analysis */
+  .pattern-card {
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+  }
+  .pattern-card .domain { font-weight: 600; color: #1e3a5f; font-size: 12px; }
+  .pattern-card .details { font-size: 10px; color: #4a5568; margin-top: 4px; }
+
+  /* Footer */
+  .page-footer {
+    font-size: 9px;
+    color: #a0aec0;
+    text-align: center;
+    padding: 8px 0;
+    border-top: 1px solid #e2e8f0;
+    margin-top: 20px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Title Page -->
+<div class="title-page">
+  <h1>Reconciliation Summary</h1>
+  <div class="subtitle">Data Verification &amp; Quality Report</div>
+  <table class="meta-table">
+    <tr><td>Engagement</td><td>{{.EngagementID}}</td></tr>
+    <tr><td>Source System</td><td>{{.SourceSystem}}</td></tr>
+    <tr><td>Schema Version</td><td>{{.SchemaVersion}}</td></tr>
+    <tr><td>Generated</td><td>{{.GeneratedAt}}</td></tr>
+    <tr><td>Total Records</td><td>{{.Summary.TotalRecords}}</td></tr>
+  </table>
+</div>
+
+<!-- Executive Summary -->
+<div class="section">
+  <h2>Executive Summary</h2>
+
+  <!-- Gate Score Gauge -->
+  <div class="gate-gauge">
+    <div class="label">Overall Gate Score</div>
+    {{scoreClass .Summary.GateScore}}
+  </div>
+
+  <!-- Tier Score Breakdown -->
+  <h3>Tier Score Breakdown</h3>
+  <table class="tier-scores">
+    <thead>
+      <tr>
+        <th>Tier</th>
+        <th>Score</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Tier 1 (Benefits)</td><td>{{scoreClass .Summary.Tier1Score}}</td></tr>
+      <tr><td>Tier 2 (Demographics)</td><td>{{scoreClass .Summary.Tier2Score}}</td></tr>
+      <tr><td>Tier 3 (Service)</td><td>{{scoreClass .Summary.Tier3Score}}</td></tr>
+    </tbody>
+  </table>
+
+  <!-- Distribution Stats -->
+  <h3>Match/Mismatch Distribution</h3>
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="value">{{.Summary.TotalRecords}}</div>
+      <div class="label">Total</div>
+    </div>
+    <div class="stat-card">
+      <div class="value">{{.Summary.MatchCount}}</div>
+      <div class="label">Match</div>
+    </div>
+    <div class="stat-card">
+      <div class="value">{{.Summary.MinorCount}}</div>
+      <div class="label">Minor</div>
+    </div>
+    <div class="stat-card">
+      <div class="value">{{.Summary.MajorCount}}</div>
+      <div class="label">Major</div>
+    </div>
+    <div class="stat-card">
+      <div class="value">{{.Summary.ErrorCount}}</div>
+      <div class="label">Error</div>
+    </div>
+    <div class="stat-card">
+      <div class="value">{{.Summary.P1Count}}</div>
+      <div class="label">P1 Issues</div>
+    </div>
+  </div>
+</div>
+
+<!-- Per-Tier Detail Tables -->
+{{range .TierBreakdowns}}
+<div class="section">
+  <h2>Tier {{.Tier}} Detail</h2>
+  <p style="font-size: 10px; color: #666; margin-bottom: 12px;">{{len .Records}} record(s)</p>
+
+  {{if .Records}}
+  <table class="data">
+    <thead>
+      <tr>
+        <th>Member ID</th>
+        <th>Calculation</th>
+        <th>Legacy Value</th>
+        <th>Recomputed Value</th>
+        <th>Category</th>
+        <th>Priority</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Records}}
+      <tr>
+        <td>{{.MemberID}}</td>
+        <td>{{.CalcName}}</td>
+        <td>{{derefString .LegacyValue}}</td>
+        <td>{{derefString .RecomputedValue}}</td>
+        <td>{{categoryBadge .Category}}</td>
+        <td>{{priorityBadge .Priority}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{else}}
+  <p style="font-size: 11px; color: #718096;">No reconciliation records for this tier.</p>
+  {{end}}
+
+  {{if .Truncated}}
+  <div class="truncation-notice">
+    Showing {{len .Records}} of {{.TotalCount}} records for Tier {{.Tier}}. Use the filtered JSON export for the complete dataset.
+  </div>
+  {{end}}
+</div>
+{{end}}
+
+<!-- Pattern Analysis -->
+{{if .Patterns}}
+<div class="section">
+  <h2>Pattern Analysis</h2>
+  <p style="font-size: 10px; color: #666; margin-bottom: 12px;">
+    Systematic mismatch patterns detected by the reconciliation engine.
+  </p>
+
+  {{range .Patterns}}
+  <div class="pattern-card">
+    <div class="domain">{{.SuspectedDomain}} — {{.Direction}}</div>
+    <div class="details">
+      Affected members: {{.MemberCount}} |
+      Mean variance: {{.MeanVariance}} |
+      {{if .CorrectionType}}Correction: {{derefString .CorrectionType}}{{else}}No correction proposed{{end}}
+      {{if .Resolved}} | <span style="color: #276749;">Resolved</span>{{end}}
+    </div>
+  </div>
+  {{end}}
+</div>
+{{end}}
+
+<div class="page-footer">
+  Generated by NoUI Migration Engine &mdash; {{.GeneratedAt}}
+</div>
+
+</body>
+</html>
