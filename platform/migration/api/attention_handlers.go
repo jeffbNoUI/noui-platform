@@ -8,6 +8,7 @@ import (
 	"github.com/noui/platform/apiresponse"
 	"github.com/noui/platform/auth"
 	migrationdb "github.com/noui/platform/migration/db"
+	"github.com/noui/platform/migration/models"
 )
 
 // HandleGetAttentionItems handles GET /api/v1/migration/engagements/{id}/attention.
@@ -125,6 +126,25 @@ func (h *Handler) handleAttentionMutation(w http.ResponseWriter, r *http.Request
 		"note":    req.ResolutionNote,
 	})
 	migrationdb.InsertEvent(h.DB, engagementID, eventType, payload)
+
+	// Immutable audit log entry (AC-6: audit integration into attention mutations).
+	// Actor comes from JWT context, never from request body.
+	afterState, _ := json.Marshal(map[string]string{
+		"source":          req.Source,
+		"resolution_note": req.ResolutionNote,
+		"resolved_by":     resolvedBy,
+	})
+	if h.Audit != nil {
+		h.Audit.Log(r.Context(), models.AuditEntry{
+			EngagementID: engagementID,
+			Actor:        resolvedBy,
+			Action:       action,
+			EntityType:   "attention",
+			EntityID:     itemID,
+			BeforeState:  nil, // attention items are derived, no prior state to capture
+			AfterState:   afterState,
+		})
+	}
 
 	// WebSocket broadcast to engagement members.
 	if engagementID != "" {
