@@ -1,6 +1,6 @@
 # Multi-stage build for migration service
 # Context: ./platform (parent directory, so replace directives resolve correctly)
-FROM golang:1.22-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 WORKDIR /app
 
