@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "sprint_contract.schema.json",
   "title": "Sprint Contract",
-  "description": "Machine-readable acceptance criteria for a sprint. Created during planning, graded by /review command.",
+  "description": "Machine-readable acceptance criteria for a sprint. Created during planning, graded by autonomous sessions or /review command.",
   "type": "object",
   "required": ["sprint", "goal", "acceptance_criteria"],
   "additionalProperties": false,
@@ -10,12 +10,23 @@
     "sprint": {
       "type": "integer",
       "minimum": 1,
-      "description": "Sprint number"
+      "description": "Sprint number (sequential within the contract set)"
     },
     "goal": {
       "type": "string",
       "minLength": 1,
       "description": "One-line sprint goal"
+    },
+    "depends_on": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Contract IDs that must be merged before this contract can execute (e.g., ['M02a', 'M01'])"
+    },
+    "layer": {
+      "type": "string",
+      "description": "Primary layer(s) affected: go, frontend, python, db, tests, or combinations like go+frontend"
     },
     "acceptance_criteria": {
       "type": "array",
@@ -43,11 +54,6 @@
         }
       }
     },
-    "persona_review_required": {
-      "type": "boolean",
-      "default": true,
-      "description": "Whether persona review is required for this sprint"
-    },
     "regression_gates": {
       "type": "array",
       "items": {
@@ -55,6 +61,43 @@
         "pattern": "^R-[0-9]+$"
       },
       "description": "Regression test IDs that must pass (e.g., R-01, R-10)"
+    },
+    "design_review_rubric": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "critical": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Must resolve before implementing — blocks code phase"
+        },
+        "high": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Resolve when feasible — reviewer flags but doesn't block"
+        },
+        "medium": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Document as known limitation if not resolved"
+        }
+      },
+      "description": "Domain-specific design review criteria (supplements standard rubric)"
+    },
+    "quality_workflow": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Slash commands to run in Phase 3 quality gates (e.g., ['/validate', '/simplify', '/validate', '/precommit'])"
+    },
+    "files_hint": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Files likely to be created or modified (guidance, not prescriptive)"
+    },
+    "persona_review_required": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether persona review is required for this sprint"
     }
   }
 }

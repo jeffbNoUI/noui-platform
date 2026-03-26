@@ -1,0 +1,64 @@
+{
+  "sprint": 1,
+  "goal": "Attention queue resolve/defer mutations — backend endpoints + frontend wiring",
+  "depends_on": [],
+  "layer": "go+frontend",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "PATCH /api/v1/migration/engagements/{id}/attention/{itemId}/resolve endpoint updates exception disposition to RESOLVED with resolution_note and resolved_by from JWT",
+      "verification": "cd platform/migration && go test ./api/... -run TestResolveAttention -count=1 -v"
+    },
+    {
+      "id": "AC-2",
+      "description": "PATCH /api/v1/migration/engagements/{id}/attention/{itemId}/defer endpoint updates exception disposition to DEFERRED with resolution_note and resolved_by from JWT",
+      "verification": "cd platform/migration && go test ./api/... -run TestDeferAttention -count=1 -v"
+    },
+    {
+      "id": "AC-3",
+      "description": "Only PENDING items can be resolved or deferred — attempting on a non-PENDING item returns 409 Conflict",
+      "verification": "cd platform/migration && go test ./api/... -run TestResolveNonPending -count=1 -v"
+    },
+    {
+      "id": "AC-4",
+      "description": "Both endpoints require auth middleware and editor-or-above role. Unauthorized returns 403.",
+      "verification": "cd platform/migration && go test ./api/... -run TestAttentionUnauthorized -count=1 -v"
+    },
+    {
+      "id": "AC-5",
+      "description": "WebSocket broadcasts attention_resolved and attention_deferred events to engagement members",
+      "verification": "cd platform/migration && go test ./api/... -run TestAttentionWebSocket -count=1 -v"
+    },
+    {
+      "id": "AC-6",
+      "description": "Frontend AttentionQueue component wires resolve/defer buttons to API endpoints with optimistic update and error rollback",
+      "verification": "cd frontend && npm test -- --run -t AttentionQueue"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "PATCH endpoints use auth middleware — editor or owner role required",
+      "Disposition update is tenant-scoped via RLS on exception table",
+      "Only PENDING items can transition — enforce at DB query level, not just handler",
+      "resolved_by comes from JWT sub claim, not request body"
+    ],
+    "high": [
+      "WebSocket broadcasts attention_resolved/attention_deferred to engagement members",
+      "Frontend uses optimistic update with rollback on 4xx/5xx",
+      "Tests cover: resolve success, defer success, resolve non-pending (409), unauthorized (403), not-found (404)",
+      "Activity log event created for each resolve/defer action"
+    ],
+    "medium": [
+      "Bulk resolve/defer endpoint for multiple items in one request"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "platform/migration/api/attention_handlers.go",
+    "platform/migration/api/attention_handlers_test.go",
+    "platform/migration/db/attention.go",
+    "frontend/src/components/migration/attention/AttentionQueue.tsx",
+    "frontend/src/components/migration/attention/AttentionQueue.test.tsx"
+  ]
+}

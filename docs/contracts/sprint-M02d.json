@@ -1,0 +1,57 @@
+{
+  "sprint": 5,
+  "goal": "Job queue: frontend status panel with real-time updates",
+  "depends_on": ["M02c"],
+  "layer": "frontend",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "JobQueuePanel component renders in EngagementDetail, showing job summary counts (pending, running, completed, failed) as stat cards",
+      "verification": "cd frontend && npm test -- --run -t JobQueuePanel"
+    },
+    {
+      "id": "AC-2",
+      "description": "Expandable job list below summary, sorted by created_at descending. Each row shows: type icon, status badge, duration, retry count, and error preview (truncated) for failed jobs",
+      "verification": "cd frontend && npm test -- --run -t JobQueuePanel"
+    },
+    {
+      "id": "AC-3",
+      "description": "Cancel button on PENDING/RETRYING jobs with confirmation dialog. Retry button on FAILED jobs. Both call the appropriate API endpoints.",
+      "verification": "cd frontend && npm test -- --run -t JobQueuePanel"
+    },
+    {
+      "id": "AC-4",
+      "description": "WebSocket integration: panel auto-updates on job_started, job_completed, job_failed, job_cancelled events without full re-fetch",
+      "verification": "cd frontend && npm test -- --run -t JobQueuePanel"
+    },
+    {
+      "id": "AC-5",
+      "description": "migrationApi.ts extended with getJobs, getJob, getJobSummary, cancelJob, retryJob functions",
+      "verification": "cd frontend && npm test -- --run -t migrationApi"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "Cancel/retry buttons only visible to editor+ roles (check user role from context)",
+      "Error details do not leak stack traces or internal paths to the UI — truncate at handler boundary"
+    ],
+    "high": [
+      "Optimistic update on cancel/retry with rollback on error",
+      "Loading skeleton while fetching job data (not blank space)",
+      "WebSocket reconnection handled (existing pattern in ActivityLog)",
+      "Accessible: status badges use aria-label, not just color"
+    ],
+    "medium": [
+      "Filter/sort controls for job list",
+      "Auto-refresh toggle for users who prefer polling over WebSocket"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "frontend/src/components/migration/engagement/JobQueuePanel.tsx",
+    "frontend/src/components/migration/engagement/JobQueuePanel.test.tsx",
+    "frontend/src/lib/migrationApi.ts",
+    "frontend/src/types/Migration.ts"
+  ]
+}
