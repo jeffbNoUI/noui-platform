@@ -106,6 +106,27 @@ func (h *Handler) ReconcileBatch(w http.ResponseWriter, r *http.Request) {
 			"gate_passed":   gate.GatePassed,
 			"total_members": gate.TotalMembers,
 		})
+
+		// AC-4 (2): Recon P1 notification when p1_count > 0.
+		if gate.P1Unresolved > 0 {
+			engName := b.EngagementID // fallback
+			if eng, err := migrationdb.GetEngagement(h.DB, b.EngagementID); err == nil && eng != nil {
+				engName = eng.SourceSystemName
+			}
+			tid := tenantID(r)
+			notifSummary := fmt.Sprintf("Recon execution found %d P1 mismatches in %s", gate.P1Unresolved, engName)
+			if notif, err := migrationdb.CreateNotification(h.DB, tid, b.EngagementID, engName, "RECON_P1_DETECTED", notifSummary); err != nil {
+				slog.Warn("failed to create recon P1 notification", "error", err)
+			} else if notif != nil {
+				h.broadcast(b.EngagementID, "notification_created", notif)
+			}
+		}
+
+		// AC-4 (3): Check gate readiness after recon completion.
+		if eng, err := migrationdb.GetEngagement(h.DB, b.EngagementID); err == nil && eng != nil {
+			tid := tenantID(r)
+			checkAndNotifyGateReadiness(h, b.EngagementID, eng.SourceSystemName, eng.Status, tid)
+		}
 	}
 }
 

@@ -60,6 +60,7 @@ func MarkAllNotificationsRead(db *sql.DB, tenantID string) error {
 // CreateNotification inserts a new notification record. Generic/reusable — not specific
 // to any particular notification type. Used by drift detection (DRIFT_CRITICAL),
 // migration lifecycle (M11a), and other subsystems.
+// Non-blocking — callers should log errors but not fail the parent operation.
 func CreateNotification(database *sql.DB, tenantID, engagementID, engagementName, notifType, summary string) (*models.Notification, error) {
 	if database == nil {
 		return nil, fmt.Errorf("db is nil")

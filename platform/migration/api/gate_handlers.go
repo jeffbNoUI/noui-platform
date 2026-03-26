@@ -14,13 +14,15 @@ import (
 
 // phaseOrder defines the canonical ordering of phases for regression validation.
 var phaseOrder = map[models.EngagementStatus]int{
-	models.StatusDiscovery:    0,
-	models.StatusProfiling:    1,
-	models.StatusMapping:      2,
-	models.StatusTransforming: 3,
-	models.StatusReconciling:  4,
-	models.StatusParallelRun:  5,
-	models.StatusComplete:     6,
+	models.StatusDiscovery:         0,
+	models.StatusProfiling:         1,
+	models.StatusMapping:           2,
+	models.StatusTransforming:      3,
+	models.StatusReconciling:       4,
+	models.StatusParallelRun:       5,
+	models.StatusComplete:          6,
+	models.StatusCutoverInProgress: 7,
+	models.StatusGoLive:            8,
 }
 
 // orderedPhases lists phases in forward order for next-phase lookup.
@@ -32,6 +34,8 @@ var orderedPhases = []models.EngagementStatus{
 	models.StatusReconciling,
 	models.StatusParallelRun,
 	models.StatusComplete,
+	models.StatusCutoverInProgress,
+	models.StatusGoLive,
 }
 
 // nextPhaseFor returns the next phase in the canonical order, or "" if at the end.
@@ -94,6 +98,7 @@ func generateGateRecommendation(engagement *models.Engagement, metrics map[strin
 }
 
 // HandleGetGateStatus handles GET /api/v1/migration/engagements/{id}/gate-status.
+// AC-5: Response includes evaluation result alongside metrics and recommendation.
 func (h *Handler) HandleGetGateStatus(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
@@ -121,13 +126,60 @@ func (h *Handler) HandleGetGateStatus(w http.ResponseWriter, r *http.Request) {
 
 	rec := generateGateRecommendation(engagement, metrics)
 
+	// Evaluate gate for the natural next phase. Null if terminal (GO_LIVE).
+	var eval *models.GateEvaluationResult
+	nextPhase := nextPhaseFor(engagement.Status)
+	if nextPhase != "" {
+		eval, _ = EvaluateGate(h.DB, id, engagement.Status, nextPhase)
+	}
+
 	apiresponse.WriteSuccess(w, http.StatusOK, "migration", models.GateStatusResponse{
 		Metrics:        metrics,
 		Recommendation: rec,
+		Evaluation:     eval,
 	})
 }
 
+// HandleGetGateEvaluation handles GET /api/v1/migration/engagements/{id}/gate-evaluation?target_phase={phase}.
+// AC-3: Preview mode — returns evaluation result without performing any transition.
+func (h *Handler) HandleGetGateEvaluation(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		apiresponse.WriteError(w, http.StatusBadRequest, "migration", "VALIDATION_ERROR", "engagement id is required")
+		return
+	}
+
+	targetPhase := r.URL.Query().Get("target_phase")
+	if targetPhase == "" {
+		apiresponse.WriteError(w, http.StatusBadRequest, "migration", "VALIDATION_ERROR", "target_phase query parameter is required")
+		return
+	}
+
+	engagement, err := migrationdb.GetEngagement(h.DB, id)
+	if err != nil {
+		slog.Error("failed to get engagement for gate evaluation", "error", err, "engagement_id", id)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to get engagement")
+		return
+	}
+	if engagement == nil {
+		apiresponse.WriteError(w, http.StatusNotFound, "migration", "NOT_FOUND", fmt.Sprintf("engagement %s not found", id))
+		return
+	}
+
+	target := models.EngagementStatus(targetPhase)
+	eval, err := EvaluateGate(h.DB, id, engagement.Status, target)
+	if err != nil {
+		slog.Error("failed to evaluate gate", "error", err, "engagement_id", id)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to evaluate gate")
+		return
+	}
+
+	apiresponse.WriteSuccess(w, http.StatusOK, "migration", eval)
+}
+
 // HandleAdvancePhase handles POST /api/v1/migration/engagements/{id}/advance-phase.
+// AC-3: Calls EvaluateGate before allowing transition. Returns 422 if evaluation fails
+// and no overrides are provided for the failing metrics.
 func (h *Handler) HandleAdvancePhase(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
@@ -162,6 +214,41 @@ func (h *Handler) HandleAdvancePhase(w http.ResponseWriter, r *http.Request) {
 		apiresponse.WriteError(w, http.StatusConflict, "migration", "INVALID_TRANSITION",
 			fmt.Sprintf("cannot advance from %s to %s", engagement.Status, nextPhase))
 		return
+	}
+
+	// Evaluate gate requirements before allowing transition.
+	eval, evalErr := EvaluateGate(h.DB, id, engagement.Status, nextPhase)
+	if evalErr != nil {
+		slog.Error("gate evaluation failed", "error", evalErr, "engagement_id", id)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to evaluate gate")
+		return
+	}
+
+	// If gate is not passed, check if overrides cover all failures.
+	if !eval.Passed {
+		overrideSet := make(map[string]bool, len(req.Overrides))
+		for _, o := range req.Overrides {
+			overrideSet[o] = true
+		}
+
+		// Check if every failing metric is overridden.
+		var unoverridden []string
+		for name, metric := range eval.Metrics {
+			if !metric.Passed && !overrideSet[name] {
+				unoverridden = append(unoverridden, name)
+			}
+		}
+
+		if len(unoverridden) > 0 {
+			apiresponse.WriteJSON(w, http.StatusUnprocessableEntity, map[string]any{
+				"status":     "error",
+				"service":    "migration",
+				"error_code": "GATE_REQUIREMENTS_NOT_MET",
+				"message":    "Gate requirements not met",
+				"evaluation": eval,
+			})
+			return
+		}
 	}
 
 	// Compute gate metrics for audit trail.

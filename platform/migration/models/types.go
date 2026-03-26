@@ -237,10 +237,11 @@ type RegressPhaseRequest struct {
 	Notes       string `json:"notes"`
 }
 
-// GateStatusResponse contains gate metrics and AI recommendation for a phase.
+// GateStatusResponse contains gate metrics, AI recommendation, and evaluation for a phase.
 type GateStatusResponse struct {
-	Metrics        map[string]float64 `json:"metrics"`
-	Recommendation *AIRecommendation  `json:"recommendation"`
+	Metrics        map[string]float64    `json:"metrics"`
+	Recommendation *AIRecommendation     `json:"recommendation"`
+	Evaluation     *GateEvaluationResult `json:"evaluation"`
 }
 
 // AIRecommendation contains a deterministic recommendation for a phase gate.
@@ -1074,4 +1075,35 @@ type OrphanSummary struct {
 	OrphanRelationships int     `json:"orphan_relationships"`
 	TotalOrphanRows     int     `json:"total_orphan_rows"`
 	HighestOrphanPct    float64 `json:"highest_orphan_pct"`
+}
+
+// ---------------------------------------------------------------------------
+// Phase Gate Evaluation (M11a)
+// ---------------------------------------------------------------------------
+
+// GateMetricResult holds the evaluation result for a single gate metric.
+type GateMetricResult struct {
+	Name         string  `json:"name"`
+	CurrentValue float64 `json:"current_value"`
+	Threshold    float64 `json:"threshold"`
+	Passed       bool    `json:"passed"`
+	Description  string  `json:"description"`
+}
+
+// GateEvaluationResult holds the complete gate evaluation result for a phase transition.
+type GateEvaluationResult struct {
+	Passed           bool                        `json:"passed"`
+	Metrics          map[string]GateMetricResult `json:"metrics"`
+	BlockingFailures []string                    `json:"blocking_failures"`
+}
+
+// GateMetricDefinition defines a gate metric's threshold and comparison logic.
+// These are hardcoded constants — not configurable per engagement.
+type GateMetricDefinition struct {
+	Name        string
+	Description string
+	Threshold   float64
+	// GreaterOrEqual: true means current >= threshold to pass,
+	// false means current <= threshold to pass (e.g., p1_count must be 0).
+	GreaterOrEqual bool
 }

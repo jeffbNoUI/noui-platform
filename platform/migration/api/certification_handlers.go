@@ -231,6 +231,17 @@ func (h *Handler) HandleCertify(w http.ResponseWriter, r *http.Request) {
 		"direction": "ADVANCE",
 	})
 
+	// AC-4 (4): Certification notification.
+	certSummary := fmt.Sprintf("%s certified by %s with gate score %.2f", engagement.SourceSystemName, tid, reconScore)
+	if notif, err := migrationdb.CreateNotification(h.DB, tid, id, engagement.SourceSystemName, "CERTIFIED", certSummary); err != nil {
+		slog.Warn("failed to create certification notification", "error", err)
+	} else if notif != nil {
+		h.broadcast(id, "notification_created", notif)
+	}
+
+	// AC-4 (3): Check gate readiness for next phase after certification.
+	checkAndNotifyGateReadiness(h, id, engagement.SourceSystemName, models.StatusComplete, tid)
+
 	slog.Info("certification created", "engagement_id", id, "certified_by", tid, "gate_score", reconScore)
 	apiresponse.WriteSuccess(w, http.StatusCreated, "migration", record)
 }

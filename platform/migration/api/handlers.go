@@ -109,6 +109,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 	// Phase gates
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/gate-status", h.HandleGetGateStatus)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/gate-evaluation", h.HandleGetGateEvaluation)
 	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/advance-phase", h.HandleAdvancePhase)
 	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/regress-phase", h.HandleRegressPhase)
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/gate-history", h.HandleGetGateHistory)
@@ -141,6 +142,8 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	// Certification
 	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/certify", h.HandleCertify)
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/certification", h.HandleGetCertification)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/certifications", h.HandleListCertifications)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/certification/checklist", h.HandleGetCertificationChecklist)
 
 	// Lineage
 	mux.HandleFunc("GET /api/v1/migration/batches/{id}/lineage", h.HandleGetLineage)
