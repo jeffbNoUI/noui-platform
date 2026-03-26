@@ -1,0 +1,67 @@
+{
+  "sprint": 8,
+  "goal": "Parallel run: execution engine — job executor for dual-version comparison",
+  "depends_on": ["M03a"],
+  "layer": "go",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "ParallelRunExecutor implements the worker.Executor interface: Execute(ctx context.Context, job *jobqueue.Job, q *jobqueue.Queue, db *sql.DB) error. Registered in main.go via w.RegisterExecutor(\"parallel_run\", &worker.ParallelRunExecutor{}) alongside existing L1/L2 executors. Input JSON schema (parsed from job.InputJSON): {run_id, engagement_id, sample_rate, comparison_mode, entities: []string}.",
+      "verification": "cd platform/migration && go build ./..."
+    },
+    {
+      "id": "AC-2",
+      "description": "Executor compares fields that have an active, approved mapping for the engagement (queried from migration.field_mapping WHERE engagement_id = X AND status = 'APPROVED'). For SAMPLE mode: selects members via ORDER BY random() LIMIT N where N = total_members * sample_rate. For FULL mode: all members. For CONTINUOUS mode: returns fmt.Errorf(\"comparison_mode CONTINUOUS not yet implemented — requires CDC integration\"). For each sampled member × mapped field, queries both the legacy source DB (via db.OpenSourceDB pattern from profile_l1_executor.go) and canonical tables, producing field-by-field comparison results.",
+      "verification": "cd platform/migration && go test ./worker/... -run TestParallelRunExecutor -count=1 -v"
+    },
+    {
+      "id": "AC-3",
+      "description": "Comparison logic handles type-aware matching: monetary values (detected by NUMERIC/DECIMAL source type) compared with big.Rat precision — never float64 string equality. Dates compared as dates (ignoring timezone formatting differences). Text compared case-insensitively after trimming. Mismatches record both values plus variance_amount for monetary fields (new_value - legacy_value as NUMERIC). MySQL sources are out of scope for M03b — executor returns a clear error if source_connection.driver is 'mysql' (only postgres and mssql supported, matching db.OpenSourceDB).",
+      "verification": "cd platform/migration && go test ./worker/... -run TestParallelRunComparison -count=1 -v"
+    },
+    {
+      "id": "AC-4",
+      "description": "Results batch-inserted into migration.parallel_run_result via db.InsertParallelRunResults with ON CONFLICT (run_id, member_id, canonical_entity, field_name) DO NOTHING for idempotent retries. Progress reported via q.UpdateProgress(job.JobID, pct) at batch boundaries (every 100 members or 10% milestone, whichever is smaller). Run status transitions: executor calls q.MarkRunning() first (CLAIMED→RUNNING), then q.Complete() on success or q.Fail() on error. The parallel_run table status is updated via db.UpdateParallelRunStatus in tandem.",
+      "verification": "cd platform/migration && go test ./worker/... -run TestParallelRunProgress -count=1 -v"
+    },
+    {
+      "id": "AC-5",
+      "description": "Executor respects context cancellation — checks ctx.Err() between member batches. On cancellation, partial results already inserted are preserved (not rolled back), run status set to CANCELLED via db.UpdateParallelRunStatus, and executor returns ctx.Err() (NOT nil — returning nil would cause the worker loop to call q.Complete()). Note on job table divergence: when executor returns ctx.Err(), worker.go calls q.Fail(), so migration.job ends in FAILED while migration.parallel_run ends in CANCELLED. This is intentional — the parallel_run status is the authoritative state for the user, while the job table reflects the worker's perspective (it failed due to context cancellation). Tests should assert both: parallel_run.status=CANCELLED AND job.status=FAILED.",
+      "verification": "cd platform/migration && go test ./worker/... -run TestParallelRunCancellation -count=1 -v"
+    },
+    {
+      "id": "AC-6",
+      "description": "Error handling: if legacy source is unreachable, run fails with descriptive error via q.Fail() (not panic). If a single member comparison fails, error is logged via slog.Warn and execution continues to next member (partial results are valid). Summary updated even on partial completion via db.UpdateParallelRunStatus with error count in metadata.",
+      "verification": "cd platform/migration && go test ./worker/... -run TestParallelRunErrorPaths -count=1 -v"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "Executor interface signature matches exactly: Execute(ctx context.Context, job *jobqueue.Job, q *jobqueue.Queue, db *sql.DB) error",
+      "Executor resolves source DB credentials via engagement.source_connection through the DB layer (db.OpenSourceDB pattern) — never queries credentials directly",
+      "Monetary comparisons use big.Rat, never float64 string comparison",
+      "Context cancellation returns ctx.Err() — NOT nil (nil triggers q.Complete() in worker loop). Job table ends in FAILED, parallel_run table ends in CANCELLED — intentional divergence documented in AC-5",
+      "Partial results preserved on failure — ON CONFLICT DO NOTHING ensures idempotent restart",
+      "No PII in test fixtures — use obviously fake member IDs (MBR-001), names (Jane Doe), benefit amounts ($1234.56)"
+    ],
+    "high": [
+      "Progress heartbeat at batch boundaries (every 100 members or 10%), not every row",
+      "Sample rate edge cases tested: rate=0 (error: no members), rate=1.0 (all members), very small sample",
+      "Tests mock both the source DB queries and the migration DB writes — no real DB required in -short mode",
+      "slog structured logging for each comparison batch (member count, match rate, duration)",
+      "CONTINUOUS mode explicitly returns error — tested",
+      "MySQL driver gap explicitly returns error — tested"
+    ],
+    "medium": [
+      "Batch size for InsertParallelRunResults defaults to 500 rows per INSERT statement",
+      "Field selection driven by approved mappings creates implicit runtime dependency on mapping data — documented in code comments"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "platform/migration/worker/parallel_run_executor.go",
+    "platform/migration/worker/parallel_run_executor_test.go",
+    "platform/migration/main.go"
+  ]
+}

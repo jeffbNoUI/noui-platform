@@ -1,0 +1,82 @@
+{
+  "sprint": 11,
+  "goal": "PDF reports: chromedp setup + mapping specification PDF export",
+  "depends_on": [],
+  "layer": "go",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "Go package platform/migration/report/ with PDF rendering engine using chromedp (headless Chrome — Go native, NOT Puppeteer which is Node.js). go.mod updated to add github.com/chromedp/chromedp dependency. Provides RenderHTML(ctx context.Context, pool *BrowserPool, htmlContent string, opts PDFOptions) ([]byte, error). PDFOptions struct: PageSize (A4 default), Landscape bool, HeaderHTML, FooterHTML, MarginTop/Bottom/Left/Right. Returns PDF bytes. In -short test mode, chromedp calls are mocked via a Renderer interface — tests verify HTML template output and PDF options without requiring Chrome.",
+      "verification": "cd platform/migration && go test ./report/... -run TestRenderHTMLToPDF -count=1 -v -short"
+    },
+    {
+      "id": "AC-2",
+      "description": "HTML template for mapping specification report using Go html/template (all values escaped — no raw HTML injection). Renders the same data as the existing buildMappingSpec() assembler in report_handler.go (export buildMappingSpec to BuildMappingSpec for cross-package access from report/). Template includes: title page (engagement name, date), table of contents, per-entity sections with field mapping tables (source column, canonical field, confidence, approval status), code mapping tables, exception summary, assumptions list (from DERIVED lineage), exclusions list (from EXCLUDED exceptions). Note: 'transformation' column removed — not present in existing FieldMappingSpec struct or DB query.",
+      "verification": "cd platform/migration && go test ./report/... -run TestMappingSpecTemplate -count=1 -v"
+    },
+    {
+      "id": "AC-3",
+      "description": "GET /api/v1/migration/engagements/{id}/reports/mapping-spec/pdf returns the mapping specification as a PDF download. Content-Type: application/pdf. Content-Disposition: attachment; filename=mapping-spec-{sanitized-engagement-name}-{date}.pdf (filename sanitized to prevent path traversal). Uses the exported BuildMappingSpec() data assembler + HTML template + chromedp renderer. Returns 404 if engagement has no field mappings. Requires authenticated user (all authenticated roles can view reports — no additional role check beyond auth middleware, consistent with existing JSON mapping-spec endpoint which has no role check). Error responses use apiresponse.WriteError format.",
+      "verification": "cd platform/migration && go test ./api/... -run TestMappingSpecPDF$ -count=1 -v"
+    },
+    {
+      "id": "AC-4",
+      "description": "PDF includes page numbers in footer (Page X of Y via CSS @page counters), generation timestamp, and engagement metadata header. Professional formatting: consistent table styling, alternating row colors, confidence scores color-coded (green >=0.85, yellow 0.50-0.84, red <0.50).",
+      "verification": "cd platform/migration && go test ./report/... -run TestMappingSpecFormatting -count=1 -v"
+    },
+    {
+      "id": "AC-5",
+      "description": "chromedp browser pool: BrowserPool struct with configurable pool size (default 2). NewBrowserPool(size int) *BrowserPool creates pool of reusable Chrome contexts. pool.Acquire(ctx) returns an allocator context, pool.Release() returns it. Pool.Close() shuts down all Chrome processes. BrowserPool implements a Renderer interface: type Renderer interface { RenderHTML(ctx context.Context, htmlContent string, opts PDFOptions) ([]byte, error) }. Handler struct uses the interface type (h.Renderer report.Renderer), NOT the concrete *BrowserPool — this allows api/ tests to inject a mock renderer without requiring Chrome. In main.go, pool is constructed, assigned to handler via h.Renderer = pool, and closed in shutdown sequence (deferred Close before server.Shutdown).",
+      "verification": "cd platform/migration && go test ./report/... -run TestBrowserPool -count=1 -v -short"
+    },
+    {
+      "id": "AC-6",
+      "description": "PDF generation timeout: chromedp context uses a 25-second timeout (5 seconds shorter than main.go's 30-second WriteTimeout to guarantee the handler can write a JSON error response before the server kills the connection). On timeout, returns 504 via apiresponse.WriteError(w, 504, 'migration', 'PDF_GENERATION_TIMEOUT', 'pdf generation timed out').",
+      "verification": "cd platform/migration && go test ./report/... -run TestPDFTimeout -count=1 -v -short"
+    },
+    {
+      "id": "AC-7",
+      "description": "Dockerfile updated: builder image corrected from golang:1.25-alpine (does not exist) to golang:1.22-alpine (matching platform/CLAUDE.md Go 1.22 standard). Production image changed from distroless/static to debian:bookworm-slim with chromium installed via apt (RUN apt-get update && apt-get install -y --no-install-recommends chromium && rm -rf /var/lib/apt/lists/*). Set ENV CHROME_PATH=/usr/bin/chromium for chromedp to locate the binary. Do NOT use chromedp/headless-shell as the production base — it does not contain the Go runtime needed for the migration binary. Multi-stage build preserved (builder stage compiles Go binary, production stage runs it with Chrome). Docker image size increase documented in PR description.",
+      "verification": "cd platform/migration && docker build -t migration-test . 2>&1 | tail -5"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "chromedp, not Puppeteer — Go native headless Chrome library",
+      "PDF endpoint goes through auth middleware — no public access",
+      "Report data assembled via exported BuildMappingSpec() — single data path shared with JSON endpoint, no divergence risk",
+      "HTML templates use html/template with automatic escaping — no XSS via user-supplied engagement names or field values",
+      "Browser pool prevents resource exhaustion — bounded concurrency, injected via Handler struct as Renderer interface (not concrete type), closed on shutdown",
+      "Dockerfile base image supports Chrome — verified by AC-7 Docker build",
+      "Dockerfile builder image uses golang:1.22-alpine matching platform Go version standard"
+    ],
+    "high": [
+      "Tests use -short mode with mock Renderer interface — template rendering tested without Chrome binary",
+      "Content-Disposition filename sanitized (replace non-alphanumeric with hyphens)",
+      "slog logging for PDF generation: engagement_id, duration, page count, file size",
+      "Error paths tested: no mappings returns 404, chromedp failure returns 500 via apiresponse.WriteError, timeout returns 504",
+      "go.mod updated with chromedp dependency — listed in files_hint",
+      "Pool.Close() wired into main.go shutdown sequence — no orphaned Chrome processes"
+    ],
+    "medium": [
+      "PDF caching deferred to M07b — regenerated on every request for now",
+      "Large engagement guard: if mapping count exceeds 5000 fields, return 422 with suggestion to use JSON export instead — prevents timeout on very large engagements",
+      "Accessibility: PDF should include document title metadata"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "platform/migration/report/renderer.go",
+    "platform/migration/report/renderer_test.go",
+    "platform/migration/report/pool.go",
+    "platform/migration/report/pool_test.go",
+    "platform/migration/report/templates/mapping_spec.html",
+    "platform/migration/api/report_handler.go",
+    "platform/migration/api/report_handler_test.go",
+    "platform/migration/api/handlers.go",
+    "platform/migration/main.go",
+    "platform/migration/go.mod",
+    "platform/migration/Dockerfile"
+  ]
+}
