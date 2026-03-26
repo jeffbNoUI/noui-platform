@@ -6,7 +6,7 @@
   "acceptance_criteria": [
     {
       "id": "AC-1",
-      "description": "Migration SQL adds to migration.reconciliation: resolved BOOLEAN NOT NULL DEFAULT FALSE, resolved_by VARCHAR(100), resolution_note TEXT. Adds DEFERRED to migration.risk status CHECK constraint (OPEN|ACKNOWLEDGED|MITIGATED|CLOSED|DEFERRED).",
+      "description": "Migration SQL adds to migration.reconciliation: resolved BOOLEAN NOT NULL DEFAULT FALSE, resolved_by VARCHAR(200), resolution_note TEXT. Adds DEFERRED to migration.risk status CHECK constraint (OPEN|ACKNOWLEDGED|MITIGATED|CLOSED|DEFERRED). Also updates the status validation in risk_handlers.go UpdateRisk handler to accept DEFERRED.",
       "verification": "cd platform/migration && go test ./db/... -run TestAttentionSchemaEvolution -count=1 -v"
     },
     {
@@ -43,6 +43,11 @@
       "id": "AC-8",
       "description": "Activity log event created for each resolve/defer action with actor, item_id, source, and resolution_note.",
       "verification": "cd platform/migration && go test ./api/... -run TestAttentionEvent$ -count=1 -v"
+    },
+    {
+      "id": "AC-9",
+      "description": "Cross-source ID mismatch: PATCH resolve with a valid risk_id but source='RECONCILIATION' returns 404 (not accidentally resolving the wrong record type). Same for valid recon_id with source='RISK'.",
+      "verification": "cd platform/migration && go test ./api/... -run TestAttentionCrossSourceMismatch$ -count=1 -v"
     }
   ],
   "regression_gates": [],
@@ -71,6 +76,7 @@
     "platform/migration/api/attention_handlers.go",
     "platform/migration/api/attention_handlers_test.go",
     "platform/migration/api/handlers.go",
+    "platform/migration/api/risk_handlers.go",
     "platform/migration/db/attention.go"
   ]
 }

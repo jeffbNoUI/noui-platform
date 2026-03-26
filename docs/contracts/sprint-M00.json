@@ -6,7 +6,7 @@
   "acceptance_criteria": [
     {
       "id": "AC-1",
-      "description": "RLS enabled on all migration.* content tables: engagement, quality_profile, field_mapping, code_mapping, batch, lineage, exception, reconciliation, correction, analyst_decision, gate_transition, notification, risk, event, certification_record. Policy pattern matches CLAUDE.md Section 6: tenant scoping via engagement_members join.",
+      "description": "RLS enabled on ALL migration.* content tables: engagement, quality_profile, field_mapping, code_mapping, batch, lineage, exception, reconciliation, correction, analyst_decision, gate_transition, notification, risk, event, certification_record, exception_cluster, canonical_members, canonical_salaries, canonical_contributions, stored_calculations, payment_history, reconciliation_pattern. Policy pattern matches CLAUDE.md Section 6: tenant scoping via engagement_members join. The DDL verification test must enumerate every table to catch future additions.",
       "verification": "cd platform/migration && go test ./db/... -run TestMigrationRLSPolicies$ -count=1 -v"
     },
     {

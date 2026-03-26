@@ -129,7 +129,11 @@ Follow this workflow exactly. Do not skip steps.
     ```bash
     # Count commits since branching from main:
     N=$(git rev-list --count origin/main..HEAD)
-    git reset --soft HEAD~$N && git commit -m "[migration/{contract-id}] {goal from contract}"
+    if [ "$N" -gt 0 ] 2>/dev/null; then
+      git reset --soft HEAD~$N && git commit -m "[migration/{contract-id}] {goal from contract}"
+    else
+      echo "No commits to squash — single commit already clean"
+    fi
     ```
     **Do NOT use `git rebase -i` — it requires interactive input and will hang in headless sessions.**
 30. Push and create PR:
@@ -158,6 +162,7 @@ These items supplement the contract-specific rubric. Both are checked.
 - Batch operations are idempotent and restartable
 - Lineage written for every canonical record mutation
 - Middleware order: CORS → Auth → Logging → Handler
+- Test fixtures use obviously fake data (Jane Doe, SSN 000-00-0000, $1234.56). No realistic PII. Test SourceConnection objects use localhost/test credentials, never real hostnames or passwords.
 
 **HIGH:**
 - WebSocket events broadcast for all state changes

@@ -1,7 +1,7 @@
 {
   "sprint": 2,
   "goal": "Job queue: DB schema + Go models for persistent task queue",
-  "depends_on": ["M00", "M01"],
+  "depends_on": ["M00"],
   "layer": "go+db",
   "acceptance_criteria": [
     {

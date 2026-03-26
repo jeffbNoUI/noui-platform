@@ -75,7 +75,7 @@ If the user says "keep for later":
 ```
 Branch ready for review. Creating PR:
   1. git push -u origin [branch-name]
-  2. gh pr create --base master
+  2. gh pr create --base main
   3. ExitWorktree (action: "keep") — preserves worktree for PR feedback
 ```
 
