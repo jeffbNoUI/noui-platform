@@ -58,6 +58,8 @@ var allMigrationTables = []string{
 	"payment_history",
 	// Tier B-SV: FK to schema_version
 	"schema_version_field",
+	// Tier B: FK to engagement (M09a)
+	"recon_rule_set",
 	// Tier D: deep FK chain
 	"source_table",
 	"source_column",
