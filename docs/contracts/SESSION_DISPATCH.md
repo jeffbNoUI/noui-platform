@@ -44,17 +44,61 @@ Follow this workflow exactly. Do not skip steps.
    - Edge cases and error paths
    - How this connects to the existing codebase
    - Note any existing code that overlaps with the contract — build on it, don't rebuild it
-10. **Design review** — spawn an independent reviewer agent (subagent_type: "feature-dev:code-reviewer") with:
-    - Your implementation design
-    - The contract's `design_review_rubric`
-    - The standard design review rubric (Section 5 of the autonomous build design doc)
-    - CLAUDE.md security rules, fiduciary rules, and layer boundary rules
-    - The original migration design doc for domain context
-    - Instruction: "Grade this design against BOTH the contract-specific rubric AND the standard rubric. Return CRITICAL, HIGH, and MEDIUM findings. Evaluate independently."
+10. **Design review** — spawn a FOREGROUND (blocking) reviewer agent. You MUST wait
+    for the agent to complete before proceeding. Do NOT run this in the background.
+
+    Before spawning, pre-read and include the following content INLINE in the agent prompt
+    (do not ask the agent to read files — provide the content directly):
+    - Your implementation design (written in step 9)
+    - The contract's `design_review_rubric` (copy from the contract JSON)
+    - The standard design review rubric (copy from the "Standard Design Review Rubric" section below)
+
+    Then spawn the agent (subagent_type: "feature-dev:code-reviewer") with this prompt template:
+
+    ```
+    Review this implementation design for a migration build contract.
+
+    ## Design Under Review
+    [paste your design from step 9]
+
+    ## Contract-Specific Rubric
+    CRITICAL: [paste critical items from contract]
+    HIGH: [paste high items from contract]
+
+    ## Standard Rubric
+    CRITICAL:
+    - Every API endpoint has auth middleware + tenant scoping
+    - Every DB query uses RLS or explicit tenant_id filter
+    - No float64 for monetary values
+    - No schema changes that relax NOT NULL or widen types
+    - Error thresholds respected (0 tolerance for retiree errors)
+    - Batch operations are idempotent and restartable
+    - Lineage written for every canonical record mutation
+    - Middleware order: CORS → Auth → Logging → Handler
+    - Test fixtures use obviously fake data, no realistic PII
+    HIGH:
+    - WebSocket events broadcast for all state changes
+    - Tests cover happy path + at least 2 error paths
+    - Existing E2E regression suite unaffected
+    - slog structured logging
+
+    ## Project Rules
+    - CLAUDE.md requires RLS on all content tables
+    - Layer boundaries: connector/ has zero deps on platform/
+    - Fiduciary rule: never float64 for monetary values
+    - Auth: JWT claims via middleware, never from headers
+
+    Grade each criterion as PASS, FAIL, or WARNING with evidence.
+    Return findings grouped by severity: CRITICAL first, then HIGH, then MEDIUM.
+    ```
+
+    **IMPORTANT:** This agent must run in FOREGROUND (blocking). Wait for it to return
+    results before proceeding. If the agent takes more than 5 minutes, that is normal
+    for a thorough review — do not cancel it.
 
     If subagent spawning is not available, perform self-review against both rubrics.
 11. Address all CRITICAL findings. Address all HIGH findings that are feasible.
-12. If you made significant changes, re-submit to the reviewer agent.
+12. If you made significant changes, re-submit to the reviewer agent (same foreground pattern).
 13. Log the final design review verdict in your session notes.
 14. Only proceed to Phase 2 when all CRITICAL pass and all feasible HIGH pass.
 
