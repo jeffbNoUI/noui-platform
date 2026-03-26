@@ -229,6 +229,20 @@ export const migrationAPI = {
 
   getAttentionSummary: () => fetchAPI<AttentionSummary>(`${BASE}/attention/summary`, RAW),
 
+  resolveAttentionItem: (engagementId: string, itemId: string, source: string, note: string) =>
+    patchAPI<{ item_id: string; source: string; action: string; status: string }>(
+      `${BASE}/engagements/${engagementId}/attention/${itemId}/resolve`,
+      { source, resolution_note: note },
+      RAW,
+    ),
+
+  deferAttentionItem: (engagementId: string, itemId: string, source: string, note: string) =>
+    patchAPI<{ item_id: string; source: string; action: string; status: string }>(
+      `${BASE}/engagements/${engagementId}/attention/${itemId}/defer`,
+      { source, resolution_note: note },
+      RAW,
+    ),
+
   // ─── AI Recommendations ───────────────────────────────────────────────────
   getAIRecommendations: (engagementId: string) =>
     fetchAPI<AIRecommendation[]>(`${BASE}/engagements/${engagementId}/ai/recommendations`, RAW),
