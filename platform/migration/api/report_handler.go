@@ -1,14 +1,18 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/noui/platform/apiresponse"
 	migrationdb "github.com/noui/platform/migration/db"
+	"github.com/noui/platform/migration/report"
 )
 
 // --- Mapping Specification Report types ---
@@ -78,7 +82,7 @@ func (h *Handler) MappingSpec(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	report, err := buildMappingSpec(h.DB, id, engagement.SourceSystemName, engagement.CanonicalSchemaVersion)
+	report, err := BuildMappingSpec(h.DB, id, engagement.SourceSystemName, engagement.CanonicalSchemaVersion)
 	if err != nil {
 		slog.Error("mapping spec: failed to build report", "error", err, "engagement_id", id)
 		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "QUERY_FAILED", "failed to build mapping specification")
@@ -88,7 +92,10 @@ func (h *Handler) MappingSpec(w http.ResponseWriter, r *http.Request) {
 	apiresponse.WriteSuccess(w, http.StatusOK, "migration", report)
 }
 
-func buildMappingSpec(db *sql.DB, engagementID, sourceSystem, schemaVersion string) (*MappingSpecReport, error) {
+// BuildMappingSpec assembles the full mapping specification report from the
+// database. Exported for cross-package use by the PDF renderer — single data
+// path shared with the JSON endpoint.
+func BuildMappingSpec(db *sql.DB, engagementID, sourceSystem, schemaVersion string) (*MappingSpecReport, error) {
 	report := &MappingSpecReport{
 		EngagementID:  engagementID,
 		SourceSystem:  sourceSystem,
@@ -322,4 +329,119 @@ func queryExcludedCount(db *sql.DB, engagementID string) (int, error) {
 		engagementID,
 	).Scan(&count)
 	return count, err
+}
+
+// sanitizeFilename replaces non-alphanumeric characters (except hyphens) with
+// hyphens and collapses multiple hyphens. Prevents path traversal in
+// Content-Disposition filenames.
+var nonAlphaNum = regexp.MustCompile(`[^a-zA-Z0-9-]+`)
+
+func sanitizeFilename(s string) string {
+	s = strings.ToLower(strings.TrimSpace(s))
+	s = nonAlphaNum.ReplaceAllString(s, "-")
+	s = strings.Trim(s, "-")
+	if s == "" {
+		s = "unnamed"
+	}
+	return s
+}
+
+// maxPDFFieldCount is the safety threshold for very large engagements.
+// Engagements with more than this many field mappings must use JSON export.
+const maxPDFFieldCount = 5000
+
+// pdfTimeout is 5 seconds shorter than the server's 30s WriteTimeout,
+// guaranteeing the handler can write a JSON error before the connection dies.
+const pdfTimeout = 25 * time.Second
+
+// MappingSpecPDF handles GET /api/v1/migration/engagements/{id}/reports/mapping-spec/pdf.
+// It renders the mapping specification as a PDF download using the same data
+// assembler as the JSON endpoint (BuildMappingSpec).
+func (h *Handler) MappingSpecPDF(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		apiresponse.WriteError(w, http.StatusBadRequest, "migration", "VALIDATION_ERROR", "engagement id is required")
+		return
+	}
+
+	if h.Renderer == nil {
+		apiresponse.WriteError(w, http.StatusServiceUnavailable, "migration", "RENDERER_UNAVAILABLE", "PDF rendering is not available")
+		return
+	}
+
+	engagement, err := migrationdb.GetEngagement(h.DB, id)
+	if err != nil {
+		slog.Error("mapping spec pdf: failed to get engagement", "error", err, "engagement_id", id)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to get engagement")
+		return
+	}
+	if engagement == nil {
+		apiresponse.WriteError(w, http.StatusNotFound, "migration", "NOT_FOUND", fmt.Sprintf("engagement %s not found", id))
+		return
+	}
+
+	start := time.Now()
+	spec, err := BuildMappingSpec(h.DB, id, engagement.SourceSystemName, engagement.CanonicalSchemaVersion)
+	if err != nil {
+		slog.Error("mapping spec pdf: failed to build report", "error", err, "engagement_id", id)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "QUERY_FAILED", "failed to build mapping specification")
+		return
+	}
+
+	if spec.TotalMappings == 0 {
+		apiresponse.WriteError(w, http.StatusNotFound, "migration", "NO_MAPPINGS", "no field mappings found for this engagement")
+		return
+	}
+
+	// Guard against very large engagements that would timeout.
+	if spec.TotalMappings > maxPDFFieldCount {
+		apiresponse.WriteError(w, http.StatusUnprocessableEntity, "migration", "TOO_LARGE",
+			fmt.Sprintf("engagement has %d field mappings (max %d for PDF); use JSON export instead", spec.TotalMappings, maxPDFFieldCount))
+		return
+	}
+
+	// Render HTML from template.
+	html, err := report.RenderMappingSpecHTML(spec)
+	if err != nil {
+		slog.Error("mapping spec pdf: template render failed", "error", err, "engagement_id", id)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "TEMPLATE_ERROR", "failed to render report template")
+		return
+	}
+
+	// Convert HTML to PDF with timeout.
+	ctx, cancel := context.WithTimeout(r.Context(), pdfTimeout)
+	defer cancel()
+
+	opts := report.DefaultPDFOptions()
+	pdfBytes, err := h.Renderer.RenderHTML(ctx, html, opts)
+	if err != nil {
+		duration := time.Since(start)
+		if ctx.Err() == context.DeadlineExceeded {
+			slog.Warn("mapping spec pdf: generation timed out", "engagement_id", id, "duration", duration)
+			apiresponse.WriteError(w, http.StatusGatewayTimeout, "migration", "PDF_GENERATION_TIMEOUT", "pdf generation timed out")
+			return
+		}
+		slog.Error("mapping spec pdf: render failed", "error", err, "engagement_id", id, "duration", duration)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "RENDER_FAILED", "failed to generate PDF")
+		return
+	}
+
+	duration := time.Since(start)
+	slog.Info("mapping spec pdf generated",
+		"engagement_id", id,
+		"duration", duration,
+		"file_size", len(pdfBytes),
+		"total_mappings", spec.TotalMappings,
+	)
+
+	// Sanitize filename.
+	name := sanitizeFilename(engagement.SourceSystemName)
+	date := time.Now().Format("2006-01-02")
+	filename := fmt.Sprintf("mapping-spec-%s-%s.pdf", name, date)
+
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(pdfBytes)))
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(pdfBytes)
 }

@@ -1,6 +1,6 @@
 # Multi-stage build for migration service
 # Context: ./platform (parent directory, so replace directives resolve correctly)
-FROM golang:1.25-alpine AS builder
+FROM golang:1.22-alpine AS builder
 
 WORKDIR /app
 
@@ -21,8 +21,19 @@ WORKDIR /app/migration
 RUN go mod download
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /migration .
 
-# Distroless production image
-FROM gcr.io/distroless/static-debian12:nonroot
+# Production image with Chromium for PDF rendering (chromedp)
+FROM debian:bookworm-slim
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends chromium && \
+    rm -rf /var/lib/apt/lists/*
+
+# chromedp uses this env var to locate the Chrome binary.
+ENV CHROME_PATH=/usr/bin/chromium
+
+# Run as non-root user.
+RUN useradd -r -s /bin/false appuser
+USER appuser
 
 COPY --from=builder /migration /migration
 
