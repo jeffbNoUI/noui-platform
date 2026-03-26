@@ -70,6 +70,15 @@ func main() {
 	go worker.StaleRecoveryLoop(svcCtx, jq, 1*time.Minute, 5*time.Minute)
 	go worker.PurgeLoop(svcCtx, jq, 1*time.Hour, 30*24*time.Hour)
 
+	// Audit retention loop — purges expired events on a configurable interval.
+	retentionInterval := 24 * time.Hour
+	if v := os.Getenv("RETENTION_INTERVAL"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			retentionInterval = d
+		}
+	}
+	go db.RetentionLoop(svcCtx, database, retentionInterval)
+
 	// Embedded worker (dev mode).
 	if *embeddedWorker {
 		cfg := worker.DefaultConfig()
