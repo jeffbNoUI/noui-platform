@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/noui/platform/migration/jobqueue"
+	"github.com/noui/platform/migration/ws"
 )
 
 // Executor processes a single job. Implementations are per-job-type.
@@ -49,6 +50,11 @@ type Worker struct {
 	executors map[string]Executor
 	sem       chan struct{}
 	wg        sync.WaitGroup
+
+	// Hub is the WebSocket hub for broadcasting events to engagement members.
+	// Assigned post-construction via w.Hub = hub in main.go (not a constructor parameter).
+	// Nil-safe: broadcasts are no-ops when Hub is nil.
+	Hub *ws.Hub
 }
 
 // New creates a Worker. Register executors via RegisterExecutor before calling Run.
@@ -192,6 +198,22 @@ func (w *Worker) heartbeatLoop(ctx context.Context, cancelJob context.CancelFunc
 			}
 		}
 	}
+}
+
+// BroadcastEvent sends a WebSocket event to all clients in an engagement room.
+// Nil-safe: no-op if Hub is nil.
+func (w *Worker) BroadcastEvent(engagementID, eventType string, payload interface{}) {
+	if w.Hub == nil {
+		return
+	}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return
+	}
+	w.Hub.Broadcast(engagementID, ws.Event{
+		Type:    eventType,
+		Payload: json.RawMessage(data),
+	})
 }
 
 // StaleRecoveryLoop periodically resets stale jobs back to PENDING.

@@ -18,13 +18,13 @@ import (
 // Handler holds dependencies for API handlers.
 type Handler struct {
 	DB          *sql.DB
-	IntelClient intelligence.Scorer          // nil-safe: handlers degrade to template-only if nil
-	Analyzer    intelligence.Analyzer        // nil-safe: pattern detection degrades if nil
-	Hub         *ws.Hub                      // WebSocket hub for broadcasting events (nil-safe)
-	PlanConfig  *reconciler.PlanConfig       // nil-safe: reconciliation degrades if not loaded
-	JobQueue    *jobqueue.Queue              // nil-safe: job endpoints return 503 if nil
-	Renderer    report.Renderer              // nil-safe: PDF endpoints return 503 if nil
-	Audit       *migrationdb.AuditLogger     // nil-safe: audit logging degrades if nil
+	IntelClient intelligence.Scorer      // nil-safe: handlers degrade to template-only if nil
+	Analyzer    intelligence.Analyzer    // nil-safe: pattern detection degrades if nil
+	Hub         *ws.Hub                  // WebSocket hub for broadcasting events (nil-safe)
+	PlanConfig  *reconciler.PlanConfig   // nil-safe: reconciliation degrades if not loaded
+	JobQueue    *jobqueue.Queue          // nil-safe: job endpoints return 503 if nil
+	Renderer    report.Renderer          // nil-safe: PDF endpoints return 503 if nil
+	Audit       *migrationdb.AuditLogger // nil-safe: audit logging degrades if nil
 }
 
 // NewHandler creates a Handler with the given database connection.
@@ -162,6 +162,13 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/profiling-runs", h.ListProfilingRuns)
 	mux.HandleFunc("GET /api/v1/migration/profiling-runs/{run_id}", h.GetProfilingRunHandler)
 	mux.HandleFunc("GET /api/v1/migration/profiling-runs/{run_id}/inventory", h.GetProfilingInventory)
+
+	// Parallel runs (M03c)
+	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/parallel-runs", h.CreateParallelRun)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/parallel-runs", h.ListParallelRuns)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/parallel-runs/{runId}", h.GetParallelRun)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/parallel-runs/{runId}/results", h.GetParallelRunResults)
+	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/parallel-runs/{runId}/cancel", h.CancelParallelRun)
 }
 
 // broadcast sends a WebSocket event to all clients in an engagement room.

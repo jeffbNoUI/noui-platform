@@ -40,13 +40,20 @@ type approvedMapping struct {
 	CanonicalColumn string
 }
 
+// BroadcastFunc is a callback for broadcasting WebSocket events from executors.
+type BroadcastFunc func(engagementID, eventType string, payload interface{})
+
 // ParallelRunExecutor implements the worker.Executor interface for parallel run
 // comparison jobs. It compares field values between a legacy source database and
 // the canonical (migration target) database for sampled or all members.
-type ParallelRunExecutor struct{}
+type ParallelRunExecutor struct {
+	// Broadcast is set by the Worker after construction to enable WebSocket events.
+	// Nil-safe: broadcasts are no-ops when nil.
+	Broadcast BroadcastFunc
+}
 
 // Execute implements the Executor interface for parallel run comparison.
-func (e *ParallelRunExecutor) Execute(ctx context.Context, job *jobqueue.Job, q *jobqueue.Queue, migrationDB *sql.DB) error {
+func (e *ParallelRunExecutor) Execute(ctx context.Context, job *jobqueue.Job, q *jobqueue.Queue, migrationDB *sql.DB) (execErr error) {
 	if err := q.MarkRunning(ctx, job.JobID); err != nil {
 		return fmt.Errorf("mark running: %w", err)
 	}
@@ -63,10 +70,28 @@ func (e *ParallelRunExecutor) Execute(ctx context.Context, job *jobqueue.Job, q 
 		"sample_rate", input.SampleRate,
 	)
 
+	// Deferred failure broadcast — fires only when Execute returns a non-nil error
+	// after the input has been parsed and we know the engagement context.
+	defer func() {
+		if execErr != nil {
+			e.broadcastEvent(input.EngagementID, "parallel_run_failed", map[string]interface{}{
+				"run_id":        input.RunID,
+				"engagement_id": input.EngagementID,
+				"error":         execErr.Error(),
+			})
+		}
+	}()
+
 	// Transition parallel_run status to RUNNING.
 	if _, err := db.UpdateParallelRunStatus(migrationDB, input.RunID, models.ParallelRunRunning); err != nil {
 		return fmt.Errorf("update run status to RUNNING: %w", err)
 	}
+
+	// Broadcast parallel_run_started event.
+	e.broadcastEvent(input.EngagementID, "parallel_run_started", map[string]string{
+		"run_id":        input.RunID,
+		"engagement_id": input.EngagementID,
+	})
 
 	// CONTINUOUS mode is not yet implemented — requires CDC integration.
 	if input.ComparisonMode == string(models.ComparisonModeContinuous) {
@@ -213,6 +238,13 @@ func (e *ParallelRunExecutor) Execute(ctx context.Context, job *jobqueue.Job, q 
 		if shouldReportProgress(i, len(memberIDs)) {
 			pct := int(float64(i+1) / float64(len(memberIDs)) * 100)
 			_ = q.UpdateProgress(ctx, job.JobID, pct)
+
+			// Broadcast parallel_run_progress event.
+			e.broadcastEvent(input.EngagementID, "parallel_run_progress", map[string]interface{}{
+				"run_id":        input.RunID,
+				"engagement_id": input.EngagementID,
+				"progress":      pct,
+			})
 		}
 	}
 
@@ -244,6 +276,16 @@ func (e *ParallelRunExecutor) Execute(ctx context.Context, job *jobqueue.Job, q 
 	if _, err := db.UpdateParallelRunStatus(migrationDB, input.RunID, models.ParallelRunCompleted); err != nil {
 		return fmt.Errorf("update run status to COMPLETED: %w", err)
 	}
+
+	// Broadcast parallel_run_completed event with summary.
+	e.broadcastEvent(input.EngagementID, "parallel_run_completed", map[string]interface{}{
+		"run_id":        input.RunID,
+		"engagement_id": input.EngagementID,
+		"members":       len(memberIDs),
+		"matches":       matchCount,
+		"mismatches":    mismatchCount,
+		"errors":        errorCount,
+	})
 
 	result, _ := json.Marshal(map[string]interface{}{
 		"run_id":     input.RunID,
@@ -548,6 +590,15 @@ func shouldReportProgress(index, total int) bool {
 		return true
 	}
 	return false
+}
+
+// broadcastEvent sends a WebSocket event via the executor's Broadcast callback.
+// Nil-safe: no-op if Broadcast is nil.
+func (e *ParallelRunExecutor) broadcastEvent(engagementID, eventType string, payload interface{}) {
+	if e.Broadcast == nil {
+		return
+	}
+	e.Broadcast(engagementID, eventType, payload)
 }
 
 // markRunFailed is a helper to update parallel_run status to FAILED, ignoring transition errors.
