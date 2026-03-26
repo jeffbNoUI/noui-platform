@@ -1,5 +1,91 @@
 # noui-platform — Build History
 
+## Session 40: Migration Overhaul Part 2 — Sprint B: 5-Level Profiling (2026-03-25)
+
+**Branch:** `claude/charming-bouman`
+
+### What Was Done
+
+**1. Sprint B: 5-Level Progressive Profiling Data Model + Levels 1-2 (17 files, +2,400 lines)**
+
+Replaced the generic ISO 8000 6-dimension quality profiler with a 5-level progressive system where Level 4 (canonical coverage report) is the primary deliverable. This sprint implements Levels 1-2.
+
+- **Migration 042:** `profiling_run`, `source_table`, `source_column` tables with indexes and unique constraints
+- **DB layer:** 15 CRUD functions with `scanProfilingRun`/`scanSourceColumn` DRY helpers, following `engagement.go` pattern
+- **Profiler:** 9 named pension pattern detectors (CYYMMDD, YYYYMMDD, SSN, IMPLICIT_2DEC, etc.), driver-aware sampling strategy (PostgreSQL TABLESAMPLE BERNOULLI + MSSQL SYSTEM)
+- **L1 executor:** Table/column discovery from source DB via `information_schema`, catalog-based row estimates, heuristic table classification, primary key detection
+- **L2 executor:** Column-level statistics (null%, distinct%, min/max, mean/stddev, top-20 values, sample values), pension pattern matching, context cancellation support
+- **Level orchestrator:** `ProfilingLevel` enum (1-5) with `JobType()`, `RunStatus()`, `NextLevel()` methods
+- **API:** 4 endpoints (initiate run, list runs, get run, get inventory)
+- **Wiring:** L1/L2 executors registered in embedded worker via `profiler.Level1Inventory.JobType()` constants
+
+**2. Execution approach: Background agent in isolated worktree**
+- Full plan executed autonomously by a single background agent
+- Zero human interaction during implementation
+- All 11 tasks completed, 10 commits, merged cleanly
+
+**3. Three /simplify cycles — security + code quality + DRY**
+- **Cycle 1 (Security):** Fixed SQL injection in `RowCountEstimateQuery` (switched to parameterized `$1/$2`), added `validSQLIdent` regex validation to `quoteIdentL1`/`quoteColName`, added `rows.Err()` checks, failure broadcast from background goroutine, job type constants
+- **Cycle 2 (DRY):** Extracted shared `ProfilingJobInput` base struct, shared `openSourceDB` helper, exported `QuoteIdent`/`ParseSchemaTable` directly (removed wrapper indirection), tightened IMPLICIT_2DEC regex
+- **Cycle 3 (DB DRY):** Extracted `scanProfilingRun` + `scanSourceColumn` helpers with column constants
+
+### Key Decisions
+
+- **Structural/algorithmic only** — no AI integration this sprint (deferred to Sprint C)
+- **L1 classification** uses heuristic substring matching (same as existing `conceptTagHeuristics`)
+- **L3-L5 not implemented** — run stops at `level_reached = 2`
+- **Existing `quality_profile` table retained** for backward compat
+
+### Verification
+
+- Go migration: 13/13 packages pass (`-short` mode)
+- Go vet: clean
+- Pre-commit hooks: gofmt + tests all green on every commit
+- 438 tests passing across migration service
+
+### Files Changed (17 new + 9 modified in Sprint B, +3 simplify commits)
+
+| File | Change |
+|------|--------|
+| `db/migrations/042_profiling_run.sql` | DDL: profiling_run, source_table, source_column |
+| `platform/migration/models/types.go` | +131 lines: ProfilingRun, SourceTableProfile, SourceColumnProfile types |
+| `platform/migration/db/profiling.go` | 438 lines: 15 CRUD functions with scan helpers |
+| `platform/migration/db/profiling_test.go` | 19 tests for DB layer |
+| `platform/migration/profiler/pension_patterns.go` | 9 named regex pension detectors |
+| `platform/migration/profiler/pension_patterns_test.go` | 9 pattern tests |
+| `platform/migration/profiler/sampling.go` | Driver-aware TABLESAMPLE strategy |
+| `platform/migration/profiler/sampling_test.go` | 12 sampling tests |
+| `platform/migration/profiler/levels.go` | ProfilingLevel enum, JobType(), RunStatus() |
+| `platform/migration/profiler/levels_test.go` | 8 level tests |
+| `platform/migration/worker/profile_l1_executor.go` | L1: column discovery, row estimation, classification |
+| `platform/migration/worker/profile_l1_executor_test.go` | 4 L1 tests |
+| `platform/migration/worker/profile_l2_executor.go` | L2: column stats, pension patterns, sampling |
+| `platform/migration/worker/profile_l2_executor_test.go` | 4 L2 tests |
+| `platform/migration/api/profiling_handlers.go` | 4 API endpoints |
+| `platform/migration/api/handlers.go` | Route registration |
+| `platform/migration/main.go` | Executor wiring |
+| `platform/migration/profiler/dimensions.go` | Exported QuoteIdent directly |
+| `platform/migration/profiler/patterns.go` | Exported ParseSchemaTable directly |
+| `docs/plans/2026-03-25-profiling-sprint-b-design.md` | Design doc |
+| `docs/plans/2026-03-25-profiling-sprint-b-plan.md` | Implementation plan |
+
+### Deferred to Sprint C
+
+- AI integration: classify-tables, classify-columns, score-coverage, propose-codebook
+- Levels 3-5: dependency analysis, canonical coverage scoring, rule signals
+- Mapping library + feedback loop
+- Performance: batch column inserts, source DB connection pooling, L2 query batching
+
+### What's Next
+
+- **Sprint C (from MIGRATION_OVERHAUL.md):** Coverage scoring + mapping library + AI boost
+  - Migrations 044-047: dependencies, coverage, rule signals, library
+  - Seed canonical_schema_field from `domains/pension/schema/`
+  - Levels 3-5 executors
+  - Coverage report API + RE review actions
+  - AI integration stubs (graceful degradation)
+- Merge this PR, then continue with Sprint C in a new branch
+
 ## Session 39: Contribution Model UI + DQ Suppression (2026-03-25)
 
 **Branch:** `claude/dreamy-euclid`
