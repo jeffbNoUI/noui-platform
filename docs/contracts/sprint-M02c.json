@@ -58,7 +58,7 @@
   "files_hint": [
     "platform/migration/api/job_handlers.go",
     "platform/migration/api/job_handlers_test.go",
-    "platform/migration/api/routes.go",
-    "platform/migration/db/job_queries.go"
+    "platform/migration/api/handlers.go",
+    "platform/migration/db/job_queue.go"
   ]
 }

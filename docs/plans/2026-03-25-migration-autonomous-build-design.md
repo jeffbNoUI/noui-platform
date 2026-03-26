@@ -121,11 +121,17 @@ Standard rubric applied to every build contract. Contracts may add domain-specif
 
 ## 6. Contract Dependency Map
 
+### Foundation (must complete first)
+```
+M00 (RLS policies on migration tables) ──> M02a-d (job queue infrastructure)
+```
+
 ### Critical Path (sequential)
 ```
-M01 (attention queue mutations) ──┐
-                                   ├──> M03a-c (parallel run) ──> M04a-b (cutover) ──> M05a-c (monitoring)
+M01 (attention queue backend) ──> M01b (attention queue frontend)
+                                   ├──> M03a-c (parallel run) ──> M04a-c (cutover) ──> M05a-c (monitoring)
 M02a-d (job queue infrastructure) ┘
+     ↑ depends on M02c (API), NOT M02d (frontend)
 ```
 
 ### Independent Track (can run in parallel with critical path)
@@ -140,7 +146,7 @@ M10a-b (intelligence pattern refinement)
 ### Dependent on Critical Path
 ```
 M11a-c (CDC infrastructure) — depends on M05
-M12a-b (frontend polish + E2E hardening) — depends on M01-M07
+M12a-b (frontend polish + E2E hardening) — depends on M01b, M02d, M05c, M07c (frontend contracts only)
 ```
 
 ### Checkpoints and Integration
@@ -156,17 +162,24 @@ INT-02: after M12b (full system integration test)
 
 ## 7. Full Contract Inventory
 
-### Critical Path (~45h)
+### Foundation
 
 | Contract | Goal | Layer | Files | Effort | Depends On |
 |----------|------|-------|-------|--------|------------|
-| M01 | Attention queue resolve/defer mutations | Go + Frontend | 4 | 4h | — |
-| M02a | Job queue: DB schema + Go models | Go/DB | 3 | 3h | — |
+| M00 | RLS policies on all migration tables | DB | 2 | 3h | — |
+
+### Critical Path (~50h)
+
+| Contract | Goal | Layer | Files | Effort | Depends On |
+|----------|------|-------|-------|--------|------------|
+| M01 | Attention queue resolve/defer (backend) | Go | 3 | 3h | — |
+| M01b | Attention queue resolve/defer (frontend) | Frontend | 3 | 2h | M01 |
+| M02a | Job queue: DB schema + Go models | Go/DB | 4 | 3h | M00 |
 | M02b | Job queue: execution engine + retry | Go | 4 | 4h | M02a |
 | M02c | Job queue: API handlers + monitoring | Go | 4 | 3h | M02b |
-| M02d | Job queue: frontend status panel | Frontend | 3 | 2h | M02c |
+| M02d | Job queue: frontend status panel | Frontend | 4 | 2h | M02c |
 | CP-01 | Regression checkpoint: full suite | — | 0 | 1h | M02d |
-| M03a | Parallel run: DB schema + models | Go/DB | 3 | 3h | M01, M02d |
+| M03a | Parallel run: DB schema + models | Go/DB | 3 | 3h | M01, M02c |
 | M03b | Parallel run: execution engine | Go | 4 | 4h | M03a |
 | M03c | Parallel run: API handlers + WebSocket | Go | 4 | 3h | M03b |
 | M04a | Certification: checklist + gate logic | Go | 3 | 3h | M03c |
@@ -201,11 +214,11 @@ INT-02: after M12b (full system integration test)
 | M11a | CDC: change tracking schema + models | Go/DB | 3 | 5h | M05c |
 | M11b | CDC: delta merge + conflict resolution | Go | 4 | 6h | M11a |
 | M11c | CDC: incremental load pipeline | Go | 4 | 5h | M11b |
-| M12a | Frontend: polish all migration panels | Frontend | 5 | 4h | M01-M07 |
+| M12a | Frontend: polish all migration panels | Frontend | 5 | 4h | M01b, M02d, M05c, M07c |
 | M12b | Frontend: E2E test hardening | Frontend | 4 | 4h | M12a |
 | INT-02 | Integration: full system test | Tests | 2 | 2h | M12b |
 
-### Total: 30 build + 3 checkpoint + 2 integration = 35 contracts (~110h)
+### Total: 33 build + 3 checkpoint + 2 integration = 38 contracts (~120h)
 
 ---
 
@@ -257,14 +270,36 @@ The autonomous build is complete when:
 
 ## 11. Iteration Plan
 
-**Night 1 (tonight):** M01, M02a, M02b, M02c, M02d — attention queue + job queue foundation
-**Night 2:** CP-01, M03a, M03b, M03c — checkpoint + parallel run
-**Night 3:** M04a, M04b, INT-01 — cutover + integration test
-**Night 4:** M05a, M05b, M05c, CP-02 — monitoring + checkpoint
-**Night 5+:** Independent track contracts (can be parallelized)
+**Night 1 (tonight):** M00 (RLS), M01 (attention backend) — can run in parallel. Then M01b, M02a sequentially.
+**Night 2:** M02b, M02c, M02d, CP-01 — job queue engine through checkpoint
+**Night 3:** M03a, M03b, M03c — parallel run
+**Night 4:** M04a, M04b, INT-01 — cutover + integration test
+**Night 5:** M05a, M05b, M05c, CP-02 — monitoring + checkpoint
+**Night 6+:** Independent track contracts (can be parallelized)
 
 Adjust based on Night 1 learnings.
 
 ---
 
+## 12. Known Gaps (Deferred)
+
+Identified during independent review (2026-03-25). These are acknowledged gaps not covered by the current contract inventory:
+
+| Gap | Status | Rationale |
+|-----|--------|-----------|
+| In-flight workflow migration (mid-stream retirement apps, DROs) | Deferred | Requires case management service integration. Add contracts when case management is built. |
+| Performance optimization for 250K+ members | Deferred (Phase 5) | First client engagement unlikely to hit this scale. Profile first, optimize second. |
+| Template governance as client base grows | Deferred (Phase 5) | Requires 3+ client engagements to be meaningful. |
+| k-anonymity on shared corpus | Add to M10b | Add as acceptance criterion in M10b contract. |
+| Data archival/cleanup post-migration | Add to independent track | Low priority but needed for production hygiene. |
+
+## 13. Review History
+
+| Date | Reviewer | Critical Findings | Resolution |
+|------|----------|------------------|------------|
+| 2026-03-25 | 3 independent reviewer agents | C1: /validate missing, C2: wrong attention domain model, C3: no session sync, C4: no RLS, C5: simplify diff issue | All 5 CRITICAL fixed. 12 IMPORTANT fixed. Design doc, contracts, and SESSION_DISPATCH.md updated. |
+
+---
+
 *Generated 2026-03-25 — NoUI Platform Migration Autonomous Build*
+*Reviewed 2026-03-25 — 3 independent reviewer agents, 5 CRITICAL + 12 IMPORTANT findings resolved*

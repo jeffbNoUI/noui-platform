@@ -1,0 +1,54 @@
+{
+  "sprint": 2,
+  "goal": "Attention queue frontend — wire resolve/defer buttons to API endpoints",
+  "depends_on": ["M01"],
+  "layer": "frontend",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "migrationApi.ts extended with resolveAttentionItem(engagementId, itemId, source, note) and deferAttentionItem(engagementId, itemId, source, note) functions",
+      "verification": "cd frontend && npm test -- --run -t migrationApi"
+    },
+    {
+      "id": "AC-2",
+      "description": "AttentionQueue component resolve button calls resolveAttentionItem with correct source from item.source field. Optimistic update removes item from list, rolls back on error.",
+      "verification": "cd frontend && npm test -- --run -t AttentionQueue"
+    },
+    {
+      "id": "AC-3",
+      "description": "AttentionQueue component defer button calls deferAttentionItem. Optimistic update moves item to deferred state, rolls back on error.",
+      "verification": "cd frontend && npm test -- --run -t AttentionQueue"
+    },
+    {
+      "id": "AC-4",
+      "description": "Resolve/defer buttons only visible to users with editor or owner role",
+      "verification": "cd frontend && npm test -- --run -t AttentionQueue"
+    },
+    {
+      "id": "AC-5",
+      "description": "Resolution note input — small text field shown on resolve/defer click before confirming the action",
+      "verification": "cd frontend && npm test -- --run -t AttentionQueue"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "Resolve/defer buttons only visible to editor+ roles (check user role from auth context)",
+      "source field passed correctly from AttentionItem data — not hardcoded"
+    ],
+    "high": [
+      "Optimistic update with rollback on error",
+      "Loading state on buttons during API call",
+      "Error toast shown on failure with user-friendly message (no stack traces)"
+    ],
+    "medium": [
+      "Keyboard accessibility — resolve/defer triggerable via Enter key"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "frontend/src/lib/migrationApi.ts",
+    "frontend/src/components/migration/attention/AttentionQueue.tsx",
+    "frontend/src/components/migration/attention/__tests__/AttentionQueue.test.tsx"
+  ]
+}

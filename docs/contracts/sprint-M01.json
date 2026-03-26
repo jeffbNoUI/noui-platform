@@ -1,53 +1,59 @@
 {
   "sprint": 1,
-  "goal": "Attention queue resolve/defer mutations — backend endpoints + frontend wiring",
+  "goal": "Attention queue resolve/defer mutations — backend endpoints dispatching to underlying tables",
   "depends_on": [],
-  "layer": "go+frontend",
+  "layer": "go",
   "acceptance_criteria": [
     {
       "id": "AC-1",
-      "description": "PATCH /api/v1/migration/engagements/{id}/attention/{itemId}/resolve endpoint updates exception disposition to RESOLVED with resolution_note and resolved_by from JWT",
+      "description": "PATCH /api/v1/migration/engagements/{id}/attention/{itemId}/resolve endpoint accepts {source: 'RISK'|'RECONCILIATION', resolution_note: string}. For RISK source, sets migration.risk.status to 'CLOSED' and records resolved_by from JWT sub claim. For RECONCILIATION source, sets migration.reconciliation.resolved to true with resolved_by and resolution_note.",
       "verification": "cd platform/migration && go test ./api/... -run TestResolveAttention -count=1 -v"
     },
     {
       "id": "AC-2",
-      "description": "PATCH /api/v1/migration/engagements/{id}/attention/{itemId}/defer endpoint updates exception disposition to DEFERRED with resolution_note and resolved_by from JWT",
+      "description": "PATCH /api/v1/migration/engagements/{id}/attention/{itemId}/defer endpoint accepts {source: 'RISK'|'RECONCILIATION', resolution_note: string}. For RISK source, sets migration.risk.status to 'DEFERRED'. For RECONCILIATION source, sets migration.reconciliation.resolved to false with resolution_note recording deferral reason.",
       "verification": "cd platform/migration && go test ./api/... -run TestDeferAttention -count=1 -v"
     },
     {
       "id": "AC-3",
-      "description": "Only PENDING items can be resolved or deferred — attempting on a non-PENDING item returns 409 Conflict",
-      "verification": "cd platform/migration && go test ./api/... -run TestResolveNonPending -count=1 -v"
+      "description": "Only unresolved items can be resolved or deferred — attempting on an already-resolved risk (status=CLOSED) or reconciliation (resolved=true) returns 409 Conflict",
+      "verification": "cd platform/migration && go test ./api/... -run TestResolveAlreadyResolved -count=1 -v"
     },
     {
       "id": "AC-4",
+      "description": "Invalid source value returns 400 Bad Request. Item not found returns 404.",
+      "verification": "cd platform/migration && go test ./api/... -run TestAttentionValidation -count=1 -v"
+    },
+    {
+      "id": "AC-5",
       "description": "Both endpoints require auth middleware and editor-or-above role. Unauthorized returns 403.",
       "verification": "cd platform/migration && go test ./api/... -run TestAttentionUnauthorized -count=1 -v"
     },
     {
-      "id": "AC-5",
-      "description": "WebSocket broadcasts attention_resolved and attention_deferred events to engagement members",
+      "id": "AC-6",
+      "description": "WebSocket broadcasts attention_resolved and attention_deferred events with item ID and source to engagement members",
       "verification": "cd platform/migration && go test ./api/... -run TestAttentionWebSocket -count=1 -v"
     },
     {
-      "id": "AC-6",
-      "description": "Frontend AttentionQueue component wires resolve/defer buttons to API endpoints with optimistic update and error rollback",
-      "verification": "cd frontend && npm test -- --run -t AttentionQueue"
+      "id": "AC-7",
+      "description": "Activity log event created for each resolve/defer action with actor, item ID, source, and resolution_note",
+      "verification": "cd platform/migration && go test ./api/... -run TestAttentionEvent -count=1 -v"
     }
   ],
   "regression_gates": [],
   "design_review_rubric": {
     "critical": [
       "PATCH endpoints use auth middleware — editor or owner role required",
-      "Disposition update is tenant-scoped via RLS on exception table",
-      "Only PENDING items can transition — enforce at DB query level, not just handler",
-      "resolved_by comes from JWT sub claim, not request body"
+      "Resolve/defer dispatches to correct underlying table based on source field (risk vs reconciliation)",
+      "RLS enforced — risk table scoped via engagement_id, reconciliation via batch.engagement_id join",
+      "resolved_by comes from JWT sub claim, not request body",
+      "Only unresolved items can transition — enforce at DB query level with WHERE clause, not just handler"
     ],
     "high": [
       "WebSocket broadcasts attention_resolved/attention_deferred to engagement members",
-      "Frontend uses optimistic update with rollback on 4xx/5xx",
-      "Tests cover: resolve success, defer success, resolve non-pending (409), unauthorized (403), not-found (404)",
-      "Activity log event created for each resolve/defer action"
+      "Tests cover: resolve RISK success, resolve RECONCILIATION success, defer both, already-resolved (409), unauthorized (403), not-found (404), invalid source (400)",
+      "Activity log event created for audit trail",
+      "No new migration file needed — operates on existing risk and reconciliation tables"
     ],
     "medium": [
       "Bulk resolve/defer endpoint for multiple items in one request"
@@ -57,8 +63,6 @@
   "files_hint": [
     "platform/migration/api/attention_handlers.go",
     "platform/migration/api/attention_handlers_test.go",
-    "platform/migration/db/attention.go",
-    "frontend/src/components/migration/attention/AttentionQueue.tsx",
-    "frontend/src/components/migration/attention/AttentionQueue.test.tsx"
+    "platform/migration/db/attention.go"
   ]
 }

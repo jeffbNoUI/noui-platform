@@ -1,7 +1,7 @@
 {
   "sprint": 2,
   "goal": "Job queue: DB schema + Go models for persistent task queue",
-  "depends_on": [],
+  "depends_on": ["M00"],
   "layer": "go+db",
   "acceptance_criteria": [
     {
@@ -52,7 +52,7 @@
   },
   "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
   "files_hint": [
-    "platform/migration/db/migrations/042_job_queue.sql",
+    "platform/migration/db/migrations/043_job_queue.sql",
     "platform/migration/models/job.go",
     "platform/migration/db/job_queue.go",
     "platform/migration/db/job_queue_test.go"
