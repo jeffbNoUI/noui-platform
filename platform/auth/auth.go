@@ -243,3 +243,13 @@ func UserID(ctx context.Context) string {
 	v, _ := ctx.Value(keyUserID).(string)
 	return v
 }
+
+// WithTestClaims returns a context with the given auth claims injected.
+// For use in tests only — allows testing handlers that check roles without
+// going through JWT validation.
+func WithTestClaims(ctx context.Context, tenantID, role, userID string) context.Context {
+	ctx = context.WithValue(ctx, keyTenantID, tenantID)
+	ctx = context.WithValue(ctx, keyUserRole, role)
+	ctx = context.WithValue(ctx, keyUserID, userID)
+	return ctx
+}

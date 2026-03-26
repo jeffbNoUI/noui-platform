@@ -143,8 +143,10 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	// Job queue
 	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/jobs", h.EnqueueJob)
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/jobs", h.ListJobs)
-	mux.HandleFunc("GET /api/v1/migration/jobs/{job_id}", h.GetJob)
-	mux.HandleFunc("POST /api/v1/migration/jobs/{job_id}/cancel", h.CancelJob)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/jobs/summary", h.JobSummary)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/jobs/{job_id}", h.GetJob)
+	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/jobs/{job_id}/cancel", h.CancelJob)
+	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/jobs/{job_id}/retry", h.RetryJob)
 	mux.HandleFunc("GET /api/v1/migration/workers", h.WorkerHealth)
 
 	// Progressive profiling (5-level model)
