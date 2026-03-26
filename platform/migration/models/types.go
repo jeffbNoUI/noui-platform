@@ -357,23 +357,48 @@ type MigrationException struct {
 
 // CertificationRecord represents a parallel run Go/No-Go certification.
 type CertificationRecord struct {
-	ID            string                 `json:"id"`
-	EngagementID  string                 `json:"engagement_id"`
-	GateScore     float64                `json:"gate_score"`
-	P1Count       int                    `json:"p1_count"`
-	ChecklistJSON map[string]interface{} `json:"checklist_json"`
-	CertifiedBy   string                 `json:"certified_by"`
-	CertifiedAt   time.Time              `json:"certified_at"`
-	Notes         string                 `json:"notes,omitempty"`
-	CreatedAt     time.Time              `json:"created_at"`
+	ID            string          `json:"id"`
+	EngagementID  string          `json:"engagement_id"`
+	GateScore     float64         `json:"gate_score"`
+	P1Count       int             `json:"p1_count"`
+	ChecklistJSON map[string]any  `json:"checklist_json"`
+	AutoEvaluated json.RawMessage `json:"auto_evaluated,omitempty"`
+	CertifiedBy   string          `json:"certified_by"`
+	CertifiedAt   time.Time       `json:"certified_at"`
+	Notes         string          `json:"notes,omitempty"`
+	CreatedAt     time.Time       `json:"created_at"`
 }
 
 // CertifyRequest is the JSON body for creating a certification record.
+// Auto-evaluated items (gate_score, p1_count) are computed server-side.
+// The request only carries human-attested items.
 type CertifyRequest struct {
-	GateScore float64                `json:"gate_score"`
-	P1Count   int                    `json:"p1_count"`
-	Checklist map[string]interface{} `json:"checklist"`
-	Notes     string                 `json:"notes,omitempty"`
+	StakeholderSignoff bool   `json:"stakeholder_signoff"`
+	RollbackPlan       bool   `json:"rollback_plan"`
+	Notes              string `json:"notes,omitempty"`
+}
+
+// CertificationListResponse is the paginated response for listing certifications.
+type CertificationListResponse struct {
+	Certifications []CertificationRecord `json:"certifications"`
+	Total          int                   `json:"total"`
+	Page           int                   `json:"page"`
+	PerPage        int                   `json:"per_page"`
+}
+
+// ChecklistItem represents one item in the certification checklist.
+type ChecklistItem struct {
+	Key         string `json:"key"`
+	Label       string `json:"label"`
+	Passed      bool   `json:"passed"`
+	AutoEval    bool   `json:"auto_eval"`
+	Description string `json:"description,omitempty"`
+}
+
+// ChecklistEvaluation holds the full evaluation result for a certification attempt.
+type ChecklistEvaluation struct {
+	Items     []ChecklistItem `json:"items"`
+	AllPassed bool            `json:"all_passed"`
 }
 
 // CreateBatchRequest is the JSON body for creating a transformation batch.
