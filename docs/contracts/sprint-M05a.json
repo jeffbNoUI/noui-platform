@@ -1,0 +1,74 @@
+{
+  "sprint": 11,
+  "goal": "Post-go-live: drift detection engine for schema and data changes in source system",
+  "depends_on": ["M04b"],
+  "layer": "go",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "DriftDetectionRun model in models/types.go: run_id (UUID), engagement_id, status (PENDING|RUNNING|COMPLETED|FAILED), drift_type ('SCHEMA'|'DATA'|'BOTH'), baseline_snapshot_id (references the schema_version active at go-live), detected_changes (int count), critical_changes (int count — changes affecting mapped fields), started_at, completed_at, error_message. DriftRecord model: record_id, run_id, change_type ('COLUMN_ADDED'|'COLUMN_REMOVED'|'COLUMN_TYPE_CHANGED'|'TABLE_ADDED'|'TABLE_REMOVED'|'ROW_COUNT_DRIFT'), entity (table or column name), detail (JSONB — old_value, new_value, drift_magnitude for row counts), severity ('CRITICAL'|'HIGH'|'MEDIUM'|'LOW'), affects_mapping (bool — true if the changed column is referenced in field_mapping for this engagement), created_at.",
+      "verification": "cd platform/migration && go test ./models/... -run TestDriftModels -count=1 -v"
+    },
+    {
+      "id": "AC-2",
+      "description": "Migration 050_drift_detection.sql creates migration.drift_detection_run and migration.drift_record tables. drift_detection_run: standard UUID PK, engagement_id FK, status CHECK constraint, timestamps. drift_record: UUID PK, run_id FK with ON DELETE CASCADE, change_type CHECK constraint, severity CHECK constraint, detail JSONB. RLS Tier B pattern on both tables (engagement_id → engagement → tenant_id). Index on drift_detection_run(engagement_id, status) and drift_record(run_id, severity).",
+      "verification": "cd platform/migration && go test ./db/... -run TestDriftDetectionRLS -count=1 -v"
+    },
+    {
+      "id": "AC-3",
+      "description": "Schema drift detector: DetectSchemaDrift(db *sql.DB, sourceDB *sql.DB, engagementID string, baselineVersionID string) ([]DriftRecord, error). Connects to source database using engagement's source_connection. Runs information_schema discovery (same pattern as profiler L1). Compares current source schema against the baseline schema_version fields (from M08a schema_version_field table). Produces DriftRecord entries for: new columns not in baseline, removed columns that were in baseline, type changes on existing columns, new tables, removed tables. Sets affects_mapping=true for any column referenced in migration.field_mapping WHERE engagement_id matches. Severity assignment: CRITICAL if affects_mapping AND column is in an AGREED mapping, HIGH if affects_mapping but mapping is PROPOSED, MEDIUM for unmapped structural changes, LOW for new additions.",
+      "verification": "cd platform/migration && go test ./db/... -run TestDetectSchemaDrift -count=1 -v"
+    },
+    {
+      "id": "AC-4",
+      "description": "Row count drift detector: DetectRowCountDrift(db *sql.DB, sourceDB *sql.DB, engagementID string) ([]DriftRecord, error). For each table in the engagement's source_table inventory (from profiling), queries current COUNT(*) (or catalog estimate for tables > 100K rows) and compares against the stored row_count from the most recent profiling run. Produces a DriftRecord with change_type=ROW_COUNT_DRIFT if the delta exceeds 10% (configurable via DriftRowCountThresholdPct constant, default 0.10). detail JSONB contains: baseline_count, current_count, delta_pct. Severity: CRITICAL if delta > 50%, HIGH if delta > 25%, MEDIUM if delta > 10%.",
+      "verification": "cd platform/migration && go test ./db/... -run TestDetectRowCountDrift -count=1 -v"
+    },
+    {
+      "id": "AC-5",
+      "description": "POST /api/v1/migration/engagements/{id}/drift-detection initiates a drift detection run. Request body: {drift_type: 'SCHEMA'|'DATA'|'BOTH'} (default 'BOTH'). Validates engagement is in GO_LIVE status — returns 409 if not. Creates DriftDetectionRun in PENDING status, enqueues a job via h.JobQueue with job_type='drift_detection'. Returns 202 Accepted with the run record. The drift detection executor (registered in worker) picks up the job, runs the appropriate detectors, inserts DriftRecord entries, updates run status to COMPLETED (or FAILED with error_message). WebSocket broadcast: drift_detection_completed with engagement_id, run_id, detected_changes count, critical_changes count.",
+      "verification": "cd platform/migration && go test ./api/... -run TestDriftDetectionEndpoint -count=1 -v"
+    },
+    {
+      "id": "AC-6",
+      "description": "GET /api/v1/migration/engagements/{id}/drift-detection returns paginated list of drift runs (newest first, ?page=, ?per_page=). GET /api/v1/migration/engagements/{id}/drift-detection/{runId} returns a single run with all its DriftRecord entries. Supports ?severity= filter on records (e.g., ?severity=CRITICAL). GET /api/v1/migration/engagements/{id}/drift-detection/{runId}/records returns just the records with pagination. If critical_changes > 0 on a completed run, an attention_item is auto-created (if attention system is available) with source='DRIFT', priority='P1', summary describing the critical schema changes.",
+      "verification": "cd platform/migration && go test ./api/... -run TestDriftDetectionListEndpoints -count=1 -v"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "Source DB connection uses engagement's stored source_connection — no credentials in request body",
+      "Drift detection only available in GO_LIVE status — prevents running on in-progress migrations",
+      "Schema comparison uses schema_version baseline from M08a — not a hardcoded snapshot",
+      "affects_mapping flag cross-references field_mapping table — critical for prioritizing drift response",
+      "Source DB queries use read-only connection (no writes to source system)",
+      "RLS Tier B on both tables — tenant isolation enforced"
+    ],
+    "high": [
+      "Row count drift uses catalog estimates for large tables (> 100K rows) — avoids expensive COUNT(*)",
+      "Drift detection runs via job queue — non-blocking, async execution with WebSocket notification",
+      "Severity assignment is deterministic and documented — CRITICAL/HIGH/MEDIUM/LOW thresholds",
+      "Auto-creation of attention items for critical drift — integrates with existing attention system",
+      "Source DB connection errors produce FAILED run with descriptive error_message, not 500"
+    ],
+    "medium": [
+      "DriftRowCountThresholdPct exported as a named constant (default 0.10)",
+      "Drift records include full detail JSONB — baseline_count, current_count for row drift; old_type, new_type for schema drift",
+      "ON DELETE CASCADE on drift_record → drift_detection_run — cleanup is automatic"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "platform/migration/db/migrations/050_drift_detection.sql",
+    "platform/migration/db/drift.go",
+    "platform/migration/db/drift_test.go",
+    "platform/migration/api/drift_handlers.go",
+    "platform/migration/api/drift_handlers_test.go",
+    "platform/migration/worker/drift_executor.go",
+    "platform/migration/worker/drift_executor_test.go",
+    "platform/migration/models/types.go",
+    "platform/migration/api/handlers.go",
+    "platform/migration/main.go"
+  ]
+}

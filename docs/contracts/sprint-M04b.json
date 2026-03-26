@@ -1,0 +1,71 @@
+{
+  "sprint": 10,
+  "goal": "Cutover: execution engine, rollback mechanism, and go-live status tracking",
+  "depends_on": ["M04a"],
+  "layer": "go",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "New engagement statuses added: StatusCutoverInProgress ('CUTOVER_IN_PROGRESS') and StatusGoLive ('GO_LIVE'). ValidTransitions updated: StatusComplete can transition to StatusCutoverInProgress, StatusCutoverInProgress can transition to StatusGoLive or StatusComplete (rollback). StatusGoLive is terminal — no further transitions. The EngagementStatus type, constants, and ValidTransitions map in models/types.go are updated accordingly.",
+      "verification": "cd platform/migration && go test ./models/... -run TestCutoverTransitions -count=1 -v"
+    },
+    {
+      "id": "AC-2",
+      "description": "CutoverPlan model: new struct in models/types.go with fields plan_id (UUID), engagement_id, status (DRAFT|APPROVED|EXECUTING|COMPLETED|ROLLED_BACK|FAILED), steps (JSONB array of CutoverStep — each has step_id, label, order, type [AUTOMATED|MANUAL], status [PENDING|IN_PROGRESS|COMPLETED|FAILED|SKIPPED], started_at, completed_at, error_message), rollback_steps (same schema — pre-defined reversal actions), approved_by, approved_at, started_at, completed_at. Migration 049_cutover.sql creates migration.cutover_plan table with RLS (Tier B: engagement_id → engagement → tenant_id). INSERT-only for completed plans (BEFORE UPDATE trigger prevents changes after status = COMPLETED or ROLLED_BACK).",
+      "verification": "cd platform/migration && go test ./db/... -run TestCutoverPlanCRUD -count=1 -v"
+    },
+    {
+      "id": "AC-3",
+      "description": "POST /api/v1/migration/engagements/{id}/cutover-plans creates a new cutover plan in DRAFT status. Request body: {steps: [{label, order, type}], rollback_steps: [{label, order, type}]}. Validates: engagement must be in COMPLETE status (certified). Returns 409 if engagement is not COMPLETE. Returns 422 if steps array is empty or any step is missing label/order/type. The plan is created with all steps in PENDING status. Only one active (non-COMPLETED, non-ROLLED_BACK, non-FAILED) plan per engagement — returns 409 if one already exists.",
+      "verification": "cd platform/migration && go test ./api/... -run TestCreateCutoverPlan -count=1 -v"
+    },
+    {
+      "id": "AC-4",
+      "description": "POST /api/v1/migration/engagements/{id}/cutover-plans/{planId}/execute begins cutover execution. Validates plan is in APPROVED status — returns 409 if DRAFT (must approve first) or already EXECUTING/COMPLETED. Transitions plan to EXECUTING, engagement to CUTOVER_IN_PROGRESS, records gate_transition (COMPLETE → CUTOVER_IN_PROGRESS, direction=ADVANCE). PATCH /api/v1/migration/engagements/{id}/cutover-plans/{planId}/approve transitions DRAFT → APPROVED with approved_by from JWT. PATCH /api/v1/migration/engagements/{id}/cutover-plans/{planId}/steps/{stepId} updates a step's status (IN_PROGRESS, COMPLETED, FAILED, SKIPPED). When all steps are COMPLETED or SKIPPED, plan auto-transitions to COMPLETED and engagement transitions to GO_LIVE with gate_transition record.",
+      "verification": "cd platform/migration && go test ./api/... -run TestCutoverExecution -count=1 -v"
+    },
+    {
+      "id": "AC-5",
+      "description": "POST /api/v1/migration/engagements/{id}/cutover-plans/{planId}/rollback initiates rollback. Only valid when plan is EXECUTING or COMPLETED — returns 409 otherwise. Sets plan status to ROLLED_BACK. Creates rollback_steps entries (from the plan's rollback_steps template) as active step records. Engagement transitions back to COMPLETE (from CUTOVER_IN_PROGRESS or GO_LIVE → COMPLETE, direction=REGRESS). Gate_transition record includes rollback_reason from request body. WebSocket broadcast: cutover_rolled_back event with engagement_id and reason.",
+      "verification": "cd platform/migration && go test ./api/... -run TestCutoverRollback -count=1 -v"
+    },
+    {
+      "id": "AC-6",
+      "description": "GET /api/v1/migration/engagements/{id}/cutover-plans returns all cutover plans for the engagement (newest first). GET /api/v1/migration/engagements/{id}/cutover-plans/{planId} returns a single plan with all steps. Both include step details (status, timestamps, error messages). Audit integration: plan creation, approval, execution start, step completion, rollback — all log to audit_log (if h.Audit non-nil) with entity_type='cutover_plan' and appropriate action strings.",
+      "verification": "cd platform/migration && go test ./api/... -run TestCutoverPlanEndpoints -count=1 -v"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "Cutover can only start from COMPLETE status (engagement must be certified first via M04a)",
+      "Rollback returns engagement to COMPLETE — allows re-certification and re-cutover",
+      "gate_transition records for every status change — full audit trail of cutover lifecycle",
+      "Plan immutability after COMPLETED or ROLLED_BACK — BEFORE UPDATE trigger prevents tampering",
+      "RLS Tier B on cutover_plan table — engagement_id → engagement → tenant_id",
+      "Only one active plan per engagement — prevents conflicting cutover attempts"
+    ],
+    "high": [
+      "Step status updates are idempotent — completing an already-completed step is a no-op, not an error",
+      "WebSocket broadcasts for cutover_started, step_completed, cutover_completed, cutover_rolled_back",
+      "Rollback request body includes rollback_reason (required, non-empty) — stored in gate_transition notes",
+      "Audit log entries for all cutover lifecycle events",
+      "ValidTransitions map updated — existing phase gate handlers respect new statuses"
+    ],
+    "medium": [
+      "Step ordering enforced: steps must complete in order (cannot complete step 3 before step 2 unless step 2 is SKIPPED)",
+      "Plan approval requires different user than creator (approved_by != created_by if engagement has multiple members)",
+      "FAILED step halts execution — plan must be explicitly rolled back or resumed"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "platform/migration/db/migrations/049_cutover.sql",
+    "platform/migration/db/cutover.go",
+    "platform/migration/db/cutover_test.go",
+    "platform/migration/api/cutover_handlers.go",
+    "platform/migration/api/cutover_handlers_test.go",
+    "platform/migration/models/types.go",
+    "platform/migration/api/handlers.go"
+  ]
+}
