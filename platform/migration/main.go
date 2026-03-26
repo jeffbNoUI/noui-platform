@@ -19,6 +19,7 @@ import (
 	"github.com/noui/platform/migration/api"
 	"github.com/noui/platform/migration/db"
 	"github.com/noui/platform/migration/jobqueue"
+	"github.com/noui/platform/migration/profiler"
 	"github.com/noui/platform/migration/reconciler"
 	"github.com/noui/platform/migration/worker"
 	"github.com/noui/platform/migration/ws"
@@ -75,7 +76,8 @@ func main() {
 		cfg.WorkerID = "embedded-" + cfg.WorkerID
 		w := worker.New(database, jq, cfg)
 		w.RegisterExecutor("noop", &worker.NoopExecutor{})
-		// Future: register profile_l1, profile_l2, etc. executors here
+		w.RegisterExecutor(profiler.Level1Inventory.JobType(), &worker.ProfileL1Executor{})
+		w.RegisterExecutor(profiler.Level2Statistics.JobType(), &worker.ProfileL2Executor{})
 		go w.Run(svcCtx)
 		slog.Info("embedded worker started", "concurrency", cfg.Concurrency, "worker_id", cfg.WorkerID)
 	}

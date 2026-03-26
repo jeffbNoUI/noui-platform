@@ -17,7 +17,7 @@ var validIdentifier = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_.]*$`)
 
 // quoteIdent validates and double-quotes a SQL identifier to prevent injection.
 // Supports schema-qualified names (e.g. "src_prism.prism_member" → "src_prism"."prism_member").
-func quoteIdent(id string) (string, error) {
+func QuoteIdent(id string) (string, error) {
 	if id == "" {
 		return "", fmt.Errorf("empty identifier")
 	}
@@ -61,7 +61,7 @@ func ProfileCompleteness(db *sql.DB, table string, requiredColumns []string) (Qu
 		return dim, nil
 	}
 
-	quotedTable, err := quoteIdent(table)
+	quotedTable, err := QuoteIdent(table)
 	if err != nil {
 		return dim, fmt.Errorf("profile completeness: %w", err)
 	}
@@ -69,7 +69,7 @@ func ProfileCompleteness(db *sql.DB, table string, requiredColumns []string) (Qu
 	// Build a query that counts nulls for each required column in one pass.
 	query := "SELECT COUNT(*)"
 	for _, col := range requiredColumns {
-		qc, err := quoteIdent(col)
+		qc, err := QuoteIdent(col)
 		if err != nil {
 			return dim, fmt.Errorf("profile completeness: %w", err)
 		}
@@ -119,14 +119,14 @@ func ProfileAccuracy(db *sql.DB, table string, patternChecks []PatternCheck) (Qu
 		return dim, nil
 	}
 
-	quotedTable, err := quoteIdent(table)
+	quotedTable, err := QuoteIdent(table)
 	if err != nil {
 		return dim, fmt.Errorf("profile accuracy: %w", err)
 	}
 
 	var totalMatchRate float64
 	for _, pc := range patternChecks {
-		qc, err := quoteIdent(pc.Column)
+		qc, err := QuoteIdent(pc.Column)
 		if err != nil {
 			return dim, fmt.Errorf("profile accuracy: %w", err)
 		}
@@ -161,22 +161,22 @@ func ProfileConsistency(db *sql.DB, table string, fkRefs []FKReference) (Quality
 		return dim, nil
 	}
 
-	quotedTable, err := quoteIdent(table)
+	quotedTable, err := QuoteIdent(table)
 	if err != nil {
 		return dim, fmt.Errorf("profile consistency: %w", err)
 	}
 
 	var totalValidRate float64
 	for _, fk := range fkRefs {
-		qCol, err := quoteIdent(fk.Column)
+		qCol, err := QuoteIdent(fk.Column)
 		if err != nil {
 			return dim, fmt.Errorf("profile consistency: %w", err)
 		}
-		qRefCol, err := quoteIdent(fk.ReferencedColumn)
+		qRefCol, err := QuoteIdent(fk.ReferencedColumn)
 		if err != nil {
 			return dim, fmt.Errorf("profile consistency: %w", err)
 		}
-		qRefTable, err := quoteIdent(fk.ReferencedTable)
+		qRefTable, err := QuoteIdent(fk.ReferencedTable)
 		if err != nil {
 			return dim, fmt.Errorf("profile consistency: %w", err)
 		}
@@ -215,7 +215,7 @@ func ProfileTimeliness(db *sql.DB, table string, dateColumns []string) (QualityD
 		return dim, nil
 	}
 
-	quotedTable, err := quoteIdent(table)
+	quotedTable, err := QuoteIdent(table)
 	if err != nil {
 		return dim, fmt.Errorf("profile timeliness: %w", err)
 	}
@@ -225,7 +225,7 @@ func ProfileTimeliness(db *sql.DB, table string, dateColumns []string) (QualityD
 	found := false
 
 	for _, col := range dateColumns {
-		qc, err := quoteIdent(col)
+		qc, err := QuoteIdent(col)
 		if err != nil {
 			return dim, fmt.Errorf("profile timeliness: %w", err)
 		}
@@ -308,7 +308,7 @@ func ProfileValidity(db *sql.DB, table string, rules []BusinessRule) (QualityDim
 		return dim, nil
 	}
 
-	quotedTable, err := quoteIdent(table)
+	quotedTable, err := QuoteIdent(table)
 	if err != nil {
 		return dim, fmt.Errorf("profile validity: %w", err)
 	}
@@ -350,7 +350,7 @@ func ProfileUniqueness(db *sql.DB, table string, keyColumns []string) (QualityDi
 		return dim, nil
 	}
 
-	quotedTable, err := quoteIdent(table)
+	quotedTable, err := QuoteIdent(table)
 	if err != nil {
 		return dim, fmt.Errorf("profile uniqueness: %w", err)
 	}
@@ -358,7 +358,7 @@ func ProfileUniqueness(db *sql.DB, table string, keyColumns []string) (QualityDi
 	// Build quoted column list for COUNT(DISTINCT (col1, col2)) — PostgreSQL row-value syntax
 	quotedCols := make([]string, len(keyColumns))
 	for i, col := range keyColumns {
-		qc, err := quoteIdent(col)
+		qc, err := QuoteIdent(col)
 		if err != nil {
 			return dim, fmt.Errorf("profile uniqueness: %w", err)
 		}

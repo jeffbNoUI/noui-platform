@@ -37,7 +37,7 @@ type ProfileConfig struct {
 // of all six dimension scores.
 func ProfileTable(db *sql.DB, cfg ProfileConfig) (*TableProfile, error) {
 	// Get row count — validate table name first
-	quotedTable, err := quoteIdent(cfg.TableName)
+	quotedTable, err := QuoteIdent(cfg.TableName)
 	if err != nil {
 		return nil, fmt.Errorf("invalid table name %q: %w", cfg.TableName, err)
 	}

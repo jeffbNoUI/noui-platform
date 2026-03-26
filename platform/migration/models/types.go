@@ -402,3 +402,134 @@ type LineageSummary struct {
 	TransformationTypes []string `json:"transformation_types"`
 	ExceptionCount      int      `json:"exception_count"`
 }
+
+// ---------------------------------------------------------------------------
+// Progressive Profiling (5-Level Model)
+// ---------------------------------------------------------------------------
+
+// ProfilingRunStatus represents the lifecycle state of a profiling run.
+type ProfilingRunStatus string
+
+const (
+	ProfilingStatusInitiated           ProfilingRunStatus = "INITIATED"
+	ProfilingStatusRunningL1           ProfilingRunStatus = "RUNNING_L1"
+	ProfilingStatusRunningL2           ProfilingRunStatus = "RUNNING_L2"
+	ProfilingStatusRunningL3           ProfilingRunStatus = "RUNNING_L3"
+	ProfilingStatusRunningL4           ProfilingRunStatus = "RUNNING_L4"
+	ProfilingStatusRunningL5           ProfilingRunStatus = "RUNNING_L5"
+	ProfilingStatusCoverageReportReady ProfilingRunStatus = "COVERAGE_REPORT_READY"
+	ProfilingStatusMapperPrePopulated  ProfilingRunStatus = "MAPPER_PRE_POPULATED"
+	ProfilingStatusRulesEngineerReview ProfilingRunStatus = "RULES_ENGINEER_REVIEW"
+	ProfilingStatusFailed              ProfilingRunStatus = "FAILED"
+)
+
+// TableProfileStatus represents the profiling progress of an individual source table.
+type TableProfileStatus string
+
+const (
+	TableProfilePending TableProfileStatus = "PENDING"
+	TableProfileL1Done  TableProfileStatus = "L1_DONE"
+	TableProfileL2Done  TableProfileStatus = "L2_DONE"
+	TableProfileL3Done  TableProfileStatus = "L3_DONE"
+	TableProfileL4Done  TableProfileStatus = "L4_DONE"
+	TableProfileL5Done  TableProfileStatus = "L5_DONE"
+	TableProfileSkipped TableProfileStatus = "SKIPPED"
+	TableProfileFailed  TableProfileStatus = "FAILED"
+)
+
+// ProfilingRun represents a migration.profiling_run row.
+type ProfilingRun struct {
+	ID                   string             `json:"id"`
+	EngagementID         string             `json:"engagement_id"`
+	SourcePlatform       string             `json:"source_platform"`
+	InitiatedBy          string             `json:"initiated_by"`
+	Status               ProfilingRunStatus `json:"status"`
+	LevelReached         *int               `json:"level_reached"`
+	TotalSourceColumns   *int               `json:"total_source_columns"`
+	TotalCanonicalFields *int               `json:"total_canonical_fields"`
+	AutoMappedCount      *int               `json:"auto_mapped_count"`
+	ReviewRequiredCount  *int               `json:"review_required_count"`
+	UnmappedCount        *int               `json:"unmapped_count"`
+	OverallCoveragePct   *float64           `json:"overall_coverage_pct"`
+	RuleSignalsFound     *int               `json:"rule_signals_found"`
+	ReadinessAssessment  *string            `json:"readiness_assessment"`
+	ErrorMessage         *string            `json:"error_message"`
+	InitiatedAt          time.Time          `json:"initiated_at"`
+	CompletedAt          *time.Time         `json:"completed_at"`
+}
+
+// SourceTableProfile represents a migration.source_table row (Level 1 inventory).
+type SourceTableProfile struct {
+	ID              string             `json:"id"`
+	ProfilingRunID  string             `json:"profiling_run_id"`
+	SchemaName      *string            `json:"schema_name"`
+	TableName       string             `json:"table_name"`
+	RowCount        *int64             `json:"row_count"`
+	RowCountExact   bool               `json:"row_count_exact"`
+	EntityClass     *string            `json:"entity_class"`
+	ClassConfidence *float64           `json:"class_confidence"`
+	IsLikelyLookup  bool               `json:"is_likely_lookup"`
+	IsLikelyArchive bool               `json:"is_likely_archive"`
+	ProfileStatus   TableProfileStatus `json:"profile_status"`
+	Notes           *string            `json:"notes"`
+}
+
+// SourceColumnProfile represents a migration.source_column row (Level 1+2).
+type SourceColumnProfile struct {
+	ID              string `json:"id"`
+	SourceTableID   string `json:"source_table_id"`
+	ColumnName      string `json:"column_name"`
+	OrdinalPosition *int   `json:"ordinal_position"`
+	DataType        string `json:"data_type"`
+	MaxLength       *int   `json:"max_length"`
+	IsNullable      bool   `json:"is_nullable"`
+	IsPrimaryKey    bool   `json:"is_primary_key"`
+	IsUnique        bool   `json:"is_unique"`
+	// Level 2 statistics
+	RowCount      *int64          `json:"row_count"`
+	NullCount     *int64          `json:"null_count"`
+	NullPct       *float64        `json:"null_pct"`
+	DistinctCount *int64          `json:"distinct_count"`
+	DistinctPct   *float64        `json:"distinct_pct"`
+	MinValue      *string         `json:"min_value"`
+	MaxValue      *string         `json:"max_value"`
+	MeanValue     *float64        `json:"mean_value"`
+	StddevValue   *float64        `json:"stddev_value"`
+	TopValues     json.RawMessage `json:"top_values"`
+	PatternFreqs  json.RawMessage `json:"pattern_frequencies"`
+	SampleValues  json.RawMessage `json:"sample_values"`
+	SampleSize    *int64          `json:"sample_size"`
+	IsSampled     bool            `json:"is_sampled"`
+}
+
+// TopValueEntry is a single entry in the top_values JSONB array.
+type TopValueEntry struct {
+	Value string  `json:"value"`
+	Count int64   `json:"count"`
+	Pct   float64 `json:"pct"`
+}
+
+// PatternFreqEntry is a single entry in the pattern_frequencies JSONB array.
+type PatternFreqEntry struct {
+	Pattern string  `json:"pattern"`
+	Label   string  `json:"label"`
+	Count   int64   `json:"count"`
+	Pct     float64 `json:"pct"`
+}
+
+// CreateProfilingRunRequest is the JSON body for initiating a new profiling run.
+type CreateProfilingRunRequest struct {
+	SourcePlatform string `json:"source_platform"`
+}
+
+// ProfilingRunSummaryResponse is the API response for a profiling run with inventory.
+type ProfilingRunSummaryResponse struct {
+	Run    ProfilingRun         `json:"run"`
+	Tables []SourceTableProfile `json:"tables,omitempty"`
+}
+
+// InventoryResponse returns L1+L2 data for a profiling run.
+type InventoryResponse struct {
+	Tables  []SourceTableProfile  `json:"tables"`
+	Columns []SourceColumnProfile `json:"columns"`
+}

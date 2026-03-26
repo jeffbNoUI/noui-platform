@@ -144,6 +144,12 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/migration/jobs/{job_id}", h.GetJob)
 	mux.HandleFunc("POST /api/v1/migration/jobs/{job_id}/cancel", h.CancelJob)
 	mux.HandleFunc("GET /api/v1/migration/workers", h.WorkerHealth)
+
+	// Progressive profiling (5-level model)
+	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/profiling-runs", h.InitiateProfilingRun)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/profiling-runs", h.ListProfilingRuns)
+	mux.HandleFunc("GET /api/v1/migration/profiling-runs/{run_id}", h.GetProfilingRunHandler)
+	mux.HandleFunc("GET /api/v1/migration/profiling-runs/{run_id}/inventory", h.GetProfilingInventory)
 }
 
 // broadcast sends a WebSocket event to all clients in an engagement room.
