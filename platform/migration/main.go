@@ -79,6 +79,7 @@ func main() {
 		w.RegisterExecutor("noop", &worker.NoopExecutor{})
 		w.RegisterExecutor(profiler.Level1Inventory.JobType(), &worker.ProfileL1Executor{})
 		w.RegisterExecutor(profiler.Level2Statistics.JobType(), &worker.ProfileL2Executor{})
+		w.RegisterExecutor(jobqueue.JobTypeParallelRun, &worker.ParallelRunExecutor{})
 		go w.Run(svcCtx)
 		slog.Info("embedded worker started", "concurrency", cfg.Concurrency, "worker_id", cfg.WorkerID)
 	}
