@@ -75,7 +75,8 @@ func main() {
 		cfg.WorkerID = "embedded-" + cfg.WorkerID
 		w := worker.New(database, jq, cfg)
 		w.RegisterExecutor("noop", &worker.NoopExecutor{})
-		// Future: register profile_l1, profile_l2, etc. executors here
+		w.RegisterExecutor("profile_l1", &worker.ProfileL1Executor{})
+		w.RegisterExecutor("profile_l2", &worker.ProfileL2Executor{})
 		go w.Run(svcCtx)
 		slog.Info("embedded worker started", "concurrency", cfg.Concurrency, "worker_id", cfg.WorkerID)
 	}
