@@ -387,7 +387,10 @@ func TestParallelRunCancellation_ContextErrReturned(t *testing.T) {
 func TestParallelRunCancellation_DeadlineExceeded(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
 	defer cancel()
-	time.Sleep(1 * time.Millisecond) // ensure deadline passes
+
+	// Wait for the context's Done channel rather than sleeping a fixed duration,
+	// which is racy on loaded systems.
+	<-ctx.Done()
 
 	err := ctx.Err()
 	if err == nil {

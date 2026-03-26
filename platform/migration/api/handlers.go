@@ -142,6 +142,11 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 	// Audit log (read-only — no UPDATE or DELETE endpoints)
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/audit-log", h.HandleListAuditLog)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/audit-log/export", h.HandleExportAuditLog)
+
+	// Retention policy
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/retention-policy", h.HandleGetRetentionPolicy)
+	mux.HandleFunc("PATCH /api/v1/migration/engagements/{id}/retention-policy", h.HandleSetRetentionPolicy)
 
 	// Notifications
 	mux.HandleFunc("GET /api/v1/migration/notifications", h.HandleGetNotifications)
