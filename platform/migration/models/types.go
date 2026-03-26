@@ -533,3 +533,69 @@ type InventoryResponse struct {
 	Tables  []SourceTableProfile  `json:"tables"`
 	Columns []SourceColumnProfile `json:"columns"`
 }
+
+// ---------------------------------------------------------------------------
+// Schema Versioning
+// ---------------------------------------------------------------------------
+
+// SchemaVersion represents a canonical schema version record.
+type SchemaVersion struct {
+	VersionID   string    `json:"version_id"`
+	TenantID    string    `json:"tenant_id"`
+	Label       string    `json:"label"`
+	Description *string   `json:"description"`
+	IsActive    bool      `json:"is_active"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// SchemaVersionField represents a single field in a schema version.
+type SchemaVersionField struct {
+	FieldID     string    `json:"field_id"`
+	VersionID   string    `json:"version_id"`
+	Entity      string    `json:"entity"`
+	FieldName   string    `json:"field_name"`
+	DataType    string    `json:"data_type"`
+	IsRequired  bool      `json:"is_required"`
+	Description *string   `json:"description"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+// SchemaVersionDiff represents the difference between two schema versions.
+type SchemaVersionDiff struct {
+	FromVersion string               `json:"from_version"`
+	ToVersion   string               `json:"to_version"`
+	Added       []SchemaVersionField `json:"added"`
+	Removed     []SchemaVersionField `json:"removed"`
+	TypeChanged []FieldTypeChange    `json:"type_changed"`
+}
+
+// FieldTypeChange represents a field whose data type changed between versions.
+type FieldTypeChange struct {
+	Entity    string `json:"entity"`
+	FieldName string `json:"field_name"`
+	OldType   string `json:"old_type"`
+	NewType   string `json:"new_type"`
+}
+
+// CreateSchemaVersionRequest is the JSON body for creating a new schema version.
+type CreateSchemaVersionRequest struct {
+	Label       string                        `json:"label"`
+	Description *string                       `json:"description,omitempty"`
+	Fields      []CreateSchemaVersionFieldReq `json:"fields"`
+}
+
+// CreateSchemaVersionFieldReq defines a field to include in a new schema version.
+type CreateSchemaVersionFieldReq struct {
+	Entity      string  `json:"entity"`
+	FieldName   string  `json:"field_name"`
+	DataType    string  `json:"data_type"`
+	IsRequired  bool    `json:"is_required"`
+	Description *string `json:"description,omitempty"`
+}
+
+// SchemaVersionWithFields bundles a version with its fields for API responses.
+type SchemaVersionWithFields struct {
+	Version SchemaVersion        `json:"version"`
+	Fields  []SchemaVersionField `json:"fields"`
+}

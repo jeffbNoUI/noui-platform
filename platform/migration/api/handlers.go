@@ -169,6 +169,13 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/parallel-runs/{runId}", h.GetParallelRun)
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/parallel-runs/{runId}/results", h.GetParallelRunResults)
 	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/parallel-runs/{runId}/cancel", h.CancelParallelRun)
+
+	// Schema versioning
+	mux.HandleFunc("POST /api/v1/migration/schema-versions", h.CreateSchemaVersion)
+	mux.HandleFunc("GET /api/v1/migration/schema-versions", h.ListSchemaVersions)
+	mux.HandleFunc("GET /api/v1/migration/schema-versions/diff", h.DiffSchemaVersions)
+	mux.HandleFunc("GET /api/v1/migration/schema-versions/{id}", h.GetSchemaVersion)
+	mux.HandleFunc("POST /api/v1/migration/schema-versions/{id}/activate", h.ActivateSchemaVersion)
 }
 
 // broadcast sends a WebSocket event to all clients in an engagement room.
