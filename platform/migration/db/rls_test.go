@@ -49,6 +49,7 @@ var allMigrationTables = []string{
 	// Tier B: FK to engagement (drift detection)
 	"drift_detection_run",
 	"drift_record",
+	"drift_schedule",
 	// Tier C: FK to batch
 	"lineage",
 	"exception",

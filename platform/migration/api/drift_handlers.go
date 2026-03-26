@@ -215,6 +215,137 @@ func (h *Handler) HandleGetDriftDetectionRecords(w http.ResponseWriter, r *http.
 	})
 }
 
+// ---------------------------------------------------------------------------
+// Drift Schedule Endpoints (M05b)
+// ---------------------------------------------------------------------------
+
+// HandleCreateDriftSchedule handles POST /api/v1/migration/engagements/{id}/drift-schedule.
+// Creates or updates a drift schedule (INSERT ON CONFLICT DO UPDATE, idempotent).
+func (h *Handler) HandleCreateDriftSchedule(w http.ResponseWriter, r *http.Request) {
+	engID := r.PathValue("id")
+	if engID == "" {
+		apiresponse.WriteError(w, http.StatusBadRequest, "migration", "VALIDATION_ERROR", "engagement id is required")
+		return
+	}
+
+	var req models.CreateDriftScheduleRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		apiresponse.WriteError(w, http.StatusBadRequest, "migration", "VALIDATION_ERROR", "invalid request body")
+		return
+	}
+
+	// Validate interval_hours.
+	if req.IntervalHours < 1 || req.IntervalHours > 168 {
+		apiresponse.WriteError(w, http.StatusUnprocessableEntity, "migration", "VALIDATION_ERROR",
+			"interval_hours must be between 1 and 168")
+		return
+	}
+
+	// Validate engagement exists and is in GO_LIVE status.
+	engagement, err := migrationdb.GetEngagement(h.DB, engID)
+	if err != nil {
+		slog.Error("failed to get engagement for drift schedule", "error", err, "engagement_id", engID)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to get engagement")
+		return
+	}
+	if engagement == nil {
+		apiresponse.WriteError(w, http.StatusNotFound, "migration", "NOT_FOUND",
+			fmt.Sprintf("engagement %s not found", engID))
+		return
+	}
+	if engagement.Status != models.StatusGoLive {
+		apiresponse.WriteError(w, http.StatusConflict, "migration", "INVALID_PHASE",
+			fmt.Sprintf("drift scheduling requires GO_LIVE status, current: %s", engagement.Status))
+		return
+	}
+
+	schedule, err := migrationdb.UpsertDriftSchedule(h.DB, engID, req.IntervalHours, req.Enabled)
+	if err != nil {
+		slog.Error("failed to upsert drift schedule", "error", err, "engagement_id", engID)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to create drift schedule")
+		return
+	}
+
+	slog.Info("drift schedule upserted", "engagement_id", engID, "interval_hours", req.IntervalHours, "enabled", req.Enabled)
+	apiresponse.WriteSuccess(w, http.StatusOK, "migration", schedule)
+}
+
+// HandleGetDriftSchedule handles GET /api/v1/migration/engagements/{id}/drift-schedule.
+func (h *Handler) HandleGetDriftSchedule(w http.ResponseWriter, r *http.Request) {
+	engID := r.PathValue("id")
+	if engID == "" {
+		apiresponse.WriteError(w, http.StatusBadRequest, "migration", "VALIDATION_ERROR", "engagement id is required")
+		return
+	}
+
+	schedule, err := migrationdb.GetDriftSchedule(h.DB, engID)
+	if err != nil {
+		slog.Error("failed to get drift schedule", "error", err, "engagement_id", engID)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to get drift schedule")
+		return
+	}
+	if schedule == nil {
+		apiresponse.WriteError(w, http.StatusNotFound, "migration", "NOT_FOUND", "no drift schedule found for this engagement")
+		return
+	}
+
+	apiresponse.WriteSuccess(w, http.StatusOK, "migration", schedule)
+}
+
+// HandleUpdateDriftSchedule handles PATCH /api/v1/migration/engagements/{id}/drift-schedule.
+func (h *Handler) HandleUpdateDriftSchedule(w http.ResponseWriter, r *http.Request) {
+	engID := r.PathValue("id")
+	if engID == "" {
+		apiresponse.WriteError(w, http.StatusBadRequest, "migration", "VALIDATION_ERROR", "engagement id is required")
+		return
+	}
+
+	var req models.UpdateDriftScheduleRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		apiresponse.WriteError(w, http.StatusBadRequest, "migration", "VALIDATION_ERROR", "invalid request body")
+		return
+	}
+
+	// Validate interval_hours if provided.
+	if req.IntervalHours != nil && (*req.IntervalHours < 1 || *req.IntervalHours > 168) {
+		apiresponse.WriteError(w, http.StatusUnprocessableEntity, "migration", "VALIDATION_ERROR",
+			"interval_hours must be between 1 and 168")
+		return
+	}
+
+	schedule, err := migrationdb.UpdateDriftSchedule(h.DB, engID, req.IntervalHours, req.Enabled)
+	if err != nil {
+		slog.Error("failed to update drift schedule", "error", err, "engagement_id", engID)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to update drift schedule")
+		return
+	}
+	if schedule == nil {
+		apiresponse.WriteError(w, http.StatusNotFound, "migration", "NOT_FOUND", "no drift schedule found for this engagement")
+		return
+	}
+
+	slog.Info("drift schedule updated", "engagement_id", engID)
+	apiresponse.WriteSuccess(w, http.StatusOK, "migration", schedule)
+}
+
+// HandleGetDriftSummary handles GET /api/v1/migration/engagements/{id}/drift-summary.
+func (h *Handler) HandleGetDriftSummary(w http.ResponseWriter, r *http.Request) {
+	engID := r.PathValue("id")
+	if engID == "" {
+		apiresponse.WriteError(w, http.StatusBadRequest, "migration", "VALIDATION_ERROR", "engagement id is required")
+		return
+	}
+
+	summary, err := migrationdb.GetDriftSummary(h.DB, engID)
+	if err != nil {
+		slog.Error("failed to get drift summary", "error", err, "engagement_id", engID)
+		apiresponse.WriteError(w, http.StatusInternalServerError, "migration", "INTERNAL_ERROR", "failed to get drift summary")
+		return
+	}
+
+	apiresponse.WriteSuccess(w, http.StatusOK, "migration", summary)
+}
+
 // parsePagination extracts page and per_page from query parameters.
 func parsePagination(r *http.Request) (int, int) {
 	page := 1

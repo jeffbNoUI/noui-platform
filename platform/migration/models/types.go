@@ -990,3 +990,51 @@ type ReconExecutionSummary struct {
 	P3Count        int     `json:"p3_count"`
 	MatchRatio     float64 `json:"match_ratio"`
 }
+
+// ---------------------------------------------------------------------------
+// Drift Monitoring (M05b)
+// ---------------------------------------------------------------------------
+
+// DriftSchedule represents a scheduled drift detection configuration for an engagement.
+type DriftSchedule struct {
+	ScheduleID      string     `json:"schedule_id"`
+	EngagementID    string     `json:"engagement_id"`
+	IntervalHours   int        `json:"interval_hours"`
+	Enabled         bool       `json:"enabled"`
+	LastTriggeredAt *time.Time `json:"last_triggered_at,omitempty"`
+	NextTriggerAt   *time.Time `json:"next_trigger_at,omitempty"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
+}
+
+// CreateDriftScheduleRequest is the JSON body for creating/updating a drift schedule.
+type CreateDriftScheduleRequest struct {
+	IntervalHours int  `json:"interval_hours"`
+	Enabled       bool `json:"enabled"`
+}
+
+// UpdateDriftScheduleRequest is the JSON body for patching a drift schedule.
+type UpdateDriftScheduleRequest struct {
+	IntervalHours *int  `json:"interval_hours,omitempty"`
+	Enabled       *bool `json:"enabled,omitempty"`
+}
+
+// DriftStatus represents the aggregate drift state for an engagement.
+type DriftStatus string
+
+const (
+	DriftStatusClean    DriftStatus = "CLEAN"
+	DriftStatusDrifted  DriftStatus = "DRIFTED"
+	DriftStatusCritical DriftStatus = "CRITICAL"
+)
+
+// DriftSummary provides aggregate drift metrics for an engagement.
+type DriftSummary struct {
+	LastRunAt       *time.Time     `json:"last_run_at,omitempty"`
+	LastRunID       *string        `json:"last_run_id,omitempty"`
+	TotalRuns       int            `json:"total_runs"`
+	DriftStatus     DriftStatus    `json:"drift_status"`
+	BySeverity      map[string]int `json:"by_severity"`
+	ScheduleEnabled bool           `json:"schedule_enabled"`
+	NextScheduledAt *time.Time     `json:"next_scheduled_at,omitempty"`
+}

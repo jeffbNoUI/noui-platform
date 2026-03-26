@@ -135,6 +135,20 @@ func (e *DriftDetectionExecutor) Execute(ctx context.Context, job *jobqueue.Job,
 		if err := db.InsertDriftAttentionItem(migrationDB, input.EngagementID, summary, detail); err != nil {
 			slog.Warn("failed to create attention item for critical drift", "error", err)
 		}
+
+		// Create notification for critical drift (M05b AC-5).
+		eng, engErr := db.GetEngagement(migrationDB, input.EngagementID)
+		if engErr == nil && eng != nil {
+			notifSummary := fmt.Sprintf("Critical drift detected: %d critical changes in %s", critical, eng.SourceSystemName)
+			notif, notifErr := db.CreateNotification(migrationDB, eng.TenantID, input.EngagementID, eng.SourceSystemName, "DRIFT_CRITICAL", notifSummary)
+			if notifErr != nil {
+				slog.Warn("failed to create notification for critical drift", "error", notifErr)
+			} else if notif != nil {
+				e.broadcastEvent(input.EngagementID, "notification_created", notif)
+			}
+		} else if engErr != nil {
+			slog.Warn("failed to get engagement for drift notification", "error", engErr)
+		}
 	}
 
 	// Broadcast completion.

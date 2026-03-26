@@ -56,3 +56,24 @@ func MarkAllNotificationsRead(db *sql.DB, tenantID string) error {
 	}
 	return nil
 }
+
+// CreateNotification inserts a new notification record. Generic/reusable — not specific
+// to any particular notification type. Used by drift detection (DRIFT_CRITICAL),
+// migration lifecycle (M11a), and other subsystems.
+func CreateNotification(database *sql.DB, tenantID, engagementID, engagementName, notifType, summary string) (*models.Notification, error) {
+	if database == nil {
+		return nil, fmt.Errorf("db is nil")
+	}
+	var n models.Notification
+	err := database.QueryRow(
+		`INSERT INTO migration.notification (tenant_id, engagement_id, engagement_name, type, summary)
+		 VALUES ($1, $2, $3, $4, $5)
+		 RETURNING id, tenant_id, engagement_id, engagement_name, type, summary, read, created_at`,
+		tenantID, engagementID, engagementName, notifType, summary,
+	).Scan(&n.ID, &n.TenantID, &n.EngagementID, &n.EngagementName,
+		&n.Type, &n.Summary, &n.Read, &n.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("create notification: %w", err)
+	}
+	return &n, nil
+}

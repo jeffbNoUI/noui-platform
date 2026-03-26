@@ -69,6 +69,7 @@ func main() {
 	defer svcCancel()
 	go worker.StaleRecoveryLoop(svcCtx, jq, 1*time.Minute, 5*time.Minute)
 	go worker.PurgeLoop(svcCtx, jq, 1*time.Hour, 30*24*time.Hour)
+	go worker.DriftSchedulerLoop(svcCtx, database, jq, 5*time.Minute)
 
 	// Audit retention loop — purges expired events on a configurable interval.
 	retentionInterval := 24 * time.Hour
@@ -93,6 +94,9 @@ func main() {
 			Broadcast: w.BroadcastEvent,
 		})
 		w.RegisterExecutor("recon_execution", &worker.ReconExecutionExecutor{
+			Broadcast: w.BroadcastEvent,
+		})
+		w.RegisterExecutor(worker.JobTypeDriftDetection, &worker.DriftDetectionExecutor{
 			Broadcast: w.BroadcastEvent,
 		})
 		go w.Run(svcCtx)
