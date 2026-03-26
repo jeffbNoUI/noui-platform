@@ -836,3 +836,90 @@ type UpdateCutoverStepRequest struct {
 type RollbackRequest struct {
 	RollbackReason string `json:"rollback_reason"`
 }
+
+// ---------------------------------------------------------------------------
+// Drift Detection (M05a)
+// ---------------------------------------------------------------------------
+
+// DriftDetectionRunStatus represents the lifecycle state of a drift detection run.
+type DriftDetectionRunStatus string
+
+const (
+	DriftRunPending   DriftDetectionRunStatus = "PENDING"
+	DriftRunRunning   DriftDetectionRunStatus = "RUNNING"
+	DriftRunCompleted DriftDetectionRunStatus = "COMPLETED"
+	DriftRunFailed    DriftDetectionRunStatus = "FAILED"
+)
+
+// DriftType specifies what kind of drift to detect.
+type DriftType string
+
+const (
+	DriftTypeSchema DriftType = "SCHEMA"
+	DriftTypeData   DriftType = "DATA"
+	DriftTypeBoth   DriftType = "BOTH"
+)
+
+// DriftChangeType categorizes the kind of schema or data change detected.
+type DriftChangeType string
+
+const (
+	DriftColumnAdded       DriftChangeType = "COLUMN_ADDED"
+	DriftColumnRemoved     DriftChangeType = "COLUMN_REMOVED"
+	DriftColumnTypeChanged DriftChangeType = "COLUMN_TYPE_CHANGED"
+	DriftTableAdded        DriftChangeType = "TABLE_ADDED"
+	DriftTableRemoved      DriftChangeType = "TABLE_REMOVED"
+	DriftRowCountDrift     DriftChangeType = "ROW_COUNT_DRIFT"
+)
+
+// DriftSeverity indicates the impact level of a detected drift.
+type DriftSeverity string
+
+const (
+	DriftSeverityCritical DriftSeverity = "CRITICAL"
+	DriftSeverityHigh     DriftSeverity = "HIGH"
+	DriftSeverityMedium   DriftSeverity = "MEDIUM"
+	DriftSeverityLow      DriftSeverity = "LOW"
+)
+
+// DriftRowCountThresholdPct is the minimum row count delta percentage to flag as drift.
+// Default 0.10 = 10%.
+const DriftRowCountThresholdPct = 0.10
+
+// DriftDetectionRun represents a drift detection run record.
+type DriftDetectionRun struct {
+	RunID              string                  `json:"run_id"`
+	EngagementID       string                  `json:"engagement_id"`
+	Status             DriftDetectionRunStatus `json:"status"`
+	DriftType          DriftType               `json:"drift_type"`
+	BaselineSnapshotID string                  `json:"baseline_snapshot_id"`
+	DetectedChanges    int                     `json:"detected_changes"`
+	CriticalChanges    int                     `json:"critical_changes"`
+	StartedAt          *time.Time              `json:"started_at,omitempty"`
+	CompletedAt        *time.Time              `json:"completed_at,omitempty"`
+	ErrorMessage       *string                 `json:"error_message,omitempty"`
+	CreatedAt          time.Time               `json:"created_at"`
+}
+
+// DriftRecord represents a single detected drift entry.
+type DriftRecord struct {
+	RecordID       string          `json:"record_id"`
+	RunID          string          `json:"run_id"`
+	ChangeType     DriftChangeType `json:"change_type"`
+	Entity         string          `json:"entity"`
+	Detail         json.RawMessage `json:"detail"`
+	Severity       DriftSeverity   `json:"severity"`
+	AffectsMapping bool            `json:"affects_mapping"`
+	CreatedAt      time.Time       `json:"created_at"`
+}
+
+// CreateDriftDetectionRequest is the JSON body for initiating a drift detection run.
+type CreateDriftDetectionRequest struct {
+	DriftType DriftType `json:"drift_type"`
+}
+
+// DriftDetectionRunWithRecords bundles a run with its records for API responses.
+type DriftDetectionRunWithRecords struct {
+	Run     DriftDetectionRun `json:"run"`
+	Records []DriftRecord     `json:"records"`
+}
