@@ -8,6 +8,58 @@ import (
 	"github.com/noui/platform/migration/models"
 )
 
+// profilingRunColumns is the shared column list for profiling_run queries.
+const profilingRunColumns = `id, engagement_id, source_platform, initiated_by, status,
+	level_reached, total_source_columns, total_canonical_fields,
+	auto_mapped_count, review_required_count, unmapped_count,
+	overall_coverage_pct, rule_signals_found, readiness_assessment,
+	error_message, initiated_at, completed_at`
+
+// scanner is satisfied by both *sql.Row and *sql.Rows.
+type scanner interface {
+	Scan(dest ...interface{}) error
+}
+
+// scanProfilingRun scans a row into a ProfilingRun struct.
+func scanProfilingRun(s scanner) (models.ProfilingRun, error) {
+	var r models.ProfilingRun
+	err := s.Scan(
+		&r.ID, &r.EngagementID, &r.SourcePlatform, &r.InitiatedBy, &r.Status,
+		&r.LevelReached, &r.TotalSourceColumns, &r.TotalCanonicalFields,
+		&r.AutoMappedCount, &r.ReviewRequiredCount, &r.UnmappedCount,
+		&r.OverallCoveragePct, &r.RuleSignalsFound, &r.ReadinessAssessment,
+		&r.ErrorMessage, &r.InitiatedAt, &r.CompletedAt,
+	)
+	return r, err
+}
+
+// sourceColumnColumns is the shared column list for source_column queries.
+const sourceColumnColumns = `id, source_table_id, column_name, ordinal_position, data_type, max_length,
+	is_nullable, is_primary_key, is_unique,
+	row_count, null_count, null_pct, distinct_count, distinct_pct,
+	min_value, max_value, mean_value, stddev_value,
+	top_values, pattern_frequencies, sample_values, sample_size, is_sampled`
+
+// scanSourceColumn scans a row into a SourceColumnProfile struct.
+func scanSourceColumn(s scanner) (models.SourceColumnProfile, error) {
+	var c models.SourceColumnProfile
+	var topVal, patternFreq, sampleVal []byte
+	err := s.Scan(
+		&c.ID, &c.SourceTableID, &c.ColumnName, &c.OrdinalPosition, &c.DataType, &c.MaxLength,
+		&c.IsNullable, &c.IsPrimaryKey, &c.IsUnique,
+		&c.RowCount, &c.NullCount, &c.NullPct, &c.DistinctCount, &c.DistinctPct,
+		&c.MinValue, &c.MaxValue, &c.MeanValue, &c.StddevValue,
+		&topVal, &patternFreq, &sampleVal, &c.SampleSize, &c.IsSampled,
+	)
+	if err != nil {
+		return c, err
+	}
+	c.TopValues = json.RawMessage(topVal)
+	c.PatternFreqs = json.RawMessage(patternFreq)
+	c.SampleValues = json.RawMessage(sampleVal)
+	return c, nil
+}
+
 // CreateProfilingRun inserts a new profiling run and returns its ID.
 func CreateProfilingRun(db *sql.DB, engagementID, sourcePlatform, initiatedBy string) (string, error) {
 	if db == nil {
@@ -31,28 +83,16 @@ func GetProfilingRun(db *sql.DB, runID string) (*models.ProfilingRun, error) {
 	if db == nil {
 		return nil, fmt.Errorf("db is nil")
 	}
-	r := &models.ProfilingRun{}
-	err := db.QueryRow(
-		`SELECT id, engagement_id, source_platform, initiated_by, status,
-		        level_reached, total_source_columns, total_canonical_fields,
-		        auto_mapped_count, review_required_count, unmapped_count,
-		        overall_coverage_pct, rule_signals_found, readiness_assessment,
-		        error_message, initiated_at, completed_at
-		 FROM migration.profiling_run WHERE id = $1`, runID,
-	).Scan(
-		&r.ID, &r.EngagementID, &r.SourcePlatform, &r.InitiatedBy, &r.Status,
-		&r.LevelReached, &r.TotalSourceColumns, &r.TotalCanonicalFields,
-		&r.AutoMappedCount, &r.ReviewRequiredCount, &r.UnmappedCount,
-		&r.OverallCoveragePct, &r.RuleSignalsFound, &r.ReadinessAssessment,
-		&r.ErrorMessage, &r.InitiatedAt, &r.CompletedAt,
-	)
+	r, err := scanProfilingRun(db.QueryRow(
+		`SELECT `+profilingRunColumns+` FROM migration.profiling_run WHERE id = $1`, runID,
+	))
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("get profiling run: %w", err)
 	}
-	return r, nil
+	return &r, nil
 }
 
 // ListProfilingRuns returns all profiling runs for an engagement.
@@ -61,11 +101,7 @@ func ListProfilingRuns(db *sql.DB, engagementID string) ([]models.ProfilingRun, 
 		return nil, fmt.Errorf("db is nil")
 	}
 	rows, err := db.Query(
-		`SELECT id, engagement_id, source_platform, initiated_by, status,
-		        level_reached, total_source_columns, total_canonical_fields,
-		        auto_mapped_count, review_required_count, unmapped_count,
-		        overall_coverage_pct, rule_signals_found, readiness_assessment,
-		        error_message, initiated_at, completed_at
+		`SELECT `+profilingRunColumns+`
 		 FROM migration.profiling_run
 		 WHERE engagement_id = $1
 		 ORDER BY initiated_at DESC`, engagementID,
@@ -77,14 +113,8 @@ func ListProfilingRuns(db *sql.DB, engagementID string) ([]models.ProfilingRun, 
 
 	var runs []models.ProfilingRun
 	for rows.Next() {
-		var r models.ProfilingRun
-		if err := rows.Scan(
-			&r.ID, &r.EngagementID, &r.SourcePlatform, &r.InitiatedBy, &r.Status,
-			&r.LevelReached, &r.TotalSourceColumns, &r.TotalCanonicalFields,
-			&r.AutoMappedCount, &r.ReviewRequiredCount, &r.UnmappedCount,
-			&r.OverallCoveragePct, &r.RuleSignalsFound, &r.ReadinessAssessment,
-			&r.ErrorMessage, &r.InitiatedAt, &r.CompletedAt,
-		); err != nil {
+		r, err := scanProfilingRun(rows)
+		if err != nil {
 			return nil, fmt.Errorf("scan profiling run: %w", err)
 		}
 		runs = append(runs, r)
@@ -261,11 +291,7 @@ func ListSourceColumns(db *sql.DB, tableID string) ([]models.SourceColumnProfile
 		return nil, fmt.Errorf("db is nil")
 	}
 	rows, err := db.Query(
-		`SELECT id, source_table_id, column_name, ordinal_position, data_type, max_length,
-		        is_nullable, is_primary_key, is_unique,
-		        row_count, null_count, null_pct, distinct_count, distinct_pct,
-		        min_value, max_value, mean_value, stddev_value,
-		        top_values, pattern_frequencies, sample_values, sample_size, is_sampled
+		`SELECT `+sourceColumnColumns+`
 		 FROM migration.source_column
 		 WHERE source_table_id = $1
 		 ORDER BY ordinal_position`, tableID,
@@ -277,20 +303,10 @@ func ListSourceColumns(db *sql.DB, tableID string) ([]models.SourceColumnProfile
 
 	var cols []models.SourceColumnProfile
 	for rows.Next() {
-		var c models.SourceColumnProfile
-		var topVal, patternFreq, sampleVal []byte
-		if err := rows.Scan(
-			&c.ID, &c.SourceTableID, &c.ColumnName, &c.OrdinalPosition, &c.DataType, &c.MaxLength,
-			&c.IsNullable, &c.IsPrimaryKey, &c.IsUnique,
-			&c.RowCount, &c.NullCount, &c.NullPct, &c.DistinctCount, &c.DistinctPct,
-			&c.MinValue, &c.MaxValue, &c.MeanValue, &c.StddevValue,
-			&topVal, &patternFreq, &sampleVal, &c.SampleSize, &c.IsSampled,
-		); err != nil {
+		c, err := scanSourceColumn(rows)
+		if err != nil {
 			return nil, fmt.Errorf("scan source column: %w", err)
 		}
-		c.TopValues = json.RawMessage(topVal)
-		c.PatternFreqs = json.RawMessage(patternFreq)
-		c.SampleValues = json.RawMessage(sampleVal)
 		cols = append(cols, c)
 	}
 	return cols, rows.Err()
@@ -319,20 +335,10 @@ func ListSourceColumnsByRun(db *sql.DB, runID string) ([]models.SourceColumnProf
 
 	var cols []models.SourceColumnProfile
 	for rows.Next() {
-		var c models.SourceColumnProfile
-		var topVal, patternFreq, sampleVal []byte
-		if err := rows.Scan(
-			&c.ID, &c.SourceTableID, &c.ColumnName, &c.OrdinalPosition, &c.DataType, &c.MaxLength,
-			&c.IsNullable, &c.IsPrimaryKey, &c.IsUnique,
-			&c.RowCount, &c.NullCount, &c.NullPct, &c.DistinctCount, &c.DistinctPct,
-			&c.MinValue, &c.MaxValue, &c.MeanValue, &c.StddevValue,
-			&topVal, &patternFreq, &sampleVal, &c.SampleSize, &c.IsSampled,
-		); err != nil {
+		c, err := scanSourceColumn(rows)
+		if err != nil {
 			return nil, fmt.Errorf("scan source column: %w", err)
 		}
-		c.TopValues = json.RawMessage(topVal)
-		c.PatternFreqs = json.RawMessage(patternFreq)
-		c.SampleValues = json.RawMessage(sampleVal)
 		cols = append(cols, c)
 	}
 	return cols, rows.Err()
