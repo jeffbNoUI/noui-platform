@@ -1,0 +1,73 @@
+{
+  "sprint": 13,
+  "goal": "PDF reports: lineage traceability report and reconciliation summary report",
+  "depends_on": ["M07a"],
+  "layer": "go",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "Lineage report data assembler: BuildLineageReport(db, engagementID, batchID) assembles a LineageReport struct containing: engagement metadata (name, source_system, schema_version), batch metadata (batch_id, status, row_count), summary stats (from db.GetLineageSummary — total_records, unique_members, fields_covered, transformation_types, exception_count), and per-handler grouped transformations (handler_name → []LineageEntry with column_name, source_value, result_value, member_id). Groups are sorted by handler_name, then column_name. Maximum 500 lineage entries per handler group (truncated with count indicator). Exported from api/report_handler.go alongside existing BuildMappingSpec.",
+      "verification": "cd platform/migration && go test ./api/... -run TestBuildLineageReport -count=1 -v"
+    },
+    {
+      "id": "AC-2",
+      "description": "HTML template for lineage report in report/templates/lineage_report.html using Go html/template (all values escaped). Includes: title page (engagement name, batch ID, generation date), executive summary section (total records, unique members, field count, exception count), per-handler sections with transformation tables (source_value → result_value, grouped by column), exception summary section. Professional styling matching M07a mapping spec template (same CSS framework, alternating row colors, consistent typography). Template rendered via report.RenderLineageReportHTML(data LineageReport) (string, error).",
+      "verification": "cd platform/migration && go test ./report/... -run TestLineageReportTemplate -count=1 -v"
+    },
+    {
+      "id": "AC-3",
+      "description": "GET /api/v1/migration/engagements/{id}/reports/lineage/{batch_id}/pdf returns the lineage report as a PDF download for a specific batch. Content-Type: application/pdf. Content-Disposition: attachment; filename=lineage-{batch-id}-{date}.pdf. Uses BuildLineageReport + HTML template + Renderer interface (same pattern as mapping spec PDF). Returns 404 if engagement or batch not found. Returns 404 if batch has no lineage records. 25-second chromedp timeout (matching M07a). Requires authenticated user.",
+      "verification": "cd platform/migration && go test ./api/... -run TestLineageReportPDF -count=1 -v"
+    },
+    {
+      "id": "AC-4",
+      "description": "Reconciliation report data assembler: BuildReconciliationReport(db, engagementID) assembles a ReconciliationReport struct containing: engagement metadata, reconciliation summary (from db.GetReconciliationSummary — total, match, minor, major, error counts, gate_score, p1_count, tier scores), per-tier breakdown (from db.GetReconciliationByTier for tiers 1-3 — member_id, calc_name, legacy_value, recomputed_value, canonical_value, category, priority), and pattern analysis (from db.GetReconciliationPatterns — suspected_domain, direction, mean_variance, affected_members, correction info). Maximum 200 records per tier (truncated with count indicator).",
+      "verification": "cd platform/migration && go test ./api/... -run TestBuildReconciliationReport -count=1 -v"
+    },
+    {
+      "id": "AC-5",
+      "description": "HTML template for reconciliation report in report/templates/reconciliation_report.html. Includes: title page, executive summary with gate score gauge (green >= 0.95, yellow 0.80-0.94, red < 0.80), tier score breakdown table, match/mismatch distribution (total, match%, minor%, major%, error%), per-tier detail tables with color-coded priority (P1=red, P2=orange, P3=yellow), pattern analysis section with variance charts described as text tables (no JS charting in PDF). Same CSS framework as mapping spec and lineage templates.",
+      "verification": "cd platform/migration && go test ./report/... -run TestReconciliationReportTemplate -count=1 -v"
+    },
+    {
+      "id": "AC-6",
+      "description": "GET /api/v1/migration/engagements/{id}/reports/reconciliation/pdf returns the reconciliation summary as a PDF download. Content-Type: application/pdf. Content-Disposition: attachment; filename=reconciliation-{sanitized-engagement-name}-{date}.pdf. Returns 404 if engagement not found or has no reconciliation data. 25-second chromedp timeout. Requires authenticated user. Large engagement guard: if total reconciliation records exceed 10,000, return 422 suggesting use of filtered JSON export instead.",
+      "verification": "cd platform/migration && go test ./api/... -run TestReconciliationReportPDF -count=1 -v"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "Data assemblers use existing DB query functions (GetLineageSummary, GetReconciliationSummary, GetReconciliationByTier, GetReconciliationPatterns) — no new DB queries needed for the data",
+      "HTML templates use html/template with automatic escaping — no XSS via member IDs or field values",
+      "Renderer interface used (not concrete BrowserPool) — tests mock without Chrome",
+      "Content-Disposition filename sanitized (same pattern as M07a)",
+      "Reports go through auth middleware — no public access",
+      "Truncation limits prevent unbounded report generation (500 lineage entries per group, 200 recon records per tier)"
+    ],
+    "high": [
+      "Templates share CSS framework with mapping spec template — consistent professional look",
+      "Tests use -short mode with mock Renderer — no Chrome binary needed in CI",
+      "Error paths tested: no data returns 404, timeout returns 504, too large returns 422",
+      "Gate score color-coding consistent with frontend (green >= 0.95, yellow >= 0.80, red < 0.80)",
+      "Lineage report is per-batch (not per-engagement) — consistent with lineage data model"
+    ],
+    "medium": [
+      "Pattern analysis section uses text tables, not embedded charts (PDF doesn't support interactive JS)",
+      "Report caching deferred to future sprint — regenerated on every request",
+      "PDF document title metadata set for accessibility"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "platform/migration/report/lineage_report.go",
+    "platform/migration/report/lineage_report_test.go",
+    "platform/migration/report/templates/lineage_report.html",
+    "platform/migration/report/reconciliation_report.go",
+    "platform/migration/report/reconciliation_report_test.go",
+    "platform/migration/report/templates/reconciliation_report.html",
+    "platform/migration/api/report_handler.go",
+    "platform/migration/api/report_handler_test.go",
+    "platform/migration/api/handlers.go"
+  ]
+}

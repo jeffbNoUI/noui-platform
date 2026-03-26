@@ -1,0 +1,69 @@
+{
+  "sprint": 9,
+  "goal": "Certification: server-side gate evaluation, hybrid checklist, phase transition trigger",
+  "depends_on": ["M03c"],
+  "layer": "go",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "Refactor POST /api/v1/migration/engagements/{id}/certify to auto-evaluate computable checklist items from DB state. The handler calls db.GetGateMetrics(db, engagementID) to retrieve live reconciliation gate_score, p1_unresolved_count, quality_min_score, and mapping_agreed_pct. Three checklist items are auto-evaluated: (1) recon_score — gate_score >= 0.95, (2) p1_resolved — p1_unresolved_count == 0, (3) parallel_duration — at least one parallel_run with status COMPLETED exists for this engagement (query migration.parallel_run). Two items remain human-attested via request body: (4) stakeholder_signoff (boolean), (5) rollback_plan (boolean). If any auto-evaluated item fails, return 422 with a structured error listing which items failed and their actual values. If human-attested items are missing or false, return 422 listing which attestations are missing.",
+      "verification": "cd platform/migration && go test ./api/... -run TestCertifyAutoEvaluate -count=1 -v"
+    },
+    {
+      "id": "AC-2",
+      "description": "CertificationRecord model updated: add auto_evaluated JSONB field (stores the server-computed values at certification time — gate_score, p1_count, quality_min_score, mapping_agreed_pct, parallel_run_count — as an immutable snapshot so auditors can see what the system evaluated). The existing gate_score and p1_count fields remain for backward compat but are now populated from auto-evaluation, not from the request body. CreateCertification updated to accept and store the auto_evaluated snapshot.",
+      "verification": "cd platform/migration && go test ./db/... -run TestCertificationAutoEvaluated -count=1 -v"
+    },
+    {
+      "id": "AC-3",
+      "description": "Successful certification triggers engagement phase transition to COMPLETE via db.UpdateEngagementStatus(db, engagementID, 'COMPLETE'). The certification handler verifies the engagement is currently in PARALLEL_RUN or RECONCILING status before proceeding — returns 409 Conflict if engagement is in any other phase. A gate_transition record is also inserted (from_phase=current, to_phase=COMPLETE, direction=ADVANCE, gate_metrics=auto_evaluated snapshot, authorized_by=actor from JWT).",
+      "verification": "cd platform/migration && go test ./api/... -run TestCertifyTriggersPhaseTransition -count=1 -v"
+    },
+    {
+      "id": "AC-4",
+      "description": "GET /api/v1/migration/engagements/{id}/certifications (plural) returns paginated certification history — all certification records for the engagement, ordered by created_at DESC. Supports ?page= and ?per_page= (default 20, max 100). Returns {records: [], total: N, page: N, per_page: N}. The existing GET /certification (singular) endpoint remains for backward compat, returning only the latest.",
+      "verification": "cd platform/migration && go test ./api/... -run TestListCertifications -count=1 -v"
+    },
+    {
+      "id": "AC-5",
+      "description": "GET /api/v1/migration/engagements/{id}/certification/checklist returns the current checklist evaluation state WITHOUT creating a certification. This is a read-only preview endpoint for the UI to show which items pass/fail before the user submits. Returns {items: [{key, label, auto_evaluated, value, passes, threshold}], all_pass: bool}. Auto-evaluated items show their live computed values. Human-attested items show {auto_evaluated: false, value: null, passes: false}.",
+      "verification": "cd platform/migration && go test ./api/... -run TestCertificationChecklist -count=1 -v"
+    },
+    {
+      "id": "AC-6",
+      "description": "Audit integration: successful certification logs to audit_log (if h.Audit is non-nil) with entity_type='certification', action='certify', after_state containing the full certification record including auto_evaluated snapshot. Failed certification attempts (422 responses) also log with action='certify_rejected' and after_state containing the failure reasons. Actor from JWT context.",
+      "verification": "cd platform/migration && go test ./api/... -run TestCertifyAuditLog -count=1 -v"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "Auto-evaluated items computed from DB state via GetGateMetrics — NEVER from request body",
+      "gate_score and p1_count on CertificationRecord populated server-side, not client-provided",
+      "Phase transition only from PARALLEL_RUN or RECONCILING → COMPLETE — 409 on any other status",
+      "gate_transition record inserted alongside certification — provides audit trail of the phase change",
+      "Human-attested items (stakeholder_signoff, rollback_plan) still required from request body — system cannot auto-evaluate governance decisions",
+      "Auto-evaluated snapshot stored as immutable JSONB — auditors see exactly what the system computed at certification time"
+    ],
+    "high": [
+      "Checklist preview endpoint is read-only — no side effects, no certification record created",
+      "Failed certification attempts logged to audit_log with rejection reasons",
+      "Parallel run completion check queries migration.parallel_run WHERE engagement_id AND status = 'COMPLETED'",
+      "Backward compat: GET /certification (singular) still works, returns latest",
+      "422 error response includes structured details of which items failed and their actual values"
+    ],
+    "medium": [
+      "Threshold constants (gate_score >= 0.95, quality >= 0.70, mapping >= 80%) defined as named constants, not magic numbers",
+      "Certification record count per engagement is typically < 10 — no index needed beyond engagement_id FK"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "platform/migration/api/certification_handlers.go",
+    "platform/migration/api/certification_handlers_test.go",
+    "platform/migration/db/certification.go",
+    "platform/migration/db/certification_test.go",
+    "platform/migration/models/types.go",
+    "platform/migration/api/handlers.go"
+  ]
+}
