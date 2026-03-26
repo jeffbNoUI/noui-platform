@@ -1107,3 +1107,51 @@ type GateMetricDefinition struct {
 	// false means current <= threshold to pass (e.g., p1_count must be 0).
 	GreaterOrEqual bool
 }
+
+// ---------------------------------------------------------------------------
+// Profiler L4: Canonical Coverage Report (M10b)
+// ---------------------------------------------------------------------------
+
+// CoverageFieldStatus classifies how well a canonical field is mapped.
+type CoverageFieldStatus string
+
+const (
+	CoverageFieldMapped         CoverageFieldStatus = "MAPPED"
+	CoverageFieldAutoMapped     CoverageFieldStatus = "AUTO_MAPPED"
+	CoverageFieldReviewRequired CoverageFieldStatus = "REVIEW_REQUIRED"
+	CoverageFieldUnmapped       CoverageFieldStatus = "UNMAPPED"
+)
+
+// CoverageSourceCandidate represents a source column that could satisfy a canonical field.
+type CoverageSourceCandidate struct {
+	SourceTable  string  `json:"source_table"`
+	SourceColumn string  `json:"source_column"`
+	Confidence   float64 `json:"confidence"`
+	MatchReason  string  `json:"match_reason"` // "exact_name", "name_similarity", "type_compatible"
+}
+
+// CoverageFieldDetail describes coverage status for a single canonical field.
+type CoverageFieldDetail struct {
+	CanonicalEntity  string                    `json:"canonical_entity"`
+	FieldName        string                    `json:"field_name"`
+	DataType         string                    `json:"data_type"`
+	IsRequired       bool                      `json:"is_required"`
+	Status           CoverageFieldStatus       `json:"status"`
+	SourceCandidates []CoverageSourceCandidate `json:"source_candidates"`
+}
+
+// CoverageReport represents a migration.coverage_report row (L4 output).
+type CoverageReport struct {
+	ReportID             string                `json:"report_id"`
+	ProfilingRunID       string                `json:"profiling_run_id"`
+	SchemaVersionID      string                `json:"schema_version_id"`
+	TotalCanonicalFields int                   `json:"total_canonical_fields"`
+	MappedFields         int                   `json:"mapped_fields"`
+	UnmappedFields       int                   `json:"unmapped_fields"`
+	CoveragePct          float64               `json:"coverage_pct"`
+	AutoMappedCount      int                   `json:"auto_mapped_count"`
+	ReviewRequiredCount  int                   `json:"review_required_count"`
+	NoMatchCount         int                   `json:"no_match_count"`
+	FieldDetails         []CoverageFieldDetail `json:"field_details"`
+	CreatedAt            time.Time             `json:"created_at"`
+}

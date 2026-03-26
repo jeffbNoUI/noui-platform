@@ -69,6 +69,8 @@ var allMigrationTables = []string{
 	// Tier B: FK to engagement (M09b)
 	"recon_execution_run",
 	"recon_execution_mismatch",
+	// Tier B: FK to profiling_run (M10b)
+	"coverage_report",
 	// Tier D: deep FK chain
 	"source_table",
 	"source_column",

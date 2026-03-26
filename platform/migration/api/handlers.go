@@ -218,6 +218,10 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PATCH /api/v1/migration/engagements/{id}/drift-schedule", h.HandleUpdateDriftSchedule)
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/drift-summary", h.HandleGetDriftSummary)
 
+	// L4 Coverage report (M10b)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/profiling/{runId}/coverage", h.GetL4CoverageReport)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/profiling/{runId}/coverage/gaps", h.GetL4CoverageGaps)
+
 	// Reconciliation rules (M09a)
 	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/recon-rules", h.CreateReconRuleSet)
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/recon-rules", h.ListReconRuleSets)
