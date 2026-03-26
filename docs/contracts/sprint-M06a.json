@@ -1,0 +1,86 @@
+{
+  "sprint": 10,
+  "goal": "Audit trail: immutable audit_log table (distinct from activity event table), DELETE protection triggers, and reconciliation integrity hashes",
+  "depends_on": ["M01"],
+  "layer": "go+db",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "Migration 046 creates migration.audit_log table with columns: log_id UUID PK DEFAULT gen_random_uuid(), engagement_id UUID NOT NULL FK, actor TEXT NOT NULL (JWT sub claim), action TEXT NOT NULL, entity_type TEXT NOT NULL (e.g., 'mapping', 'reconciliation', 'risk', 'parallel_run', 'attention'), entity_id TEXT NOT NULL (TEXT not UUID — attention items use string IDs from path params, not all entities have UUID PKs), before_state JSONB, after_state JSONB, metadata JSONB, created_at TIMESTAMPTZ NOT NULL DEFAULT now(). Table has REVOKE UPDATE, DELETE on migration.audit_log FROM migration_app_role (or equivalent — INSERT only). RLS uses Tier B pattern: USING (engagement_id IN (SELECT engagement_id FROM migration.engagement WHERE tenant_id = current_setting('app.tenant_id', true)::UUID)). Index on (engagement_id, created_at DESC) for listing. Distinction from migration.event: event is a real-time activity feed (WebSocket broadcast substrate, short-retention), audit_log is the immutable compliance record (structured before/after state, 7-year retention, no UPDATE/DELETE). Both tables coexist — audit_log does not replace event.",
+      "verification": "cd platform/migration && go test ./db/... -run TestAuditLogSchema -count=1 -v"
+    },
+    {
+      "id": "AC-2",
+      "description": "Migration 046 creates migration.analyst_decision table (043_rls_policies.sql enables RLS on it but no CREATE TABLE exists in any migration). CRITICAL: table must include tenant_id UUID NOT NULL to match the existing Tier A RLS policy in 043 which uses USING (tenant_id = current_setting('app.tenant_id')). Schema: decision_id UUID PK DEFAULT gen_random_uuid(), tenant_id UUID NOT NULL, engagement_id UUID NOT NULL FK, decision_type TEXT NOT NULL CHECK (MAPPING_APPROVED|MAPPING_REJECTED|CORRECTION_APPROVED|CORRECTION_REJECTED|EXCEPTION_RESOLVED), entity_type TEXT NOT NULL, entity_id TEXT NOT NULL, decided_by TEXT NOT NULL, context JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now(). No new RLS policy needed — 043 already created the Tier A policy. Then adds BEFORE DELETE triggers on migration.lineage, migration.event, migration.analyst_decision, and migration.audit_log that RAISE EXCEPTION 'DELETE not permitted on audit table: %', TG_TABLE_NAME.",
+      "verification": "cd platform/migration && go test ./db/... -run TestAuditDeleteProtection -count=1 -v"
+    },
+    {
+      "id": "AC-3",
+      "description": "Reconciliation result integrity hash: migration 046 adds integrity_hash TEXT column to migration.reconciliation (nullable for existing rows). Go function ComputeReconIntegrityHash(r *ReconciliationResult) string computes SHA-256 over a canonical string representation: fmt.Sprintf(\"%s|%s|%s|%s|%s|%s|%s\", batchID, memberID, calcName, legacyValue, recomputedValue, canonicalValue, varianceAmount) where NULL fields are represented as empty string. Deterministic and tested with known inputs/outputs.",
+      "verification": "cd platform/migration && go test ./db/... -run TestReconIntegrityHash -count=1 -v"
+    },
+    {
+      "id": "AC-4",
+      "description": "Go audit logger in db/audit.go: AuditLogger struct wrapping *sql.DB with method Log(ctx context.Context, entry AuditEntry) error. AuditEntry struct defined in models/audit.go: EngagementID, Actor, Action, EntityType, EntityID (all string), BeforeState, AfterState, Metadata (all json.RawMessage). Logger inserts into migration.audit_log. Actor extracted from request context via auth helper (same pattern as resolved_by in attention handlers). Audit INSERT is synchronous but non-blocking: if the INSERT fails, error is logged via slog.Error and the caller receives nil (audit failure must not fail the parent mutation).",
+      "verification": "cd platform/migration && go test ./db/... -run TestAuditLogger -count=1 -v"
+    },
+    {
+      "id": "AC-5",
+      "description": "GET /api/v1/migration/engagements/{id}/audit-log returns paginated audit entries. Supports ?entity_type= filter, ?entity_id= filter, ?actor= filter, ?page= and ?per_page= pagination (default 50, max 200). Returns 200 with {entries: [], total: N, page: N, per_page: N}. Ordered by created_at DESC. Requires authenticated user (all roles can view audit trail). No UPDATE or DELETE API endpoints exist for audit_log — read-only access only.",
+      "verification": "cd platform/migration && go test ./api/... -run TestListAuditLog -count=1 -v"
+    },
+    {
+      "id": "AC-6",
+      "description": "Audit logger integrated into attention mutation handlers (attention_handlers.go): resolve/defer actions log to audit_log with entity_type='attention', entity_id=itemID (string from path param), action='resolve' or 'defer', before_state=nil (attention items are derived, no prior state to capture), after_state={source, resolution_note, resolved_by}. Tested by calling resolve endpoint and asserting audit_log entry exists.",
+      "verification": "cd platform/migration && go test ./api/... -run TestAuditIntegration -count=1 -v"
+    },
+    {
+      "id": "AC-7",
+      "description": "Non-blocking audit behavior tested: inject a DB write failure (e.g., closed connection) for the audit INSERT. The parent mutation (attention resolve) still returns 200 success. The audit failure is logged via slog.Error with engagement_id and entity_id context.",
+      "verification": "cd platform/migration && go test ./api/... -run TestAuditNonBlocking -count=1 -v"
+    },
+    {
+      "id": "AC-8",
+      "description": "rls_test.go updated: audit_log added to allMigrationTables under Tier B. analyst_decision remains in Tier A (it already exists in the list at line 27). The migrationRLSFile constant or TestRLSDDLVerification logic updated to also scan 046_audit_log.sql for RLS policy DDL (since audit_log's RLS policy is defined in 046, not 043). All existing RLS tests continue to pass.",
+      "verification": "cd platform/migration && go test ./db/... -run TestMigrationRLS -count=1 -v"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "audit_log table has REVOKE UPDATE, DELETE — INSERT only, verified in tests",
+      "BEFORE DELETE triggers raise EXCEPTION, not silently skip — on lineage, event, analyst_decision, audit_log",
+      "audit_log RLS uses Tier B pattern via current_setting('app.tenant_id') — NOT engagement_members",
+      "analyst_decision uses Tier A pattern WITH tenant_id column — matches existing 043_rls_policies.sql policy that references tenant_id directly",
+      "integrity_hash is SHA-256 computed server-side, not client-provided — prevents tampering",
+      "Actor comes from JWT context (request context auth helper), never from request body",
+      "entity_id is TEXT not UUID — accommodates attention item string IDs and other non-UUID entity keys",
+      "Test fixtures use obviously fake data (Jane Doe, $1234.56, not realistic PII)",
+      "analyst_decision CREATE TABLE includes tenant_id UUID NOT NULL — fixes gap where 043 enables Tier A RLS on non-existent table"
+    ],
+    "high": [
+      "Non-blocking audit: INSERT failure logged but does not fail parent mutation — explicit AC-7 test",
+      "before_state/after_state are json.RawMessage (not interface{}) — serialization is caller's responsibility",
+      "Pagination bounded at max 200 per_page",
+      "slog structured logging for audit write failures with engagement_id context",
+      "audit_log vs event distinction documented in migration SQL comments and AC-1",
+      "TestRLSDDLVerification updated to scan both 043 and 046 migration files for RLS DDL"
+    ],
+    "medium": [
+      "Audit log retention policy (7 years per CLAUDE.md) — documented as M06b scope",
+      "Tamper detection: periodic integrity verification of reconciliation hashes — documented as future",
+      "NULL handling in ComputeReconIntegrityHash explicitly specified: empty string for nil fields"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "platform/migration/db/migrations/046_audit_log.sql",
+    "platform/migration/db/audit.go",
+    "platform/migration/db/audit_test.go",
+    "platform/migration/api/audit_handlers.go",
+    "platform/migration/api/audit_handlers_test.go",
+    "platform/migration/models/audit.go",
+    "platform/migration/api/attention_handlers.go",
+    "platform/migration/db/rls_test.go"
+  ]
+}

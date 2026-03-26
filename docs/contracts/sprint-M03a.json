@@ -1,0 +1,73 @@
+{
+  "sprint": 7,
+  "goal": "Parallel run: DB schema + Go models for dual-version execution tracking",
+  "depends_on": ["M01", "M02c"],
+  "layer": "go+db",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "Migration 045 creates migration.parallel_run table with columns: run_id UUID PK DEFAULT gen_random_uuid(), engagement_id UUID NOT NULL FK to migration.engagement, name TEXT NOT NULL, description TEXT, status TEXT NOT NULL DEFAULT 'PENDING' CHECK (PENDING|RUNNING|PAUSED|COMPLETED|FAILED|CANCELLED), legacy_source TEXT NOT NULL (identifies the legacy system endpoint), canonical_source TEXT NOT NULL (identifies the new system endpoint), comparison_mode TEXT NOT NULL DEFAULT 'SAMPLE' CHECK (SAMPLE|FULL|CONTINUOUS) — note: CONTINUOUS requires CDC integration not yet built, add SQL comment documenting this, sample_rate NUMERIC(5,4) DEFAULT 0.1000, started_by TEXT NOT NULL, started_at TIMESTAMPTZ, completed_at TIMESTAMPTZ, created_at TIMESTAMPTZ NOT NULL DEFAULT now(). Index on engagement_id for RLS subquery performance and listing. RLS policy uses the established Tier B pattern: USING (engagement_id IN (SELECT engagement_id FROM migration.engagement WHERE tenant_id = current_setting('app.tenant_id', true)::UUID)).",
+      "verification": "cd platform/migration && go test ./db/... -run TestParallelRunSchema -count=1 -v"
+    },
+    {
+      "id": "AC-2",
+      "description": "Migration 045 also creates migration.parallel_run_result table with columns: result_id UUID PK DEFAULT gen_random_uuid(), run_id UUID NOT NULL FK to migration.parallel_run, member_id VARCHAR(200) NOT NULL (matches reconciliation table pattern), canonical_entity TEXT NOT NULL, field_name TEXT NOT NULL, legacy_value TEXT, new_value TEXT, match BOOLEAN NOT NULL, variance_amount NUMERIC(15,2), variance_pct NUMERIC(8,4), checked_at TIMESTAMPTZ NOT NULL DEFAULT now(). UNIQUE constraint on (run_id, member_id, canonical_entity, field_name) for idempotent inserts. Indexes on (run_id, match) for mismatch filtering and (run_id, canonical_entity) for entity-level summaries. RLS policy joins through parallel_run to engagement to tenant: USING (run_id IN (SELECT run_id FROM migration.parallel_run WHERE engagement_id IN (SELECT engagement_id FROM migration.engagement WHERE tenant_id = current_setting('app.tenant_id', true)::UUID))).",
+      "verification": "cd platform/migration && go test ./db/... -run TestParallelRunResultSchema -count=1 -v"
+    },
+    {
+      "id": "AC-3",
+      "description": "Go model types defined in models/parallel_run.go: ParallelRun struct, ParallelRunResult struct, ParallelRunStatus enum (PENDING|RUNNING|PAUSED|COMPLETED|FAILED|CANCELLED), ComparisonMode enum (SAMPLE|FULL|CONTINUOUS), ParallelRunSummary struct with fields: TotalCompared int, MatchCount int, MismatchCount int, MatchRatePct float64, ByEntity map[string]EntityMatchSummary. EntityMatchSummary struct has MatchCount and MismatchCount fields. All build cleanly.",
+      "verification": "cd platform/migration && go build ./models/..."
+    },
+    {
+      "id": "AC-4",
+      "description": "DB query functions in db/parallel_run.go: CreateParallelRun, GetParallelRun, ListParallelRuns (by engagement_id, with optional status filter), UpdateParallelRunStatus, InsertParallelRunResults (batch insert using ON CONFLICT (run_id, member_id, canonical_entity, field_name) DO NOTHING for idempotent retries), GetParallelRunResults (with pagination + match filter, per_page max 200), GetParallelRunSummary (aggregate COUNT/SUM by entity via SQL, not client-side). All use scanParallelRun/scanParallelRunResult DRY helpers following the engagement.go scanner pattern.",
+      "verification": "cd platform/migration && go test ./db/... -run TestParallelRun -count=1 -v"
+    },
+    {
+      "id": "AC-5",
+      "description": "ParallelRunStatus has valid transition enforcement: PENDING→RUNNING, RUNNING→PAUSED|COMPLETED|FAILED|CANCELLED, PAUSED→RUNNING|CANCELLED. Invalid transitions return error. Tested with at least 3 valid and 3 invalid transitions.",
+      "verification": "cd platform/migration && go test ./models/... -run TestParallelRunStatusTransition -count=1 -v"
+    },
+    {
+      "id": "AC-6",
+      "description": "Untyped string constant added to jobqueue/queue.go: const JobTypeParallelRun = \"parallel_run\". This follows the existing pattern where job types are free-form strings — the constant provides a canonical reference without introducing a typed enum that would break existing callers using raw string literals.",
+      "verification": "cd platform/migration && go build ./jobqueue/..."
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "RLS uses Tier B pattern via current_setting('app.tenant_id') — NOT engagement_members (which does not exist in this codebase)",
+      "engagement_id NOT NULL and FK to migration.engagement on parallel_run table",
+      "parallel_run_result joins through parallel_run to get tenant scoping — two-hop RLS subquery",
+      "variance_amount uses NUMERIC(15,2), not float — monetary precision required for benefit comparisons",
+      "Migration file is 045 (next after 044_attention_resolve.sql)",
+      "Status transitions enforced in model layer — no direct string assignment",
+      "UNIQUE constraint on (run_id, member_id, canonical_entity, field_name) for idempotent batch inserts"
+    ],
+    "high": [
+      "Index on engagement_id for parallel_run table (consistent with all engagement-scoped tables, required for RLS subquery)",
+      "Index on (run_id, match) for efficient mismatch filtering",
+      "Index on (run_id, canonical_entity) for entity-level grouping",
+      "Batch insert for results (not row-by-row) with ON CONFLICT DO NOTHING",
+      "Summary query uses COUNT/SUM aggregation, not client-side counting",
+      "Tests use sqlmock-compatible patterns (scanner interface, explicit column lists)",
+      "rls_test.go updated: parallel_run and parallel_run_result added to allMigrationTables"
+    ],
+    "medium": [
+      "sample_rate default 0.1 (10%) is sensible for initial parallel runs",
+      "comparison_mode CONTINUOUS documented as future-only in SQL comment and Go model comment"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "platform/migration/db/migrations/045_parallel_run.sql",
+    "platform/migration/models/parallel_run.go",
+    "platform/migration/models/parallel_run_test.go",
+    "platform/migration/db/parallel_run.go",
+    "platform/migration/db/parallel_run_test.go",
+    "platform/migration/db/rls_test.go",
+    "platform/migration/jobqueue/queue.go"
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "sprint": 9,
+  "goal": "Parallel run: API handlers + WebSocket events for run management and live results",
+  "depends_on": ["M03b"],
+  "layer": "go",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "POST /api/v1/migration/engagements/{id}/parallel-runs creates a new parallel run. Accepts JSON body: {name, description, legacy_source, canonical_source, comparison_mode, sample_rate, entities: []string}. Validates comparison_mode against allowed values (SAMPLE, FULL) — returns 400 for CONTINUOUS with message 'CONTINUOUS mode not yet supported'. Enqueues a 'parallel_run' job via job queue. Returns 201 with the created ParallelRun JSON including run_id. Requires editor-or-above role (h.requireEditor). Broadcasts 'parallel_run_created' WebSocket event.",
+      "verification": "cd platform/migration && go test ./api/... -run TestCreateParallelRun$ -count=1 -v"
+    },
+    {
+      "id": "AC-2",
+      "description": "GET /api/v1/migration/engagements/{id}/parallel-runs lists all parallel runs for the engagement. Supports ?status= query parameter for filtering. Returns 200 with array of ParallelRun JSON objects ordered by created_at DESC. Requires authenticated user (all roles can view — no additional role check beyond auth middleware).",
+      "verification": "cd platform/migration && go test ./api/... -run TestListParallelRuns$ -count=1 -v"
+    },
+    {
+      "id": "AC-3",
+      "description": "GET /api/v1/migration/engagements/{id}/parallel-runs/{runId} returns a single parallel run with its summary statistics (total_compared, match_count, mismatch_count, match_rate_pct, by_entity breakdown using EntityMatchSummary). Returns 404 if run not found. Requires authenticated user.",
+      "verification": "cd platform/migration && go test ./api/... -run TestGetParallelRun$ -count=1 -v"
+    },
+    {
+      "id": "AC-4",
+      "description": "GET /api/v1/migration/engagements/{id}/parallel-runs/{runId}/results returns paginated comparison results. Supports ?match=true|false filter, ?entity= filter for specific canonical entity, ?page= and ?per_page= pagination (default 50, max 200 — requests above 200 are clamped). Returns 200 with {results: [], total: N, page: N, per_page: N}. Requires authenticated user.",
+      "verification": "cd platform/migration && go test ./api/... -run TestGetParallelRunResults$ -count=1 -v"
+    },
+    {
+      "id": "AC-5",
+      "description": "POST /api/v1/migration/engagements/{id}/parallel-runs/{runId}/cancel cancels a parallel run. For PENDING/CLAIMED jobs: calls jobqueue.CancelScoped to cancel directly, sets parallel_run status to CANCELLED. For RUNNING jobs: sets parallel_run status to CANCELLED — the worker's heartbeat loop (default 30s interval) detects StatusCancelled and stops the executor via context cancellation (cooperative cancel). Note: there is up to a 30-second latency between the API response and actual executor stop — the API returns 200 immediately with parallel_run.status=CANCELLED, but the job may continue executing until the next heartbeat. Returns 409 if run is already in terminal state (COMPLETED|FAILED|CANCELLED). PAUSED runs are cancellable (PAUSED→CANCELLED is a valid transition per M03a). Requires editor-or-above role. Broadcasts 'parallel_run_cancelled' WebSocket event.",
+      "verification": "cd platform/migration && go test ./api/... -run TestCancelParallelRun$ -count=1 -v"
+    },
+    {
+      "id": "AC-6",
+      "description": "WebSocket events broadcast to engagement members for API-originated actions: 'parallel_run_created' (on create), 'parallel_run_cancelled' (on cancel). Worker-originated events require Hub injection into the Worker struct — add a Hub *ws.Hub field to worker.Worker, assigned post-construction via w.Hub = hub in main.go (same pattern as handler.Hub = hub at main.go line 87 — NOT a constructor parameter change, to avoid breaking M03b's worker.New() call). Worker broadcasts: 'parallel_run_started' (when executor calls q.MarkRunning), 'parallel_run_progress' (on q.UpdateProgress with progress percentage), 'parallel_run_completed' (on q.Complete with summary), 'parallel_run_failed' (on q.Fail with error). All events include run_id and engagement_id in payload.",
+      "verification": "cd platform/migration && go test ./api/... -run TestParallelRunWebSocket -count=1 -v"
+    },
+    {
+      "id": "AC-7",
+      "description": "All endpoints enforce auth middleware (inherited from mux wrapping in main.go). Unauthenticated requests return 401. Wrong role on mutation endpoints returns 403. Engagement not found returns 404. Invalid JSON body returns 400 with descriptive error via apiresponse.WriteError.",
+      "verification": "cd platform/migration && go test ./api/... -run TestParallelRunAuth -count=1 -v"
+    },
+    {
+      "id": "AC-8",
+      "description": "Routes registered in api/handlers.go RegisterRoutes() following existing mux.HandleFunc pattern. Handler uses h.DB directly (consistent with all existing handlers — no new dependency injection interface). PAUSE endpoint is deferred to a future contract (M03a schema supports PAUSED status, but no API endpoint triggers it yet — document as TODO in handlers file).",
+      "verification": "cd platform/migration && go build ./api/..."
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "All endpoints go through auth middleware — no exceptions",
+      "RLS scoping via tenant_id through engagement — handler never bypasses tenant isolation",
+      "Cancel for RUNNING jobs uses cooperative mechanism (set parallel_run status, worker detects via heartbeat), NOT jobqueue.CancelScoped (which only works for PENDING/CLAIMED)",
+      "Job cancellation propagates correctly: PENDING/CLAIMED via CancelScoped, RUNNING via heartbeat signal",
+      "Pagination per_page clamped to max 200 in handler code, not just documented",
+      "Worker.Hub injection: Hub assigned post-construction via w.Hub = hub (NOT via constructor change — preserves M03b's worker.New() call signature)"
+    ],
+    "high": [
+      "WebSocket events for all state changes — frontend can react without polling",
+      "GET endpoints require auth only (all roles can view), mutation endpoints require editor-or-above — matches permission model",
+      "Tests cover: create, list, get, results pagination, cancel PENDING, cancel RUNNING (cooperative), cancel PAUSED, 409 on terminal, 403 unauthorized, 404 not found, 400 bad JSON/CONTINUOUS mode",
+      "slog structured logging on create, cancel, and error paths",
+      "401 vs 403 distinction: missing/invalid token → 401 (auth middleware), wrong role → 403 (requireEditor)"
+    ],
+    "medium": [
+      "PAUSE endpoint deferred — documented as TODO",
+      "CONTINUOUS mode rejected at API layer (400) before reaching the worker",
+      "Rate limiting on create endpoint deferred — no accidental spam protection yet"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "platform/migration/api/parallel_run_handlers.go",
+    "platform/migration/api/parallel_run_handlers_test.go",
+    "platform/migration/api/handlers.go",
+    "platform/migration/worker/worker.go",
+    "platform/migration/main.go"
+  ]
+}
