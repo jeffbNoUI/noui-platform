@@ -197,6 +197,12 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/migration/schema-versions/{id}", h.GetSchemaVersion)
 	mux.HandleFunc("POST /api/v1/migration/schema-versions/{id}/activate", h.ActivateSchemaVersion)
 
+	// Drift detection (M05a)
+	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/drift-detection", h.HandleInitiateDriftDetection)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/drift-detection", h.HandleListDriftDetectionRuns)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/drift-detection/{runId}", h.HandleGetDriftDetectionRun)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/drift-detection/{runId}/records", h.HandleGetDriftDetectionRecords)
+
 	// Reconciliation rules (M09a)
 	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/recon-rules", h.CreateReconRuleSet)
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/recon-rules", h.ListReconRuleSets)
