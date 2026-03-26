@@ -1,0 +1,59 @@
+{
+  "version": "1.0",
+  "description": "Persona-based design review rubric for NoUI migration autonomous build pipeline. Three tiers represent distinct stakeholder perspectives.",
+  "priority_order": ["tier1", "tier2", "tier3"],
+  "conflict_resolution": "Fixed priority: T1 > T2 > T3. Higher tier wins on conflicts. Most conflicts resolve via role-gating.",
+  "tiers": {
+    "tier1": {
+      "persona": "Pension Fund Auditor / CISO",
+      "perspective": "Regulatory compliance, data isolation, audit trail integrity, fiduciary responsibility. Every record must be traceable, every access must be authorized, every mutation must be logged. Zero tolerance for data leakage between tenants.",
+      "review_prompt": "You are a pension fund auditor and CISO reviewing a migration build pipeline design. Your primary concerns are: (1) Can a bad actor or a bug in one tenant's migration see, modify, or corrupt another tenant's data? (2) Is every data mutation auditable with immutable lineage? (3) Does the system meet pension regulatory requirements (7-year retention, trustee-readable reports)? (4) Are credentials, PII, and financial data protected at rest and in transit? Grade each criterion as PASS, FAIL, or WARNING with evidence.",
+      "criteria": [
+        "Every migration table has RLS enforced at the DB layer — not just app-level filtering",
+        "Tenant ID flows from JWT claim through middleware to DB context — never from request body or headers",
+        "Lineage records are immutable after creation — no UPDATE touches lineage except superseded_by",
+        "Audit trail cannot be tampered with — append-only, no DELETE capability on audit tables",
+        "Credentials for source database connections are not stored in plaintext — encrypted at rest",
+        "Financial values (benefit amounts, salary, contributions) never use float64 — big.Rat or scaled int only",
+        "Reconciliation results are signed with engagement version — cannot be retroactively altered",
+        "Error thresholds enforce zero tolerance for retiree data errors",
+        "PDF/HTML reports are generated server-side — no client-side rendering of sensitive financial data",
+        "Session dispatch workflow enforces auth check before any data access in every contract"
+      ]
+    },
+    "tier2": {
+      "persona": "Migration Analyst / Rules Engineer",
+      "perspective": "Domain correctness, phase gate integrity, reconciliation accuracy, exception handling completeness. The migration must produce correct pension data — wrong benefit calculations destroy retirement security.",
+      "review_prompt": "You are a pension migration analyst and rules engineer reviewing a migration build pipeline. Your primary concerns are: (1) Will the phase gates actually catch data quality issues before they propagate? (2) Are the reconciliation tiers correctly ordered and prioritized? (3) Does the attention queue correctly surface the right issues to the right people? (4) Will the cutover process preserve data integrity? Grade each criterion as PASS, FAIL, or WARNING with evidence.",
+      "criteria": [
+        "Attention queue correctly unions risk and reconciliation tables — source field dispatches to correct underlying table",
+        "Phase transitions enforce prerequisites — cannot skip from MAPPING to RECONCILING",
+        "Reconciliation weighted gate formula matches spec: (MATCH*1.0 + MINOR*0.5) / total >= 0.95 AND P1 == 0",
+        "Exception dispositions are domain-correct: PENDING, OPEN, ACCEPTED, REJECTED, WAIVED — not generic RESOLVED/DEFERRED",
+        "Batch operations are idempotent — re-running a batch produces the same result without double-loading",
+        "Confidence tagging (ACTUAL, DERIVED, ESTIMATED, ROLLED_UP) is preserved through all transformations",
+        "Code table translations are versioned per engagement — not shared across engagements",
+        "Parallel run contracts acknowledge existing certification_handlers.go and gate_handlers.go",
+        "Cutover rollback can surgically undo via lineage — not just full table restore",
+        "Contract acceptance criteria are specific enough to produce only one correct implementation"
+      ]
+    },
+    "tier3": {
+      "persona": "Platform SRE / DevOps Engineer",
+      "perspective": "Operational reliability, failure recovery, monitoring observability, deployment safety. The system must run unattended overnight without losing work or corrupting state.",
+      "review_prompt": "You are a platform SRE reviewing a migration build pipeline designed for autonomous overnight execution. Your primary concerns are: (1) What happens when a session crashes mid-implementation? (2) Can the pipeline recover from partial failures without human intervention? (3) Are there adequate monitoring and alerting hooks? (4) Will worktrees, branches, and PRs accumulate as garbage? Grade each criterion as PASS, FAIL, or WARNING with evidence.",
+      "criteria": [
+        "Job queue uses SELECT FOR UPDATE SKIP LOCKED — no double-pickup under concurrent workers",
+        "Stale job recovery on service restart — RUNNING jobs older than threshold reset to RETRYING",
+        "Graceful shutdown — worker finishes current job before stopping on SIGTERM",
+        "Exponential backoff with jitter on retry — prevents thundering herd",
+        "WebSocket reconnection handles service restart without losing event history",
+        "Session dispatch handles worktree cleanup — stale worktrees are detected and reported",
+        "Draft PR protocol on failure — incomplete work is visible and resumable, not lost",
+        "Dependency check prevents building on stale main — rebase gate after worktree creation",
+        "Overnight batch script handles session failure — doesn't blindly start dependent contracts",
+        "Checkpoint contracts (CP-01, CP-02) verify cross-contract regression — not just per-contract tests"
+      ]
+    }
+  }
+}

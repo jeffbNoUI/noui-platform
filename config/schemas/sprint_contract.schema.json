@@ -9,7 +9,7 @@
   "properties": {
     "sprint": {
       "type": "integer",
-      "minimum": 1,
+      "minimum": 0,
       "description": "Sprint number (sequential within the contract set)"
     },
     "goal": {

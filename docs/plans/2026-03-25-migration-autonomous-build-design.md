@@ -229,15 +229,40 @@ INT-02: after M12b (full system integration test)
 claude --name "migration-M01" -p "Execute sprint contract docs/contracts/sprint-M01.json using the quality-gated workflow. [full prompt in docs/contracts/SESSION_DISPATCH.md]"
 ```
 
-### Overnight Batch (sequential)
+### Overnight Batch (failure-aware)
 ```bash
-for contract in M01 M02a M02b M02c M02d; do
-  claude --name "migration-$contract" -p "Execute sprint contract docs/contracts/sprint-$contract.json using the quality-gated workflow described in docs/contracts/SESSION_DISPATCH.md"
+#!/bin/bash
+set -euo pipefail
+
+CONTRACTS=(M00 M01 M01b M02a M02b)
+
+for contract in "${CONTRACTS[@]}"; do
+  echo "=== Starting contract $contract ==="
+
+  # Verify prerequisites are merged before starting
+  deps=$(jq -r '.depends_on[]?' "docs/contracts/sprint-${contract}.json" 2>/dev/null)
+  for dep in $deps; do
+    merged=$(gh pr list --state merged --search "migration/${dep} in:title" --json title --jq length)
+    if [ "$merged" -eq 0 ]; then
+      echo "BLOCKED: prerequisite $dep not merged. Stopping pipeline."
+      exit 1
+    fi
+  done
+
+  claude --name "migration-$contract" -p \
+    "Execute sprint contract docs/contracts/sprint-$contract.json using the quality-gated workflow described in docs/contracts/SESSION_DISPATCH.md"
+
+  # Check if session produced a draft PR (quality gates failed)
+  pr_state=$(gh pr list --state open --search "migration/${contract} in:title" --json isDraft --jq '.[0].isDraft // "none"')
+  if [ "$pr_state" = "true" ]; then
+    echo "WARNING: Contract $contract produced a draft PR. Stopping pipeline."
+    exit 1
+  fi
 done
 ```
 
 ### Parallel Independent Tracks
-Critical path and independent track can run simultaneously in separate worktrees, as long as they don't touch the same files.
+Critical path and independent track can run simultaneously in separate terminal sessions, as long as they don't touch the same files. Each track uses the same failure-aware batch pattern.
 
 ---
 
@@ -292,12 +317,19 @@ Identified during independent review (2026-03-25). These are acknowledged gaps n
 | Template governance as client base grows | Deferred (Phase 5) | Requires 3+ client engagements to be meaningful. |
 | k-anonymity on shared corpus | Add to M10b | Add as acceptance criterion in M10b contract. |
 | Data archival/cleanup post-migration | Add to independent track | Low priority but needed for production hygiene. |
+| Source DB credential encryption | Pre-production blocker | `SourceConnection.Password` stored as plaintext JSONB. Must encrypt before any client engagement. Add M00b contract or address in M06a. |
+| Reconciliation result integrity hash | Add to M06a | SHA-256 hash of recon inputs for tamper detection. Add to M06a acceptance criteria. |
+| DELETE trigger protection on audit tables | Add to M06a | BEFORE DELETE triggers on lineage, event, analyst_decision tables. Add to M06a rubric. |
+| Attention queue missing TRANSFORMATION + QUALITY sources | Future enhancement | Current scope is RISK + RECONCILIATION. Expand when exception clustering matures. |
+| Exception disposition vocabulary split (PENDING vs OPEN) | Existing bug | `cluster.go` references PENDING but constraint allows only OPEN. Fix in a bug-fix contract. |
+| WebSocket event replay on reconnect | Future enhancement | Standard SSE `last-event-id` pattern. Not blocking for MVP. |
 
 ## 13. Review History
 
 | Date | Reviewer | Critical Findings | Resolution |
 |------|----------|------------------|------------|
-| 2026-03-25 | 3 independent reviewer agents | C1: /validate missing, C2: wrong attention domain model, C3: no session sync, C4: no RLS, C5: simplify diff issue | All 5 CRITICAL fixed. 12 IMPORTANT fixed. Design doc, contracts, and SESSION_DISPATCH.md updated. |
+| 2026-03-25 | 3 independent reviewer agents (Round 1) | C1: /validate missing, C2: wrong attention domain model, C3: no session sync, C4: no RLS, C5: simplify diff issue | All 5 CRITICAL fixed. 12 IMPORTANT fixed. Design doc, contracts, and SESSION_DISPATCH.md updated. |
+| 2026-03-25 | 3 persona reviewers (Round 2: T1 Auditor, T2 Analyst, T3 SRE) | T1: plaintext credentials (FAIL), recon integrity hash (FAIL), no DELETE triggers (WARN). T2: attention source types incomplete (WARN), disposition vocab split (WARN), existing handlers not in hints (WARN). T3: naive batch script (FAIL), schema min:1 vs sprint:0 (FAIL), git add -A risky (WARN). | Fixed: M01 depends on M00, schema min→0, batch script failure-aware, git add explicit, review history updated. Deferred: credential encryption (pre-prod blocker), recon hash + DELETE triggers (add to M06a). |
 
 ---
 

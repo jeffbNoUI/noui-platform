@@ -71,9 +71,11 @@ Follow this workflow exactly. Do not skip steps.
 
 ### Phase 3: Quality Gates
 
-20. **WIP commit** — stage and commit all changes before running quality gates:
+20. **WIP commit** — stage and commit all changes before running quality gates.
+    Stage only the files you created or modified (never use `git add -A` — it can capture debug artifacts, .env files, or binaries):
     ```bash
-    git add -A && git commit -m "WIP: [migration/{contract-id}] implementation complete, running quality gates"
+    git add platform/migration/... frontend/src/... # adjust to match your actual changes
+    git commit -m "WIP: [migration/{contract-id}] implementation complete, running quality gates"
     ```
     This ensures `/simplify` can diff against the correct baseline.
 21. Run `/validate` — full lint + typecheck + test suite

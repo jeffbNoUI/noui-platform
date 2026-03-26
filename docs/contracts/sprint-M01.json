@@ -1,7 +1,7 @@
 {
   "sprint": 1,
   "goal": "Attention queue resolve/defer mutations — backend endpoints dispatching to underlying tables",
-  "depends_on": [],
+  "depends_on": ["M00"],
   "layer": "go",
   "acceptance_criteria": [
     {
