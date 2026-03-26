@@ -126,10 +126,10 @@ M00 (RLS policies on migration tables) ──> M02a-d (job queue infrastructure)
 
 ### Critical Path (sequential)
 ```
-M01 (attention queue backend) ──> M01b (attention queue frontend)
-                                   ├──> M03a-c (parallel run) ──> M04a-c (cutover) ──> M05a-c (monitoring)
-M02a-d (job queue infrastructure) ┘
-     ↑ depends on M02c (API), NOT M02d (frontend)
+M00 (RLS) ──┬──> M01 (attention backend) ──> M01b (attention frontend)
+            │                                  ├──> M03a-c (parallel run) ──> M04a-c (cutover) ──> M05a-c (monitoring)
+            └──> M02a-d (job queue) ───────────┘
+                 M03a depends on M01 + M02c (API), NOT M02d (frontend)
 ```
 
 ### Independent Track (can run in parallel with critical path)
@@ -170,7 +170,7 @@ INT-02: after M12b (full system integration test)
 
 | Contract | Goal | Layer | Files | Effort | Depends On |
 |----------|------|-------|-------|--------|------------|
-| M01 | Attention queue resolve/defer (backend) | Go | 3 | 3h | — |
+| M01 | Attention queue resolve/defer (backend) | Go+DB | 5 | 3h | M00 |
 | M01b | Attention queue resolve/defer (frontend) | Frontend | 3 | 2h | M01 |
 | M02a | Job queue: DB schema + Go models | Go/DB | 4 | 3h | M00 |
 | M02b | Job queue: execution engine + retry | Go | 4 | 4h | M02a |
@@ -269,7 +269,7 @@ Usage:
 
 # Night 2: After M00 merged
 ./scripts/run-contract.sh M01 &
-./scripts/run-contract.sh M02a &  # M02a depends on M00 and M01, both merged
+./scripts/run-contract.sh M02a &  # M02a depends on M00 only
 
 # Night 3: After M01 and M02a merged
 ./scripts/run-contract.sh M01b &
@@ -303,7 +303,7 @@ Morning review checklist:
 ## 10. Success Criteria
 
 The autonomous build is complete when:
-- All 35 contracts have merged PRs
+- All 38 contracts have merged PRs
 - INT-02 (full system integration) passes
 - Docker E2E suite has expanded to cover parallel run + monitoring
 - No regressions in existing 96 E2E tests
@@ -315,7 +315,7 @@ The autonomous build is complete when:
 
 **Night 1:** M00 (RLS) — foundation, no dependencies
 **Night 2:** M01 (attention backend) — depends on M00 (merge M00 first)
-**Night 3:** M01b + M02a in parallel — M01b depends on M01, M02a depends on M00+M01
+**Night 2:** M01 + M02a in parallel — both depend only on M00
 **Night 4:** M02b (job engine) — depends on M02a
 **Night 5:** M02c + M02d sequentially, then CP-01 — job queue complete
 **Night 6+:** M03a-c, M04a-b, etc. — one per night, review between
