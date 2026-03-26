@@ -53,6 +53,13 @@ export function useMigrationEvents(engagementId: string | null, token?: string) 
         case 'mapping_agreement_updated':
           queryClient.invalidateQueries({ queryKey: ['migration', 'mappings'] });
           break;
+        case 'job_started':
+        case 'job_completed':
+        case 'job_failed':
+        case 'job_cancelled':
+          queryClient.invalidateQueries({ queryKey: ['migration', 'jobs'] });
+          queryClient.invalidateQueries({ queryKey: ['migration', 'job-summary'] });
+          break;
       }
     },
     [queryClient],

@@ -23,6 +23,10 @@ const EVENT_LABELS: Record<WSEventType, string> = {
   phase_transition: 'Phase Transition',
   gate_recommendation: 'Gate Recommendation',
   ai_insight: 'AI Insight',
+  job_started: 'Job Started',
+  job_completed: 'Job Completed',
+  job_failed: 'Job Failed',
+  job_cancelled: 'Job Cancelled',
 };
 
 function formatRelativeTime(timestamp: string | undefined): string {

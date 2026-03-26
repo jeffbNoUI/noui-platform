@@ -60,6 +60,7 @@
       "Bash(DROP DATABASE:*)"
     ]
   },
+"defaultMode": "bypassPermissions",
   "hooks": {
     "PostToolUse": [
       {
