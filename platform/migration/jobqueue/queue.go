@@ -24,6 +24,9 @@ const (
 	StatusCancelled JobStatus = "CANCELLED"
 )
 
+// JobTypeParallelRun is the canonical job type string for parallel run jobs.
+const JobTypeParallelRun = "parallel_run"
+
 // Job represents a row in migration.job.
 type Job struct {
 	JobID        string          `json:"job_id"`
