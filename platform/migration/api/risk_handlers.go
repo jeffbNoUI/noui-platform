@@ -96,9 +96,9 @@ func (h *Handler) UpdateRisk(w http.ResponseWriter, r *http.Request) {
 
 	if req.Status != nil {
 		s := *req.Status
-		if s != "OPEN" && s != "ACKNOWLEDGED" && s != "MITIGATED" && s != "CLOSED" {
+		if s != "OPEN" && s != "ACKNOWLEDGED" && s != "MITIGATED" && s != "CLOSED" && s != "DEFERRED" {
 			apiresponse.WriteError(w, http.StatusBadRequest, "migration", "VALIDATION_ERROR",
-				"status must be OPEN, ACKNOWLEDGED, MITIGATED, or CLOSED")
+				"status must be OPEN, ACKNOWLEDGED, MITIGATED, CLOSED, or DEFERRED")
 			return
 		}
 	}

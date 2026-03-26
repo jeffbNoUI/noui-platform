@@ -112,6 +112,8 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	// Attention queue
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/attention", h.HandleGetAttentionItems)
 	mux.HandleFunc("GET /api/v1/migration/attention/summary", h.HandleGetAttentionSummary)
+	mux.HandleFunc("PATCH /api/v1/migration/engagements/{id}/attention/{itemId}/resolve", h.HandleResolveAttention)
+	mux.HandleFunc("PATCH /api/v1/migration/engagements/{id}/attention/{itemId}/defer", h.HandleDeferAttention)
 
 	// AI recommendations
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/ai/recommendations", h.HandleGetAIRecommendations)
