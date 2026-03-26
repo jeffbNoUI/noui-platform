@@ -1,0 +1,66 @@
+{
+  "sprint": 17,
+  "goal": "Phase gate evaluation engine with server-side metric computation, phaseOrder update for CUTOVER_IN_PROGRESS/GO_LIVE, and notification triggers for gate readiness, drift, and certification events",
+  "depends_on": ["M05b", "M09b"],
+  "layer": "go",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "GateEvaluationResult model in models/types.go: passed (bool), metrics (map[string]GateMetricResult), blocking_failures ([]string — human-readable descriptions of why the gate failed). GateMetricResult: name (string), current_value (float64), threshold (float64), passed (bool), description (string). Gate metric definitions are hardcoded constants — not configurable per engagement. Metrics evaluated per phase transition: RECONCILING to PARALLEL_RUN requires mapping_agreed_pct >= 0.90. PARALLEL_RUN to COMPLETE requires recon_gate_score >= 0.95 AND recon_p1_unresolved == 0. COMPLETE to CUTOVER_IN_PROGRESS requires has_completed_parallel_run == true AND has_certification == true.",
+      "verification": "cd platform/migration && go test ./models/... -run TestGateMetricDefinitions -count=1 -v"
+    },
+    {
+      "id": "AC-2",
+      "description": "EvaluateGate function in api/gate_evaluator.go: EvaluateGate(db *sql.DB, engagementID string, fromPhase, toPhase models.EngagementStatus) (*models.GateEvaluationResult, error). Updates GetGateMetrics to incorporate M09b recon execution results: the recon_gate_score metric uses the most recent completed ReconExecutionRun's match ratio (match_count / total_evaluated) from db.GetReconExecutionSummary. The legacy reconciliation table query is retained as a separate metric (recon_legacy_score) for backward compatibility. Also update phaseOrder and orderedPhases arrays in gate_handlers.go to include CUTOVER_IN_PROGRESS and GO_LIVE — these are prerequisites for the gate evaluator to support the full status chain. Returns GateEvaluationResult with per-metric pass/fail and blocking failures list. The function is deterministic — same DB state always produces same result.",
+      "verification": "cd platform/migration && go test ./api/... -run TestEvaluateGate -count=1 -v"
+    },
+    {
+      "id": "AC-3",
+      "description": "Phase advance handler (existing POST /api/v1/migration/engagements/{id}/advance) updated to call EvaluateGate before allowing the transition. If evaluation fails (passed=false) and no overrides are provided, returns 422 with {evaluation: GateEvaluationResult, message: 'Gate requirements not met'}. If overrides array in request body contains the names of failing metrics (e.g., ['recon_gate_score']), the transition proceeds with overrides recorded in gate_transition.overrides JSONB. GET /api/v1/migration/engagements/{id}/gate-evaluation?target_phase={phase} returns the evaluation result without performing any transition — preview mode for the UI.",
+      "verification": "cd platform/migration && go test ./api/... -run TestGateEvaluationBlocking -count=1 -v"
+    },
+    {
+      "id": "AC-4",
+      "description": "Notification triggers using db.CreateNotification (from M05b). Four trigger points wired into existing handlers: (1) Drift critical: drift executor calls CreateNotification when critical_changes > 0 (ensure wired if not already from M05b). (2) Recon failure: recon_execution executor calls CreateNotification when p1_count > 0, type='RECON_P1_DETECTED', summary='Recon execution found {N} P1 mismatches in {engagement_name}'. (3) Gate readiness: after any recon_execution or certification completes, check if all gate metrics pass for the next phase — if so, CreateNotification type='GATE_READY', summary='{engagement_name} meets requirements to advance to {next_phase}'. (4) Certification: certification_handlers.go calls CreateNotification type='CERTIFIED', summary='{engagement_name} certified by {user} with gate score {score}'.",
+      "verification": "cd platform/migration && go test ./api/... -run TestNotificationTriggers -count=1 -v"
+    },
+    {
+      "id": "AC-5",
+      "description": "GET /api/v1/migration/engagements/{id}/gate-status updated to include evaluation result alongside existing metrics and AI recommendation. Response shape: {metrics: map, recommendation: AIRecommendation, evaluation: GateEvaluationResult}. The evaluation field shows whether the engagement currently meets gate requirements for the natural next phase (derived from ValidTransitions). If no valid next phase (GO_LIVE is terminal), evaluation is null.",
+      "verification": "cd platform/migration && go test ./api/... -run TestGateStatusWithEvaluation -count=1 -v"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "Gate metric thresholds are hardcoded constants — not user-configurable, ensures consistent governance",
+      "Override mechanism requires explicit metric names — the user must acknowledge each failing metric",
+      "Overrides are recorded in gate_transition — full audit trail of bypassed gate requirements",
+      "EvaluateGate is a pure function of DB state — deterministic, testable, no side effects",
+      "Notification triggers are non-blocking — CreateNotification failures do not fail the parent operation",
+      "phaseOrder and orderedPhases updated for CUTOVER_IN_PROGRESS and GO_LIVE — enables full status chain"
+    ],
+    "high": [
+      "Gate evaluation preview endpoint (GET ?target_phase=) — UI can show pass/fail before user attempts advance",
+      "Notification type values are documented constants — UI can filter and style by type",
+      "Gate readiness check runs after recon execution and certification — catches the moment requirements are met",
+      "WebSocket broadcast notification_created on all notification inserts — real-time bell updates"
+    ],
+    "medium": [
+      "blocking_failures array is human-readable — can be shown directly in UI without parsing",
+      "Gate metrics for each phase transition are documented in code comments — auditable governance",
+      "Evaluation includes current_value and threshold per metric — UI can show progress bars"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "platform/migration/api/gate_evaluator.go",
+    "platform/migration/api/gate_evaluator_test.go",
+    "platform/migration/api/gate_handlers.go",
+    "platform/migration/api/certification_handlers.go",
+    "platform/migration/worker/recon_execution_executor.go",
+    "platform/migration/db/notification.go",
+    "platform/migration/models/types.go",
+    "platform/migration/api/handlers.go"
+  ]
+}

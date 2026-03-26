@@ -1,0 +1,60 @@
+{
+  "sprint": 17,
+  "goal": "Cutover panel with plan editor, step tracker, rollback controls, Go-Live terminal status display, and EngagementStatus type union sync",
+  "depends_on": ["M04b"],
+  "layer": "frontend",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "EngagementStatus union type in frontend/src/types/Migration.ts extended to include 'CUTOVER_IN_PROGRESS' and 'GO_LIVE' as union members. This is the prerequisite for all other changes — must be done first. Then update ALL files with Record<EngagementStatus, ...> or EngagementStatus[] arrays: EngagementDetail.tsx STATUS_COLOR/STATUS_BG maps (CUTOVER_IN_PROGRESS uses coral for action-in-progress, GO_LIVE uses sage for success), defaultTab function (CUTOVER_IN_PROGRESS returns 'cutover', GO_LIVE returns 'cutover'), PHASE_ORDER array extended. EngagementList.tsx STATUS_COLORS map extended. ComparativeView.tsx PHASE_ORDER and PHASE_LABELS extended. PhaseGateDialog.tsx PHASE_LABELS extended. PhaseStepper.tsx updated to render the two new phase steps (GO_LIVE shown with checkmark icon as terminal, no arrow after).",
+      "verification": "cd frontend && npx tsc --noEmit && npm test -- --run"
+    },
+    {
+      "id": "AC-2",
+      "description": "New API hooks in useMigrationApi.ts: useCutoverPlans(engagementId) returns paginated cutover plans. useCutoverPlan(engagementId, planId) returns single plan with steps. useCreateCutoverPlan() mutation. useApproveCutoverPlan() mutation. useExecuteCutoverPlan() mutation. useRollbackCutoverPlan() mutation. useUpdateCutoverStep() mutation for step status updates. All use existing tanstack-query pattern with queryKey arrays and fetch wrappers.",
+      "verification": "cd frontend && npx tsc --noEmit"
+    },
+    {
+      "id": "AC-3",
+      "description": "CutoverPanel.tsx component: Props = {engagementId: string}. Shows cutover plan list if plans exist, or 'Create Cutover Plan' button if none. Plan detail view shows: plan status badge, approval status, step list as a vertical timeline/stepper. Each step shows: label, type (AUTOMATED/MANUAL) badge, status (PENDING/IN_PROGRESS/COMPLETED/FAILED/SKIPPED) with color coding (PENDING=gray, IN_PROGRESS=blue, COMPLETED=green, FAILED=red, SKIPPED=amber). Action buttons conditional on plan status: DRAFT has 'Approve' button, APPROVED has 'Execute' button, EXECUTING has step status toggles (Mark Complete/Mark Failed/Skip), any active has 'Rollback' button with confirmation dialog requiring reason textarea.",
+      "verification": "cd frontend && npm test -- --run --grep CutoverPanel"
+    },
+    {
+      "id": "AC-4",
+      "description": "New 'cutover' tab added to EngagementDetail.tsx Tab union type and TABS array: {key: 'cutover', label: 'Cutover'}. Tab renders CutoverPanel. Tab is visible for all engagement statuses (allows reviewing historical cutover plans) but Create/Execute buttons are disabled unless engagement is in COMPLETE or CUTOVER_IN_PROGRESS status. Go-Live terminal state: when engagement status is GO_LIVE, the cutover panel shows a prominent success banner: 'Migration Complete — System is Live' with the go-live timestamp and the completed cutover plan summary below.",
+      "verification": "cd frontend && npm test -- --run --grep 'EngagementDetail|CutoverPanel'"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "EngagementStatus union type must include all 9 statuses — TypeScript compiler enforces exhaustive switches",
+      "ALL Record<EngagementStatus, ...> maps must cover all 9 statuses — missing entries cause runtime undefined",
+      "Rollback button shows confirmation dialog with reason textarea — prevents accidental rollback",
+      "Step status changes are individual mutations — not batch updates"
+    ],
+    "high": [
+      "PhaseStepper renders GO_LIVE as terminal with distinct visual treatment (checkmark, no arrow after)",
+      "Cutover plan step timeline uses consistent vertical layout matching existing PhaseStepper pattern",
+      "WebSocket events (cutover_started, step_completed, cutover_completed, cutover_rolled_back) trigger query invalidation",
+      "AUTOMATED vs MANUAL step types have distinct visual badges"
+    ],
+    "medium": [
+      "Go-Live success banner uses sage background for positive association",
+      "Step timestamps shown relative ('2 hours ago') with absolute tooltip on hover",
+      "Failed step shows error_message in red text below the step label"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "frontend/src/types/Migration.ts",
+    "frontend/src/hooks/useMigrationApi.ts",
+    "frontend/src/components/migration/engagement/CutoverPanel.tsx",
+    "frontend/src/components/migration/engagement/EngagementDetail.tsx",
+    "frontend/src/components/migration/engagement/PhaseStepper.tsx",
+    "frontend/src/components/migration/dashboard/EngagementList.tsx",
+    "frontend/src/components/migration/dashboard/ComparativeView.tsx",
+    "frontend/src/components/migration/engagement/PhaseGateDialog.tsx",
+    "frontend/src/components/migration/engagement/__tests__/CutoverPanel.test.tsx"
+  ]
+}

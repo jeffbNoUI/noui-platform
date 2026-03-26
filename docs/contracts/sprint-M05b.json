@@ -1,0 +1,74 @@
+{
+  "sprint": 15,
+  "goal": "Drift monitoring: scheduled runs, engagement-level summary endpoint, notification triggers for critical drift, and drift executor registration",
+  "depends_on": ["M05a"],
+  "layer": "go",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "DriftSchedule model in models/types.go: schedule_id (UUID), engagement_id, interval_hours (int, min 1, max 168), enabled (bool), last_triggered_at (timestamptz), next_trigger_at (timestamptz), created_at, updated_at. Migration 053_drift_schedule.sql creates migration.drift_schedule with UNIQUE(engagement_id) — one schedule per engagement. RLS Tier B. Default interval_hours=24, enabled=false.",
+      "verification": "cd platform/migration && go test ./models/... -run TestDriftScheduleModel -count=1 -v"
+    },
+    {
+      "id": "AC-2",
+      "description": "POST /api/v1/migration/engagements/{id}/drift-schedule creates or updates the drift schedule. Request body: {interval_hours, enabled}. Uses INSERT ON CONFLICT (engagement_id) DO UPDATE — idempotent upsert. Validates engagement is in GO_LIVE status — returns 409 if not. This GO_LIVE restriction applies only to scheduled drift; the existing one-off manual drift detection endpoint (POST /drift-detection from M05a) remains unrestricted by engagement status. GET /api/v1/migration/engagements/{id}/drift-schedule returns the current schedule (or 404 if none). PATCH /api/v1/migration/engagements/{id}/drift-schedule updates interval_hours and/or enabled. Returns 200 with updated schedule. When enabled transitions false to true, next_trigger_at is set to NOW() + interval_hours.",
+      "verification": "cd platform/migration && go test ./api/... -run TestDriftScheduleEndpoints -count=1 -v"
+    },
+    {
+      "id": "AC-3",
+      "description": "DriftSchedulerLoop in worker/drift_scheduler.go: background goroutine (started in main.go alongside StaleRecoveryLoop). Polls migration.drift_schedule every 5 minutes for rows WHERE enabled = true AND next_trigger_at <= NOW(). For each due schedule: creates a drift detection run (drift_type='BOTH'), enqueues drift_detection job, updates last_triggered_at = NOW() and next_trigger_at = NOW() + interval_hours. Uses SELECT ... FOR UPDATE SKIP LOCKED to prevent duplicate triggers across multiple API instances. Respects context cancellation for graceful shutdown.",
+      "verification": "cd platform/migration && go test ./worker/... -run TestDriftSchedulerLoop -count=1 -v"
+    },
+    {
+      "id": "AC-4",
+      "description": "GET /api/v1/migration/engagements/{id}/drift-summary returns a DriftSummary: last_run_at (timestamp of most recent completed run), last_run_id, total_runs (int), drift_status ('CLEAN'|'DRIFTED'|'CRITICAL' — based on most recent completed run: CLEAN if 0 detected_changes, CRITICAL if critical_changes > 0, DRIFTED otherwise), by_severity (map[string]int — CRITICAL/HIGH/MEDIUM/LOW counts from most recent run's records), schedule_enabled (bool), next_scheduled_at (nullable timestamp). Single query joins drift_detection_run and drift_schedule for efficiency.",
+      "verification": "cd platform/migration && go test ./api/... -run TestDriftSummaryEndpoint -count=1 -v"
+    },
+    {
+      "id": "AC-5",
+      "description": "CreateNotification function in db/notification.go: CreateNotification(db *sql.DB, tenantID, engagementID, engagementName, notifType, summary string) (*models.Notification, error). Inserts into migration.notification and returns the created record. Notification trigger in drift executor: when a drift detection run completes with critical_changes > 0, call CreateNotification with type='DRIFT_CRITICAL', summary='Critical drift detected: {N} schema changes affecting mapped fields in {engagement_name}'. WebSocket broadcast: notification_created with the notification record — NotificationBell component can auto-refresh.",
+      "verification": "cd platform/migration && go test ./db/... -run TestCreateNotification -count=1 -v"
+    },
+    {
+      "id": "AC-6",
+      "description": "Drift executor registration: worker.DriftDetectionExecutor (already implemented in worker/drift_executor.go from M05a) must be registered in main.go alongside existing L1/L2/ParallelRun executors. The executor was created by M05a but never registered. Verify: after registration, enqueuing a drift_detection job via the job queue results in the DriftDetectionExecutor being invoked. If already registered, verify it functions correctly with the DriftSchedulerLoop by running a scheduled drift detection end-to-end.",
+      "verification": "cd platform/migration && go test ./worker/... -run TestDriftExecutorRegistration -count=1 -v"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "SELECT ... FOR UPDATE SKIP LOCKED on drift_schedule — prevents duplicate drift triggers across API replicas",
+      "Drift schedule only allowed on GO_LIVE engagements — consistent with production monitoring use case",
+      "CreateNotification is generic and reusable — not drift-specific, other contracts (M11a) will use it",
+      "RLS Tier B on drift_schedule — tenant isolation enforced",
+      "Drift executor registered in main.go — fills gap from M05a where executor was created but not registered"
+    ],
+    "high": [
+      "Scheduler loop polls every 5 minutes — not per-second, to minimize DB load",
+      "drift_status badge derived from most recent COMPLETED run — not cumulative across all runs",
+      "UNIQUE(engagement_id) on drift_schedule — one schedule per engagement, upsert pattern",
+      "WebSocket broadcast on notification creation — NotificationBell auto-refresh"
+    ],
+    "medium": [
+      "interval_hours clamped to 1-168 (1 hour to 1 week) — prevents abuse",
+      "DriftSummary endpoint joins two tables in one query — no N+1",
+      "Scheduler respects context cancellation — clean shutdown in main.go"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "platform/migration/db/migrations/053_drift_schedule.sql",
+    "platform/migration/db/drift.go",
+    "platform/migration/db/drift_test.go",
+    "platform/migration/db/notification.go",
+    "platform/migration/api/drift_handlers.go",
+    "platform/migration/api/drift_handlers_test.go",
+    "platform/migration/worker/drift_scheduler.go",
+    "platform/migration/worker/drift_scheduler_test.go",
+    "platform/migration/worker/drift_executor.go",
+    "platform/migration/models/types.go",
+    "platform/migration/api/handlers.go",
+    "platform/migration/main.go"
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "sprint": 21,
+  "goal": "End-to-end integration test: full migration lifecycle from engagement creation through go-live via API",
+  "depends_on": ["M04b", "M09b", "M11a"],
+  "layer": "tests",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "Integration test file at platform/migration/api/integration_test.go with build tag '//go:build integration'. TestFullMigrationLifecycle function: creates engagement via POST /engagements, configures source connection, triggers L1 profiling job (waits for completion via polling GET /profiling/{runId} until status != RUNNING). Verifies engagement advances through DISCOVERY to PROFILING after profiling completes. Advance to MAPPING, create field mappings via POST /mappings (approve at least 90% to pass gate). Test is self-contained — uses sqlmock or test database fixture (not external database).",
+      "verification": "cd platform/migration && go test ./api/... -run TestFullMigrationLifecycle -count=1 -v -tags=integration"
+    },
+    {
+      "id": "AC-2",
+      "description": "Lifecycle continues: advance MAPPING to TRANSFORMING, create batch via POST /batches, verify batch status. Advance TRANSFORMING to RECONCILING, verify gate metrics include quality scores. Advance RECONCILING to PARALLEL_RUN, create parallel run via POST /parallel-runs, simulate result insertion (or mock executor). Verify recon execution: create recon ruleset, activate it, trigger recon execution against parallel run results, verify mismatch counts match expected values.",
+      "verification": "cd platform/migration && go test ./api/... -run TestFullMigrationLifecycle -count=1 -v -tags=integration"
+    },
+    {
+      "id": "AC-3",
+      "description": "Lifecycle continues: advance PARALLEL_RUN to COMPLETE via certification. Create certification with gate_score >= 0.95 and p1_count = 0. Verify gate evaluation passes. Create cutover plan, approve it, execute it, complete all steps. Verify engagement transitions COMPLETE to CUTOVER_IN_PROGRESS to GO_LIVE. Verify gate_transition records exist for each phase change (at least 8 transitions in the full lifecycle). Verify audit_log has entries for all major mutations.",
+      "verification": "cd platform/migration && go test ./api/... -run TestFullMigrationLifecycle -count=1 -v -tags=integration"
+    },
+    {
+      "id": "AC-4",
+      "description": "Negative path tests in TestMigrationLifecycleGateBlocking: attempt to advance without meeting gate requirements — verify 422 response with GateEvaluationResult. Attempt to advance with overrides — verify transition succeeds with overrides recorded. Attempt cutover from non-COMPLETE status — verify 409. Attempt rollback from CUTOVER_IN_PROGRESS — verify engagement returns to COMPLETE. Each negative test is a separate subtest (t.Run).",
+      "verification": "cd platform/migration && go test ./api/... -run TestMigrationLifecycleGateBlocking -count=1 -v -tags=integration"
+    },
+    {
+      "id": "AC-5",
+      "description": "Test helper: integration_helpers_test.go providing createTestEngagement, advancePhase, createAndApproveMapping, createBatchAndWait, createParallelRunWithResults, certifyEngagement, createAndExecuteCutoverPlan. Each helper wraps HTTP calls to the test server (httptest.NewServer) with appropriate request bodies and assertions on status codes. Helpers reduce test boilerplate and make lifecycle tests readable.",
+      "verification": "cd platform/migration && go test ./api/... -run TestIntegrationHelpers -count=1 -v -tags=integration"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "Integration tests use build tag — not included in default 'go test ./...' runs",
+      "Full status chain tested: DISCOVERY to PROFILING to MAPPING to TRANSFORMING to RECONCILING to PARALLEL_RUN to COMPLETE to CUTOVER_IN_PROGRESS to GO_LIVE",
+      "Gate blocking verified — ensures gate evaluator actually prevents invalid transitions",
+      "Rollback tested — CUTOVER_IN_PROGRESS to COMPLETE via cutover rollback",
+      "Tests use httptest.NewServer with real handler registration — tests the full middleware stack"
+    ],
+    "high": [
+      "Each phase transition verifies gate_transition record was created — audit trail completeness",
+      "Negative tests cover all 409/422 guard rails — not just happy path",
+      "Test helpers are reusable — other test files can compose lifecycle fragments",
+      "Recon execution integrated into lifecycle — ruleset creation, activation, execution, mismatch verification"
+    ],
+    "medium": [
+      "Test uses table-driven subtests for negative cases — easy to add new guard rail tests",
+      "Integration test runs in under 30 seconds — no external dependencies or sleep-based waits",
+      "Helper functions return the created entity ID — enables chaining without global state"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "platform/migration/api/integration_test.go",
+    "platform/migration/api/integration_helpers_test.go"
+  ]
+}

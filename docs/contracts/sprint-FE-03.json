@@ -1,0 +1,57 @@
+{
+  "sprint": 18,
+  "goal": "Recon rules management panel with version lifecycle, and recon execution results view with rule-scored mismatch browser",
+  "depends_on": ["M09a", "M09b"],
+  "layer": "frontend",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "New API hooks in useMigrationApi.ts: useReconRuleSets(engagementId, status?) — list with optional status filter. useReconRuleSet(engagementId, rulesetId) — single set with rules. useActiveReconRuleSet(engagementId) — active ruleset shortcut. useCreateReconRuleSet() mutation. useUpdateReconRuleSet() mutation. useActivateReconRuleSet() mutation. useArchiveReconRuleSet() mutation. useReconRuleSetDiff(engagementId, rulesetId, compareToId) — diff between two sets. useReconExecutions(engagementId, page) — execution run list. useReconExecution(engagementId, execId) — single run. useReconExecutionMismatches(engagementId, execId, priority?, entity?, page) — paginated mismatches. useTriggerReconExecution() mutation.",
+      "verification": "cd frontend && npx tsc --noEmit"
+    },
+    {
+      "id": "AC-2",
+      "description": "ReconRulesPanel.tsx component: Props = {engagementId: string}. Version list: table showing version number, label, status badge (DRAFT=blue, ACTIVE=green, SUPERSEDED=gray, ARCHIVED=dim), rule count, created_at. 'Create New Version' button opens editor dialog: label input, rules table (tier dropdown 1/2/3, calc_name input, comparison_type dropdown, tolerance_value input, priority_if_mismatch dropdown P1/P2/P3, enabled checkbox). Edit button on DRAFT versions only — hidden/disabled for non-DRAFT. 'Activate' button on DRAFT with confirmation ('This will supersede the current active version'). Diff viewer: select two versions, shows added/removed/modified rules with field-level change highlighting (e.g., tolerance changed from 0.01 to 0.02 in amber). Status badge color scheme: DRAFT=#3B82F6, ACTIVE=#10B981, SUPERSEDED=#6B7280, ARCHIVED=#D1D5DB.",
+      "verification": "cd frontend && npm test -- --run --grep ReconRulesPanel"
+    },
+    {
+      "id": "AC-3",
+      "description": "ReconciliationPanel.tsx extended with recon execution results section. New sub-section below existing reconciliation summary: 'Rule-Based Execution' header. Shows execution run list (execution_id, ruleset version, status, match/mismatch counts, p1/p2/p3 counts, started_at). 'Run Recon Execution' button: select parallel run from dropdown (only COMPLETED runs), optionally override ruleset (dropdown of all rulesets vs active default). Click execution row to expand mismatch browser: paginated table with priority badge (P1=red, P2=orange, P3=amber), member_id, canonical_entity, field_name, legacy_value, new_value, variance_amount, comparison_type, tolerance_value. Filter dropdowns for priority and canonical_entity.",
+      "verification": "cd frontend && npm test -- --run --grep ReconciliationPanel"
+    },
+    {
+      "id": "AC-4",
+      "description": "New 'recon-rules' tab added to EngagementDetail.tsx Tab union type and TABS array: {key: 'recon-rules', label: 'Recon Rules'}. Tab renders ReconRulesPanel. WebSocket subscription on 'recon_rules_activated' and 'recon_execution_completed' events triggers query invalidation for both panels. Rule editor validates: rules array non-empty, no duplicate {tier}_{calc_name} combinations (matches backend validation), tolerance_value is valid decimal string.",
+      "verification": "cd frontend && npm test -- --run --grep 'EngagementDetail|ReconRulesPanel'"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "Rule editor validates tolerance_value as decimal string — not float, matches backend storage format",
+      "Activate button includes confirmation dialog mentioning supersession of current active version",
+      "Mismatch priority badges match existing P1/P2/P3 color scheme used in attention and risk panels",
+      "Only COMPLETED parallel runs selectable for execution — matches backend validation"
+    ],
+    "high": [
+      "Diff viewer highlights individual field changes within rules — tolerance, priority, enabled toggle",
+      "Execution mismatch browser supports both priority and entity filters simultaneously",
+      "WebSocket events trigger query invalidation — activation reflects immediately across open tabs",
+      "DRAFT-only edit enforcement — edit button hidden/disabled for non-DRAFT versions"
+    ],
+    "medium": [
+      "Rule count shown in version list — quick scan without expanding details",
+      "Execution summary row shows p1/p2/p3 as colored pills — visual severity distribution at a glance",
+      "Archive button shown only on SUPERSEDED versions — clean UI for lifecycle management"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "frontend/src/hooks/useMigrationApi.ts",
+    "frontend/src/components/migration/engagement/ReconRulesPanel.tsx",
+    "frontend/src/components/migration/engagement/ReconciliationPanel.tsx",
+    "frontend/src/components/migration/engagement/EngagementDetail.tsx",
+    "frontend/src/components/migration/engagement/__tests__/ReconRulesPanel.test.tsx",
+    "frontend/src/types/Migration.ts"
+  ]
+}

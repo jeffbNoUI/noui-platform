@@ -1,0 +1,60 @@
+{
+  "sprint": 16,
+  "goal": "Profiler L4: canonical coverage report mapping source columns to schema version fields with gap analysis",
+  "depends_on": ["M10a"],
+  "layer": "go",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "CoverageReport model in models/types.go: report_id (UUID), profiling_run_id, schema_version_id (FK to schema_version), total_canonical_fields (int), mapped_fields (int — canonical fields with at least one source column mapped), unmapped_fields (int), coverage_pct (float64 — mapped_fields / total_canonical_fields), auto_mapped_count (int — mappings with confidence >= 0.8 from name/type similarity), review_required_count (int — mappings with confidence 0.5-0.79), no_match_count (int), field_details (JSONB — array of CoverageFieldDetail), created_at. CoverageFieldDetail: canonical_entity, field_name, data_type, is_required, status ('MAPPED'|'AUTO_MAPPED'|'REVIEW_REQUIRED'|'UNMAPPED'), source_candidates (array of {source_table, source_column, confidence, match_reason}).",
+      "verification": "cd platform/migration && go test ./models/... -run TestCoverageReportModel -count=1 -v"
+    },
+    {
+      "id": "AC-2",
+      "description": "Migration 055_coverage_report.sql creates migration.coverage_report table: UUID PK, profiling_run_id FK, schema_version_id FK to schema_version, count columns INT, coverage_pct NUMERIC(5,2), field_details JSONB, created_at TIMESTAMPTZ DEFAULT now(). RLS Tier B via profiling_run — engagement — tenant_id. UNIQUE(profiling_run_id, schema_version_id) — one report per run per schema version.",
+      "verification": "cd platform/migration && go test ./db/... -run TestCoverageReportRLS -count=1 -v"
+    },
+    {
+      "id": "AC-3",
+      "description": "L4Executor in worker/profile_l4_executor.go implementing worker.Executor (matching L1/L2/L3 pattern). Step 1: Load active schema_version and its fields via db.GetActiveSchemaVersionID and db.GetBaselineFields. Step 2: Load all source_column records from the profiling run (from L1/L2). Step 3: For each canonical field, find source column candidates by: exact name match (confidence 0.95), name similarity after removing common prefixes/suffixes (0.8), data type compatibility scoring (0.6). Step 4: Classify each canonical field: MAPPED if existing field_mapping exists, AUTO_MAPPED if best candidate confidence >= 0.8, REVIEW_REQUIRED if best candidate 0.5-0.79, UNMAPPED if no candidates above 0.5. Step 5: Updates profiling_run aggregate columns: total_canonical_fields, auto_mapped_count, review_required_count, unmapped_count, overall_coverage_pct.",
+      "verification": "cd platform/migration && go test ./worker/... -run TestL4Executor -count=1 -v"
+    },
+    {
+      "id": "AC-4",
+      "description": "L4Executor registered in main.go with job_type='profile_l4'. Updates profiling run status to RUNNING_L4 at start, level_reached=4 on completion. WebSocket broadcast: profiling_l4_completed with engagement_id, coverage_pct, auto_mapped_count, unmapped_count. Stores report via db.InsertCoverageReport. GET /api/v1/migration/engagements/{id}/profiling/{runId}/coverage returns the coverage report with field_details. GET /api/v1/migration/engagements/{id}/profiling/{runId}/coverage/gaps returns only UNMAPPED and REVIEW_REQUIRED fields — the primary action list for analysts.",
+      "verification": "cd platform/migration && go test ./api/... -run TestL4CoverageEndpoints -count=1 -v"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "Coverage report references a specific schema_version_id — reproducible against any schema version, not just 'active'",
+      "Name matching uses normalization (lowercase, strip prefixes like 'fk_', 'idx_') — not raw string comparison",
+      "Coverage percentages use total_canonical_fields as denominator — required fields weighted equally to optional",
+      "L4 requires L2 completion (source_column data) and active schema_version"
+    ],
+    "high": [
+      "Candidate scoring is deterministic and documented — no AI/ML in the path",
+      "Existing field_mapping records are checked first — MAPPED status reflects human-approved mappings",
+      "UNIQUE(profiling_run_id, schema_version_id) — re-running L4 against same version overwrites previous report",
+      "profiling_run aggregate columns updated — coverage_handler.go can serve from profiling_run without joining coverage_report"
+    ],
+    "medium": [
+      "source_candidates array in field_details limited to top 5 per canonical field — prevents JSONB bloat",
+      "Coverage gaps endpoint (?status=UNMAPPED,REVIEW_REQUIRED) is the primary analyst workflow entry point",
+      "match_reason in candidates is human-readable: 'exact_name', 'name_similarity', 'type_compatible'"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "platform/migration/db/migrations/055_coverage_report.sql",
+    "platform/migration/worker/profile_l4_executor.go",
+    "platform/migration/worker/profile_l4_executor_test.go",
+    "platform/migration/db/profiling.go",
+    "platform/migration/db/profiling_test.go",
+    "platform/migration/api/coverage_handler.go",
+    "platform/migration/models/types.go",
+    "platform/migration/api/handlers.go",
+    "platform/migration/main.go"
+  ]
+}

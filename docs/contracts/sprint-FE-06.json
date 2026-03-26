@@ -1,0 +1,68 @@
+{
+  "sprint": 20,
+  "goal": "Test hardening: achieve 100% panel test coverage for all existing and new migration frontend panels",
+  "depends_on": ["FE-01", "FE-02", "FE-03", "FE-04", "FE-05"],
+  "layer": "tests",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "QualityProfilePanel.test.tsx: renders loading skeleton then data. Mocks GET /profiling and GET /quality-profile. Verifies quality score display (six dimensions), profiling run list rendering, 'Run Profile' button triggers mutation. Tests empty state (no profiling runs). Tests error state (API 500 renders error message). Follows DiscoveryPanel.test.tsx pattern — fetch-mock at network layer, not hook mocks.",
+      "verification": "cd frontend && npm test -- --run --grep QualityProfilePanel"
+    },
+    {
+      "id": "AC-2",
+      "description": "TransformationPanel.test.tsx: renders batch list with status badges. Mocks GET /batches. Tests batch creation dialog (validates required fields). Tests exception list rendering within a batch. Tests disposition mutation (PENDING to AUTO_FIXED). Tests empty state. Tests filter controls (status dropdown). BatchDetail.test.tsx: BatchDetail.tsx is an existing component at frontend/src/components/migration/engagement/BatchDetail.tsx — test covers batch detail with exception table, cluster display, cluster apply mutation, and pagination controls.",
+      "verification": "cd frontend && npm test -- --run --grep 'TransformationPanel|BatchDetail'"
+    },
+    {
+      "id": "AC-3",
+      "description": "PhaseGateDialog.test.tsx: renders gate evaluation result (pass and fail cases). Tests override checkbox flow — checking overrides enables advance button. Tests notes textarea for override justification. Tests advance mutation with overrides array. Tests regress flow with target phase dropdown. CutoverPanel.test.tsx: renders plan list, step timeline. Tests create/approve/execute/rollback flows. Tests step status update. Tests Go-Live success banner. DriftPanel.test.tsx: renders run list, record browser, severity filter. Tests schedule toggle. SchemaVersionPanel.test.tsx: renders version list, activation, diff viewer.",
+      "verification": "cd frontend && npm test -- --run --grep 'PhaseGateDialog|CutoverPanel|DriftPanel|SchemaVersionPanel'"
+    },
+    {
+      "id": "AC-4",
+      "description": "ReconRulesPanel.test.tsx: renders version list with status badges. Tests create dialog with rule editor. Tests activate flow with confirmation. Tests diff viewer between two versions. AuditPanel.test.tsx: renders log table with filters. Tests entity_type/actor filter controls. Tests export dialog with pre-flight count. Tests date range picker. ReportPanel.test.tsx: renders report type cards. Tests generation trigger and polling. Tests download button. RiskPanel.test.tsx: renders risk list with severity badges. Tests add/acknowledge/close flows. CertificationPanel.test.tsx: renders gate status cards. Tests certification checklist and submit flow.",
+      "verification": "cd frontend && npm test -- --run --grep 'ReconRulesPanel|AuditPanel|ReportPanel|RiskPanel|CertificationPanel'"
+    },
+    {
+      "id": "AC-5",
+      "description": "All tests use fetch-mock (or msw) at the network layer — NOT hook-level mocks. Test pattern: render component in QueryClientProvider, mock API responses, assert rendered output and user interactions. Each test file has: render test (loading then data), empty state test, error state test, and at least one mutation test (user action then API call then UI update). Total new test files: ~12. All existing tests still pass — zero regressions. TypeScript compilation clean: npx tsc --noEmit passes.",
+      "verification": "cd frontend && npx tsc --noEmit && npm test -- --run"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "All tests mock at fetch/network layer — matches feedback_testing_strategy.md memory directive",
+      "Zero regressions on existing 6 test files (DiscoveryPanel, JobQueuePanel, MappingPanel, ParallelRunPanel, ReconciliationPanel, AttentionQueue)",
+      "TypeScript compilation must be clean — tsc --noEmit passes before and after",
+      "Each test file covers: loading state, data rendering, empty state, error state, at least one mutation"
+    ],
+    "high": [
+      "Test fixtures are realistic — use UUIDs, timestamps, proper status values from the type system",
+      "Mutation tests verify the API call was made with correct parameters (URL, method, body)",
+      "QueryClient wrapped with short staleTime for test predictability",
+      "WebSocket event handlers tested where applicable (query invalidation on events)"
+    ],
+    "medium": [
+      "Test file naming matches component: ComponentName.test.tsx in __tests__/ directory",
+      "Shared test utilities (renderWithProviders, mockFetch helper) extracted if pattern repeats 3+ times",
+      "Coverage report shows >= 80% branch coverage on all new panels"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "frontend/src/components/migration/engagement/__tests__/QualityProfilePanel.test.tsx",
+    "frontend/src/components/migration/engagement/__tests__/TransformationPanel.test.tsx",
+    "frontend/src/components/migration/engagement/__tests__/BatchDetail.test.tsx",
+    "frontend/src/components/migration/engagement/__tests__/PhaseGateDialog.test.tsx",
+    "frontend/src/components/migration/engagement/__tests__/CutoverPanel.test.tsx",
+    "frontend/src/components/migration/engagement/__tests__/DriftPanel.test.tsx",
+    "frontend/src/components/migration/engagement/__tests__/SchemaVersionPanel.test.tsx",
+    "frontend/src/components/migration/engagement/__tests__/ReconRulesPanel.test.tsx",
+    "frontend/src/components/migration/engagement/__tests__/AuditPanel.test.tsx",
+    "frontend/src/components/migration/engagement/__tests__/ReportPanel.test.tsx",
+    "frontend/src/components/migration/engagement/__tests__/RiskPanel.test.tsx",
+    "frontend/src/components/migration/engagement/__tests__/CertificationPanel.test.tsx"
+  ]
+}

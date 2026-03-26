@@ -1,0 +1,60 @@
+{
+  "sprint": 22,
+  "goal": "Final regression checkpoint: all Go tests pass, all frontend tests pass, typecheck clean, lint clean across entire migration pipeline",
+  "depends_on": ["INT-01", "FE-06"],
+  "layer": "tests",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "All Go unit and short tests pass: 'cd platform/migration && go test ./... -short -count=1' exits 0. This includes all model tests, all db tests (sqlmock-based), all api handler tests, all reconciler tests, all profiler tests, all worker tests. No test is skipped (t.Skip) unless it has a legitimate build tag requirement. Test count expected: 200+ individual test cases across all packages.",
+      "verification": "cd platform/migration && go test ./... -short -count=1 -v 2>&1 | tail -5"
+    },
+    {
+      "id": "AC-2",
+      "description": "All frontend tests pass: 'cd frontend && npm test -- --run' exits 0. This includes all 18+ panel test files (DiscoveryPanel, JobQueuePanel, MappingPanel, ParallelRunPanel, ReconciliationPanel, AttentionQueue, QualityProfilePanel, TransformationPanel, BatchDetail, PhaseGateDialog, CutoverPanel, DriftPanel, SchemaVersionPanel, ReconRulesPanel, AuditPanel, ReportPanel, RiskPanel, CertificationPanel) plus any existing utility/hook tests. Zero test failures, zero test timeouts.",
+      "verification": "cd frontend && npm test -- --run 2>&1 | tail -10"
+    },
+    {
+      "id": "AC-3",
+      "description": "TypeScript compilation clean: 'cd frontend && npx tsc --noEmit' exits 0 with zero errors. All new types (CUTOVER_IN_PROGRESS, GO_LIVE in EngagementStatus, all new API hook types, all new component prop types) compile without errors. No 'any' type assertions added to silence errors — actual type correctness required.",
+      "verification": "cd frontend && npx tsc --noEmit"
+    },
+    {
+      "id": "AC-4",
+      "description": "Go vet clean: 'cd platform/migration && go vet ./...' exits 0. No unused variables, no unreachable code, no shadowed variables in critical paths. Go build clean: 'cd platform/migration && go build ./...' exits 0 — binary compiles without warnings.",
+      "verification": "cd platform/migration && go vet ./... && go build ./..."
+    },
+    {
+      "id": "AC-5",
+      "description": "Integration tests pass: 'cd platform/migration && go test ./api/... -tags=integration -count=1 -v' exits 0. Full lifecycle test (TestFullMigrationLifecycle) and gate blocking test (TestMigrationLifecycleGateBlocking) both pass. This is the final gate — if integration tests pass with all unit tests, the migration pipeline is complete.",
+      "verification": "cd platform/migration && go test ./api/... -tags=integration -count=1 -v 2>&1 | tail -10"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "Zero test failures across both Go and frontend — any failure blocks the checkpoint",
+      "TypeScript --noEmit with zero errors — type safety is the frontend's primary guard rail",
+      "Go vet clean — catches common bugs that tests might miss (shadowed vars, format string errors)",
+      "Integration tests exercise the full status chain — systemic correctness, not just unit isolation"
+    ],
+    "high": [
+      "No t.Skip() in tests unless justified by build tag or external dependency requirement",
+      "No 'any' type assertions in TypeScript — proper typing throughout",
+      "Test count is documented — regression if test count drops below threshold",
+      "Build output (go build, npm run build) produces working binary/bundle"
+    ],
+    "medium": [
+      "Test execution time under 2 minutes total (Go short + frontend) — CI-friendly",
+      "Frontend lint (npx eslint src/) — no new lint warnings introduced",
+      "All 13 migration contracts' ACs are traceable to passing tests"
+    ]
+  },
+  "quality_workflow": ["/validate", "/precommit"],
+  "files_hint": [
+    "platform/migration/",
+    "frontend/src/components/migration/",
+    "frontend/src/hooks/useMigrationApi.ts",
+    "frontend/src/types/Migration.ts"
+  ]
+}

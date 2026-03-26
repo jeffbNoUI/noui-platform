@@ -1,0 +1,60 @@
+{
+  "sprint": 16,
+  "goal": "Profiler L3: cross-column referential integrity discovery and orphan detection in source database",
+  "depends_on": ["M08a"],
+  "layer": "go",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "SourceRelationship model in models/types.go: relationship_id (UUID), profiling_run_id, parent_table (schema.table), parent_column, child_table (schema.table), child_column, relationship_type ('FK_DECLARED'|'FK_INFERRED'), confidence (float64, 0.0-1.0 — 1.0 for declared FKs, heuristic-scored for inferred), orphan_count (int — child rows with no matching parent), orphan_pct (float64 — orphan_count / total child rows), created_at. Migration 054_source_relationships.sql creates migration.source_relationship table. RLS Tier B via profiling_run — engagement. Index on (profiling_run_id). UNIQUE(profiling_run_id, parent_table, parent_column, child_table, child_column).",
+      "verification": "cd platform/migration && go test ./models/... -run TestSourceRelationshipModel -count=1 -v"
+    },
+    {
+      "id": "AC-2",
+      "description": "L3Executor in worker/profile_l3_executor.go implementing worker.Executor interface (matching existing L1/L2 pattern in worker/profile_l1_executor.go). Phase 1: Discovers declared foreign keys from information_schema.table_constraints + key_column_usage (for PostgreSQL/MySQL) or sys.foreign_keys (for MSSQL). Stores as FK_DECLARED with confidence=1.0. Phase 2: Infers FK relationships by name-matching heuristics: columns ending in '_id' that match another table's PK column name, with confidence scored by: exact name match (0.9), partial name match (0.7), type-compatible only (0.5). Phase 3: Orphan detection — for each discovered relationship (declared and inferred with confidence >= 0.7), runs SELECT COUNT(*) FROM child LEFT JOIN parent ON child.fk = parent.pk WHERE parent.pk IS NULL. Stores orphan_count and orphan_pct.",
+      "verification": "cd platform/migration && go test ./worker/... -run TestL3Executor -count=1 -v"
+    },
+    {
+      "id": "AC-3",
+      "description": "L3Executor registered in main.go with job_type='profile_l3'. Updates profiling run status to RUNNING_L3 at start, level_reached=3 on completion. Stores results via db.InsertSourceRelationships (batch insert). Progress updates: phase 1/3 (FK discovery), 2/3 (inference), 3/3 (orphan detection) via q.UpdateProgress. WebSocket broadcast: profiling_l3_completed with engagement_id, relationship_count, orphan_relationships (count of relationships with orphan_count > 0).",
+      "verification": "cd platform/migration && go test ./worker/... -run TestL3ExecutorRegistration -count=1 -v"
+    },
+    {
+      "id": "AC-4",
+      "description": "DB operations in db/profiling.go: InsertSourceRelationships(db, []models.SourceRelationship), ListSourceRelationships(db, profilingRunID, page, perPage) with orphan_count > 0 filter option, GetOrphanSummary(db, profilingRunID) returning aggregate {total_relationships, orphan_relationships, total_orphan_rows, highest_orphan_pct}. GET /api/v1/migration/engagements/{id}/profiling/{runId}/relationships returns paginated relationships. GET /api/v1/migration/engagements/{id}/profiling/{runId}/orphan-summary returns aggregate orphan metrics. Supports ?orphans_only=true filter to show only relationships with orphan_count > 0.",
+      "verification": "cd platform/migration && go test ./api/... -run TestL3Endpoints -count=1 -v"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "Source DB queries are read-only — no writes to source system during profiling",
+      "Orphan detection uses LEFT JOIN pattern, not NOT IN (handles NULLs correctly)",
+      "FK inference heuristics produce confidence scores — never asserted as fact without human review",
+      "L3 requires L2 completion (level_reached >= 2) — profiling run must have source_column data"
+    ],
+    "high": [
+      "Orphan detection only runs for relationships with confidence >= 0.7 — avoids expensive queries on weak matches",
+      "Batch insert for relationships — single transaction for all discoveries in one run",
+      "Progress updates per phase (1/3, 2/3, 3/3) — UI can show current L3 stage",
+      "Source connection reuses engagement's stored credentials — same pattern as L1/L2 and drift detector"
+    ],
+    "medium": [
+      "Inference heuristics are driver-aware — PostgreSQL vs MySQL vs MSSQL information_schema differences handled",
+      "UNIQUE constraint prevents duplicate relationship records on re-run",
+      "orphan_pct computed as orphan_count / total child rows — not parent rows"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "platform/migration/db/migrations/054_source_relationships.sql",
+    "platform/migration/worker/profile_l3_executor.go",
+    "platform/migration/worker/profile_l3_executor_test.go",
+    "platform/migration/db/profiling.go",
+    "platform/migration/db/profiling_test.go",
+    "platform/migration/api/profiling_handlers.go",
+    "platform/migration/models/types.go",
+    "platform/migration/api/handlers.go",
+    "platform/migration/main.go"
+  ]
+}

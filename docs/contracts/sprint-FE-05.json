@@ -1,0 +1,60 @@
+{
+  "sprint": 19,
+  "goal": "Replace risks placeholder stub with full risk register panel, and add certification detail panel with gate status cards and attestation workflow",
+  "depends_on": ["M04a", "M11a"],
+  "layer": "frontend",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "RiskPanel.tsx replaces the existing risks placeholder in EngagementDetail.tsx. Props = {engagementId: string}. Risk list table: risk_id (truncated), source badge (PROFILER/TRANSFORMER/DRIFT/ANALYST), severity badge (P1=red, P2=orange, P3=amber), description (truncated with expand), status badge (OPEN=red, ACKNOWLEDGED=blue, MITIGATED=green, CLOSED=gray), detected_at. Filter bar: severity dropdown, status dropdown, source dropdown. 'Add Risk' button opens AddRiskDialog (already exists at dialogs/AddRiskDialog.tsx). Click risk row to expand: full description, evidence text, mitigation text (editable for OPEN/ACKNOWLEDGED risks), acknowledge button (OPEN to ACKNOWLEDGED), close button (ACKNOWLEDGED/MITIGATED to CLOSED with confirmation). Summary bar at top: total open P1 count, total open count, mitigated count.",
+      "verification": "cd frontend && npm test -- --run --grep RiskPanel"
+    },
+    {
+      "id": "AC-2",
+      "description": "CertificationPanel.tsx component: Props = {engagementId: string}. Top section: gate status cards — one card per metric from GET /gate-status endpoint. Each card shows: metric name, current value (progress bar or number), threshold, pass/fail badge. Cards are green-bordered if passing, red-bordered if failing. Gate evaluation preview: prominent 'Evaluate Gate' button calls GET /gate-evaluation?target_phase={next}. Shows GateEvaluationResult: overall passed/failed badge, per-metric detail, blocking_failures list in red. Certification section: if gate passes, shows 'Certify' button. Certify flow: checklist (predefined items: 'Data quality validated', 'Reconciliation reviewed', 'Stakeholder sign-off obtained' — checkboxes), notes textarea, submit calls POST /certifications. Latest certification displayed: certified_by, certified_at, gate_score, p1_count, checklist status. Certification history table below.",
+      "verification": "cd frontend && npm test -- --run --grep CertificationPanel"
+    },
+    {
+      "id": "AC-3",
+      "description": "PhaseGateDialog.tsx enhanced: when user clicks 'Advance Phase' in PhaseStepper, the dialog now shows GateEvaluationResult inline. If evaluation fails, shows blocking_failures with override checkboxes (one per failing metric). User must check each override checkbox and provide notes to proceed with overridden advance. If evaluation passes, shows green confirmation with gate metrics summary. The phase advance mutation includes overrides array for any checked override items.",
+      "verification": "cd frontend && npm test -- --run --grep PhaseGateDialog"
+    },
+    {
+      "id": "AC-4",
+      "description": "Tab updates in EngagementDetail.tsx: 'risks' tab key now renders RiskPanel instead of the placeholder. New 'certification' tab added: {key: 'certification', label: 'Certification'}. Certification tab renders CertificationPanel. Both visible for all statuses. New hooks in useMigrationApi.ts if not already present: useGateEvaluation(engagementId, targetPhase), useCertifications(engagementId, page), useCreateCertification() mutation.",
+      "verification": "cd frontend && npm test -- --run --grep 'EngagementDetail|RiskPanel|CertificationPanel'"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "P1/P2/P3 severity color scheme is globally consistent: P1=red (#EF4444), P2=orange (#F97316), P3=amber (#F59E0B)",
+      "Gate evaluation shown before advance — user sees what will be checked before committing",
+      "Override checkboxes require individual acknowledgment — no 'select all' for gate overrides",
+      "Certification checklist items are predefined, not user-editable — governance consistency"
+    ],
+    "high": [
+      "Risk source badge distinguishes system-generated (PROFILER, TRANSFORMER, DRIFT) from analyst-created (ANALYST)",
+      "Certification button disabled until all checklist items checked — prevents incomplete attestation",
+      "Gate status cards use progress bars for percentage metrics, numeric display for count metrics",
+      "AddRiskDialog reused from existing dialogs/AddRiskDialog.tsx — no code duplication"
+    ],
+    "medium": [
+      "Risk description truncated to 100 chars in table with full text on expand",
+      "Certification history shows all historical certifications — supports re-certification after rollback",
+      "Gate evaluation result cached for 30 seconds — prevents rapid re-fetching on tab switches"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "frontend/src/hooks/useMigrationApi.ts",
+    "frontend/src/components/migration/engagement/RiskPanel.tsx",
+    "frontend/src/components/migration/engagement/CertificationPanel.tsx",
+    "frontend/src/components/migration/engagement/PhaseGateDialog.tsx",
+    "frontend/src/components/migration/engagement/EngagementDetail.tsx",
+    "frontend/src/components/migration/engagement/__tests__/RiskPanel.test.tsx",
+    "frontend/src/components/migration/engagement/__tests__/CertificationPanel.test.tsx",
+    "frontend/src/components/migration/engagement/__tests__/PhaseGateDialog.test.tsx",
+    "frontend/src/types/Migration.ts"
+  ]
+}

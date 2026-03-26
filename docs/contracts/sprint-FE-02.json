@@ -1,0 +1,56 @@
+{
+  "sprint": 18,
+  "goal": "Drift detection panel with run list and record browser, and schema versioning panel with field inventory and diff viewer",
+  "depends_on": ["M05a", "M08a", "FE-01"],
+  "layer": "frontend",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "New API hooks in useMigrationApi.ts: useDriftRuns(engagementId, page) — paginated drift runs list. useDriftRecords(engagementId, runId, severity?, page) — paginated records with severity filter. useDriftSummary(engagementId) — drift summary badge data. useTriggerDriftDetection() mutation. useDriftSchedule(engagementId) — current schedule. useUpdateDriftSchedule() mutation. useSchemaVersions(tenantId) — list all schema versions. useSchemaVersion(versionId) — single version with fields. useCreateSchemaVersion() mutation. useActivateSchemaVersion() mutation. useSchemaVersionDiff(versionId1, versionId2) — diff between two versions.",
+      "verification": "cd frontend && npx tsc --noEmit"
+    },
+    {
+      "id": "AC-2",
+      "description": "DriftPanel.tsx component: Props = {engagementId: string}. Top section: drift summary badge (CLEAN=green, DRIFTED=amber, CRITICAL=red) with last run timestamp and 'Run Detection' button. Schedule configuration: interval dropdown (1h/6h/12h/24h/48h/168h), enable/disable toggle. Run list: table with columns run_id (truncated UUID), drift_type, status badge, detected_changes, critical_changes, started_at. Click a run to expand inline record browser. Record browser: severity color-coded list (CRITICAL=red, HIGH=orange, MEDIUM=amber, LOW=gray), change_type badges, entity name, detail expansion showing old_value/new_value diff. Supports severity filter dropdown. Auto-refresh via useMigrationEvents WebSocket subscription on 'drift_detection_completed'.",
+      "verification": "cd frontend && npm test -- --run --grep DriftPanel"
+    },
+    {
+      "id": "AC-3",
+      "description": "SchemaVersionPanel.tsx component: Props = {engagementId: string}. Version list: table showing label (e.g., v1.0), description, is_active badge, field count, created_at. 'Create Version' button opens dialog with label (v-prefixed, validated), description, field definitions (entity, field_name, data_type, is_required, description — table editor). 'Activate' button on inactive versions with confirmation. Diff viewer: select two versions via checkboxes, 'Compare' button shows structural diff: added fields (green), removed fields (red), changed fields (amber with old to new type display). Field inventory: expandable per-entity sections listing all fields with data_type, is_required badge, description.",
+      "verification": "cd frontend && npm test -- --run --grep SchemaVersionPanel"
+    },
+    {
+      "id": "AC-4",
+      "description": "New tabs added to EngagementDetail.tsx: 'drift' tab renders DriftPanel (visible when status is GO_LIVE or CUTOVER_IN_PROGRESS — consistent with backend constraint). 'schema' tab renders SchemaVersionPanel (visible for all statuses — schema versions are tenant-level, not engagement-specific, but displayed in engagement context for convenience). Tab union type and TABS array updated. defaultTab for GO_LIVE returns 'drift'.",
+      "verification": "cd frontend && npm test -- --run --grep EngagementDetail"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "Drift panel only shown for GO_LIVE/CUTOVER_IN_PROGRESS engagements — consistent with backend 409 constraint",
+      "Schema version activation has confirmation dialog — activating supersedes the current active version",
+      "Severity color coding is consistent: CRITICAL=red, HIGH=orange, MEDIUM=amber, LOW=gray across all panels"
+    ],
+    "high": [
+      "Auto-refresh on WebSocket drift_detection_completed — run list updates without manual refresh",
+      "Diff viewer shows structural changes, not line-by-line text diff — added/removed/changed fields",
+      "DriftPanel schedule config uses optimistic updates — toggle responds immediately"
+    ],
+    "medium": [
+      "Run list truncates UUID to first 8 chars with full UUID in tooltip",
+      "Record browser detail expansion uses JSON pretty-print for drift detail JSONB",
+      "Schema version field editor supports bulk import (CSV paste) for efficiency"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "frontend/src/hooks/useMigrationApi.ts",
+    "frontend/src/components/migration/engagement/DriftPanel.tsx",
+    "frontend/src/components/migration/engagement/SchemaVersionPanel.tsx",
+    "frontend/src/components/migration/engagement/EngagementDetail.tsx",
+    "frontend/src/components/migration/engagement/__tests__/DriftPanel.test.tsx",
+    "frontend/src/components/migration/engagement/__tests__/SchemaVersionPanel.test.tsx",
+    "frontend/src/types/Migration.ts"
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "sprint": 19,
+  "goal": "Audit trail log viewer with entity/action filters and export, and report generation panel with trigger, preview, and download",
+  "depends_on": ["M06b", "M07b"],
+  "layer": "frontend",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "New API hooks in useMigrationApi.ts: useAuditLog(engagementId, filters: {entity_type?, entity_id?, actor?, page, per_page}) — paginated audit entries. useExportAudit(engagementId, filters: {from?, to?, entity_type?, actor?}, format: 'csv'|'json') mutation — triggers download. useAuditExportCount(engagementId, filters) — pre-flight count for large export warning. useRetentionPolicy(engagementId) — current policy. useSetRetentionPolicy() mutation. useGenerateReport(engagementId, reportType) mutation. useReportStatus(engagementId, reportId) — poll generation status. useDownloadReport(engagementId, reportId) mutation.",
+      "verification": "cd frontend && npx tsc --noEmit"
+    },
+    {
+      "id": "AC-2",
+      "description": "AuditPanel.tsx component: Props = {engagementId: string}. Filter bar: entity_type dropdown (populated from distinct values: 'engagement', 'batch', 'mapping', 'recon_rule_set', 'cutover_plan', 'gate', etc.), actor text search input, date range picker (from/to, defaults to last 30 days). Results table: log_id (truncated), actor, action badge (CREATE=green, UPDATE=blue, DELETE=red, phase_transition=purple), entity_type, entity_id (link if entity is navigable), created_at (relative with absolute tooltip). Expandable row detail showing before_state and after_state as JSON diff view (green for added fields, red for removed, collapsed unchanged). Export button: opens dialog with format selector (CSV/JSON), date range confirmation, pre-flight count display ('Will export {N} records'). Warning banner if count > 10000. Disable export button if count > 50000 (MaxExportRows). Pagination controls at bottom.",
+      "verification": "cd frontend && npm test -- --run --grep AuditPanel"
+    },
+    {
+      "id": "AC-3",
+      "description": "ReportPanel.tsx component: Props = {engagementId: string}. Two report types available: 'Lineage Traceability Report' and 'Reconciliation Summary Report' (matching M07a/M07b backend). Each shows: description of what the report contains, 'Generate' button, generation status (PENDING/GENERATING/COMPLETED/FAILED with polling via useReportStatus), 'Preview' button (opens in-browser PDF viewer if available, otherwise direct download), 'Download' button. Report history: table of previously generated reports with type, generated_at, status. Retention policy section: displays current event/audit retention periods, edit form with validation (minimum 365 days per MinRetentionDays constant).",
+      "verification": "cd frontend && npm test -- --run --grep ReportPanel"
+    },
+    {
+      "id": "AC-4",
+      "description": "New tabs added to EngagementDetail.tsx: 'audit' tab renders AuditPanel, 'reports' tab renders ReportPanel. Both visible for all engagement statuses (audit trail exists from DISCOVERY onward). Tab union type and TABS array updated. Total tab count after this contract: 15 tabs (discovery, quality, mappings, transformation, reconciliation, parallel-run, recon-rules, risks, cutover, drift, schema, audit, reports, attention, jobs).",
+      "verification": "cd frontend && npm test -- --run --grep EngagementDetail"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "Export pre-flight count prevents server-side timeout — client-side guard at 50000 matches MaxExportRows constant",
+      "Audit before_state/after_state diff viewer does NOT reproduce full JSON content — uses structural diff only",
+      "Report download uses blob/URL.createObjectURL for PDF — not inline Base64",
+      "Retention policy minimum 365 days enforced in UI — matches backend MinRetentionDays"
+    ],
+    "high": [
+      "Audit log filter bar uses controlled state — URL params synced for bookmarkable filtered views",
+      "Export dialog shows pre-flight count before user triggers download — informed consent for large exports",
+      "Report generation uses polling (not WebSocket) — reports may take minutes for large engagements",
+      "Date range picker defaults to last 30 days — sensible default for audit review"
+    ],
+    "medium": [
+      "entity_type dropdown populated dynamically from distinct audit_log values, not hardcoded",
+      "JSON diff view collapses unchanged fields — focuses on what changed"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "frontend/src/hooks/useMigrationApi.ts",
+    "frontend/src/components/migration/engagement/AuditPanel.tsx",
+    "frontend/src/components/migration/engagement/ReportPanel.tsx",
+    "frontend/src/components/migration/engagement/EngagementDetail.tsx",
+    "frontend/src/components/migration/engagement/__tests__/AuditPanel.test.tsx",
+    "frontend/src/components/migration/engagement/__tests__/ReportPanel.test.tsx",
+    "frontend/src/types/Migration.ts"
+  ]
+}

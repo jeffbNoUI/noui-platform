@@ -1,0 +1,75 @@
+{
+  "sprint": 15,
+  "goal": "Recon execution engine: evaluate active ruleset against parallel run results and produce scored mismatches",
+  "depends_on": ["M09a", "M03c"],
+  "layer": "go",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "ReconExecutionRun model in models/types.go: execution_id (UUID), engagement_id, ruleset_id (FK to recon_rule_set), parallel_run_id (FK to parallel_run), status (PENDING|RUNNING|COMPLETED|FAILED), total_evaluated (int), match_count (int), mismatch_count (int), p1_count (int), p2_count (int), p3_count (int), started_at, completed_at, error_message, created_at. ReconExecutionMismatch model: mismatch_id (UUID), execution_id (FK), rule_id (string — references ReconRule.rule_id within the ruleset), member_id, canonical_entity, field_name, legacy_value (string), new_value (string), variance_amount (string — decimal precision), comparison_type (EXACT|TOLERANCE_ABS|TOLERANCE_PCT|ROUND_THEN_COMPARE), tolerance_value (string), priority (P1|P2|P3 — from the rule's priority_if_mismatch), created_at.",
+      "verification": "cd platform/migration && go test ./models/... -run TestReconExecutionModels -count=1 -v"
+    },
+    {
+      "id": "AC-2",
+      "description": "Migration 052_recon_execution.sql creates migration.recon_execution_run and migration.recon_execution_mismatch tables. recon_execution_run: UUID PK, engagement_id FK, ruleset_id FK to recon_rule_set, parallel_run_id FK to parallel_run, status CHECK constraint, count columns INT DEFAULT 0, timestamps. recon_execution_mismatch: UUID PK, execution_id FK with ON DELETE CASCADE, rule_id VARCHAR(200), member_id, canonical_entity, field_name, legacy_value, new_value, variance_amount, comparison_type, tolerance_value, priority CHECK ('P1','P2','P3'). RLS Tier B on both tables (engagement_id — engagement — tenant_id). Indexes: (execution_id, priority) on mismatches, (engagement_id, created_at DESC) on runs.",
+      "verification": "cd platform/migration && go test ./db/... -run TestReconExecutionRLS -count=1 -v"
+    },
+    {
+      "id": "AC-3",
+      "description": "ReconExecutionEngine in reconciler/execution.go: ExecuteRules(db *sql.DB, executionID string, ruleset *models.ReconRuleSet, results []models.ParallelRunResult) ([]models.ReconExecutionMismatch, error). For each enabled rule in the ruleset, filters parallel_run_result rows matching the rule's calc_name (field_name match) and tier. Applies comparison: EXACT — legacy_value != new_value produces mismatch. TOLERANCE_ABS — abs(legacy_value - new_value) > tolerance_value. TOLERANCE_PCT — abs(legacy_value - new_value) / abs(legacy_value) > tolerance_value. ROUND_THEN_COMPARE — round both to 2 decimal places then EXACT compare. All arithmetic uses math/big.Rat (not float64). Each mismatch gets priority from rule.PriorityIfMismatch. Returns accumulated mismatches.",
+      "verification": "cd platform/migration && go test ./reconciler/... -run TestExecuteRules -count=1 -v"
+    },
+    {
+      "id": "AC-4",
+      "description": "Worker executor: ReconExecutionExecutor registered with job_type='recon_execution' in main.go. Accepts job payload {engagement_id, parallel_run_id, ruleset_id?}. If ruleset_id is nil, loads the ACTIVE ruleset via db.GetActiveReconRuleSet. If no ACTIVE ruleset exists, fails the job with descriptive error. Loads parallel_run_result records (all non-paginated — full dataset), calls ExecuteRules, batch-inserts mismatches via db.InsertReconExecutionMismatches, updates execution run counts (total_evaluated, match_count, mismatch_count, p1/p2/p3_count). WebSocket broadcast: recon_execution_completed with engagement_id, execution_id, match_count, mismatch_count, p1_count.",
+      "verification": "cd platform/migration && go test ./worker/... -run TestReconExecutionExecutor -count=1 -v"
+    },
+    {
+      "id": "AC-5",
+      "description": "POST /api/v1/migration/engagements/{id}/recon-executions triggers a new recon execution. Request body: {parallel_run_id, ruleset_id?}. Validates: parallel run exists and belongs to engagement, parallel run is COMPLETED. If ruleset_id provided, validates ruleset exists and belongs to engagement. Creates ReconExecutionRun in PENDING, enqueues recon_execution job. Returns 202 Accepted with run record. GET /api/v1/migration/engagements/{id}/recon-executions returns paginated list of execution runs (newest first). GET /api/v1/migration/engagements/{id}/recon-executions/{execId} returns single run. GET /api/v1/migration/engagements/{id}/recon-executions/{execId}/mismatches returns paginated mismatches with ?priority= and ?canonical_entity= filters.",
+      "verification": "cd platform/migration && go test ./api/... -run TestReconExecutionEndpoints -count=1 -v"
+    },
+    {
+      "id": "AC-6",
+      "description": "DB operations in db/recon_execution.go: CreateReconExecutionRun, GetReconExecutionRun, ListReconExecutionRuns (paginated), UpdateReconExecutionRunStatus, UpdateReconExecutionRunCounts, InsertReconExecutionMismatches (batch insert), ListReconExecutionMismatches (paginated with priority/entity filters), CountReconExecutionMismatches, GetReconExecutionSummary(db, engagementID) returns the most recent COMPLETED execution's total_evaluated, match_count, mismatch_count, p1_count, p2_count, p3_count, plus computed match_ratio (match_count / total_evaluated as float64). All follow existing scan/columns pattern from db/drift.go and db/parallel_run.go. Audit integration: execution trigger logs to audit_log with entity_type='recon_execution', action='execute'.",
+      "verification": "cd platform/migration && go test ./db/... -run TestReconExecutionDB -count=1 -v"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "All comparison arithmetic uses math/big.Rat — no float64 for monetary values or variance calculations",
+      "ROUND_THEN_COMPARE rounds to 2 decimal places using big.Rat, not float64 truncation",
+      "Ruleset must be ACTIVE at execution time — DRAFT/SUPERSEDED/ARCHIVED rulesets cannot be used (unless explicitly passed by ID)",
+      "RLS Tier B on both tables — tenant isolation enforced",
+      "Mismatch priority comes from the rule definition, not computed — deterministic scoring"
+    ],
+    "high": [
+      "Parallel run must be COMPLETED before recon execution — prevents running against partial data",
+      "Batch insert for mismatches — single transaction for all mismatches in one execution",
+      "Worker executor loads full parallel_run_result set — no pagination gaps in evaluation",
+      "Disabled rules (enabled=false) are skipped during execution",
+      "WebSocket broadcast includes p1_count — UI can show alert for critical mismatches"
+    ],
+    "medium": [
+      "Job payload supports optional ruleset_id — allows re-running with a specific ruleset version for comparison",
+      "Mismatch records include the comparison_type and tolerance_value that produced them — self-documenting",
+      "Execution counts (match/mismatch/p1/p2/p3) updated atomically after all mismatches inserted"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "platform/migration/db/migrations/052_recon_execution.sql",
+    "platform/migration/db/recon_execution.go",
+    "platform/migration/db/recon_execution_test.go",
+    "platform/migration/reconciler/execution.go",
+    "platform/migration/reconciler/execution_test.go",
+    "platform/migration/worker/recon_execution_executor.go",
+    "platform/migration/worker/recon_execution_executor_test.go",
+    "platform/migration/api/recon_execution_handlers.go",
+    "platform/migration/api/recon_execution_handlers_test.go",
+    "platform/migration/models/types.go",
+    "platform/migration/api/handlers.go",
+    "platform/migration/main.go"
+  ]
+}
