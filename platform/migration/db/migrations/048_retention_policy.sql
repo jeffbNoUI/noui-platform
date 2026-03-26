@@ -1,28 +1,33 @@
--- Migration 048: Retention policy support (M06b)
--- Adds retention policy column to engagement and soft-delete support for events.
+-- Migration 048: Retention policy (M06b)
+-- Adds audit_retention_policy JSONB column, archived_at soft-delete column,
+-- and trigger that blocks event deletes unless retention purge session var is set.
 
 BEGIN;
 
--- Add retention policy JSONB column to engagement.
+-- Add retention policy column to engagement
 ALTER TABLE migration.engagement
-  ADD COLUMN IF NOT EXISTS audit_retention_policy JSONB;
+    ADD COLUMN IF NOT EXISTS audit_retention_policy JSONB;
 
--- Add archived_at for soft-delete tracking.
-ALTER TABLE migration.engagement
-  ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
+-- Add archived_at column for soft-delete pattern
+ALTER TABLE migration.event
+    ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
 
--- Replace the event delete trigger to allow retention-based purges.
--- When the session variable app.retention_purge is set to 'true',
--- DELETE is allowed (for automated retention cleanup).
--- Otherwise, DELETE raises an exception to prevent accidental deletion.
+-- Trigger function: blocks DELETEs on migration.event unless app.retention_purge is set.
+-- The retention purge background job sets this session variable before deleting.
 CREATE OR REPLACE FUNCTION migration.prevent_event_delete()
 RETURNS TRIGGER AS $$
 BEGIN
     IF current_setting('app.retention_purge', true) = 'true' THEN
         RETURN OLD;
     END IF;
-    RAISE EXCEPTION 'event records cannot be deleted outside retention purge';
+    RAISE EXCEPTION 'direct DELETE on migration.event is not allowed — use retention purge';
 END;
 $$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_prevent_event_delete ON migration.event;
+CREATE TRIGGER trg_prevent_event_delete
+    BEFORE DELETE ON migration.event
+    FOR EACH ROW
+    EXECUTE FUNCTION migration.prevent_event_delete();
 
 COMMIT;
