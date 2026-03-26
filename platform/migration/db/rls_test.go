@@ -13,7 +13,7 @@ import (
 	migdb "github.com/noui/platform/migration/db"
 )
 
-// migrationRLSFile is the migration file that defines RLS policies for the migration schema.
+// migrationRLSFile is the primary migration file (kept for backward compat with helper).
 const migrationRLSFile = "migrations/043_rls_policies.sql"
 
 // allMigrationTables lists every content table in the migration schema.
@@ -39,6 +39,7 @@ var allMigrationTables = []string{
 	"profiling_run",
 	"job",
 	"warning_acknowledgment",
+	"audit_log",
 	// Tier B+: FK to engagement via parallel_run
 	"parallel_run",
 	"parallel_run_result",

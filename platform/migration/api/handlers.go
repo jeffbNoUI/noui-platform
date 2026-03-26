@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/noui/platform/apiresponse"
+	migrationdb "github.com/noui/platform/migration/db"
 	"github.com/noui/platform/migration/intelligence"
 	"github.com/noui/platform/migration/jobqueue"
 	"github.com/noui/platform/migration/reconciler"
@@ -17,12 +18,13 @@ import (
 // Handler holds dependencies for API handlers.
 type Handler struct {
 	DB          *sql.DB
-	IntelClient intelligence.Scorer    // nil-safe: handlers degrade to template-only if nil
-	Analyzer    intelligence.Analyzer  // nil-safe: pattern detection degrades if nil
-	Hub         *ws.Hub                // WebSocket hub for broadcasting events (nil-safe)
-	PlanConfig  *reconciler.PlanConfig // nil-safe: reconciliation degrades if not loaded
-	JobQueue    *jobqueue.Queue        // nil-safe: job endpoints return 503 if nil
-	Renderer    report.Renderer        // nil-safe: PDF endpoints return 503 if nil
+	IntelClient intelligence.Scorer          // nil-safe: handlers degrade to template-only if nil
+	Analyzer    intelligence.Analyzer        // nil-safe: pattern detection degrades if nil
+	Hub         *ws.Hub                      // WebSocket hub for broadcasting events (nil-safe)
+	PlanConfig  *reconciler.PlanConfig       // nil-safe: reconciliation degrades if not loaded
+	JobQueue    *jobqueue.Queue              // nil-safe: job endpoints return 503 if nil
+	Renderer    report.Renderer              // nil-safe: PDF endpoints return 503 if nil
+	Audit       *migrationdb.AuditLogger     // nil-safe: audit logging degrades if nil
 }
 
 // NewHandler creates a Handler with the given database connection.
@@ -137,6 +139,9 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	// Lineage
 	mux.HandleFunc("GET /api/v1/migration/batches/{id}/lineage", h.HandleGetLineage)
 	mux.HandleFunc("GET /api/v1/migration/batches/{id}/lineage/summary", h.HandleGetLineageSummary)
+
+	// Audit log (read-only — no UPDATE or DELETE endpoints)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/audit-log", h.HandleListAuditLog)
 
 	// Notifications
 	mux.HandleFunc("GET /api/v1/migration/notifications", h.HandleGetNotifications)
