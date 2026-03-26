@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { C, BODY, DISPLAY } from '@/lib/designSystem';
 import { useAttentionItems } from '@/hooks/useMigrationApi';
+import { migrationAPI } from '@/lib/migrationApi';
 import CorpusIndicator from '../ai/CorpusIndicator';
 import type { AttentionItem } from '@/types/Migration';
 
@@ -27,13 +29,32 @@ function AttentionItemCard({
   item,
   onResolve,
   onDefer,
+  isLoading,
 }: {
   item: AttentionItem;
-  onResolve: () => void;
-  onDefer: () => void;
+  onResolve: (note: string) => void;
+  onDefer: (note: string) => void;
+  isLoading: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [showNoteInput, setShowNoteInput] = useState<'resolve' | 'defer' | null>(null);
+  const [note, setNote] = useState('');
   const color = PRIORITY_COLORS[item.priority] || C.sky;
+
+  const handleConfirm = () => {
+    if (showNoteInput === 'resolve') {
+      onResolve(note);
+    } else if (showNoteInput === 'defer') {
+      onDefer(note);
+    }
+    setShowNoteInput(null);
+    setNote('');
+  };
+
+  const handleCancel = () => {
+    setShowNoteInput(null);
+    setNote('');
+  };
 
   return (
     <div
@@ -55,7 +76,6 @@ function AttentionItemCard({
           marginBottom: 6,
         }}
       >
-        {/* Priority badge */}
         <span
           style={{
             display: 'inline-flex',
@@ -70,7 +90,6 @@ function AttentionItemCard({
         >
           {item.priority}
         </span>
-        {/* Source tag */}
         <span
           style={{
             fontSize: 10,
@@ -168,21 +187,60 @@ function AttentionItemCard({
         </div>
       )}
 
-      {/* Action buttons */}
-      <div style={{ display: 'flex', gap: 8 }}>
-        {item.priority === 'P1' ? (
-          <>
-            <ActionButton label="Resolve" color={C.sage} filled onClick={onResolve} />
-            <ActionButton label="Defer" color={C.textTertiary} filled={false} onClick={onDefer} />
-          </>
-        ) : (
-          <>
-            <ActionButton label="Apply to All" color={C.sage} filled onClick={onResolve} />
-            <ActionButton label="Review" color={C.sky} filled={false} onClick={() => {}} />
-            <ActionButton label="Defer" color={C.textTertiary} filled={false} onClick={onDefer} />
-          </>
-        )}
-      </div>
+      {/* Resolution note input */}
+      {showNoteInput && (
+        <div style={{ marginBottom: 10 }}>
+          <input
+            type="text"
+            placeholder={showNoteInput === 'resolve' ? 'Resolution note...' : 'Deferral reason...'}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleConfirm(); }}
+            aria-label="resolution note"
+            style={{
+              width: '100%',
+              padding: '6px 10px',
+              fontSize: 12,
+              fontFamily: BODY,
+              border: `1px solid ${C.border}`,
+              borderRadius: 6,
+              background: C.pageBg,
+              color: C.text,
+              outline: 'none',
+              boxSizing: 'border-box',
+              marginBottom: 6,
+            }}
+          />
+          <div style={{ display: 'flex', gap: 6 }}>
+            <ActionButton
+              label={showNoteInput === 'resolve' ? 'Confirm Resolve' : 'Confirm Defer'}
+              color={showNoteInput === 'resolve' ? C.sage : C.textTertiary}
+              filled
+              onClick={handleConfirm}
+              disabled={isLoading}
+            />
+            <ActionButton label="Cancel" color={C.textTertiary} filled={false} onClick={handleCancel} disabled={isLoading} />
+          </div>
+        </div>
+      )}
+
+      {/* Action buttons — hidden when note input is showing */}
+      {!showNoteInput && (
+        <div style={{ display: 'flex', gap: 8 }}>
+          {item.priority === 'P1' ? (
+            <>
+              <ActionButton label="Resolve" color={C.sage} filled onClick={() => setShowNoteInput('resolve')} disabled={isLoading} />
+              <ActionButton label="Defer" color={C.textTertiary} filled={false} onClick={() => setShowNoteInput('defer')} disabled={isLoading} />
+            </>
+          ) : (
+            <>
+              <ActionButton label="Apply to All" color={C.sage} filled onClick={() => setShowNoteInput('resolve')} disabled={isLoading} />
+              <ActionButton label="Review" color={C.sky} filled={false} onClick={() => {}} disabled={isLoading} />
+              <ActionButton label="Defer" color={C.textTertiary} filled={false} onClick={() => setShowNoteInput('defer')} disabled={isLoading} />
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -192,23 +250,27 @@ function ActionButton({
   color,
   filled,
   onClick,
+  disabled = false,
 }: {
   label: string;
   color: string;
   filled: boolean;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       style={{
         fontFamily: BODY,
         fontSize: 11,
         fontWeight: 600,
         padding: '5px 12px',
         borderRadius: 6,
-        cursor: 'pointer',
+        cursor: disabled ? 'not-allowed' : 'pointer',
         transition: 'opacity 0.15s',
+        opacity: disabled ? 0.5 : 1,
         ...(filled
           ? {
               background: color,
@@ -229,6 +291,8 @@ function ActionButton({
 
 export default function AttentionQueue({ engagementId }: Props) {
   const [filter, setFilter] = useState<PriorityFilter>('ALL');
+  const [mutatingItemId, setMutatingItemId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const { data: items, isLoading } = useAttentionItems(
     engagementId,
     filter === 'ALL' ? undefined : { priority: filter },
@@ -236,6 +300,38 @@ export default function AttentionQueue({ engagementId }: Props) {
 
   const activeItems = items?.filter((i) => !i.resolved) ?? [];
   const totalCount = activeItems.length;
+
+  const handleMutation = async (
+    itemId: string,
+    source: string,
+    action: 'resolve' | 'defer',
+    note: string,
+  ) => {
+    setMutatingItemId(itemId);
+
+    // Optimistic update: remove the item from the list immediately.
+    const queryKey = ['migration', 'attention', engagementId, filter === 'ALL' ? undefined : { priority: filter }];
+    const previousItems = queryClient.getQueryData<AttentionItem[]>(queryKey);
+
+    queryClient.setQueryData<AttentionItem[]>(queryKey, (old) =>
+      old?.map((i) => (i.id === itemId ? { ...i, resolved: true } : i)),
+    );
+
+    try {
+      if (action === 'resolve') {
+        await migrationAPI.resolveAttentionItem(engagementId, itemId, source, note);
+      } else {
+        await migrationAPI.deferAttentionItem(engagementId, itemId, source, note);
+      }
+      // Invalidate to refetch fresh data from server.
+      queryClient.invalidateQueries({ queryKey: ['migration', 'attention'] });
+    } catch {
+      // Rollback on error.
+      queryClient.setQueryData(queryKey, previousItems);
+    } finally {
+      setMutatingItemId(null);
+    }
+  };
 
   return (
     <div style={{ fontFamily: BODY }}>
@@ -358,12 +454,9 @@ export default function AttentionQueue({ engagementId }: Props) {
             <AttentionItemCard
               key={item.id}
               item={item}
-              onResolve={() => {
-                // TODO: wire to resolve mutation when backend endpoint exists
-              }}
-              onDefer={() => {
-                // TODO: wire to defer mutation when backend endpoint exists
-              }}
+              isLoading={mutatingItemId === item.id}
+              onResolve={(note) => handleMutation(item.id, item.source, 'resolve', note)}
+              onDefer={(note) => handleMutation(item.id, item.source, 'defer', note)}
             />
           ))}
         </div>
