@@ -7,12 +7,12 @@
     {
       "id": "AC-1",
       "description": "RLS enabled on all migration.* content tables: engagement, quality_profile, field_mapping, code_mapping, batch, lineage, exception, reconciliation, correction, analyst_decision, gate_transition, notification, risk, event, certification_record. Policy pattern matches CLAUDE.md Section 6: tenant scoping via engagement_members join.",
-      "verification": "cd platform/migration && go test ./db/... -run TestMigrationRLS -count=1 -v"
+      "verification": "cd platform/migration && go test ./db/... -run TestMigrationRLSPolicies$ -count=1 -v"
     },
     {
       "id": "AC-2",
-      "description": "Migration SQL file creates policies using the standard pattern: USING (engagement_id IN (SELECT engagement_id FROM migration.engagement WHERE tenant_id = current_setting('app.current_tenant_id')::UUID)). Tables without direct engagement_id use a join path (e.g., batch via engagement_id, reconciliation via batch.engagement_id).",
-      "verification": "cd platform/migration && go test ./db/... -run TestRLSPolicyExists -count=1 -v"
+      "description": "DDL verification test: parses migration SQL file and asserts that every table listed in AC-1 has ENABLE ROW LEVEL SECURITY, FORCE ROW LEVEL SECURITY, and a CREATE POLICY statement. This test works in -short mode without a database.",
+      "verification": "cd platform/migration && go test ./db/... -short -run TestRLSDDLVerification$ -count=1 -v"
     },
     {
       "id": "AC-3",
@@ -21,8 +21,8 @@
     },
     {
       "id": "AC-4",
-      "description": "Test verifies that a query with tenant A's context cannot read tenant B's engagement data",
-      "verification": "cd platform/migration && go test ./db/... -run TestRLSIsolation -count=1 -v"
+      "description": "Integration test (skipped in -short mode): verifies that a query with tenant A's context cannot read tenant B's engagement data. Guarded by: if testing.Short() { t.Skip('requires database') }",
+      "verification": "cd platform/migration && go test ./db/... -run TestRLSIsolation$ -count=1 -v"
     }
   ],
   "regression_gates": [],

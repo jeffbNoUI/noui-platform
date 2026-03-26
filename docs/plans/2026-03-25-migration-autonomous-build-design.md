@@ -37,51 +37,39 @@ Each build contract touches **one layer, 3-5 files max**. If a feature spans bac
 
 ## 3. Quality-Gated Session Workflow
 
-Every autonomous session follows this lifecycle:
+Every autonomous session follows this lifecycle. Detailed step-by-step instructions
+are in `docs/contracts/SESSION_DISPATCH.md` (the executable spec). This section
+describes intent; SESSION_DISPATCH defines the exact steps.
 
-### Phase 1: Design (before writing code)
+### Phase 0: Sync
+Fetch remote, verify clean working tree, read CLAUDE.md + migration design doc.
 
-1. Read sprint contract + relevant specs + existing code
-2. Write implementation design (approach, files, tests, edge cases)
-3. Spawn **independent reviewer agent** (dual-agent review)
-   - Reviewer receives: design, contract rubric, CLAUDE.md rules
-   - Reviewer does NOT receive: implementer's reasoning
-   - Reviewer grades against: rubric, layer boundaries, security rules, tenant isolation
-   - Returns: CRITICAL / HIGH / MEDIUM findings
-4. Implementer addresses all CRITICAL, all feasible HIGH
-5. Re-submit to reviewer if changes were significant
-6. Log final design review verdict
+### Phase 1: Design
+Read contract, check dependencies and resume state, write implementation design,
+spawn independent reviewer agent for dual-agent review. Iterate until all CRITICAL
+and feasible HIGH items pass.
 
-### Phase 2: Red — Write Tests First (TDD)
+### Phase 2: Red (TDD)
+Write test files from contract acceptance criteria. Create stubs so tests compile.
+Verify ALL tests FAIL. Commit failing tests as a checkpoint.
 
-7. Write test files from contract acceptance criteria — every AC becomes a test
-8. Create minimal stubs so tests compile but fail
-9. Run tests — verify ALL FAIL (Red). If any pass, the test is wrong.
-10. Commit failing tests as checkpoint
+### Phase 3: Green (TDD)
+Implement one AC at a time, simplest first. Run `/validate` after each AC turns green.
+All AC verification commands must pass before proceeding.
 
-### Phase 3: Green — Make Tests Pass
-
-11. Implement one AC at a time, simplest first
-12. Run `/validate` after each AC turns green
-13. All AC verification commands must pass before proceeding
-
-### Phase 4: Refactor — Quality Gates
-
-14. `/validate` — full lint + typecheck + test suite
-15. `/simplify` — up to 3 cycles of code cleanup (the Refactor step)
-16. `/validate` — confirm simplify didn't break anything
-17. `/precommit` — 4-category graded evaluation
-18. If any FAIL → fix and re-run from step 14
+### Phase 4: Refactor
+`/validate` → `/simplify` (up to 3 cycles) → `/validate` → `/precommit`.
+If any FAIL, fix and re-run. Max 3 cycles; draft PR on persistent failure.
 
 ### Phase 5: Ship
+Squash into single clean commit (no `git rebase -i` — use `git reset --soft`).
+Push, create PR with label `migration-build`, run `/session-end`.
 
-19. Squash RED + GREEN + refactor into single clean commit
-20. Push + create PR
-21. `/session-end` — exit gates, starter prompt for next session
+The `/execute-contract` slash command loads this workflow.
 
 ---
 
-## 4. Six-Layer Quality Architecture
+## 4. Seven-Layer Quality Architecture
 
 ### Per-Contract Quality
 1. **Dual-agent design review** — architectural flaws, security, layer violations
@@ -91,8 +79,8 @@ Every autonomous session follows this lifecycle:
 5. **Pre-commit grading** — `/precommit` 4-category evaluation
 
 ### Cross-Contract Quality (periodic)
-5. **Regression checkpoint** — full test suite every 5th contract
-6. **Integration milestone** — composed workflow testing at dependency convergence
+6. **Regression checkpoint** — full test suite every 5th contract
+7. **Integration milestone** — composed workflow testing at dependency convergence
 
 ### Pipeline Integrity
 - **Dependency chain enforcement** — each session checks prerequisite contracts are merged before starting
@@ -239,40 +227,60 @@ INT-02: after M12b (full system integration test)
 claude --name "migration-M01" -p "Execute sprint contract docs/contracts/sprint-M01.json using the quality-gated workflow. [full prompt in docs/contracts/SESSION_DISPATCH.md]"
 ```
 
-### Overnight Batch (failure-aware)
+### Overnight Batch (one contract per night, human review between)
+
+**Important:** Each overnight session produces a PR. The human reviews and merges
+it the next morning. Dependent contracts can only run after their prerequisites
+are merged. This means a typical cadence is: **one contract per night, review in
+the morning, next contract the following night.**
+
+For independent contracts (no dependency between them), multiple sessions can run
+in parallel in separate terminals.
+
 ```bash
 #!/bin/bash
 set -euo pipefail
 
-CONTRACTS=(M00 M01 M01b M02a M02b)
+CONTRACT=$1  # e.g., M00, M01, M02a
 
-for contract in "${CONTRACTS[@]}"; do
-  echo "=== Starting contract $contract ==="
-
-  # Verify prerequisites are merged before starting
-  deps=$(jq -r '.depends_on[]?' "docs/contracts/sprint-${contract}.json" 2>/dev/null)
-  for dep in $deps; do
-    merged=$(gh pr list --state merged --search "migration/${dep} in:title" --json title --jq length)
-    if [ "$merged" -eq 0 ]; then
-      echo "BLOCKED: prerequisite $dep not merged. Stopping pipeline."
-      exit 1
-    fi
-  done
-
-  claude --name "migration-$contract" -p \
-    "Execute sprint contract docs/contracts/sprint-$contract.json using the quality-gated workflow described in docs/contracts/SESSION_DISPATCH.md"
-
-  # Check if session produced a draft PR (quality gates failed)
-  pr_state=$(gh pr list --state open --search "migration/${contract} in:title" --json isDraft --jq '.[0].isDraft // "none"')
-  if [ "$pr_state" = "true" ]; then
-    echo "WARNING: Contract $contract produced a draft PR. Stopping pipeline."
+# Verify prerequisites are merged before starting
+deps=$(jq -r '.depends_on[]?' "docs/contracts/sprint-${CONTRACT}.json" 2>/dev/null)
+for dep in $deps; do
+  merged=$(gh pr list --state merged --search "migration/${dep} in:title" --json title --jq length)
+  if [ "$merged" -eq 0 ]; then
+    echo "BLOCKED: prerequisite $dep not merged. Stopping."
     exit 1
   fi
 done
+
+echo "=== Executing contract $CONTRACT ==="
+claude -p "$(cat docs/contracts/SESSION_DISPATCH.md)
+
+CONTRACT FILE: docs/contracts/sprint-${CONTRACT}.json
+
+Read the contract file above, then follow the Phase 0-5 workflow exactly."
 ```
 
-### Parallel Independent Tracks
-Critical path and independent track can run simultaneously in separate terminal sessions, as long as they don't touch the same files. Each track uses the same failure-aware batch pattern.
+Usage:
+```bash
+# Night 1: Run independent contracts in parallel
+./scripts/run-contract.sh M00 &
+# (M01 depends on M00 — run after M00's PR is merged)
+
+# Night 2: After M00 merged
+./scripts/run-contract.sh M01 &
+./scripts/run-contract.sh M02a &  # M02a depends on M00 and M01, both merged
+
+# Night 3: After M01 and M02a merged
+./scripts/run-contract.sh M01b &
+./scripts/run-contract.sh M02b &
+```
+
+### Notes on autonomous execution
+- Migration-file-creating contracts must NOT run in parallel (conflicting file numbers)
+- The `-p` flag inlines SESSION_DISPATCH.md content so the session has the full workflow
+- `EnterWorktree` may not work in headless `-p` mode — SESSION_DISPATCH includes a git-command fallback
+- The `migration-build` GitHub label must be created before first run: `gh label create migration-build`
 
 ---
 
@@ -305,12 +313,17 @@ The autonomous build is complete when:
 
 ## 11. Iteration Plan
 
-**Night 1 (tonight):** M00 (RLS), M01 (attention backend) — can run in parallel. Then M01b, M02a sequentially.
-**Night 2:** M02b, M02c, M02d, CP-01 — job queue engine through checkpoint
-**Night 3:** M03a, M03b, M03c — parallel run
-**Night 4:** M04a, M04b, INT-01 — cutover + integration test
-**Night 5:** M05a, M05b, M05c, CP-02 — monitoring + checkpoint
-**Night 6+:** Independent track contracts (can be parallelized)
+**Night 1:** M00 (RLS) — foundation, no dependencies
+**Night 2:** M01 (attention backend) — depends on M00 (merge M00 first)
+**Night 3:** M01b + M02a in parallel — M01b depends on M01, M02a depends on M00+M01
+**Night 4:** M02b (job engine) — depends on M02a
+**Night 5:** M02c + M02d sequentially, then CP-01 — job queue complete
+**Night 6+:** M03a-c, M04a-b, etc. — one per night, review between
+
+Independent track contracts (M06-M10) can run in parallel with the critical path
+once M00 is merged, since they share no dependencies with M01-M05.
+
+**Adjust based on Night 1 learnings.** If M00 goes smoothly, the cadence may accelerate.
 
 Adjust based on Night 1 learnings.
 

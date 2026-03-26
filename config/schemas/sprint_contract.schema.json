@@ -87,7 +87,7 @@
     "quality_workflow": {
       "type": "array",
       "items": { "type": "string" },
-      "description": "Slash commands to run in Phase 3 quality gates (e.g., ['/validate', '/simplify', '/validate', '/precommit'])"
+      "description": "Slash commands to run in Phase 4 Refactor quality gates (e.g., ['/validate', '/simplify', '/validate', '/precommit'])"
     },
     "files_hint": {
       "type": "array",

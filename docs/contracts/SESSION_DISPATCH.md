@@ -60,7 +60,11 @@ Follow this workflow exactly. Do not skip steps.
 
 ### Phase 2: Red — Write Tests First (TDD)
 
-15. Create a worktree named after the contract: use `EnterWorktree` with name `migration-{contract-id}` (e.g., `migration-M01`, `migration-M02a`). If this is a resume session, skip this step — you're already on the branch.
+15. Create an isolated branch for this contract. Preferred method: use `EnterWorktree` with name `migration-{contract-id}`. If `EnterWorktree` is unavailable (headless `-p` mode), use git directly:
+    ```bash
+    git checkout -b migration-{contract-id} origin/main
+    ```
+    If this is a resume session (draft PR found in step 7), check out the existing branch instead.
 16. After entering the worktree, ensure it's up to date:
     ```bash
     git fetch origin && git rebase origin/main
@@ -123,10 +127,11 @@ Follow this workflow exactly. Do not skip steps.
 
 29. Squash all commits (RED + GREEN + refactor) into a single clean commit:
     ```bash
-    git rebase -i --autosquash HEAD~N  # squash RED/GREEN/refactor into one
-    # Or simply:
-    git reset --soft HEAD~N && git commit -m "[migration/{contract-id}] {goal from contract}"
+    # Count commits since branching from main:
+    N=$(git rev-list --count origin/main..HEAD)
+    git reset --soft HEAD~$N && git commit -m "[migration/{contract-id}] {goal from contract}"
     ```
+    **Do NOT use `git rebase -i` — it requires interactive input and will hang in headless sessions.**
 30. Push and create PR:
     - Branch: `migration-{contract-id}`
     - Base: `main`
@@ -176,6 +181,16 @@ These items supplement the contract-specific rubric. Both are checked.
   - `.claude/starter-prompt-next-session.md` (in-repo, for PR context)
   - The canonical memory location (for cross-session continuity)
 - **Prerequisite not merged** → STOP immediately, do not attempt the contract
+- **Red phase: tests won't compile even with stubs** → check for import cycles or missing dependencies. If unfixable after 3 attempts, create a draft PR with the test files and document the compilation issue.
+- **Green phase: stuck on one AC after 3 attempts** → commit partial progress (passing ACs green, stuck AC still red). Create a draft PR documenting which AC is stuck and why. The next session can pick up from the GREEN commit.
+- **Red phase: a test passes unexpectedly** → the test is wrong, not the code. Rewrite the test to assert the correct behavior. If it still passes after 3 rewrites, the behavior may already be implemented — verify and document.
+
+### Autonomous Mode Overrides
+
+When running in a headless `-p` session (no interactive user):
+- **Session-end Gate 2** ("Commit or discard?"): Always commit. Never discard work.
+- **Session-end Gate 3** ("Merge and clean up?"): Always choose **Path C** — push, create PR, keep worktree. Do not attempt to merge PRs autonomously.
+- **Any interactive confirmation prompt**: Choose the non-destructive option. Never delete, discard, or force-push without a human present.
 
 ### Contract JSON Schema
 

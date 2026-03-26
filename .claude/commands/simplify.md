@@ -9,7 +9,7 @@ For each cycle:
 ### Step 1: Find changed files
 
 ```bash
-git diff --name-only HEAD~1
+git diff --name-only origin/main..HEAD
 ```
 
 ### Step 2: Review
@@ -27,7 +27,10 @@ Report findings with specific file:line references and suggested fixes.
 
 If findings are warranted:
 1. Apply fixes
-2. Run `cd frontend && npm test -- --run` to verify nothing breaks
+2. Verify nothing breaks — run tests for each modified layer:
+   - If Go files changed: `cd <service-dir> && go test ./... -short -count=1`
+   - If frontend files changed: `cd frontend && npm test -- --run`
+   - If Python files changed: `cd migration-intelligence && python -m pytest`
 3. If tests pass, continue to Step 4
 4. If tests fail, revert fixes and report the failure
 

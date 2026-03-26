@@ -35,7 +35,7 @@ If in a worktree, determine the branch state:
 ```bash
 # Check if branch has been merged to master
 git fetch origin
-git branch --merged origin/master | grep "$BRANCH" && echo "MERGED" || echo "NOT_MERGED"
+git branch --merged origin/main | grep "$BRANCH" && echo "MERGED" || echo "NOT_MERGED"
 
 # Check if a PR exists for this branch
 gh pr status --json headRefName,state,url 2>/dev/null || echo "No PR found"
@@ -47,7 +47,7 @@ gh pr status --json headRefName,state,url 2>/dev/null || echo "No PR found"
 ✓ Branch merged. Cleaning up:
   1. ExitWorktree (action: "remove") — removes worktree + local branch
   2. git push origin --delete [branch-name] — remove remote branch
-  3. In main repo: git fetch origin && git merge --ff-only origin/master
+  3. In main repo: git fetch origin && git merge --ff-only origin/main
 ```
 
 Use the ExitWorktree tool with `action: "remove"`. This returns the session to the
@@ -64,7 +64,7 @@ main repo automatically. Then delete the remote branch and fast-forward master.
 1. `gh pr merge [number] --merge` — merge the PR
 2. ExitWorktree (action: "remove") — removes worktree + local branch
 3. `git push origin --delete [branch-name]` — remove remote branch
-4. In main repo: `git fetch origin && git merge --ff-only origin/master`
+4. In main repo: `git fetch origin && git merge --ff-only origin/main`
 5. Report: "PR merged, worktree removed, remote branch deleted, master updated."
 
 If the user says "keep for later":
@@ -103,20 +103,20 @@ gh pr merge [number] --merge
 ```bash
 git fetch origin
 # Verify merge
-git branch --merged origin/master | grep "$BRANCH"
+git branch --merged origin/main | grep "$BRANCH"
 ```
 
 If confirmed merged:
 1. ExitWorktree (action: "remove")
 2. `git push origin --delete [branch-name]`
-3. In main repo: `git fetch origin && git merge --ff-only origin/master`
+3. In main repo: `git fetch origin && git merge --ff-only origin/main`
 4. Report: "PR merged, worktree removed, remote branch deleted, master updated."
 
 ## Gate 4: Stale Worktree Scan
 
 ```bash
 git worktree list
-git branch --merged master 2>/dev/null | grep -v '^\*' | grep -v master
+git branch --merged main 2>/dev/null | grep -v '^\*' | grep -v master
 ```
 
 Report any stale worktrees with cleanup commands.
@@ -124,8 +124,8 @@ Report any stale worktrees with cleanup commands.
 ## Step 5: Session Summary
 
 ```bash
-git log --oneline origin/master..HEAD
-git diff --stat origin/master..HEAD
+git log --oneline origin/main..HEAD
+git diff --stat origin/main..HEAD
 ```
 
 ## Step 6: CLAUDE.md Check
