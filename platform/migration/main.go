@@ -21,6 +21,7 @@ import (
 	"github.com/noui/platform/migration/jobqueue"
 	"github.com/noui/platform/migration/profiler"
 	"github.com/noui/platform/migration/reconciler"
+	"github.com/noui/platform/migration/report"
 	"github.com/noui/platform/migration/worker"
 	"github.com/noui/platform/migration/ws"
 	"github.com/noui/platform/ratelimit"
@@ -82,11 +83,17 @@ func main() {
 		slog.Info("embedded worker started", "concurrency", cfg.Concurrency, "worker_id", cfg.WorkerID)
 	}
 
+	// PDF renderer — browser pool for chromedp-based PDF generation.
+	pdfPoolSize := 2
+	pdfPool := report.NewBrowserPool(pdfPoolSize)
+	defer pdfPool.Close() // Clean up Chrome processes before server.Shutdown.
+
 	counters := healthutil.NewRequestCounters()
 	handler := api.NewHandler(database)
 	handler.Hub = hub
 	handler.PlanConfig = planConfig
 	handler.JobQueue = jq
+	handler.Renderer = pdfPool
 	mux := http.NewServeMux()
 
 	// WebSocket route on bare mux — bypasses auth/ratelimit/dbcontext middleware chain.

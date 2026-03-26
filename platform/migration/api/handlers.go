@@ -10,6 +10,7 @@ import (
 	"github.com/noui/platform/migration/intelligence"
 	"github.com/noui/platform/migration/jobqueue"
 	"github.com/noui/platform/migration/reconciler"
+	"github.com/noui/platform/migration/report"
 	"github.com/noui/platform/migration/ws"
 )
 
@@ -21,6 +22,7 @@ type Handler struct {
 	Hub         *ws.Hub                // WebSocket hub for broadcasting events (nil-safe)
 	PlanConfig  *reconciler.PlanConfig // nil-safe: reconciliation degrades if not loaded
 	JobQueue    *jobqueue.Queue        // nil-safe: job endpoints return 503 if nil
+	Renderer    report.Renderer        // nil-safe: PDF endpoints return 503 if nil
 }
 
 // NewHandler creates a Handler with the given database connection.
@@ -126,6 +128,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 	// Mapping specification document (auditable artifact)
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/reports/mapping-spec", h.MappingSpec)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/reports/mapping-spec/pdf", h.MappingSpecPDF)
 
 	// Certification
 	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/certify", h.HandleCertify)
