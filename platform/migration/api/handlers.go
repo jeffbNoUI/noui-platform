@@ -187,6 +187,16 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/migration/schema-versions/diff", h.DiffSchemaVersions)
 	mux.HandleFunc("GET /api/v1/migration/schema-versions/{id}", h.GetSchemaVersion)
 	mux.HandleFunc("POST /api/v1/migration/schema-versions/{id}/activate", h.ActivateSchemaVersion)
+
+	// Reconciliation rules (M09a)
+	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/recon-rules", h.CreateReconRuleSet)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/recon-rules", h.ListReconRuleSets)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/recon-rules/active", h.GetActiveReconRuleSet)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/recon-rules/{rulesetId}", h.GetReconRuleSet)
+	mux.HandleFunc("PATCH /api/v1/migration/engagements/{id}/recon-rules/{rulesetId}", h.UpdateReconRuleSet)
+	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/recon-rules/{rulesetId}/activate", h.ActivateReconRuleSet)
+	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/recon-rules/{rulesetId}/archive", h.ArchiveReconRuleSet)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/recon-rules/{rulesetId}/diff", h.DiffReconRuleSets)
 }
 
 // broadcast sends a WebSocket event to all clients in an engagement room.

@@ -624,3 +624,125 @@ type SchemaVersionWithFields struct {
 	Version SchemaVersion        `json:"version"`
 	Fields  []SchemaVersionField `json:"fields"`
 }
+
+// ---------------------------------------------------------------------------
+// Reconciliation Rules (M09a)
+// ---------------------------------------------------------------------------
+
+// ReconRuleSetStatus represents the lifecycle state of a reconciliation rule set.
+type ReconRuleSetStatus string
+
+const (
+	ReconRuleSetDraft      ReconRuleSetStatus = "DRAFT"
+	ReconRuleSetActive     ReconRuleSetStatus = "ACTIVE"
+	ReconRuleSetSuperseded ReconRuleSetStatus = "SUPERSEDED"
+	ReconRuleSetArchived   ReconRuleSetStatus = "ARCHIVED"
+)
+
+// ValidReconRuleSetStatuses is the set of valid status values for a ReconRuleSet.
+var ValidReconRuleSetStatuses = map[ReconRuleSetStatus]bool{
+	ReconRuleSetDraft:      true,
+	ReconRuleSetActive:     true,
+	ReconRuleSetSuperseded: true,
+	ReconRuleSetArchived:   true,
+}
+
+// ReconComparisonType defines how a reconciliation rule compares source vs target.
+type ReconComparisonType string
+
+const (
+	ComparisonExact            ReconComparisonType = "EXACT"
+	ComparisonToleranceAbs     ReconComparisonType = "TOLERANCE_ABS"
+	ComparisonTolerancePct     ReconComparisonType = "TOLERANCE_PCT"
+	ComparisonRoundThenCompare ReconComparisonType = "ROUND_THEN_COMPARE"
+)
+
+// ValidComparisonTypes is the set of valid comparison types.
+var ValidComparisonTypes = map[ReconComparisonType]bool{
+	ComparisonExact:            true,
+	ComparisonToleranceAbs:     true,
+	ComparisonTolerancePct:     true,
+	ComparisonRoundThenCompare: true,
+}
+
+// ReconPriority defines the priority assigned when a rule mismatch occurs.
+type ReconPriority string
+
+const (
+	PriorityP1 ReconPriority = "P1"
+	PriorityP2 ReconPriority = "P2"
+	PriorityP3 ReconPriority = "P3"
+)
+
+// ValidPriorities is the set of valid mismatch priorities.
+var ValidPriorities = map[ReconPriority]bool{
+	PriorityP1: true,
+	PriorityP2: true,
+	PriorityP3: true,
+}
+
+// ReconRule is a single reconciliation rule within a rule set.
+// Stored in JSONB — tolerance_value is a string for decimal precision.
+type ReconRule struct {
+	RuleID             string              `json:"rule_id"`
+	Tier               int                 `json:"tier"`
+	CalcName           string              `json:"calc_name"`
+	ComparisonType     ReconComparisonType `json:"comparison_type"`
+	ToleranceValue     string              `json:"tolerance_value"`
+	PriorityIfMismatch ReconPriority       `json:"priority_if_mismatch"`
+	Enabled            bool                `json:"enabled"`
+}
+
+// ReconRuleSet represents a versioned set of reconciliation rules for an engagement.
+type ReconRuleSet struct {
+	RulesetID    string             `json:"ruleset_id"`
+	EngagementID string             `json:"engagement_id"`
+	Version      int                `json:"version"`
+	Label        string             `json:"label"`
+	Status       ReconRuleSetStatus `json:"status"`
+	Rules        []ReconRule        `json:"rules"`
+	CreatedBy    string             `json:"created_by"`
+	CreatedAt    time.Time          `json:"created_at"`
+	ActivatedAt  *time.Time         `json:"activated_at"`
+	SupersededAt *time.Time         `json:"superseded_at"`
+}
+
+// CreateReconRuleSetRequest is the JSON body for creating a new reconciliation rule set.
+type CreateReconRuleSetRequest struct {
+	Label string               `json:"label"`
+	Rules []CreateReconRuleReq `json:"rules"`
+}
+
+// CreateReconRuleReq defines a single rule in a create request.
+type CreateReconRuleReq struct {
+	Tier               int                 `json:"tier"`
+	CalcName           string              `json:"calc_name"`
+	ComparisonType     ReconComparisonType `json:"comparison_type"`
+	ToleranceValue     string              `json:"tolerance_value"`
+	PriorityIfMismatch ReconPriority       `json:"priority_if_mismatch"`
+	Enabled            bool                `json:"enabled"`
+}
+
+// UpdateReconRuleSetRequest is the JSON body for updating a DRAFT reconciliation rule set.
+type UpdateReconRuleSetRequest struct {
+	Label *string               `json:"label,omitempty"`
+	Rules *[]CreateReconRuleReq `json:"rules,omitempty"`
+}
+
+// ReconRuleDiff represents the structural difference between two reconciliation rule sets.
+type ReconRuleDiff struct {
+	FromRulesetID string            `json:"from_ruleset_id"`
+	FromVersion   int               `json:"from_version"`
+	ToRulesetID   string            `json:"to_ruleset_id"`
+	ToVersion     int               `json:"to_version"`
+	Added         []ReconRule       `json:"added"`
+	Removed       []ReconRule       `json:"removed"`
+	Modified      []ReconRuleChange `json:"modified"`
+}
+
+// ReconRuleChange describes how a single rule changed between two rule sets.
+type ReconRuleChange struct {
+	RuleID string    `json:"rule_id"`
+	From   ReconRule `json:"from"`
+	To     ReconRule `json:"to"`
+}
