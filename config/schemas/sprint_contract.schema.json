@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "sprint_contract.schema.json",
+  "title": "Sprint Contract",
+  "description": "Machine-readable acceptance criteria for a sprint. Created during planning, graded by /review command.",
+  "type": "object",
+  "required": ["sprint", "goal", "acceptance_criteria"],
+  "additionalProperties": false,
+  "properties": {
+    "sprint": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Sprint number"
+    },
+    "goal": {
+      "type": "string",
+      "minLength": 1,
+      "description": "One-line sprint goal"
+    },
+    "acceptance_criteria": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "description", "verification"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^AC-[0-9]+$",
+            "description": "Unique criterion ID (e.g., AC-1, AC-2)"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "What must be true for this criterion to pass"
+          },
+          "verification": {
+            "type": "string",
+            "minLength": 1,
+            "description": "How to verify — test command, manual check, or inspection"
+          }
+        }
+      }
+    },
+    "persona_review_required": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether persona review is required for this sprint"
+    },
+    "regression_gates": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^R-[0-9]+$"
+      },
+      "description": "Regression test IDs that must pass (e.g., R-01, R-10)"
+    }
+  }
+}

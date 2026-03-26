@@ -1,48 +1,109 @@
 # Session Start
 
-Read these files in order to understand the current state before writing any code:
+Prepare workspace for this session.
 
-1. Read `BUILD_HISTORY.md` — understand current state, last changes, any open issues
-2. Read `docs/INTEGRATION_PLAN.md` if it exists — understand what phase we're in
-3. Check for any `.claude/prompts/` files relevant to the current task
+## Step 0: Context Identification (run first, always)
 
-Then verify the build is healthy:
+Detect where this session is running:
 
 ```bash
-# Check git status
-git status --short
-git log --oneline -5
-
-# Quick build check for the layers we're likely to touch
-cd connector && go build ./... 2>&1 | tail -5
-cd ../platform/dataaccess && go build ./... 2>&1 | tail -5
-cd ../platform/intelligence && go build ./... 2>&1 | tail -5
-cd ../../frontend && npx tsc --noEmit 2>&1 | tail -5
+# Detect project from CLAUDE.md first line
+head -1 CLAUDE.md 2>/dev/null || echo "NO CLAUDE.md FOUND"
+# Detect if in a worktree
+git rev-parse --show-toplevel 2>/dev/null
+git worktree list 2>/dev/null | head -5
+# Current branch
+git branch --show-current
+# Commits ahead of master/main
+git rev-list --count origin/master..HEAD 2>/dev/null || git rev-list --count origin/main..HEAD 2>/dev/null || echo "0"
 ```
 
-Then check for unresolved error reports (skip silently if the Issues service is not reachable):
+Report as a context block:
+
+```
+## Context Check
+- Project:    [detected from CLAUDE.md header]
+- Location:   [Main repo | Worktree (path)]
+- Branch:     [current branch name]
+- Base:       master ([N] commits ahead)
+- Dirty:      [YES — list files | NO]
+```
+
+**GATE: If dirty state detected, STOP.** Report:
+```
+BLOCKED: Dirty working tree — [N] uncommitted files detected.
+Commit or discard changes before starting a new session.
+Run `git status` to see details.
+```
+Do not proceed past this gate until the working tree is clean.
+
+## Step 1: Stale Worktree Scan
 
 ```bash
-# Check for auto-reported errors (Issues service on port 8092)
-curl -sf http://localhost:8092/api/v1/errors/recent?status=open 2>/dev/null || true
+git worktree list
+git branch --merged master 2>/dev/null | grep -v '^\*' | grep -v master
 ```
 
-If error reports are found, display them in a table:
-
+If stale worktrees found (worktree branch already merged):
 ```
-## Unresolved Error Reports
-| Issue | Error | Service | First Seen |
-|-------|-------|---------|------------|
-| ISS-XX | ERROR_CODE: /api/path | service | date |
-
-Want me to investigate any of these?
+WARNING: Stale worktree detected:
+  Path:   [worktree-path]
+  Branch: [branch] (already merged)
+  Action: git worktree remove [path] && git branch -d [branch]
 ```
 
-Report:
-- What the last session accomplished
-- Whether builds are clean or broken
-- Any uncommitted changes from a prior session
-- Any open error reports from the Issues service
-- What the logical next task is
+## Step 2: Sync with Remote
 
-Then ask the user: "What are we working on today?" and wait for direction before writing any code.
+```bash
+git fetch origin
+git merge --ff-only origin/master 2>/dev/null || git merge --ff-only origin/main 2>/dev/null || echo "Already up to date or not on main branch"
+```
+
+## Step 3: Show Project State
+
+Show the project's build plan or task list — read the first 7 lines of the primary
+task tracking file (BUILD_PLAN.md, TODO.md, or equivalent).
+
+## Step 4: Verify Baseline Tests
+
+```bash
+cd frontend && npm test -- --run 2>&1 | tail -5
+```
+
+## Step 5: Read Starter Prompt
+
+Check for the starter prompt in priority order (user-level survives worktree removal):
+
+1. **User-level memory (canonical):**
+   `C:\Users\jeffb\.claude\projects\C--Users-jeffb-noui-platform/starter-prompt.md`
+2. **In-repo fallback:**
+   `.claude/starter-prompt-next-session.md`
+
+Read whichever exists (prefer user-level). This is the handoff from the previous session.
+
+If the user provided arguments to `/session-start`, follow those instead.
+
+## Step 6: Read Behavioral Guidelines
+
+Read CLAUDE.md behavioral guidelines section.
+
+## Step 7: Session Naming Reminder
+
+If this session wasn't started with `claude --name "task-id-description"`, recommend doing so.
+
+## Report
+
+Report concisely: context check, sync status, stale worktrees (if any), test count,
+starter prompt summary (if found), and current next task.
+
+Then print the quick reference:
+
+```
+Quick Reference:
+  Shift+Tab        Plan mode (persona review runs if needed)
+  /validate        After significant changes — lint + test check
+  /precommit       Before committing — graded 4-category evaluation
+  /commit          Stage + commit with proper message
+  /simplify        After task complete — iterative cleanup (up to 3 cycles)
+  /session-end     End session — exit gates, starter prompt, clean state
+```
