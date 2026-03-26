@@ -163,6 +163,13 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/migration/profiling-runs/{run_id}", h.GetProfilingRunHandler)
 	mux.HandleFunc("GET /api/v1/migration/profiling-runs/{run_id}/inventory", h.GetProfilingInventory)
 
+	// Parallel runs (M03c)
+	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/parallel-runs", h.CreateParallelRun)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/parallel-runs", h.ListParallelRuns)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/parallel-runs/{runId}", h.GetParallelRun)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/parallel-runs/{runId}/results", h.GetParallelRunResults)
+	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/parallel-runs/{runId}/cancel", h.CancelParallelRun)
+
 	// Schema versioning
 	mux.HandleFunc("POST /api/v1/migration/schema-versions", h.CreateSchemaVersion)
 	mux.HandleFunc("GET /api/v1/migration/schema-versions", h.ListSchemaVersions)

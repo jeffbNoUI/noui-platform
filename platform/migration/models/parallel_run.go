@@ -20,7 +20,7 @@ const (
 // parallelRunTransitions defines allowed status transitions for a parallel run.
 // PENDING→RUNNING, RUNNING→PAUSED|COMPLETED|FAILED|CANCELLED, PAUSED→RUNNING|CANCELLED.
 var parallelRunTransitions = map[ParallelRunStatus][]ParallelRunStatus{
-	ParallelRunPending:   {ParallelRunRunning},
+	ParallelRunPending:   {ParallelRunRunning, ParallelRunCancelled},
 	ParallelRunRunning:   {ParallelRunPaused, ParallelRunCompleted, ParallelRunFailed, ParallelRunCancelled},
 	ParallelRunPaused:    {ParallelRunRunning, ParallelRunCancelled},
 	ParallelRunCompleted: {},

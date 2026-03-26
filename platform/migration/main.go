@@ -76,10 +76,13 @@ func main() {
 		cfg.Concurrency = *workerConcurrency
 		cfg.WorkerID = "embedded-" + cfg.WorkerID
 		w := worker.New(database, jq, cfg)
+		w.Hub = hub // Post-construction Hub injection for WebSocket broadcasts.
 		w.RegisterExecutor("noop", &worker.NoopExecutor{})
 		w.RegisterExecutor(profiler.Level1Inventory.JobType(), &worker.ProfileL1Executor{})
 		w.RegisterExecutor(profiler.Level2Statistics.JobType(), &worker.ProfileL2Executor{})
-		w.RegisterExecutor(jobqueue.JobTypeParallelRun, &worker.ParallelRunExecutor{})
+		w.RegisterExecutor(jobqueue.JobTypeParallelRun, &worker.ParallelRunExecutor{
+			Broadcast: w.BroadcastEvent,
+		})
 		go w.Run(svcCtx)
 		slog.Info("embedded worker started", "concurrency", cfg.Concurrency, "worker_id", cfg.WorkerID)
 	}

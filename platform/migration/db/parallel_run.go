@@ -204,8 +204,9 @@ func InsertParallelRunResults(db *sql.DB, results []models.ParallelRunResult) (i
 
 // GetParallelRunResults retrieves paginated results for a parallel run.
 // matchFilter: nil=all, true=matches only, false=mismatches only.
+// entityFilter: nil=all entities, non-empty=filter by canonical_entity.
 // perPage max is 200. offset is 0-based.
-func GetParallelRunResults(db *sql.DB, runID string, matchFilter *bool, perPage, offset int) ([]models.ParallelRunResult, error) {
+func GetParallelRunResults(db *sql.DB, runID string, matchFilter *bool, entityFilter *string, perPage, offset int) ([]models.ParallelRunResult, error) {
 	if perPage <= 0 || perPage > 200 {
 		perPage = 200
 	}
@@ -222,6 +223,12 @@ func GetParallelRunResults(db *sql.DB, runID string, matchFilter *bool, perPage,
 	if matchFilter != nil {
 		query += fmt.Sprintf(` AND match = $%d`, argIdx)
 		args = append(args, *matchFilter)
+		argIdx++
+	}
+
+	if entityFilter != nil && *entityFilter != "" {
+		query += fmt.Sprintf(` AND canonical_entity = $%d`, argIdx)
+		args = append(args, *entityFilter)
 		argIdx++
 	}
 
@@ -247,6 +254,31 @@ func GetParallelRunResults(db *sql.DB, runID string, matchFilter *bool, perPage,
 		return nil, fmt.Errorf("get parallel run results rows: %w", err)
 	}
 	return results, nil
+}
+
+// CountParallelRunResults returns the total number of results matching the given filters.
+func CountParallelRunResults(db *sql.DB, runID string, matchFilter *bool, entityFilter *string) (int, error) {
+	query := `SELECT COUNT(*) FROM migration.parallel_run_result WHERE run_id = $1`
+	args := []any{runID}
+	argIdx := 2
+
+	if matchFilter != nil {
+		query += fmt.Sprintf(` AND match = $%d`, argIdx)
+		args = append(args, *matchFilter)
+		argIdx++
+	}
+
+	if entityFilter != nil && *entityFilter != "" {
+		query += fmt.Sprintf(` AND canonical_entity = $%d`, argIdx)
+		args = append(args, *entityFilter)
+		argIdx++
+	}
+
+	var count int
+	if err := db.QueryRow(query, args...).Scan(&count); err != nil {
+		return 0, fmt.Errorf("count parallel run results: %w", err)
+	}
+	return count, nil
 }
 
 // GetParallelRunSummary returns aggregate match/mismatch metrics via SQL COUNT/SUM.

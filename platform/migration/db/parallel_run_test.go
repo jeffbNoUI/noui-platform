@@ -337,7 +337,7 @@ func TestGetParallelRunResults(t *testing.T) {
 			&legVal, &newVal, false, 50.0, 5.0, "2026-03-25T12:00:00Z",
 		))
 
-	results, err := GetParallelRunResults(db, "run-001", nil, 50, 0)
+	results, err := GetParallelRunResults(db, "run-001", nil, nil, 50, 0)
 	if err != nil {
 		t.Fatalf("GetParallelRunResults error: %v", err)
 	}
@@ -367,7 +367,7 @@ func TestGetParallelRunResults_WithMatchFilter(t *testing.T) {
 		WithArgs("run-001", false, 200, 0).
 		WillReturnRows(sqlmock.NewRows(parallelRunResultCols))
 
-	results, err := GetParallelRunResults(db, "run-001", &matchOnly, 0, 0)
+	results, err := GetParallelRunResults(db, "run-001", &matchOnly, nil, 0, 0)
 	if err != nil {
 		t.Fatalf("GetParallelRunResults error: %v", err)
 	}
