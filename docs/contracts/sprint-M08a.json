@@ -1,0 +1,78 @@
+{
+  "sprint": 14,
+  "goal": "Schema versioning: first-class version entity, CRUD operations, field diff between versions",
+  "depends_on": [],
+  "layer": "go+db",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "Migration 047 creates migration.schema_version table: version_id UUID PK DEFAULT gen_random_uuid(), version_label TEXT NOT NULL UNIQUE (e.g., 'v1.0', 'v1.1', 'v2.0'), description TEXT, is_active BOOLEAN NOT NULL DEFAULT true, created_by TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now(). Only one version may be active at a time — enforced by a partial unique index: CREATE UNIQUE INDEX idx_schema_version_active ON migration.schema_version(is_active) WHERE is_active = true. RLS uses Tier A pattern with a tenant_id UUID NOT NULL column (schema versions are tenant-scoped — different pension funds may have different canonical schemas). Index on tenant_id for RLS subquery.",
+      "verification": "cd platform/migration && go test ./db/... -run TestSchemaVersionSchema -count=1 -v"
+    },
+    {
+      "id": "AC-2",
+      "description": "Migration 047 also creates migration.schema_version_field table: field_id UUID PK DEFAULT gen_random_uuid(), version_id UUID NOT NULL FK to migration.schema_version, entity TEXT NOT NULL, field_name TEXT NOT NULL, data_type TEXT NOT NULL, is_required BOOLEAN NOT NULL DEFAULT false, description TEXT, display_order INT NOT NULL DEFAULT 0, UNIQUE(version_id, entity, field_name). RLS via version_id → schema_version → tenant_id (Tier B-like two-hop). This replaces the flat canonical_schema_field approach with a properly versioned structure — each version has its own complete set of fields. Index on version_id for listing.",
+      "verification": "cd platform/migration && go test ./db/... -run TestSchemaVersionFieldSchema -count=1 -v"
+    },
+    {
+      "id": "AC-3",
+      "description": "Go model types in models/schema_version.go: SchemaVersion struct (ID, TenantID, VersionLabel, Description, IsActive, CreatedBy, CreatedAt), SchemaVersionField struct (ID, VersionID, Entity, FieldName, DataType, IsRequired, Description, DisplayOrder), CreateSchemaVersionRequest (VersionLabel, Description, Fields []SchemaVersionFieldInput), SchemaVersionFieldInput (Entity, FieldName, DataType, IsRequired, Description, DisplayOrder). SchemaVersionDiff struct: {Added []SchemaVersionField, Removed []SchemaVersionField, TypeChanged []FieldTypeChange}. FieldTypeChange: {Entity, FieldName, OldType, NewType}.",
+      "verification": "cd platform/migration && go build ./models/..."
+    },
+    {
+      "id": "AC-4",
+      "description": "DB CRUD in db/schema_version.go: CreateSchemaVersion (inserts version + fields in a transaction — if is_active requested, deactivates the currently active version first), GetSchemaVersion, ListSchemaVersions (ordered by created_at DESC), ActivateSchemaVersion (deactivates current active, activates target — within transaction), GetSchemaVersionFields (by version_id, ordered by entity + display_order), DiffSchemaVersions(db, fromVersionID, toVersionID) returns SchemaVersionDiff by comparing field sets. All use scanSchemaVersion/scanSchemaVersionField DRY helpers following engagement.go pattern.",
+      "verification": "cd platform/migration && go test ./db/... -run TestSchemaVersion -count=1 -v"
+    },
+    {
+      "id": "AC-5",
+      "description": "API endpoints: POST /api/v1/migration/schema-versions (create version with fields — fields are required, empty field list returns 422), GET /api/v1/migration/schema-versions (list all), GET /api/v1/migration/schema-versions/{id} (get with fields), POST /api/v1/migration/schema-versions/{id}/activate (activate — deactivates current), GET /api/v1/migration/schema-versions/diff?from={id}&to={id} (diff two versions). All require authenticated user. Version label must match pattern ^v\\d+\\.\\d+$ (e.g., v1.0, v2.1) — return 422 on invalid format.",
+      "verification": "cd platform/migration && go test ./api/... -run TestSchemaVersionAPI -count=1 -v"
+    },
+    {
+      "id": "AC-6",
+      "description": "Seed v1.0 schema version: migration 047 includes a seed INSERT that creates a v1.0 schema_version record (with a well-known UUID for test reproducibility) and populates schema_version_field from the 9 canonical entities defined in the codebase (member, employment_record, salary_history, contribution_history, benefit_calculation, payment_history, beneficiary, service_credit, dro). Fields are sourced from the existing canonical_schema_field definitions if present, or from the reconciler.CanonicalFields() definitions. Tenant_id for seed uses a well-known test tenant UUID. The seed is idempotent (ON CONFLICT DO NOTHING on version_label).",
+      "verification": "cd platform/migration && go test ./db/... -run TestSchemaVersionSeed -count=1 -v"
+    },
+    {
+      "id": "AC-7",
+      "description": "rls_test.go updated: schema_version added to allMigrationTables under Tier A (has tenant_id), schema_version_field added under Tier B (FK to schema_version). All existing RLS tests continue to pass.",
+      "verification": "cd platform/migration && go test ./db/... -run TestMigrationRLS -count=1 -v"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "Only one active version per tenant — enforced by partial unique index, not application logic",
+      "Version activation is transactional — deactivate current + activate target in same transaction",
+      "schema_version has tenant_id (Tier A RLS) — different tenants can have different canonical schemas",
+      "schema_version_field RLS via two-hop (field → version → tenant)",
+      "Version label validated: must match ^v\\d+\\.\\d+$ pattern",
+      "CreateSchemaVersion is transactional — version + all fields inserted atomically"
+    ],
+    "high": [
+      "DiffSchemaVersions computes added/removed/type-changed fields via set operations — not stored",
+      "Seed data uses well-known UUID for test reproducibility",
+      "Seed is idempotent (ON CONFLICT DO NOTHING)",
+      "scanSchemaVersion/scanSchemaVersionField DRY helpers follow engagement.go pattern",
+      "rls_test.go updated with both new tables"
+    ],
+    "medium": [
+      "M08b (compatibility checking) will build on this to determine if engagements need re-mapping after version change",
+      "display_order field enables consistent UI ordering of fields within entities",
+      "Description field on both version and field supports documentation of what changed"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "platform/migration/db/migrations/047_schema_version.sql",
+    "platform/migration/models/schema_version.go",
+    "platform/migration/models/schema_version_test.go",
+    "platform/migration/db/schema_version.go",
+    "platform/migration/db/schema_version_test.go",
+    "platform/migration/api/schema_version_handlers.go",
+    "platform/migration/api/schema_version_handlers_test.go",
+    "platform/migration/api/handlers.go",
+    "platform/migration/db/rls_test.go"
+  ]
+}

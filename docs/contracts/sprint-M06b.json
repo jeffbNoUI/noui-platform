@@ -1,0 +1,69 @@
+{
+  "sprint": 12,
+  "goal": "Audit trail: CSV/JSON export endpoints and background retention enforcement",
+  "depends_on": ["M06a"],
+  "layer": "go",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "GET /api/v1/migration/engagements/{id}/audit-log/export?format=csv returns the full audit trail as a streaming CSV download. Content-Type: text/csv. Content-Disposition: attachment; filename=audit-log-{sanitized-engagement-name}-{date}.csv. Columns: log_id, actor, action, entity_type, entity_id, before_state (JSON string), after_state (JSON string), metadata (JSON string), created_at (RFC3339). Supports optional query params: ?from= and ?to= (ISO 8601 date range filter on created_at), ?entity_type= filter, ?actor= filter. Uses sql.Rows streaming — does NOT load entire result set into memory. Sanitize filename same pattern as M07a PDF export.",
+      "verification": "cd platform/migration && go test ./api/... -run TestAuditExportCSV -count=1 -v"
+    },
+    {
+      "id": "AC-2",
+      "description": "GET /api/v1/migration/engagements/{id}/audit-log/export?format=json returns the audit trail as a JSON array download. Content-Type: application/json. Content-Disposition: attachment; filename=audit-log-{sanitized-engagement-name}-{date}.json. Same filters as CSV endpoint (?from, ?to, ?entity_type, ?actor). Uses json.NewEncoder with streaming writes — each entry written as it's scanned from rows, not buffered. Returns 404 if engagement not found. Returns 200 with empty array if no audit entries match filters.",
+      "verification": "cd platform/migration && go test ./api/... -run TestAuditExportJSON -count=1 -v"
+    },
+    {
+      "id": "AC-3",
+      "description": "Export includes cross-table audit data: audit_log entries are the primary source, but the export also includes gate_transition records (action='phase_transition', entity_type='gate', before_state=from_phase, after_state=to_phase+gate_metrics) to provide a complete audit picture. The two sources are merged into a unified stream ordered by created_at DESC. A new db function GetAuditExport(db, engagementID, opts ExportOptions) returns a sql.Rows iterator over the UNION ALL query.",
+      "verification": "cd platform/migration && go test ./db/... -run TestAuditExportQuery -count=1 -v"
+    },
+    {
+      "id": "AC-4",
+      "description": "Large export guard: if estimated row count (SELECT COUNT(*) with same filters) exceeds 50,000 entries, return 422 with message suggesting date range filters to reduce scope. This prevents timeout on very large audit trails. The count query runs first (fast, index-only on engagement_id + created_at), then the streaming export runs only if under the limit.",
+      "verification": "cd platform/migration && go test ./api/... -run TestAuditExportLargeGuard -count=1 -v"
+    },
+    {
+      "id": "AC-5",
+      "description": "Retention configuration: new JSONB field audit_retention_policy on migration.engagement (migration 047, nullable, default null = no auto-purge). Schema: {event_retention_days: int, audit_log_retention_days: int}. When null, no automatic purging occurs. Retention values must be >= 365 (1 year minimum) — the system refuses to set shorter retention periods. API: PATCH /api/v1/migration/engagements/{id}/retention-policy with body {event_retention_days, audit_log_retention_days}. Returns 422 if any value < 365. Note: audit_log entries are NEVER purged by retention (INSERT-only table per M06a design). Only migration.event rows are eligible for retention purging — audit_log_retention_days controls when audit entries are ARCHIVED (marked but not deleted), not purged.",
+      "verification": "cd platform/migration && go test ./api/... -run TestRetentionPolicy -count=1 -v"
+    },
+    {
+      "id": "AC-6",
+      "description": "Background retention goroutine: PurgeExpiredEvents(db, interval) runs on a configurable interval (default 24h). For each engagement with a non-null audit_retention_policy, deletes event rows where created_at < NOW() - event_retention_days. Respects the BEFORE DELETE trigger on migration.event added by M06a — the trigger must be temporarily disabled within the retention goroutine's transaction (ALTER TABLE migration.event DISABLE TRIGGER prevent_event_delete; DELETE ...; ALTER TABLE migration.event ENABLE TRIGGER prevent_event_delete) OR the trigger is modified in migration 047 to allow deletes from a special 'retention_service' role. Logged via slog.Info with engagement_id, rows_purged, oldest_remaining. Started in main.go as a goroutine with context cancellation on shutdown.",
+      "verification": "cd platform/migration && go test ./db/... -run TestPurgeExpiredEvents -count=1 -v"
+    }
+  ],
+  "regression_gates": [],
+  "design_review_rubric": {
+    "critical": [
+      "audit_log entries are NEVER deleted — INSERT-only immutable table. Retention only applies to migration.event",
+      "Streaming export via sql.Rows — never buffer full result set in memory",
+      "Retention minimum 365 days — system refuses shorter periods",
+      "DELETE trigger on event table must be handled correctly during retention purge — either disable/enable within transaction or use role-based exemption",
+      "RLS still applies to export — user can only export audit data for engagements they have access to"
+    ],
+    "high": [
+      "Cross-table UNION ALL for complete audit picture (audit_log + gate_transition)",
+      "Large export guard prevents timeout (50K row limit without date filters)",
+      "Filename sanitization matches M07a pattern (non-alphanumeric → hyphens)",
+      "Retention goroutine has context cancellation on shutdown — no goroutine leak",
+      "slog structured logging for retention operations"
+    ],
+    "medium": [
+      "CSV export uses encoding/csv writer (handles quoting, escaping automatically)",
+      "JSON export uses json.Encoder with streaming (SetEscapeHTML false for readability)",
+      "Retention interval configurable via environment variable (default 24h)"
+    ]
+  },
+  "quality_workflow": ["/validate", "/simplify", "/validate", "/precommit"],
+  "files_hint": [
+    "platform/migration/db/migrations/047_retention_policy.sql",
+    "platform/migration/db/audit.go",
+    "platform/migration/db/audit_test.go",
+    "platform/migration/api/audit_handlers.go",
+    "platform/migration/api/audit_handlers_test.go",
+    "platform/migration/main.go"
+  ]
+}
