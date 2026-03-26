@@ -923,3 +923,70 @@ type DriftDetectionRunWithRecords struct {
 	Run     DriftDetectionRun `json:"run"`
 	Records []DriftRecord     `json:"records"`
 }
+
+// ---------------------------------------------------------------------------
+// Reconciliation Execution Engine (M09b)
+// ---------------------------------------------------------------------------
+
+// ReconExecutionRunStatus represents the lifecycle state of a recon execution run.
+type ReconExecutionRunStatus string
+
+const (
+	ReconExecPending   ReconExecutionRunStatus = "PENDING"
+	ReconExecRunning   ReconExecutionRunStatus = "RUNNING"
+	ReconExecCompleted ReconExecutionRunStatus = "COMPLETED"
+	ReconExecFailed    ReconExecutionRunStatus = "FAILED"
+)
+
+// ReconExecutionRun represents a single execution of a ruleset against parallel run results.
+type ReconExecutionRun struct {
+	ExecutionID    string                  `json:"execution_id"`
+	EngagementID   string                  `json:"engagement_id"`
+	RulesetID      string                  `json:"ruleset_id"`
+	ParallelRunID  string                  `json:"parallel_run_id"`
+	Status         ReconExecutionRunStatus `json:"status"`
+	TotalEvaluated int                     `json:"total_evaluated"`
+	MatchCount     int                     `json:"match_count"`
+	MismatchCount  int                     `json:"mismatch_count"`
+	P1Count        int                     `json:"p1_count"`
+	P2Count        int                     `json:"p2_count"`
+	P3Count        int                     `json:"p3_count"`
+	StartedAt      *time.Time              `json:"started_at,omitempty"`
+	CompletedAt    *time.Time              `json:"completed_at,omitempty"`
+	ErrorMessage   *string                 `json:"error_message,omitempty"`
+	CreatedAt      time.Time               `json:"created_at"`
+}
+
+// ReconExecutionMismatch represents a single mismatch detected during execution.
+type ReconExecutionMismatch struct {
+	MismatchID      string              `json:"mismatch_id"`
+	ExecutionID     string              `json:"execution_id"`
+	RuleID          string              `json:"rule_id"`
+	MemberID        string              `json:"member_id"`
+	CanonicalEntity string              `json:"canonical_entity"`
+	FieldName       string              `json:"field_name"`
+	LegacyValue     *string             `json:"legacy_value"`
+	NewValue        *string             `json:"new_value"`
+	VarianceAmount  *string             `json:"variance_amount"`
+	ComparisonType  ReconComparisonType `json:"comparison_type"`
+	ToleranceValue  *string             `json:"tolerance_value"`
+	Priority        ReconPriority       `json:"priority"`
+	CreatedAt       time.Time           `json:"created_at"`
+}
+
+// CreateReconExecutionRequest is the JSON body for triggering a new recon execution.
+type CreateReconExecutionRequest struct {
+	ParallelRunID string  `json:"parallel_run_id"`
+	RulesetID     *string `json:"ruleset_id,omitempty"`
+}
+
+// ReconExecutionSummary provides aggregate metrics for the most recent execution.
+type ReconExecutionSummary struct {
+	TotalEvaluated int     `json:"total_evaluated"`
+	MatchCount     int     `json:"match_count"`
+	MismatchCount  int     `json:"mismatch_count"`
+	P1Count        int     `json:"p1_count"`
+	P2Count        int     `json:"p2_count"`
+	P3Count        int     `json:"p3_count"`
+	MatchRatio     float64 `json:"match_ratio"`
+}

@@ -65,6 +65,9 @@ var allMigrationTables = []string{
 	"schema_version_field",
 	// Tier B: FK to engagement (M09a)
 	"recon_rule_set",
+	// Tier B: FK to engagement (M09b)
+	"recon_execution_run",
+	"recon_execution_mismatch",
 	// Tier D: deep FK chain
 	"source_table",
 	"source_column",

@@ -92,6 +92,9 @@ func main() {
 		w.RegisterExecutor(jobqueue.JobTypeParallelRun, &worker.ParallelRunExecutor{
 			Broadcast: w.BroadcastEvent,
 		})
+		w.RegisterExecutor("recon_execution", &worker.ReconExecutionExecutor{
+			Broadcast: w.BroadcastEvent,
+		})
 		go w.Run(svcCtx)
 		slog.Info("embedded worker started", "concurrency", cfg.Concurrency, "worker_id", cfg.WorkerID)
 	}

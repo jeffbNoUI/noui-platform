@@ -256,6 +256,35 @@ func GetParallelRunResults(db *sql.DB, runID string, matchFilter *bool, entityFi
 	return results, nil
 }
 
+// GetAllParallelRunResults retrieves ALL results for a parallel run without pagination.
+// Used by the recon execution engine which needs the full dataset to avoid evaluation gaps.
+func GetAllParallelRunResults(db *sql.DB, runID string) ([]models.ParallelRunResult, error) {
+	rows, err := db.Query(
+		`SELECT `+parallelRunResultColumns+`
+		 FROM migration.parallel_run_result
+		 WHERE run_id = $1
+		 ORDER BY checked_at`,
+		runID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get all parallel run results: %w", err)
+	}
+	defer rows.Close()
+
+	var results []models.ParallelRunResult
+	for rows.Next() {
+		r, err := scanParallelRunResult(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan parallel run result: %w", err)
+		}
+		results = append(results, *r)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("get all parallel run results rows: %w", err)
+	}
+	return results, nil
+}
+
 // CountParallelRunResults returns the total number of results matching the given filters.
 func CountParallelRunResults(db *sql.DB, runID string, matchFilter *bool, entityFilter *string) (int, error) {
 	query := `SELECT COUNT(*) FROM migration.parallel_run_result WHERE run_id = $1`
