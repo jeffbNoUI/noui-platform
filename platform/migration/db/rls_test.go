@@ -72,6 +72,7 @@ var allMigrationTables = []string{
 	// Tier D: deep FK chain
 	"source_table",
 	"source_column",
+	"source_relationship",
 }
 
 // rlsMigrationPath returns the absolute path to the RLS migration file,

@@ -71,8 +71,8 @@ func TestProfilingLevel_RequiresSourceAccess(t *testing.T) {
 	if !Level2Statistics.RequiresSourceAccess() {
 		t.Error("L2 should require source access")
 	}
-	if Level3Dependencies.RequiresSourceAccess() {
-		t.Error("L3 should not require source access")
+	if !Level3Dependencies.RequiresSourceAccess() {
+		t.Error("L3 should require source access (orphan detection)")
 	}
 	if Level4Coverage.RequiresSourceAccess() {
 		t.Error("L4 should not require source access")

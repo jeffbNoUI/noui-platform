@@ -224,6 +224,10 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/recon-rules/{rulesetId}/activate", h.ActivateReconRuleSet)
 	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/recon-rules/{rulesetId}/archive", h.ArchiveReconRuleSet)
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/recon-rules/{rulesetId}/diff", h.DiffReconRuleSets)
+
+	// L3 profiling: source relationships + orphan detection (M10a)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/profiling/{runId}/relationships", h.ListRelationships)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/profiling/{runId}/orphan-summary", h.OrphanSummary)
 }
 
 // broadcast sends a WebSocket event to all clients in an engagement room.

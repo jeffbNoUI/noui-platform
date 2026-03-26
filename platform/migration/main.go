@@ -90,6 +90,7 @@ func main() {
 		w.RegisterExecutor("noop", &worker.NoopExecutor{})
 		w.RegisterExecutor(profiler.Level1Inventory.JobType(), &worker.ProfileL1Executor{})
 		w.RegisterExecutor(profiler.Level2Statistics.JobType(), &worker.ProfileL2Executor{})
+		w.RegisterExecutor(profiler.Level3Dependencies.JobType(), &worker.ProfileL3Executor{})
 		w.RegisterExecutor(jobqueue.JobTypeParallelRun, &worker.ParallelRunExecutor{
 			Broadcast: w.BroadcastEvent,
 		})

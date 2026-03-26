@@ -1038,3 +1038,40 @@ type DriftSummary struct {
 	ScheduleEnabled bool           `json:"schedule_enabled"`
 	NextScheduledAt *time.Time     `json:"next_scheduled_at,omitempty"`
 }
+
+// ---------------------------------------------------------------------------
+// Source Relationships — L3 Profiling (M10a)
+// ---------------------------------------------------------------------------
+
+// RelationshipType categorizes how a relationship was discovered.
+type RelationshipType string
+
+const (
+	RelationshipFKDeclared RelationshipType = "FK_DECLARED"
+	RelationshipFKInferred RelationshipType = "FK_INFERRED"
+)
+
+// SourceRelationship represents a cross-table referential relationship
+// discovered during L3 profiling. May be declared (via information_schema FK)
+// or inferred (by column-name heuristics).
+type SourceRelationship struct {
+	RelationshipID   string           `json:"relationship_id"`
+	ProfilingRunID   string           `json:"profiling_run_id"`
+	ParentTable      string           `json:"parent_table"` // schema.table
+	ParentColumn     string           `json:"parent_column"`
+	ChildTable       string           `json:"child_table"` // schema.table
+	ChildColumn      string           `json:"child_column"`
+	RelationshipType RelationshipType `json:"relationship_type"`
+	Confidence       float64          `json:"confidence"` // 0.0–1.0
+	OrphanCount      int              `json:"orphan_count"`
+	OrphanPct        float64          `json:"orphan_pct"`
+	CreatedAt        time.Time        `json:"created_at"`
+}
+
+// OrphanSummary provides aggregate orphan metrics for a profiling run.
+type OrphanSummary struct {
+	TotalRelationships  int     `json:"total_relationships"`
+	OrphanRelationships int     `json:"orphan_relationships"`
+	TotalOrphanRows     int     `json:"total_orphan_rows"`
+	HighestOrphanPct    float64 `json:"highest_orphan_pct"`
+}

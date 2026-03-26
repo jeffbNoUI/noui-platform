@@ -60,7 +60,7 @@ func (l ProfilingLevel) RunStatus() models.ProfilingRunStatus {
 
 // RequiresSourceAccess returns true if this level queries the source database.
 func (l ProfilingLevel) RequiresSourceAccess() bool {
-	return l == Level1Inventory || l == Level2Statistics
+	return l == Level1Inventory || l == Level2Statistics || l == Level3Dependencies
 }
 
 // NextLevel returns the next profiling level, or 0 if this is the last.
