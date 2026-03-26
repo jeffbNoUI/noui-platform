@@ -7,6 +7,8 @@ export type EngagementStatus =
   | 'TRANSFORMING'
   | 'RECONCILING'
   | 'PARALLEL_RUN'
+  | 'CUTOVER_IN_PROGRESS'
+  | 'GO_LIVE'
   | 'COMPLETE';
 export type BatchStatus = 'PENDING' | 'RUNNING' | 'LOADED' | 'RECONCILED' | 'APPROVED' | 'FAILED';
 export type ExceptionType =
@@ -604,4 +606,75 @@ export interface DetectedPattern {
   label: string;
   match_rate: number;
   sample_size: number;
+}
+
+// ─── Cutover Types ─────────────────────────────────────────────────────────
+
+export type CutoverStepStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED' | 'SKIPPED';
+
+export interface CutoverStep {
+  step_id: string;
+  plan_id: string;
+  sequence: number;
+  label: string;
+  description: string;
+  status: CutoverStepStatus;
+  assigned_to: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  notes: string | null;
+}
+
+export interface CutoverPlan {
+  plan_id: string;
+  engagement_id: string;
+  name: string;
+  scheduled_start: string | null;
+  scheduled_end: string | null;
+  steps: CutoverStep[];
+  created_at: string;
+  updated_at: string;
+}
+
+export type RollbackStatus = 'AVAILABLE' | 'INITIATED' | 'COMPLETED' | 'EXPIRED';
+
+export interface RollbackAction {
+  rollback_id: string;
+  plan_id: string;
+  status: RollbackStatus;
+  trigger_reason: string | null;
+  initiated_by: string | null;
+  initiated_at: string | null;
+  completed_at: string | null;
+}
+
+export type GoLiveTerminalStatus = 'LIVE' | 'ROLLED_BACK' | 'ABORTED';
+
+export interface GoLiveStatus {
+  engagement_id: string;
+  terminal_status: GoLiveTerminalStatus;
+  go_live_at: string | null;
+  confirmed_by: string | null;
+  rollback_window_end: string | null;
+  notes: string | null;
+}
+
+export interface CreateCutoverPlanRequest {
+  name: string;
+  scheduled_start?: string;
+  scheduled_end?: string;
+  steps: { label: string; description: string; assigned_to?: string }[];
+}
+
+export interface UpdateCutoverStepRequest {
+  status?: CutoverStepStatus;
+  notes?: string;
+}
+
+export interface InitiateRollbackRequest {
+  trigger_reason: string;
+}
+
+export interface ConfirmGoLiveRequest {
+  notes?: string;
 }

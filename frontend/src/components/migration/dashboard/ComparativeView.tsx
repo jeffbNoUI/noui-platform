@@ -11,6 +11,8 @@ const PHASE_ORDER: EngagementStatus[] = [
   'TRANSFORMING',
   'RECONCILING',
   'PARALLEL_RUN',
+  'CUTOVER_IN_PROGRESS',
+  'GO_LIVE',
   'COMPLETE',
 ];
 
@@ -21,6 +23,8 @@ const PHASE_LABELS: Record<EngagementStatus, string> = {
   TRANSFORMING: 'Transforming',
   RECONCILING: 'Reconciling',
   PARALLEL_RUN: 'Parallel Run',
+  CUTOVER_IN_PROGRESS: 'Cutover',
+  GO_LIVE: 'Go-Live',
   COMPLETE: 'Complete',
 };
 
@@ -80,19 +84,21 @@ const METRIC_ROWS: MetricRow[] = [
     label: 'Accuracy',
     key: 'accuracy',
     minPhase: 'PROFILING',
-    format: (e) => e.quality_scores ? `${(e.quality_scores.accuracy * 100).toFixed(1)}%` : '--',
+    format: (e) => (e.quality_scores ? `${(e.quality_scores.accuracy * 100).toFixed(1)}%` : '--'),
   },
   {
     label: 'Completeness',
     key: 'completeness',
     minPhase: 'PROFILING',
-    format: (e) => e.quality_scores ? `${(e.quality_scores.completeness * 100).toFixed(1)}%` : '--',
+    format: (e) =>
+      e.quality_scores ? `${(e.quality_scores.completeness * 100).toFixed(1)}%` : '--',
   },
   {
     label: 'Consistency',
     key: 'consistency',
     minPhase: 'PROFILING',
-    format: (e) => e.quality_scores ? `${(e.quality_scores.consistency * 100).toFixed(1)}%` : '--',
+    format: (e) =>
+      e.quality_scores ? `${(e.quality_scores.consistency * 100).toFixed(1)}%` : '--',
   },
 ];
 
@@ -105,10 +111,7 @@ export default function ComparativeView() {
 
   const commonPhase = useMemo(() => {
     if (!compareResult || compareResult.engagements.length < 2) return null;
-    return minCommonPhase(
-      compareResult.engagements[0].status,
-      compareResult.engagements[1].status,
-    );
+    return minCommonPhase(compareResult.engagements[0].status, compareResult.engagements[1].status);
   }, [compareResult]);
 
   const visibleMetrics = useMemo(() => {
@@ -148,17 +151,24 @@ export default function ComparativeView() {
       {/* Selectors */}
       <div className="flex items-center gap-4" style={{ marginBottom: 24 }}>
         <div className="flex flex-col gap-1">
-          <label style={{ fontSize: 11, fontWeight: 600, color: C.textTertiary, textTransform: 'uppercase' }}>
+          <label
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              color: C.textTertiary,
+              textTransform: 'uppercase',
+            }}
+          >
             Engagement A
           </label>
-          <select
-            value={leftId}
-            onChange={(e) => setLeftId(e.target.value)}
-            style={selectStyle}
-          >
+          <select value={leftId} onChange={(e) => setLeftId(e.target.value)} style={selectStyle}>
             <option value="">Select engagement...</option>
             {options.map((eng) => (
-              <option key={eng.engagement_id} value={eng.engagement_id} disabled={eng.engagement_id === rightId}>
+              <option
+                key={eng.engagement_id}
+                value={eng.engagement_id}
+                disabled={eng.engagement_id === rightId}
+              >
                 {eng.source_system_name}
               </option>
             ))}
@@ -168,17 +178,24 @@ export default function ComparativeView() {
         <span style={{ fontSize: 18, color: C.textTertiary, paddingTop: 18 }}>vs</span>
 
         <div className="flex flex-col gap-1">
-          <label style={{ fontSize: 11, fontWeight: 600, color: C.textTertiary, textTransform: 'uppercase' }}>
+          <label
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              color: C.textTertiary,
+              textTransform: 'uppercase',
+            }}
+          >
             Engagement B
           </label>
-          <select
-            value={rightId}
-            onChange={(e) => setRightId(e.target.value)}
-            style={selectStyle}
-          >
+          <select value={rightId} onChange={(e) => setRightId(e.target.value)} style={selectStyle}>
             <option value="">Select engagement...</option>
             {options.map((eng) => (
-              <option key={eng.engagement_id} value={eng.engagement_id} disabled={eng.engagement_id === leftId}>
+              <option
+                key={eng.engagement_id}
+                value={eng.engagement_id}
+                disabled={eng.engagement_id === leftId}
+              >
                 {eng.source_system_name}
               </option>
             ))}
@@ -246,7 +263,9 @@ export default function ComparativeView() {
               background: C.pageBg,
             }}
           >
-            <div style={{ padding: '10px 16px', fontSize: 12, fontWeight: 600, color: C.textTertiary }}>
+            <div
+              style={{ padding: '10px 16px', fontSize: 12, fontWeight: 600, color: C.textTertiary }}
+            >
               Metric
             </div>
             <div style={{ padding: '10px 16px', fontSize: 12, fontWeight: 600, color: C.navy }}>
@@ -264,7 +283,8 @@ export default function ComparativeView() {
               style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr 1fr',
-                borderBottom: idx < visibleMetrics.length - 1 ? `1px solid ${C.borderLight}` : 'none',
+                borderBottom:
+                  idx < visibleMetrics.length - 1 ? `1px solid ${C.borderLight}` : 'none',
                 background: idx % 2 === 0 ? C.cardBg : C.pageBg,
               }}
             >

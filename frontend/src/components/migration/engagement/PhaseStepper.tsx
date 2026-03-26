@@ -8,6 +8,8 @@ const PHASES: { key: EngagementStatus; label: string }[] = [
   { key: 'TRANSFORMING', label: 'Transform' },
   { key: 'RECONCILING', label: 'Reconcile' },
   { key: 'PARALLEL_RUN', label: 'Parallel Run' },
+  { key: 'CUTOVER_IN_PROGRESS', label: 'Cutover' },
+  { key: 'GO_LIVE', label: 'Go-Live' },
   { key: 'COMPLETE', label: 'Complete' },
 ];
 
@@ -18,6 +20,8 @@ const STATUS_COLOR: Record<EngagementStatus, string> = {
   TRANSFORMING: C.sage,
   RECONCILING: C.coral,
   PARALLEL_RUN: C.navyLight,
+  CUTOVER_IN_PROGRESS: C.gold,
+  GO_LIVE: C.sage,
   COMPLETE: C.sage,
 };
 

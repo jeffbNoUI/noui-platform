@@ -48,6 +48,14 @@ import type {
   ReconciliationPattern,
   Job,
   JobSummary,
+  CutoverPlan,
+  CutoverStep,
+  RollbackAction,
+  GoLiveStatus,
+  CreateCutoverPlanRequest,
+  UpdateCutoverStepRequest,
+  InitiateRollbackRequest,
+  ConfirmGoLiveRequest,
 } from '@/types/Migration';
 
 const BASE = '/api/v1/migration';
@@ -312,4 +320,32 @@ export const migrationAPI = {
 
   retryJob: (engagementId: string, jobId: string) =>
     postAPI<Job>(`${BASE}/engagements/${engagementId}/jobs/${jobId}/retry`, {}, RAW),
+
+  // ─── Cutover ──────────────────────────────────────────────────────────────
+  getCutoverPlan: (engagementId: string) =>
+    fetchAPI<CutoverPlan>(`${BASE}/engagements/${engagementId}/cutover-plan`, RAW),
+
+  createCutoverPlan: (engagementId: string, req: CreateCutoverPlanRequest) =>
+    postAPI<CutoverPlan>(`${BASE}/engagements/${engagementId}/cutover-plan`, req, RAW),
+
+  updateCutoverStep: (engagementId: string, stepId: string, req: UpdateCutoverStepRequest) =>
+    patchAPI<CutoverStep>(
+      `${BASE}/engagements/${engagementId}/cutover-plan/steps/${stepId}`,
+      req,
+      RAW,
+    ),
+
+  // ─── Rollback ─────────────────────────────────────────────────────────────
+  getRollback: (engagementId: string) =>
+    fetchAPI<RollbackAction>(`${BASE}/engagements/${engagementId}/rollback`, RAW),
+
+  initiateRollback: (engagementId: string, req: InitiateRollbackRequest) =>
+    postAPI<RollbackAction>(`${BASE}/engagements/${engagementId}/rollback`, req, RAW),
+
+  // ─── Go-Live ──────────────────────────────────────────────────────────────
+  getGoLiveStatus: (engagementId: string) =>
+    fetchAPI<GoLiveStatus>(`${BASE}/engagements/${engagementId}/go-live`, RAW),
+
+  confirmGoLive: (engagementId: string, req: ConfirmGoLiveRequest) =>
+    postAPI<GoLiveStatus>(`${BASE}/engagements/${engagementId}/go-live`, req, RAW),
 };

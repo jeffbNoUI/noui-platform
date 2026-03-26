@@ -15,6 +15,8 @@ const STATUS_COLORS: Record<EngagementStatus, { bg: string; fg: string }> = {
   TRANSFORMING: { bg: C.sageLight, fg: C.sage },
   RECONCILING: { bg: C.coralLight, fg: C.coral },
   PARALLEL_RUN: { bg: C.borderLight, fg: C.navyLight },
+  CUTOVER_IN_PROGRESS: { bg: C.goldLight, fg: C.gold },
+  GO_LIVE: { bg: C.sageLight, fg: C.sage },
   COMPLETE: { bg: C.sageLight, fg: C.sage },
 };
 
