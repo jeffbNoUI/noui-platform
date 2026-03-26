@@ -11,6 +11,7 @@ import (
 	"github.com/noui/platform/migration/db"
 	"github.com/noui/platform/migration/jobqueue"
 	"github.com/noui/platform/migration/models"
+	"github.com/noui/platform/migration/profiler"
 )
 
 // InitiateProfilingRun handles POST /api/v1/migration/engagements/{id}/profiling-runs.
@@ -74,6 +75,7 @@ func (h *Handler) enqueueL1Jobs(engID, runID, sourcePlatform string) {
 		slog.Error("cannot enqueue L1 jobs: no source connection", "error", err, "engagement_id", engID)
 		errMsg := err.Error()
 		_ = db.UpdateProfilingRunStatus(h.DB, runID, models.ProfilingStatusFailed, nil, &errMsg)
+		h.broadcast(engID, "profiling_run_failed", map[string]string{"run_id": runID, "error": errMsg})
 		return
 	}
 
@@ -82,6 +84,7 @@ func (h *Handler) enqueueL1Jobs(engID, runID, sourcePlatform string) {
 		slog.Error("cannot enqueue L1 jobs: table discovery failed", "error", err, "engagement_id", engID)
 		errMsg := err.Error()
 		_ = db.UpdateProfilingRunStatus(h.DB, runID, models.ProfilingStatusFailed, nil, &errMsg)
+		h.broadcast(engID, "profiling_run_failed", map[string]string{"run_id": runID, "error": errMsg})
 		return
 	}
 
@@ -89,6 +92,7 @@ func (h *Handler) enqueueL1Jobs(engID, runID, sourcePlatform string) {
 		slog.Warn("no source tables found", "engagement_id", engID)
 		errMsg := "no source tables found"
 		_ = db.UpdateProfilingRunStatus(h.DB, runID, models.ProfilingStatusFailed, nil, &errMsg)
+		h.broadcast(engID, "profiling_run_failed", map[string]string{"run_id": runID, "error": errMsg})
 		return
 	}
 
@@ -105,7 +109,7 @@ func (h *Handler) enqueueL1Jobs(engID, runID, sourcePlatform string) {
 		priority := max(1000-i, 0)
 		params = append(params, jobqueue.EnqueueParams{
 			EngagementID: engID,
-			JobType:      "profile_l1",
+			JobType:      profiler.Level1Inventory.JobType(),
 			Scope:        t.SchemaName + "." + t.TableName,
 			Priority:     priority,
 			InputJSON:    input,

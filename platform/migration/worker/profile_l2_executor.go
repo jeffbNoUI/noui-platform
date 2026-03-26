@@ -129,7 +129,10 @@ func (e *ProfileL2Executor) computeColumnStats(
 	quotedTable, sampleClause, columnName, dataType, driver string,
 	isSampled bool,
 ) (*models.SourceColumnProfile, error) {
-	quotedCol := quoteColName(columnName, driver)
+	quotedCol, err := quoteColName(columnName, driver)
+	if err != nil {
+		return nil, fmt.Errorf("unsafe column name %q: %w", columnName, err)
+	}
 
 	stats := &models.SourceColumnProfile{
 		ColumnName: columnName,
@@ -219,6 +222,9 @@ func (e *ProfileL2Executor) computeColumnStats(
 				topValues = append(topValues, tv)
 			}
 		}
+		if err := topRows.Err(); err != nil {
+			slog.Warn("top values iteration error", "column", columnName, "error", err)
+		}
 		if len(topValues) > 0 {
 			if b, err := json.Marshal(topValues); err == nil {
 				stats.TopValues = b
@@ -242,6 +248,10 @@ func (e *ProfileL2Executor) computeColumnStats(
 			}
 		}
 
+		if err := sampleRows.Err(); err != nil {
+			slog.Warn("sample values iteration error", "column", columnName, "error", err)
+		}
+
 		// Run pension pattern detection on sample values.
 		if len(sampleValues) > 0 {
 			if b, err := json.Marshal(sampleValues); err == nil {
@@ -262,13 +272,9 @@ func (e *ProfileL2Executor) computeColumnStats(
 }
 
 // quoteColName returns a safely quoted column name for the given driver.
-func quoteColName(col, driver string) string {
-	switch driver {
-	case "mssql":
-		return fmt.Sprintf("[%s]", col)
-	default:
-		return fmt.Sprintf(`"%s"`, col)
-	}
+// Uses the validated quoteIdentL1 from the L1 executor (same package).
+func quoteColName(col, driver string) (string, error) {
+	return quoteIdentL1("", col, driver)
 }
 
 // isNumericType returns true for SQL types that support AVG/STDDEV.

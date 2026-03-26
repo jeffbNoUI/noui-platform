@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/noui/platform/migration/models"
 )
@@ -431,6 +430,3 @@ func GetSourceTable(database *sql.DB, tableID string) (*models.SourceTableProfil
 	}
 	return t, nil
 }
-
-// Ensure unused import warning doesn't trigger.
-var _ = time.Now

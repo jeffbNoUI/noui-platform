@@ -39,7 +39,11 @@ func TestQuoteColName(t *testing.T) {
 		{"salary", "postgres", `"salary"`},
 	}
 	for _, tt := range tests {
-		got := quoteColName(tt.col, tt.driver)
+		got, err := quoteColName(tt.col, tt.driver)
+		if err != nil {
+			t.Errorf("quoteColName(%q, %q) unexpected error: %v", tt.col, tt.driver, err)
+			continue
+		}
 		if got != tt.want {
 			t.Errorf("quoteColName(%q, %q) = %q, want %q", tt.col, tt.driver, got, tt.want)
 		}

@@ -81,23 +81,36 @@ func TestTableSampleClause_UnknownDriver(t *testing.T) {
 }
 
 func TestRowCountEstimateQuery_Postgres(t *testing.T) {
-	q := RowCountEstimateQuery("postgres", "public", "employees")
+	q, args := RowCountEstimateQuery("postgres", "public", "employees")
 	if !strings.Contains(q, "pg_class") {
 		t.Errorf("expected pg_class in query, got %q", q)
+	}
+	if len(args) != 2 || args[0] != "public" || args[1] != "employees" {
+		t.Errorf("expected parameterized args [public employees], got %v", args)
+	}
+	// Must use $1/$2 parameters, not string interpolation.
+	if strings.Contains(q, "'public'") || strings.Contains(q, "'employees'") {
+		t.Error("query should use parameterized args, not string interpolation")
 	}
 }
 
 func TestRowCountEstimateQuery_MSSQL(t *testing.T) {
-	q := RowCountEstimateQuery("mssql", "dbo", "employees")
+	q, args := RowCountEstimateQuery("mssql", "dbo", "employees")
 	if !strings.Contains(q, "dm_db_partition_stats") {
 		t.Errorf("expected dm_db_partition_stats in query, got %q", q)
+	}
+	if len(args) != 2 {
+		t.Errorf("expected 2 args, got %d", len(args))
 	}
 }
 
 func TestRowCountEstimateQuery_Unknown(t *testing.T) {
-	q := RowCountEstimateQuery("oracle", "hr", "employees")
+	q, args := RowCountEstimateQuery("oracle", "hr", "employees")
 	if q != "" {
 		t.Errorf("expected empty query for unknown driver, got %q", q)
+	}
+	if args != nil {
+		t.Errorf("expected nil args for unknown driver, got %v", args)
 	}
 }
 

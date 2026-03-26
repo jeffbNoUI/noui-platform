@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"regexp"
 
 	"github.com/noui/platform/migration/db"
 	"github.com/noui/platform/migration/jobqueue"
@@ -120,9 +121,9 @@ func (e *ProfileL1Executor) Execute(ctx context.Context, job *jobqueue.Job, q *j
 func (e *ProfileL1Executor) getRowCount(ctx context.Context, srcDB *sql.DB, input L1Input) (int64, bool, error) {
 	// First get catalog estimate.
 	var estimated int64
-	estimateQuery := profiler.RowCountEstimateQuery(input.SourceDriver, input.SchemaName, input.TableName)
+	estimateQuery, estimateArgs := profiler.RowCountEstimateQuery(input.SourceDriver, input.SchemaName, input.TableName)
 	if estimateQuery != "" {
-		if err := srcDB.QueryRowContext(ctx, estimateQuery).Scan(&estimated); err != nil {
+		if err := srcDB.QueryRowContext(ctx, estimateQuery, estimateArgs...).Scan(&estimated); err != nil {
 			slog.Warn("catalog estimate failed", "error", err)
 			estimated = 0
 		}
@@ -230,8 +231,21 @@ func (e *ProfileL1Executor) detectPrimaryKeys(ctx context.Context, srcDB *sql.DB
 	return result, rows.Err()
 }
 
+// validSQLIdent matches safe SQL identifiers: letters, digits, underscores, dots.
+var validSQLIdent = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+
 // quoteIdentL1 constructs a quoted schema.table reference for a source query.
+// Validates identifiers to prevent SQL injection.
 func quoteIdentL1(schema, table, driver string) (string, error) {
+	if table == "" {
+		return "", fmt.Errorf("empty table name")
+	}
+	if !validSQLIdent.MatchString(table) {
+		return "", fmt.Errorf("unsafe table name: %q", table)
+	}
+	if schema != "" && !validSQLIdent.MatchString(schema) {
+		return "", fmt.Errorf("unsafe schema name: %q", schema)
+	}
 	switch driver {
 	case "mssql":
 		if schema != "" {

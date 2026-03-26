@@ -56,30 +56,25 @@ func TableSampleClause(s SamplingStrategy, driver string) string {
 	}
 }
 
-// RowCountEstimateQuery returns the SQL query to get an approximate row count
-// from the database catalog (fast, no table scan).
-func RowCountEstimateQuery(driver, schema, table string) string {
+// RowCountEstimateQuery returns the parameterized SQL query and args to get an
+// approximate row count from the database catalog (fast, no table scan).
+// Returns empty query if the driver is unsupported.
+func RowCountEstimateQuery(driver, schema, table string) (string, []interface{}) {
 	switch driver {
 	case "postgres":
-		return fmt.Sprintf(
-			`SELECT GREATEST(c.reltuples::bigint, 0)
+		return `SELECT GREATEST(c.reltuples::bigint, 0)
 			 FROM pg_class c
 			 JOIN pg_namespace n ON n.oid = c.relnamespace
-			 WHERE n.nspname = '%s' AND c.relname = '%s'`,
-			schema, table,
-		)
+			 WHERE n.nspname = $1 AND c.relname = $2`, []interface{}{schema, table}
 	case "mssql":
-		return fmt.Sprintf(
-			`SELECT ISNULL(SUM(p.row_count), 0)
+		return `SELECT ISNULL(SUM(p.row_count), 0)
 			 FROM sys.dm_db_partition_stats p
 			 JOIN sys.tables t ON t.object_id = p.object_id
 			 JOIN sys.schemas s ON s.schema_id = t.schema_id
-			 WHERE s.name = '%s' AND t.name = '%s'
-			   AND p.index_id IN (0, 1)`,
-			schema, table,
-		)
+			 WHERE s.name = @p1 AND t.name = @p2
+			   AND p.index_id IN (0, 1)`, []interface{}{schema, table}
 	default:
-		return ""
+		return "", nil
 	}
 }
 
