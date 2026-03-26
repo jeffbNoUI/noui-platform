@@ -268,11 +268,12 @@ func (q *Queue) Fail(ctx context.Context, jobID string, errMsg string) error {
 	return nil
 }
 
-// Cancel marks a PENDING or active job as CANCELLED.
+// Cancel marks a PENDING or CLAIMED job as CANCELLED.
+// RUNNING jobs cannot be cancelled via the API — only the worker can stop a running job.
 func (q *Queue) Cancel(ctx context.Context, jobID string) error {
 	res, err := q.db.ExecContext(ctx,
 		`UPDATE migration.job SET status = 'CANCELLED', completed_at = now()
-		 WHERE job_id = $1 AND status IN ('PENDING', 'CLAIMED', 'RUNNING')`, jobID)
+		 WHERE job_id = $1 AND status IN ('PENDING', 'CLAIMED')`, jobID)
 	if err != nil {
 		return fmt.Errorf("cancel job: %w", err)
 	}
@@ -280,6 +281,92 @@ func (q *Queue) Cancel(ctx context.Context, jobID string) error {
 		return fmt.Errorf("cancel: job %s not in cancellable state", jobID)
 	}
 	return nil
+}
+
+// CancelScoped cancels a job within a specific engagement.
+// Returns an error if the job is not PENDING or CLAIMED within that engagement.
+func (q *Queue) CancelScoped(ctx context.Context, jobID, engagementID string) error {
+	res, err := q.db.ExecContext(ctx,
+		`UPDATE migration.job SET status = 'CANCELLED', completed_at = now()
+		 WHERE job_id = $1 AND engagement_id = $2 AND status IN ('PENDING', 'CLAIMED')`,
+		jobID, engagementID)
+	if err != nil {
+		return fmt.Errorf("cancel job: %w", err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return fmt.Errorf("cancel: job %s not in cancellable state", jobID)
+	}
+	return nil
+}
+
+// Retry resets a FAILED job to PENDING, clearing error state and resetting attempt count.
+// Manual retry grants a fresh quota of max_attempts automatic retries.
+func (q *Queue) Retry(ctx context.Context, jobID, engagementID string) error {
+	res, err := q.db.ExecContext(ctx,
+		`UPDATE migration.job SET status = 'PENDING', attempt = 0, error_message = NULL,
+		 worker_id = NULL, completed_at = NULL
+		 WHERE job_id = $1 AND engagement_id = $2 AND status = 'FAILED'`,
+		jobID, engagementID)
+	if err != nil {
+		return fmt.Errorf("retry job: %w", err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return fmt.Errorf("retry: job %s not in FAILED state", jobID)
+	}
+	return nil
+}
+
+// JobSummary contains aggregated job status counts and performance metrics.
+type JobSummary struct {
+	Counts         map[string]int `json:"counts"`
+	Total          int            `json:"total"`
+	AvgExecSeconds float64        `json:"avg_exec_seconds"`
+}
+
+// Summary returns aggregated job counts by status and average execution time
+// for all jobs in an engagement. Uses a single GROUP BY query.
+func (q *Queue) Summary(ctx context.Context, engagementID string) (*JobSummary, error) {
+	rows, err := q.db.QueryContext(ctx,
+		`SELECT status, COUNT(*) AS cnt,
+		        COALESCE(AVG(EXTRACT(EPOCH FROM (completed_at - claimed_at))), 0) AS avg_seconds
+		 FROM migration.job WHERE engagement_id = $1
+		 GROUP BY status`, engagementID)
+	if err != nil {
+		return nil, fmt.Errorf("job summary: %w", err)
+	}
+	defer rows.Close()
+
+	s := &JobSummary{Counts: make(map[string]int)}
+	var totalAvg float64
+	var completedCount int
+	for rows.Next() {
+		var status string
+		var count int
+		var avgSec *float64
+		if err := rows.Scan(&status, &count, &avgSec); err != nil {
+			return nil, fmt.Errorf("scan job summary: %w", err)
+		}
+		s.Counts[status] = count
+		s.Total += count
+		if avgSec != nil && (status == string(StatusComplete) || status == string(StatusFailed)) {
+			totalAvg += *avgSec * float64(count)
+			completedCount += count
+		}
+	}
+	if completedCount > 0 {
+		s.AvgExecSeconds = totalAvg / float64(completedCount)
+	}
+	return s, rows.Err()
+}
+
+// GetByEngagement retrieves a single job scoped to a specific engagement.
+// Returns nil, nil if the job does not exist or does not belong to the engagement.
+func (q *Queue) GetByEngagement(ctx context.Context, jobID, engagementID string) (*Job, error) {
+	return q.scanJob(q.db.QueryRowContext(ctx,
+		`SELECT job_id, engagement_id, job_type, scope, status, priority, progress,
+		        input_json, result_json, error_message, worker_id, attempt, max_attempts,
+		        created_at, claimed_at, heartbeat_at, completed_at
+		 FROM migration.job WHERE job_id = $1 AND engagement_id = $2`, jobID, engagementID))
 }
 
 // Get retrieves a single job by ID.
@@ -293,12 +380,17 @@ func (q *Queue) Get(ctx context.Context, jobID string) (*Job, error) {
 
 // ListParams controls filtering for ListByEngagement.
 type ListParams struct {
-	JobType *string
-	Status  *JobStatus
-	Limit   int // 0 defaults to 100
+	JobType  *string
+	Status   *JobStatus
+	Limit    int        // 0 defaults to 100
+	Sort     string     // "created_at" (default) or "priority"
+	CursorAt *time.Time // cursor: jobs before this timestamp
+	CursorID *string    // cursor: tiebreaker job ID
 }
 
-// ListByEngagement returns jobs for an engagement, newest first.
+// ListByEngagement returns jobs for an engagement with cursor-based pagination.
+// Default sort is created_at DESC. Cursor uses composite (created_at, job_id) for
+// consistent pagination during concurrent inserts.
 func (q *Queue) ListByEngagement(ctx context.Context, engagementID string, p ListParams) ([]Job, error) {
 	query := `SELECT job_id, engagement_id, job_type, scope, status, priority, progress,
 	                 input_json, result_json, error_message, worker_id, attempt, max_attempts,
@@ -318,11 +410,26 @@ func (q *Queue) ListByEngagement(ctx context.Context, engagementID string, p Lis
 		argIdx++
 	}
 
+	// Cursor-based pagination: composite (created_at, job_id) comparison
+	if p.CursorAt != nil && p.CursorID != nil {
+		query += fmt.Sprintf(" AND (created_at, job_id) < ($%d, $%d)", argIdx, argIdx+1)
+		args = append(args, *p.CursorAt, *p.CursorID)
+		argIdx += 2
+	}
+
+	// Sort order
+	switch p.Sort {
+	case "priority":
+		query += " ORDER BY priority DESC, created_at DESC, job_id DESC"
+	default:
+		query += " ORDER BY created_at DESC, job_id DESC"
+	}
+
 	limit := p.Limit
 	if limit <= 0 {
 		limit = 100
 	}
-	query += fmt.Sprintf(" ORDER BY created_at DESC LIMIT $%d", argIdx)
+	query += fmt.Sprintf(" LIMIT $%d", argIdx)
 	args = append(args, limit)
 
 	rows, err := q.db.QueryContext(ctx, query, args...)
