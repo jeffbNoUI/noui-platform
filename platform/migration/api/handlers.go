@@ -181,6 +181,15 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/parallel-runs/{runId}/results", h.GetParallelRunResults)
 	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/parallel-runs/{runId}/cancel", h.CancelParallelRun)
 
+	// Cutover plans (M04b)
+	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/cutover-plans", h.HandleCreateCutoverPlan)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/cutover-plans", h.HandleListCutoverPlans)
+	mux.HandleFunc("GET /api/v1/migration/engagements/{id}/cutover-plans/{planId}", h.HandleGetCutoverPlan)
+	mux.HandleFunc("PATCH /api/v1/migration/engagements/{id}/cutover-plans/{planId}/approve", h.HandleApproveCutoverPlan)
+	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/cutover-plans/{planId}/execute", h.HandleExecuteCutoverPlan)
+	mux.HandleFunc("PATCH /api/v1/migration/engagements/{id}/cutover-plans/{planId}/steps/{stepId}", h.HandleUpdateCutoverStep)
+	mux.HandleFunc("POST /api/v1/migration/engagements/{id}/cutover-plans/{planId}/rollback", h.HandleRollbackCutoverPlan)
+
 	// Schema versioning
 	mux.HandleFunc("POST /api/v1/migration/schema-versions", h.CreateSchemaVersion)
 	mux.HandleFunc("GET /api/v1/migration/schema-versions", h.ListSchemaVersions)

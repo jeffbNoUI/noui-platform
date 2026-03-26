@@ -10,24 +10,28 @@ import (
 type EngagementStatus string
 
 const (
-	StatusDiscovery    EngagementStatus = "DISCOVERY"
-	StatusProfiling    EngagementStatus = "PROFILING"
-	StatusMapping      EngagementStatus = "MAPPING"
-	StatusTransforming EngagementStatus = "TRANSFORMING"
-	StatusReconciling  EngagementStatus = "RECONCILING"
-	StatusParallelRun  EngagementStatus = "PARALLEL_RUN"
-	StatusComplete     EngagementStatus = "COMPLETE"
+	StatusDiscovery         EngagementStatus = "DISCOVERY"
+	StatusProfiling         EngagementStatus = "PROFILING"
+	StatusMapping           EngagementStatus = "MAPPING"
+	StatusTransforming      EngagementStatus = "TRANSFORMING"
+	StatusReconciling       EngagementStatus = "RECONCILING"
+	StatusParallelRun       EngagementStatus = "PARALLEL_RUN"
+	StatusComplete          EngagementStatus = "COMPLETE"
+	StatusCutoverInProgress EngagementStatus = "CUTOVER_IN_PROGRESS"
+	StatusGoLive            EngagementStatus = "GO_LIVE"
 )
 
-// ValidTransitions defines allowed forward status transitions for migration engagements.
+// ValidTransitions defines allowed status transitions for migration engagements.
 var ValidTransitions = map[EngagementStatus][]EngagementStatus{
-	StatusDiscovery:    {StatusProfiling},
-	StatusProfiling:    {StatusMapping},
-	StatusMapping:      {StatusTransforming},
-	StatusTransforming: {StatusReconciling},
-	StatusReconciling:  {StatusParallelRun, StatusComplete},
-	StatusParallelRun:  {StatusComplete},
-	StatusComplete:     {},
+	StatusDiscovery:         {StatusProfiling},
+	StatusProfiling:         {StatusMapping},
+	StatusMapping:           {StatusTransforming},
+	StatusTransforming:      {StatusReconciling},
+	StatusReconciling:       {StatusParallelRun, StatusComplete},
+	StatusParallelRun:       {StatusComplete},
+	StatusComplete:          {StatusCutoverInProgress},
+	StatusCutoverInProgress: {StatusGoLive, StatusComplete},
+	StatusGoLive:            {},
 }
 
 // CanTransitionTo returns true if the current status can transition to the target status.
@@ -745,4 +749,90 @@ type ReconRuleChange struct {
 	RuleID string    `json:"rule_id"`
 	From   ReconRule `json:"from"`
 	To     ReconRule `json:"to"`
+}
+
+// ---------------------------------------------------------------------------
+// Cutover Execution Engine (M04b)
+// ---------------------------------------------------------------------------
+
+// CutoverPlanStatus represents the lifecycle state of a cutover plan.
+type CutoverPlanStatus string
+
+const (
+	CutoverStatusDraft      CutoverPlanStatus = "DRAFT"
+	CutoverStatusApproved   CutoverPlanStatus = "APPROVED"
+	CutoverStatusExecuting  CutoverPlanStatus = "EXECUTING"
+	CutoverStatusCompleted  CutoverPlanStatus = "COMPLETED"
+	CutoverStatusRolledBack CutoverPlanStatus = "ROLLED_BACK"
+	CutoverStatusFailed     CutoverPlanStatus = "FAILED"
+)
+
+// CutoverStepStatus represents the state of an individual cutover step.
+type CutoverStepStatus string
+
+const (
+	StepStatusPending    CutoverStepStatus = "PENDING"
+	StepStatusInProgress CutoverStepStatus = "IN_PROGRESS"
+	StepStatusCompleted  CutoverStepStatus = "COMPLETED"
+	StepStatusFailed     CutoverStepStatus = "FAILED"
+	StepStatusSkipped    CutoverStepStatus = "SKIPPED"
+)
+
+// CutoverStepType distinguishes automated vs. manual steps.
+type CutoverStepType string
+
+const (
+	StepTypeAutomated CutoverStepType = "AUTOMATED"
+	StepTypeManual    CutoverStepType = "MANUAL"
+)
+
+// CutoverStep represents one step in a cutover plan.
+type CutoverStep struct {
+	StepID       string            `json:"step_id"`
+	Label        string            `json:"label"`
+	Order        int               `json:"order"`
+	Type         CutoverStepType   `json:"type"`
+	Status       CutoverStepStatus `json:"status"`
+	StartedAt    *time.Time        `json:"started_at,omitempty"`
+	CompletedAt  *time.Time        `json:"completed_at,omitempty"`
+	ErrorMessage *string           `json:"error_message,omitempty"`
+}
+
+// CutoverPlan represents a cutover plan record.
+type CutoverPlan struct {
+	PlanID        string            `json:"plan_id"`
+	EngagementID  string            `json:"engagement_id"`
+	Status        CutoverPlanStatus `json:"status"`
+	Steps         []CutoverStep     `json:"steps"`
+	RollbackSteps []CutoverStep     `json:"rollback_steps"`
+	ApprovedBy    *string           `json:"approved_by,omitempty"`
+	ApprovedAt    *time.Time        `json:"approved_at,omitempty"`
+	StartedAt     *time.Time        `json:"started_at,omitempty"`
+	CompletedAt   *time.Time        `json:"completed_at,omitempty"`
+	CreatedAt     time.Time         `json:"created_at"`
+	UpdatedAt     time.Time         `json:"updated_at"`
+}
+
+// CreateCutoverStepRequest is the step definition in a create plan request.
+type CreateCutoverStepRequest struct {
+	Label string          `json:"label"`
+	Order int             `json:"order"`
+	Type  CutoverStepType `json:"type"`
+}
+
+// CreateCutoverPlanRequest is the JSON body for creating a new cutover plan.
+type CreateCutoverPlanRequest struct {
+	Steps         []CreateCutoverStepRequest `json:"steps"`
+	RollbackSteps []CreateCutoverStepRequest `json:"rollback_steps"`
+}
+
+// UpdateCutoverStepRequest is the JSON body for updating a step's status.
+type UpdateCutoverStepRequest struct {
+	Status       CutoverStepStatus `json:"status"`
+	ErrorMessage *string           `json:"error_message,omitempty"`
+}
+
+// RollbackRequest is the JSON body for initiating a rollback.
+type RollbackRequest struct {
+	RollbackReason string `json:"rollback_reason"`
 }
