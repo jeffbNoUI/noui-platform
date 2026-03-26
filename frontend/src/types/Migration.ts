@@ -7,6 +7,8 @@ export type EngagementStatus =
   | 'TRANSFORMING'
   | 'RECONCILING'
   | 'PARALLEL_RUN'
+  | 'CUTOVER_IN_PROGRESS'
+  | 'GO_LIVE'
   | 'COMPLETE';
 export type BatchStatus = 'PENDING' | 'RUNNING' | 'LOADED' | 'RECONCILED' | 'APPROVED' | 'FAILED';
 export type ExceptionType =
@@ -486,7 +488,9 @@ export type WSEventType =
   | 'job_started'
   | 'job_completed'
   | 'job_failed'
-  | 'job_cancelled';
+  | 'job_cancelled'
+  | 'drift_detection_completed'
+  | 'drift_detection_started';
 
 export interface WSEvent {
   type: WSEventType;
@@ -604,4 +608,181 @@ export interface DetectedPattern {
   label: string;
   match_rate: number;
   sample_size: number;
+}
+
+// ─── Cutover Types ─────────────────────────────────────────────────────────
+
+export type CutoverStepStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED' | 'SKIPPED';
+
+export interface CutoverStep {
+  step_id: string;
+  plan_id: string;
+  sequence: number;
+  label: string;
+  description: string;
+  status: CutoverStepStatus;
+  assigned_to: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  notes: string | null;
+}
+
+export interface CutoverPlan {
+  plan_id: string;
+  engagement_id: string;
+  name: string;
+  scheduled_start: string | null;
+  scheduled_end: string | null;
+  steps: CutoverStep[];
+  created_at: string;
+  updated_at: string;
+}
+
+export type RollbackStatus = 'AVAILABLE' | 'INITIATED' | 'COMPLETED' | 'EXPIRED';
+
+export interface RollbackAction {
+  rollback_id: string;
+  plan_id: string;
+  status: RollbackStatus;
+  trigger_reason: string | null;
+  initiated_by: string | null;
+  initiated_at: string | null;
+  completed_at: string | null;
+}
+
+export type GoLiveTerminalStatus = 'LIVE' | 'ROLLED_BACK' | 'ABORTED';
+
+export interface GoLiveStatus {
+  engagement_id: string;
+  terminal_status: GoLiveTerminalStatus;
+  go_live_at: string | null;
+  confirmed_by: string | null;
+  rollback_window_end: string | null;
+  notes: string | null;
+}
+
+export interface CreateCutoverPlanRequest {
+  name: string;
+  scheduled_start?: string;
+  scheduled_end?: string;
+  steps: { label: string; description: string; assigned_to?: string }[];
+}
+
+export interface UpdateCutoverStepRequest {
+  status?: CutoverStepStatus;
+  notes?: string;
+}
+
+export interface InitiateRollbackRequest {
+  trigger_reason: string;
+}
+
+export interface ConfirmGoLiveRequest {
+  notes?: string;
+}
+
+// ─── Drift Detection Types ──────────────────────────────────────────────────
+
+export type DriftStatus = 'CLEAN' | 'DRIFTED' | 'CRITICAL';
+export type DriftSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+export type DriftChangeType = 'ADDED' | 'REMOVED' | 'MODIFIED' | 'TYPE_CHANGED';
+export type DriftType = 'SCHEMA' | 'DATA' | 'BOTH';
+export type DriftRunStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+
+export interface DriftRun {
+  run_id: string;
+  engagement_id: string;
+  drift_type: DriftType;
+  status: DriftRunStatus;
+  detected_changes: number;
+  critical_changes: number;
+  started_at: string;
+  completed_at: string | null;
+}
+
+export interface DriftRecord {
+  record_id: string;
+  run_id: string;
+  severity: DriftSeverity;
+  change_type: DriftChangeType;
+  entity_name: string;
+  field_name: string | null;
+  old_value: unknown;
+  new_value: unknown;
+  detail: Record<string, unknown>;
+  detected_at: string;
+}
+
+export interface DriftSummary {
+  engagement_id: string;
+  status: DriftStatus;
+  last_run_at: string | null;
+  total_changes: number;
+  critical_count: number;
+  high_count: number;
+  medium_count: number;
+  low_count: number;
+}
+
+export interface DriftSchedule {
+  engagement_id: string;
+  interval_hours: number;
+  enabled: boolean;
+  next_run_at: string | null;
+}
+
+export interface UpdateDriftScheduleRequest {
+  interval_hours?: number;
+  enabled?: boolean;
+}
+
+// ─── Schema Versioning Types ────────────────────────────────────────────────
+
+export interface SchemaVersionField {
+  entity: string;
+  field_name: string;
+  data_type: string;
+  is_required: boolean;
+  description: string;
+}
+
+export interface SchemaVersion {
+  version_id: string;
+  tenant_id: string;
+  label: string;
+  description: string;
+  is_active: boolean;
+  fields: SchemaVersionField[];
+  field_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateSchemaVersionRequest {
+  label: string;
+  description: string;
+  fields: Omit<SchemaVersionField, 'version_id'>[];
+}
+
+export type DiffChangeType = 'ADDED' | 'REMOVED' | 'CHANGED';
+
+export interface SchemaFieldDiff {
+  entity: string;
+  field_name: string;
+  change_type: DiffChangeType;
+  old_data_type?: string;
+  new_data_type?: string;
+  old_required?: boolean;
+  new_required?: boolean;
+  old_description?: string;
+  new_description?: string;
+}
+
+export interface SchemaVersionDiff {
+  version1: { version_id: string; label: string };
+  version2: { version_id: string; label: string };
+  changes: SchemaFieldDiff[];
+  added_count: number;
+  removed_count: number;
+  changed_count: number;
 }

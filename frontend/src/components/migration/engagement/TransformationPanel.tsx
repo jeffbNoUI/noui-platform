@@ -9,6 +9,8 @@ const TRANSFORM_READY: EngagementStatus[] = [
   'TRANSFORMING',
   'RECONCILING',
   'PARALLEL_RUN',
+  'CUTOVER_IN_PROGRESS',
+  'GO_LIVE',
   'COMPLETE',
 ];
 

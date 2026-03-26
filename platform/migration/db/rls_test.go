@@ -46,6 +46,9 @@ var allMigrationTables = []string{
 	"parallel_run_result",
 	// Tier B: FK to engagement (cutover)
 	"cutover_plan",
+	// Tier B: FK to engagement (drift detection)
+	"drift_detection_run",
+	"drift_record",
 	// Tier C: FK to batch
 	"lineage",
 	"exception",

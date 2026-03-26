@@ -38,6 +38,22 @@ import type {
   RegressPhaseRequest,
   Job,
   JobSummary,
+  CutoverPlan,
+  CutoverStep,
+  RollbackAction,
+  GoLiveStatus,
+  CreateCutoverPlanRequest,
+  UpdateCutoverStepRequest,
+  InitiateRollbackRequest,
+  ConfirmGoLiveRequest,
+  DriftRun,
+  DriftRecord,
+  DriftSummary,
+  DriftSchedule,
+  UpdateDriftScheduleRequest,
+  SchemaVersion,
+  CreateSchemaVersionRequest,
+  SchemaVersionDiff,
 } from '@/types/Migration';
 // ─── Query hooks ─────────────────────────────────────────────────────────────
 
@@ -629,4 +645,228 @@ export function useCancelJob() {
 
 export function useRetryJob() {
   return useJobMutation(migrationAPI.retryJob, { status: 'PENDING', attempt: 0 });
+}
+
+// ─── Cutover hooks ──────────────────────────────────────────────────────────
+
+export function useCutoverPlan(engagementId: string | undefined) {
+  return useQuery<CutoverPlan>({
+    queryKey: ['migration', 'cutover-plan', engagementId],
+    queryFn: () => migrationAPI.getCutoverPlan(engagementId!),
+    enabled: !!engagementId,
+  });
+}
+
+export function useCreateCutoverPlan() {
+  const queryClient = useQueryClient();
+  return useMutation<CutoverPlan, Error, { engagementId: string; req: CreateCutoverPlanRequest }>({
+    mutationFn: ({ engagementId, req }) => migrationAPI.createCutoverPlan(engagementId, req),
+    onSuccess: (_, { engagementId }) => {
+      queryClient.invalidateQueries({ queryKey: ['migration', 'cutover-plan', engagementId] });
+    },
+  });
+}
+
+export function useUpdateCutoverStep() {
+  const queryClient = useQueryClient();
+  return useMutation<
+    CutoverStep,
+    Error,
+    { engagementId: string; stepId: string; req: UpdateCutoverStepRequest }
+  >({
+    mutationFn: ({ engagementId, stepId, req }) =>
+      migrationAPI.updateCutoverStep(engagementId, stepId, req),
+    onSuccess: (_, { engagementId }) => {
+      queryClient.invalidateQueries({ queryKey: ['migration', 'cutover-plan', engagementId] });
+    },
+  });
+}
+
+// ─── Rollback hooks ─────────────────────────────────────────────────────────
+
+export function useRollback(engagementId: string | undefined) {
+  return useQuery<RollbackAction>({
+    queryKey: ['migration', 'rollback', engagementId],
+    queryFn: () => migrationAPI.getRollback(engagementId!),
+    enabled: !!engagementId,
+  });
+}
+
+export function useInitiateRollback() {
+  const queryClient = useQueryClient();
+  return useMutation<RollbackAction, Error, { engagementId: string; req: InitiateRollbackRequest }>(
+    {
+      mutationFn: ({ engagementId, req }) => migrationAPI.initiateRollback(engagementId, req),
+      onSuccess: (_, { engagementId }) => {
+        queryClient.invalidateQueries({ queryKey: ['migration', 'rollback', engagementId] });
+        queryClient.invalidateQueries({ queryKey: ['migration', 'engagement', engagementId] });
+        queryClient.invalidateQueries({ queryKey: ['migration', 'cutover-plan', engagementId] });
+      },
+    },
+  );
+}
+
+// ─── Go-Live hooks ──────────────────────────────────────────────────────────
+
+export function useGoLiveStatus(engagementId: string | undefined) {
+  return useQuery<GoLiveStatus>({
+    queryKey: ['migration', 'go-live', engagementId],
+    queryFn: () => migrationAPI.getGoLiveStatus(engagementId!),
+    enabled: !!engagementId,
+  });
+}
+
+export function useConfirmGoLive() {
+  const queryClient = useQueryClient();
+  return useMutation<GoLiveStatus, Error, { engagementId: string; req: ConfirmGoLiveRequest }>({
+    mutationFn: ({ engagementId, req }) => migrationAPI.confirmGoLive(engagementId, req),
+    onSuccess: (_, { engagementId }) => {
+      queryClient.invalidateQueries({ queryKey: ['migration', 'go-live', engagementId] });
+      queryClient.invalidateQueries({ queryKey: ['migration', 'engagement', engagementId] });
+      queryClient.invalidateQueries({ queryKey: ['migration', 'engagements'] });
+      queryClient.invalidateQueries({ queryKey: ['migration', 'dashboard'] });
+    },
+  });
+}
+
+// ─── Drift Detection hooks ─────────────────────────────────────────────────
+
+export function useDriftRuns(engagementId: string | undefined, page = 1) {
+  return useQuery<{ runs: DriftRun[]; total: number }>({
+    queryKey: ['migration', 'drift-runs', engagementId, page],
+    queryFn: () => migrationAPI.getDriftRuns(engagementId!, { page, per_page: 20 }),
+    enabled: !!engagementId,
+  });
+}
+
+export function useDriftRecords(
+  engagementId: string | undefined,
+  runId: string | undefined,
+  severity?: string,
+  page = 1,
+) {
+  return useQuery<{ records: DriftRecord[]; total: number }>({
+    queryKey: ['migration', 'drift-records', engagementId, runId, severity, page],
+    queryFn: () =>
+      migrationAPI.getDriftRecords(engagementId!, runId!, { severity, page, per_page: 50 }),
+    enabled: !!engagementId && !!runId,
+  });
+}
+
+export function useDriftSummary(engagementId: string | undefined) {
+  return useQuery<DriftSummary>({
+    queryKey: ['migration', 'drift-summary', engagementId],
+    queryFn: () => migrationAPI.getDriftSummary(engagementId!),
+    enabled: !!engagementId,
+    staleTime: 30_000,
+  });
+}
+
+export function useTriggerDriftDetection() {
+  const queryClient = useQueryClient();
+  return useMutation<DriftRun, Error, string>({
+    mutationFn: (engagementId) => migrationAPI.triggerDriftDetection(engagementId),
+    onSuccess: (_, engagementId) => {
+      queryClient.invalidateQueries({ queryKey: ['migration', 'drift-runs', engagementId] });
+      queryClient.invalidateQueries({ queryKey: ['migration', 'drift-summary', engagementId] });
+    },
+  });
+}
+
+export function useDriftSchedule(engagementId: string | undefined) {
+  return useQuery<DriftSchedule>({
+    queryKey: ['migration', 'drift-schedule', engagementId],
+    queryFn: () => migrationAPI.getDriftSchedule(engagementId!),
+    enabled: !!engagementId,
+  });
+}
+
+export function useUpdateDriftSchedule() {
+  const queryClient = useQueryClient();
+  return useMutation<
+    DriftSchedule,
+    Error,
+    { engagementId: string; req: UpdateDriftScheduleRequest }
+  >({
+    mutationFn: ({ engagementId, req }) => migrationAPI.updateDriftSchedule(engagementId, req),
+    onMutate: async ({ engagementId, req }) => {
+      await queryClient.cancelQueries({
+        queryKey: ['migration', 'drift-schedule', engagementId],
+      });
+      const previous = queryClient.getQueryData<DriftSchedule>([
+        'migration',
+        'drift-schedule',
+        engagementId,
+      ]);
+      if (previous) {
+        queryClient.setQueryData<DriftSchedule>(['migration', 'drift-schedule', engagementId], {
+          ...previous,
+          ...req,
+        });
+      }
+      return { previous, engagementId };
+    },
+    onError: (_err, { engagementId }, context) => {
+      if (context && typeof context === 'object' && 'previous' in context) {
+        queryClient.setQueryData(
+          ['migration', 'drift-schedule', engagementId],
+          (context as { previous: DriftSchedule }).previous,
+        );
+      }
+    },
+    onSettled: (_, __, { engagementId }) => {
+      queryClient.invalidateQueries({
+        queryKey: ['migration', 'drift-schedule', engagementId],
+      });
+    },
+  });
+}
+
+// ─── Schema Versioning hooks ───────────────────────────────────────────────
+
+export function useSchemaVersions(tenantId: string | undefined) {
+  return useQuery<SchemaVersion[]>({
+    queryKey: ['migration', 'schema-versions', tenantId],
+    queryFn: () => migrationAPI.getSchemaVersions(tenantId!),
+    enabled: !!tenantId,
+  });
+}
+
+export function useSchemaVersion(versionId: string | undefined) {
+  return useQuery<SchemaVersion>({
+    queryKey: ['migration', 'schema-version', versionId],
+    queryFn: () => migrationAPI.getSchemaVersion(versionId!),
+    enabled: !!versionId,
+  });
+}
+
+export function useCreateSchemaVersion() {
+  const queryClient = useQueryClient();
+  return useMutation<SchemaVersion, Error, { tenantId: string; req: CreateSchemaVersionRequest }>({
+    mutationFn: ({ tenantId, req }) => migrationAPI.createSchemaVersion(tenantId, req),
+    onSuccess: (_, { tenantId }) => {
+      queryClient.invalidateQueries({ queryKey: ['migration', 'schema-versions', tenantId] });
+    },
+  });
+}
+
+export function useActivateSchemaVersion() {
+  const queryClient = useQueryClient();
+  return useMutation<SchemaVersion, Error, { versionId: string; tenantId: string }>({
+    mutationFn: ({ versionId }) => migrationAPI.activateSchemaVersion(versionId),
+    onSuccess: (_, { tenantId }) => {
+      queryClient.invalidateQueries({ queryKey: ['migration', 'schema-versions', tenantId] });
+    },
+  });
+}
+
+export function useSchemaVersionDiff(
+  versionId1: string | undefined,
+  versionId2: string | undefined,
+) {
+  return useQuery<SchemaVersionDiff>({
+    queryKey: ['migration', 'schema-diff', versionId1, versionId2],
+    queryFn: () => migrationAPI.getSchemaVersionDiff(versionId1!, versionId2!),
+    enabled: !!versionId1 && !!versionId2,
+  });
 }

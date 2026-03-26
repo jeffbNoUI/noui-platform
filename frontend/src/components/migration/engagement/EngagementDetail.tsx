@@ -61,6 +61,9 @@ import ReconciliationPanel from './ReconciliationPanel';
 import DiscoveryPanel from './DiscoveryPanel';
 import ParallelRunPanel from './ParallelRunPanel';
 import PhaseGateDialog from './PhaseGateDialog';
+import CutoverPanel from './CutoverPanel';
+import DriftPanel from './DriftPanel';
+import SchemaVersionPanel from './SchemaVersionPanel';
 import AttentionQueue from '../attention/AttentionQueue';
 import JobQueuePanel from './JobQueuePanel';
 import ActivityLog from './ActivityLog';
@@ -72,17 +75,23 @@ type Tab =
   | 'transformation'
   | 'reconciliation'
   | 'parallel-run'
+  | 'cutover'
+  | 'drift'
+  | 'schema'
   | 'risks'
   | 'attention'
   | 'jobs';
 
-const TABS: { key: Tab; label: string }[] = [
+const TABS: { key: Tab; label: string; statusFilter?: EngagementStatus[] }[] = [
   { key: 'discovery', label: 'Discovery' },
   { key: 'quality', label: 'Quality Profile' },
   { key: 'mappings', label: 'Mappings' },
   { key: 'transformation', label: 'Transformation' },
   { key: 'reconciliation', label: 'Reconciliation' },
   { key: 'parallel-run', label: 'Parallel Run' },
+  { key: 'cutover', label: 'Cutover' },
+  { key: 'drift', label: 'Drift', statusFilter: ['GO_LIVE', 'CUTOVER_IN_PROGRESS'] },
+  { key: 'schema', label: 'Schema' },
   { key: 'risks', label: 'Risks' },
   { key: 'attention', label: 'Attention' },
   { key: 'jobs', label: 'Jobs' },
@@ -95,6 +104,8 @@ const STATUS_COLOR: Record<EngagementStatus, string> = {
   TRANSFORMING: C.sage,
   RECONCILING: C.coral,
   PARALLEL_RUN: C.navyLight,
+  CUTOVER_IN_PROGRESS: C.gold,
+  GO_LIVE: C.sage,
   COMPLETE: C.sage,
 };
 
@@ -105,6 +116,8 @@ const STATUS_BG: Record<EngagementStatus, string> = {
   TRANSFORMING: C.sageLight,
   RECONCILING: C.coralLight,
   PARALLEL_RUN: C.pageBg,
+  CUTOVER_IN_PROGRESS: C.goldLight,
+  GO_LIVE: C.sageLight,
   COMPLETE: C.sageLight,
 };
 
@@ -123,6 +136,10 @@ function defaultTab(status: EngagementStatus): Tab {
       return 'reconciliation';
     case 'PARALLEL_RUN':
       return 'parallel-run';
+    case 'CUTOVER_IN_PROGRESS':
+      return 'cutover';
+    case 'GO_LIVE':
+      return 'drift';
     case 'COMPLETE':
       return 'reconciliation';
     default:
@@ -138,6 +155,8 @@ const PHASE_ORDER: EngagementStatus[] = [
   'TRANSFORMING',
   'RECONCILING',
   'PARALLEL_RUN',
+  'CUTOVER_IN_PROGRESS',
+  'GO_LIVE',
   'COMPLETE',
 ];
 
@@ -384,7 +403,9 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
             padding: '0 24px',
           }}
         >
-          {TABS.map((tab) => (
+          {TABS.filter(
+            (tab) => !tab.statusFilter || tab.statusFilter.includes(engagement.status),
+          ).map((tab) => (
             <button
               key={tab.key}
               onClick={() => handleTabChange(tab.key)}
@@ -443,6 +464,9 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
             )}
             {activeTab === 'reconciliation' && <ReconciliationPanel engagementId={engagementId} />}
             {activeTab === 'parallel-run' && <ParallelRunPanel engagementId={engagementId} />}
+            {activeTab === 'cutover' && <CutoverPanel engagementId={engagementId} />}
+            {activeTab === 'drift' && <DriftPanel engagementId={engagementId} />}
+            {activeTab === 'schema' && <SchemaVersionPanel engagementId={engagementId} />}
             {activeTab === 'risks' && <RisksPlaceholder engagementId={engagementId} />}
             {activeTab === 'attention' && <AttentionQueue engagementId={engagementId} />}
             {activeTab === 'jobs' && <JobQueuePanel engagementId={engagementId} />}

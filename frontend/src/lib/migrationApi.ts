@@ -48,6 +48,22 @@ import type {
   ReconciliationPattern,
   Job,
   JobSummary,
+  CutoverPlan,
+  CutoverStep,
+  RollbackAction,
+  GoLiveStatus,
+  CreateCutoverPlanRequest,
+  UpdateCutoverStepRequest,
+  InitiateRollbackRequest,
+  ConfirmGoLiveRequest,
+  DriftRun,
+  DriftRecord,
+  DriftSummary,
+  DriftSchedule,
+  UpdateDriftScheduleRequest,
+  SchemaVersion,
+  CreateSchemaVersionRequest,
+  SchemaVersionDiff,
 } from '@/types/Migration';
 
 const BASE = '/api/v1/migration';
@@ -312,4 +328,80 @@ export const migrationAPI = {
 
   retryJob: (engagementId: string, jobId: string) =>
     postAPI<Job>(`${BASE}/engagements/${engagementId}/jobs/${jobId}/retry`, {}, RAW),
+
+  // ─── Cutover ──────────────────────────────────────────────────────────────
+  getCutoverPlan: (engagementId: string) =>
+    fetchAPI<CutoverPlan>(`${BASE}/engagements/${engagementId}/cutover-plan`, RAW),
+
+  createCutoverPlan: (engagementId: string, req: CreateCutoverPlanRequest) =>
+    postAPI<CutoverPlan>(`${BASE}/engagements/${engagementId}/cutover-plan`, req, RAW),
+
+  updateCutoverStep: (engagementId: string, stepId: string, req: UpdateCutoverStepRequest) =>
+    patchAPI<CutoverStep>(
+      `${BASE}/engagements/${engagementId}/cutover-plan/steps/${stepId}`,
+      req,
+      RAW,
+    ),
+
+  // ─── Rollback ─────────────────────────────────────────────────────────────
+  getRollback: (engagementId: string) =>
+    fetchAPI<RollbackAction>(`${BASE}/engagements/${engagementId}/rollback`, RAW),
+
+  initiateRollback: (engagementId: string, req: InitiateRollbackRequest) =>
+    postAPI<RollbackAction>(`${BASE}/engagements/${engagementId}/rollback`, req, RAW),
+
+  // ─── Go-Live ──────────────────────────────────────────────────────────────
+  getGoLiveStatus: (engagementId: string) =>
+    fetchAPI<GoLiveStatus>(`${BASE}/engagements/${engagementId}/go-live`, RAW),
+
+  confirmGoLive: (engagementId: string, req: ConfirmGoLiveRequest) =>
+    postAPI<GoLiveStatus>(`${BASE}/engagements/${engagementId}/go-live`, req, RAW),
+
+  // ─── Drift Detection ─────────────────────────────────────────────────────
+  getDriftRuns: (engagementId: string, params?: { page?: number; per_page?: number }) =>
+    fetchAPI<{ runs: DriftRun[]; total: number }>(
+      `${BASE}/engagements/${engagementId}/drift/runs${params ? toQueryString(params) : ''}`,
+      RAW,
+    ),
+
+  getDriftRecords: (
+    engagementId: string,
+    runId: string,
+    params?: { severity?: string; page?: number; per_page?: number },
+  ) =>
+    fetchAPI<{ records: DriftRecord[]; total: number }>(
+      `${BASE}/engagements/${engagementId}/drift/runs/${runId}/records${params ? toQueryString(params) : ''}`,
+      RAW,
+    ),
+
+  getDriftSummary: (engagementId: string) =>
+    fetchAPI<DriftSummary>(`${BASE}/engagements/${engagementId}/drift/summary`, RAW),
+
+  triggerDriftDetection: (engagementId: string) =>
+    postAPI<DriftRun>(`${BASE}/engagements/${engagementId}/drift/detect`, {}, RAW),
+
+  getDriftSchedule: (engagementId: string) =>
+    fetchAPI<DriftSchedule>(`${BASE}/engagements/${engagementId}/drift/schedule`, RAW),
+
+  updateDriftSchedule: (engagementId: string, req: UpdateDriftScheduleRequest) =>
+    patchAPI<DriftSchedule>(`${BASE}/engagements/${engagementId}/drift/schedule`, req, RAW),
+
+  // ─── Schema Versioning ────────────────────────────────────────────────────
+  getSchemaVersions: (tenantId: string) =>
+    fetchAPI<SchemaVersion[]>(`${BASE}/tenants/${tenantId}/schema-versions`, RAW),
+
+  getSchemaVersion: (versionId: string) =>
+    fetchAPI<SchemaVersion>(`${BASE}/schema-versions/${versionId}`, RAW),
+
+  createSchemaVersion: (tenantId: string, req: CreateSchemaVersionRequest) =>
+    postAPI<SchemaVersion>(`${BASE}/tenants/${tenantId}/schema-versions`, req, RAW),
+
+  activateSchemaVersion: (versionId: string) =>
+    postAPI<SchemaVersion>(`${BASE}/schema-versions/${versionId}/activate`, {}, RAW),
+
+  getSchemaVersionDiff: (versionId1: string, versionId2: string) =>
+    fetchAPI<SchemaVersionDiff>(
+      `${BASE}/schema-versions/diff?v1=${versionId1}&v2=${versionId2}`,
+      RAW,
+    ),
 };
