@@ -81,14 +81,3 @@ func AllLevels() []ProfilingLevel {
 		Level5RuleSignals,
 	}
 }
-
-// QuoteIdent is the public wrapper around the unexported quoteIdent function
-// in dimensions.go. It validates and double-quotes a SQL identifier.
-func QuoteIdent(id string) (string, error) {
-	return quoteIdent(id)
-}
-
-// ParseSchemaTable is the public wrapper for parseSchemaTable.
-func ParseSchemaTable(qualified string) (string, string) {
-	return parseSchemaTable(qualified)
-}

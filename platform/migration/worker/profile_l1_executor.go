@@ -14,13 +14,36 @@ import (
 	"github.com/noui/platform/migration/profiler"
 )
 
-// L1Input is the JSON payload inside job.input_json for profile_l1 jobs.
-type L1Input struct {
+// ProfilingJobInput contains the fields shared by all profiling job inputs.
+type ProfilingJobInput struct {
 	ProfilingRunID string `json:"profiling_run_id"`
 	EngagementID   string `json:"engagement_id"`
 	SchemaName     string `json:"schema_name"`
 	TableName      string `json:"table_name"`
 	SourceDriver   string `json:"source_driver"`
+}
+
+// openSourceDB opens and pings a source database connection for the given engagement.
+// Caller must defer srcDB.Close().
+func openSourceDB(ctx context.Context, migrationDB *sql.DB, engagementID string) (*sql.DB, error) {
+	conn, err := db.GetEngagementSourceConnection(migrationDB, engagementID)
+	if err != nil {
+		return nil, fmt.Errorf("get source connection: %w", err)
+	}
+	srcDB, err := db.OpenSourceDB(conn)
+	if err != nil {
+		return nil, fmt.Errorf("open source db: %w", err)
+	}
+	if err := srcDB.PingContext(ctx); err != nil {
+		srcDB.Close()
+		return nil, fmt.Errorf("ping source db: %w", err)
+	}
+	return srcDB, nil
+}
+
+// L1Input is the JSON payload inside job.input_json for profile_l1 jobs.
+type L1Input struct {
+	ProfilingJobInput
 }
 
 // ProfileL1Executor discovers columns and row counts for a single source table.
@@ -46,19 +69,11 @@ func (e *ProfileL1Executor) Execute(ctx context.Context, job *jobqueue.Job, q *j
 	)
 
 	// Open source database connection.
-	conn, err := db.GetEngagementSourceConnection(migrationDB, input.EngagementID)
+	srcDB, err := openSourceDB(ctx, migrationDB, input.EngagementID)
 	if err != nil {
-		return fmt.Errorf("get source connection: %w", err)
-	}
-	srcDB, err := db.OpenSourceDB(conn)
-	if err != nil {
-		return fmt.Errorf("open source db: %w", err)
+		return err
 	}
 	defer srcDB.Close()
-
-	if err := srcDB.PingContext(ctx); err != nil {
-		return fmt.Errorf("ping source db: %w", err)
-	}
 
 	// Get row count estimate (and optionally exact count for small tables).
 	estimatedRows, isExact, err := e.getRowCount(ctx, srcDB, input)

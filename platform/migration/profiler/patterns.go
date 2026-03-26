@@ -83,7 +83,7 @@ func DetectPatterns(db *sql.DB, table string, sampleSize int) ([]DetectedPattern
 		sampleSize = DefaultSampleSize
 	}
 
-	quotedTable, err := quoteIdent(table)
+	quotedTable, err := QuoteIdent(table)
 	if err != nil {
 		return nil, fmt.Errorf("detect patterns: invalid table %q: %w", table, err)
 	}
@@ -108,7 +108,7 @@ func DetectPatterns(db *sql.DB, table string, sampleSize int) ([]DetectedPattern
 // discoverTextColumns returns VARCHAR/TEXT/CHAR column names for the given table.
 func discoverTextColumns(db *sql.DB, table string) ([]string, error) {
 	// Parse schema.table or just table name.
-	schema, tableName := parseSchemaTable(table)
+	schema, tableName := ParseSchemaTable(table)
 
 	query := `SELECT column_name FROM information_schema.columns
 		WHERE table_name = $1 AND data_type IN ('character varying', 'text', 'character', 'varchar', 'char', 'nvarchar')`
@@ -137,7 +137,7 @@ func discoverTextColumns(db *sql.DB, table string) ([]string, error) {
 }
 
 // parseSchemaTable splits "schema.table" into (schema, table). If no dot, returns ("", table).
-func parseSchemaTable(qualified string) (string, string) {
+func ParseSchemaTable(qualified string) (string, string) {
 	for i, c := range qualified {
 		if c == '.' {
 			return qualified[:i], qualified[i+1:]
@@ -148,7 +148,7 @@ func parseSchemaTable(qualified string) (string, string) {
 
 // detectColumnPatterns samples values from a single column and tests against known patterns.
 func detectColumnPatterns(db *sql.DB, quotedTable, column string, sampleSize int) ([]DetectedPattern, error) {
-	quotedCol, err := quoteIdent(column)
+	quotedCol, err := QuoteIdent(column)
 	if err != nil {
 		return nil, fmt.Errorf("invalid column %q: %w", column, err)
 	}

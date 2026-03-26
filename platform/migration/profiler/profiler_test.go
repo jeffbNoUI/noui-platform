@@ -464,13 +464,13 @@ func TestQuoteIdent_ValidIdentifiers(t *testing.T) {
 		{"col1", `"col1"`},
 	}
 	for _, tt := range tests {
-		got, err := quoteIdent(tt.input)
+		got, err := QuoteIdent(tt.input)
 		if err != nil {
-			t.Errorf("quoteIdent(%q) error: %v", tt.input, err)
+			t.Errorf("QuoteIdent(%q) error: %v", tt.input, err)
 			continue
 		}
 		if got != tt.want {
-			t.Errorf("quoteIdent(%q) = %q, want %q", tt.input, got, tt.want)
+			t.Errorf("QuoteIdent(%q) = %q, want %q", tt.input, got, tt.want)
 		}
 	}
 }
@@ -486,9 +486,9 @@ func TestQuoteIdent_UnsafeIdentifiers(t *testing.T) {
 		"1startswithnumber",
 	}
 	for _, id := range unsafe {
-		_, err := quoteIdent(id)
+		_, err := QuoteIdent(id)
 		if err == nil {
-			t.Errorf("quoteIdent(%q) should have returned error for unsafe identifier", id)
+			t.Errorf("QuoteIdent(%q) should have returned error for unsafe identifier", id)
 		}
 	}
 }

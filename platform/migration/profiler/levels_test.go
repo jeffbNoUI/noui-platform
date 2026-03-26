@@ -111,49 +111,5 @@ func TestAllLevels(t *testing.T) {
 	}
 }
 
-func TestQuoteIdent(t *testing.T) {
-	tests := []struct {
-		input, want string
-		wantErr     bool
-	}{
-		{"employees", `"employees"`, false},
-		{"public.employees", `"public"."employees"`, false},
-		{"", "", true},
-		{"drop;table", "", true},
-	}
-	for _, tt := range tests {
-		got, err := QuoteIdent(tt.input)
-		if tt.wantErr {
-			if err == nil {
-				t.Errorf("QuoteIdent(%q) expected error", tt.input)
-			}
-			continue
-		}
-		if err != nil {
-			t.Errorf("QuoteIdent(%q) error: %v", tt.input, err)
-			continue
-		}
-		if got != tt.want {
-			t.Errorf("QuoteIdent(%q) = %q, want %q", tt.input, got, tt.want)
-		}
-	}
-}
-
-func TestParseSchemaTable_Levels(t *testing.T) {
-	tests := []struct {
-		input      string
-		wantSchema string
-		wantTable  string
-	}{
-		{"public.employees", "public", "employees"},
-		{"employees", "", "employees"},
-		{"a.b.c", "a", "b.c"},
-	}
-	for _, tt := range tests {
-		schema, table := ParseSchemaTable(tt.input)
-		if schema != tt.wantSchema || table != tt.wantTable {
-			t.Errorf("ParseSchemaTable(%q) = (%q, %q), want (%q, %q)",
-				tt.input, schema, table, tt.wantSchema, tt.wantTable)
-		}
-	}
-}
+// QuoteIdent and ParseSchemaTable are tested directly in profiler_test.go
+// and patterns_test.go — no wrapper tests needed here.

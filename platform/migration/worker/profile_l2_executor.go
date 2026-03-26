@@ -15,13 +15,9 @@ import (
 
 // L2Input is the JSON payload inside job.input_json for profile_l2 jobs.
 type L2Input struct {
-	ProfilingRunID string `json:"profiling_run_id"`
-	EngagementID   string `json:"engagement_id"`
-	SourceTableID  string `json:"source_table_id"`
-	SchemaName     string `json:"schema_name"`
-	TableName      string `json:"table_name"`
-	SourceDriver   string `json:"source_driver"`
-	EstimatedRows  int64  `json:"estimated_rows"`
+	ProfilingJobInput
+	SourceTableID string `json:"source_table_id"`
+	EstimatedRows int64  `json:"estimated_rows"`
 }
 
 // ProfileL2Executor computes column-level statistics, pension patterns, and
@@ -48,19 +44,11 @@ func (e *ProfileL2Executor) Execute(ctx context.Context, job *jobqueue.Job, q *j
 	)
 
 	// Open source database connection.
-	conn, err := db.GetEngagementSourceConnection(migrationDB, input.EngagementID)
+	srcDB, err := openSourceDB(ctx, migrationDB, input.EngagementID)
 	if err != nil {
-		return fmt.Errorf("get source connection: %w", err)
-	}
-	srcDB, err := db.OpenSourceDB(conn)
-	if err != nil {
-		return fmt.Errorf("open source db: %w", err)
+		return err
 	}
 	defer srcDB.Close()
-
-	if err := srcDB.PingContext(ctx); err != nil {
-		return fmt.Errorf("ping source db: %w", err)
-	}
 
 	// Get existing columns from L1.
 	columns, err := db.ListSourceColumns(migrationDB, input.SourceTableID)

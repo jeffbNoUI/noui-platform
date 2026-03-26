@@ -30,7 +30,7 @@ var PensionPatterns = []PensionPattern{
 	{
 		Name:  "IMPLICIT_2DEC",
 		Label: "Implicit decimal (cents in last 2 digits)",
-		Regex: regexp.MustCompile(`^\d{5,12}$`),
+		Regex: regexp.MustCompile(`^\d{6,12}$`), // 6+ digits: excludes IDs <100k, catches typical cent amounts
 	},
 	{
 		Name:  "PCT_WHOLE",

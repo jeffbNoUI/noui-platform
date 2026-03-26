@@ -242,9 +242,9 @@ func TestParseSchemaTable(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		schema, table := parseSchemaTable(tt.input)
+		schema, table := ParseSchemaTable(tt.input)
 		if schema != tt.wantSchema || table != tt.wantTable {
-			t.Errorf("parseSchemaTable(%q) = (%q, %q), want (%q, %q)",
+			t.Errorf("ParseSchemaTable(%q) = (%q, %q), want (%q, %q)",
 				tt.input, schema, table, tt.wantSchema, tt.wantTable)
 		}
 	}
