@@ -27,6 +27,10 @@ const EVENT_LABELS: Record<WSEventType, string> = {
   job_completed: 'Job Completed',
   job_failed: 'Job Failed',
   job_cancelled: 'Job Cancelled',
+  recon_rules_activated: 'Recon Rules Activated',
+  recon_execution_completed: 'Recon Execution Completed',
+  drift_detection_completed: 'Drift Detection Completed',
+  drift_detection_started: 'Drift Detection Started',
 };
 
 function formatRelativeTime(timestamp: string | undefined): string {

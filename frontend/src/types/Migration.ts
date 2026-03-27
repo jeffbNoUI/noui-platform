@@ -7,6 +7,8 @@ export type EngagementStatus =
   | 'TRANSFORMING'
   | 'RECONCILING'
   | 'PARALLEL_RUN'
+  | 'CUTOVER_IN_PROGRESS'
+  | 'GO_LIVE'
   | 'COMPLETE';
 export type BatchStatus = 'PENDING' | 'RUNNING' | 'LOADED' | 'RECONCILED' | 'APPROVED' | 'FAILED';
 export type ExceptionType =
@@ -32,7 +34,7 @@ export interface MappingWarning {
   warning: string;
   risk: WarningRisk;
 }
-export type RiskSource = 'DYNAMIC' | 'STATIC';
+export type RiskSource = 'DYNAMIC' | 'STATIC' | 'PROFILER' | 'TRANSFORMER' | 'DRIFT' | 'ANALYST';
 export type RiskSeverity = 'P1' | 'P2' | 'P3';
 export type RiskStatus = 'OPEN' | 'ACKNOWLEDGED' | 'MITIGATED' | 'CLOSED';
 export type ReconciliationCategory = 'MATCH' | 'MINOR' | 'MAJOR' | 'ERROR';
@@ -355,9 +357,45 @@ export interface AttentionSummary {
   byEngagement: Record<string, number>;
 }
 
+export interface GateMetric {
+  metric_name: string;
+  current_value: number;
+  threshold: number;
+  passing: boolean;
+  display_type: 'percentage' | 'count';
+}
+
 export interface GateStatusResponse {
   metrics: Record<string, number>;
   recommendation: AIRecommendation | null;
+  detailed_metrics?: GateMetric[];
+}
+
+export interface GateEvaluationResult {
+  passed: boolean;
+  target_phase: EngagementStatus;
+  metrics: GateMetric[];
+  blocking_failures: string[];
+  evaluated_at: string;
+}
+
+export interface Certification {
+  certification_id: string;
+  engagement_id: string;
+  certified_by: string;
+  certified_at: string;
+  gate_score: number;
+  p1_count: number;
+  checklist: Record<string, boolean>;
+  notes?: string;
+  phase: EngagementStatus;
+}
+
+export interface CreateCertificationRequest {
+  gate_score: number;
+  p1_count: number;
+  checklist: Record<string, boolean>;
+  notes?: string;
 }
 
 export interface RootCauseResponse {
@@ -486,7 +524,11 @@ export type WSEventType =
   | 'job_started'
   | 'job_completed'
   | 'job_failed'
-  | 'job_cancelled';
+  | 'job_cancelled'
+  | 'recon_rules_activated'
+  | 'recon_execution_completed'
+  | 'drift_detection_completed'
+  | 'drift_detection_started';
 
 export interface WSEvent {
   type: WSEventType;
@@ -604,4 +646,344 @@ export interface DetectedPattern {
   label: string;
   match_rate: number;
   sample_size: number;
+}
+
+// ─── Cutover Types ─────────────────────────────────────────────────────────
+
+export type CutoverStepStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED' | 'SKIPPED';
+
+export interface CutoverStep {
+  step_id: string;
+  plan_id: string;
+  sequence: number;
+  label: string;
+  description: string;
+  status: CutoverStepStatus;
+  assigned_to: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  notes: string | null;
+}
+
+export interface CutoverPlan {
+  plan_id: string;
+  engagement_id: string;
+  name: string;
+  scheduled_start: string | null;
+  scheduled_end: string | null;
+  steps: CutoverStep[];
+  created_at: string;
+  updated_at: string;
+}
+
+export type RollbackStatus = 'AVAILABLE' | 'INITIATED' | 'COMPLETED' | 'EXPIRED';
+
+export interface RollbackAction {
+  rollback_id: string;
+  plan_id: string;
+  status: RollbackStatus;
+  trigger_reason: string | null;
+  initiated_by: string | null;
+  initiated_at: string | null;
+  completed_at: string | null;
+}
+
+export type GoLiveTerminalStatus = 'LIVE' | 'ROLLED_BACK' | 'ABORTED';
+
+export interface GoLiveStatus {
+  engagement_id: string;
+  terminal_status: GoLiveTerminalStatus;
+  go_live_at: string | null;
+  confirmed_by: string | null;
+  rollback_window_end: string | null;
+  notes: string | null;
+}
+
+export interface CreateCutoverPlanRequest {
+  name: string;
+  scheduled_start?: string;
+  scheduled_end?: string;
+  steps: { label: string; description: string; assigned_to?: string }[];
+}
+
+export interface UpdateCutoverStepRequest {
+  status?: CutoverStepStatus;
+  notes?: string;
+}
+
+export interface InitiateRollbackRequest {
+  trigger_reason: string;
+}
+
+export interface ConfirmGoLiveRequest {
+  notes?: string;
+}
+
+// ─── Reconciliation Rules ───────────────────────────────────────────────────
+
+export type ReconRuleSetStatus = 'DRAFT' | 'ACTIVE' | 'SUPERSEDED' | 'ARCHIVED';
+
+export type ComparisonType = 'EXACT' | 'TOLERANCE_ABS' | 'TOLERANCE_PCT' | 'ROUND_THEN_COMPARE';
+
+export interface ReconRule {
+  rule_id: string;
+  tier: 1 | 2 | 3;
+  calc_name: string;
+  comparison_type: ComparisonType;
+  tolerance_value: string;
+  priority_if_mismatch: RiskSeverity;
+  enabled: boolean;
+}
+
+export interface ReconRuleSet {
+  ruleset_id: string;
+  engagement_id: string;
+  version: number;
+  label: string;
+  status: ReconRuleSetStatus;
+  rules: ReconRule[];
+  created_by: string;
+  created_at: string;
+  activated_at: string | null;
+  superseded_at: string | null;
+}
+
+export interface CreateReconRuleSetRequest {
+  label: string;
+  rules: Omit<ReconRule, 'rule_id'>[];
+}
+
+export interface UpdateReconRuleSetRequest {
+  label?: string;
+  rules?: Omit<ReconRule, 'rule_id'>[];
+}
+
+export interface ReconRuleDiffItem {
+  rule_id: string;
+  change: 'added' | 'removed' | 'modified';
+  fields?: Record<string, { old: string | number | boolean; new: string | number | boolean }>;
+  rule?: ReconRule;
+}
+
+export interface ReconRuleDiff {
+  from_version: number;
+  to_version: number;
+  added: ReconRuleDiffItem[];
+  removed: ReconRuleDiffItem[];
+  modified: ReconRuleDiffItem[];
+}
+
+// ─── Reconciliation Execution ───────────────────────────────────────────────
+
+export type ReconExecutionStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+
+export interface ReconExecution {
+  execution_id: string;
+  engagement_id: string;
+  ruleset_id: string;
+  ruleset_version: number;
+  parallel_run_id: string;
+  status: ReconExecutionStatus;
+  match_count: number;
+  mismatch_count: number;
+  p1_count: number;
+  p2_count: number;
+  p3_count: number;
+  started_at: string;
+  completed_at: string | null;
+  error_message: string | null;
+}
+
+export interface ReconMismatch {
+  mismatch_id: string;
+  execution_id: string;
+  priority: RiskSeverity;
+  member_id: string;
+  canonical_entity: string;
+  field_name: string;
+  legacy_value: string;
+  new_value: string;
+  variance_amount: string | null;
+  comparison_type: ComparisonType;
+  tolerance_value: string;
+}
+
+export interface ReconMismatchPage {
+  mismatches: ReconMismatch[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface TriggerReconExecutionRequest {
+  parallel_run_id: string;
+  ruleset_id?: string;
+}
+
+// ─── Drift Detection Types ──────────────────────────────────────────────────
+
+export type DriftStatus = 'CLEAN' | 'DRIFTED' | 'CRITICAL';
+export type DriftSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+export type DriftChangeType = 'ADDED' | 'REMOVED' | 'MODIFIED' | 'TYPE_CHANGED';
+export type DriftType = 'SCHEMA' | 'DATA' | 'BOTH';
+export type DriftRunStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+
+export interface DriftRun {
+  run_id: string;
+  engagement_id: string;
+  drift_type: DriftType;
+  status: DriftRunStatus;
+  detected_changes: number;
+  critical_changes: number;
+  started_at: string;
+  completed_at: string | null;
+}
+
+export interface DriftRecord {
+  record_id: string;
+  run_id: string;
+  severity: DriftSeverity;
+  change_type: DriftChangeType;
+  entity_name: string;
+  field_name: string | null;
+  old_value: unknown;
+  new_value: unknown;
+  detail: Record<string, unknown>;
+  detected_at: string;
+}
+
+export interface DriftSummary {
+  engagement_id: string;
+  status: DriftStatus;
+  last_run_at: string | null;
+  total_changes: number;
+  critical_count: number;
+  high_count: number;
+  medium_count: number;
+  low_count: number;
+}
+
+export interface DriftSchedule {
+  engagement_id: string;
+  interval_hours: number;
+  enabled: boolean;
+  next_run_at: string | null;
+}
+
+export interface UpdateDriftScheduleRequest {
+  interval_hours?: number;
+  enabled?: boolean;
+}
+
+// ─── Schema Versioning Types ────────────────────────────────────────────────
+
+export interface SchemaVersionField {
+  entity: string;
+  field_name: string;
+  data_type: string;
+  is_required: boolean;
+  description: string;
+}
+
+export interface SchemaVersion {
+  version_id: string;
+  tenant_id: string;
+  label: string;
+  description: string;
+  is_active: boolean;
+  fields: SchemaVersionField[];
+  field_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateSchemaVersionRequest {
+  label: string;
+  description: string;
+  fields: Omit<SchemaVersionField, 'version_id'>[];
+}
+
+export type DiffChangeType = 'ADDED' | 'REMOVED' | 'CHANGED';
+
+export interface SchemaFieldDiff {
+  entity: string;
+  field_name: string;
+  change_type: DiffChangeType;
+  old_data_type?: string;
+  new_data_type?: string;
+  old_required?: boolean;
+  new_required?: boolean;
+  old_description?: string;
+  new_description?: string;
+}
+
+export interface SchemaVersionDiff {
+  version1: { version_id: string; label: string };
+  version2: { version_id: string; label: string };
+  changes: SchemaFieldDiff[];
+  added_count: number;
+  removed_count: number;
+  changed_count: number;
+}
+
+// ─── Audit Trail Types ──────────────────────────────────────────────────────
+
+export interface AuditLogEntry {
+  log_id: string;
+  engagement_id: string;
+  actor: string;
+  action: 'CREATE' | 'UPDATE' | 'DELETE' | 'phase_transition';
+  entity_type: string;
+  entity_id: string;
+  before_state: Record<string, unknown> | null;
+  after_state: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export interface AuditLogFilters {
+  entity_type?: string;
+  entity_id?: string;
+  actor?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  per_page?: number;
+}
+
+export interface AuditExportFilters {
+  from?: string;
+  to?: string;
+  entity_type?: string;
+  actor?: string;
+}
+
+export interface AuditExportCountResult {
+  count: number;
+}
+
+export interface RetentionPolicy {
+  engagement_id: string;
+  event_retention_days: number;
+  audit_retention_days: number;
+  updated_at: string;
+}
+
+export interface SetRetentionPolicyRequest {
+  event_retention_days: number;
+  audit_retention_days: number;
+}
+
+// ─── Report Types ───────────────────────────────────────────────────────────
+
+export type ReportType = 'lineage_traceability' | 'reconciliation_summary';
+export type ReportStatus = 'PENDING' | 'GENERATING' | 'COMPLETED' | 'FAILED';
+
+export interface MigrationReport {
+  report_id: string;
+  engagement_id: string;
+  report_type: ReportType;
+  status: ReportStatus;
+  generated_at: string | null;
+  error_message: string | null;
+  created_at: string;
 }

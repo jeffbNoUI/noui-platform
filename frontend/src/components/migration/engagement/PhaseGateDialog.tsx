@@ -21,6 +21,8 @@ const PHASE_LABELS: Record<EngagementStatus, string> = {
   TRANSFORMING: 'Transforming',
   RECONCILING: 'Reconciling',
   PARALLEL_RUN: 'Parallel Run',
+  CUTOVER_IN_PROGRESS: 'Cutover',
+  GO_LIVE: 'Go-Live',
   COMPLETE: 'Complete',
 };
 
@@ -267,7 +269,8 @@ export default function PhaseGateDialog({
                   <span style={{ fontWeight: 500 }}>
                     I understand the risk:{' '}
                     <span style={{ fontFamily: MONO, color: C.coral }}>
-                      {formatMetricName(key)} = {typeof value === 'number' && value <= 1
+                      {formatMetricName(key)} ={' '}
+                      {typeof value === 'number' && value <= 1
                         ? `${(value * 100).toFixed(1)}%`
                         : value}
                     </span>
@@ -383,7 +386,5 @@ export default function PhaseGateDialog({
 }
 
 function formatMetricName(key: string): string {
-  return key
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }

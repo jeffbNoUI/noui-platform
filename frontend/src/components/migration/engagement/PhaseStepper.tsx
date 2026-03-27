@@ -18,6 +18,8 @@ const STATUS_COLOR: Record<EngagementStatus, string> = {
   TRANSFORMING: C.sage,
   RECONCILING: C.coral,
   PARALLEL_RUN: C.navyLight,
+  CUTOVER_IN_PROGRESS: C.gold,
+  GO_LIVE: C.sage,
   COMPLETE: C.sage,
 };
 

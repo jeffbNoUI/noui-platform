@@ -48,6 +48,37 @@ import type {
   ReconciliationPattern,
   Job,
   JobSummary,
+  CutoverPlan,
+  CutoverStep,
+  RollbackAction,
+  GoLiveStatus,
+  CreateCutoverPlanRequest,
+  UpdateCutoverStepRequest,
+  InitiateRollbackRequest,
+  ConfirmGoLiveRequest,
+  ReconRuleSet,
+  CreateReconRuleSetRequest,
+  UpdateReconRuleSetRequest,
+  ReconRuleDiff,
+  ReconExecution,
+  ReconMismatchPage,
+  TriggerReconExecutionRequest,
+  DriftRun,
+  DriftRecord,
+  DriftSummary,
+  DriftSchedule,
+  UpdateDriftScheduleRequest,
+  SchemaVersion,
+  CreateSchemaVersionRequest,
+  SchemaVersionDiff,
+  AuditLogEntry,
+  AuditLogFilters,
+  AuditExportFilters,
+  AuditExportCountResult,
+  RetentionPolicy,
+  SetRetentionPolicyRequest,
+  MigrationReport,
+  ReportType,
 } from '@/types/Migration';
 
 const BASE = '/api/v1/migration';
@@ -170,6 +201,19 @@ export const migrationAPI = {
   getCertification: (engagementId: string) =>
     fetchAPI<Record<string, unknown> | null>(
       `${BASE}/engagements/${engagementId}/certification`,
+      RAW,
+    ),
+
+  listCertifications: (engagementId: string, page = 1) =>
+    fetchAPI<import('@/types/Migration').Certification[]>(
+      `${BASE}/engagements/${engagementId}/certifications${toQueryString({ page })}`,
+      RAW,
+    ),
+
+  // ─── Gate Evaluation ─────────────────────────────────────────────────────
+  evaluateGate: (engagementId: string, targetPhase: string) =>
+    fetchAPI<import('@/types/Migration').GateEvaluationResult>(
+      `${BASE}/engagements/${engagementId}/gate-evaluation${toQueryString({ target_phase: targetPhase })}`,
       RAW,
     ),
 
@@ -312,4 +356,185 @@ export const migrationAPI = {
 
   retryJob: (engagementId: string, jobId: string) =>
     postAPI<Job>(`${BASE}/engagements/${engagementId}/jobs/${jobId}/retry`, {}, RAW),
+
+  // ─── Cutover ──────────────────────────────────────────────────────────────
+  getCutoverPlan: (engagementId: string) =>
+    fetchAPI<CutoverPlan>(`${BASE}/engagements/${engagementId}/cutover-plan`, RAW),
+
+  createCutoverPlan: (engagementId: string, req: CreateCutoverPlanRequest) =>
+    postAPI<CutoverPlan>(`${BASE}/engagements/${engagementId}/cutover-plan`, req, RAW),
+
+  updateCutoverStep: (engagementId: string, stepId: string, req: UpdateCutoverStepRequest) =>
+    patchAPI<CutoverStep>(
+      `${BASE}/engagements/${engagementId}/cutover-plan/steps/${stepId}`,
+      req,
+      RAW,
+    ),
+
+  // ─── Reconciliation Rules ─────────────────────────────────────────────────
+  listReconRuleSets: (engagementId: string, params?: { status?: string }) =>
+    fetchAPI<ReconRuleSet[]>(
+      `${BASE}/engagements/${engagementId}/recon-rules${params ? toQueryString(params) : ''}`,
+      RAW,
+    ),
+
+  getReconRuleSet: (engagementId: string, rulesetId: string) =>
+    fetchAPI<ReconRuleSet>(`${BASE}/engagements/${engagementId}/recon-rules/${rulesetId}`, RAW),
+
+  getActiveReconRuleSet: (engagementId: string) =>
+    fetchAPI<ReconRuleSet>(`${BASE}/engagements/${engagementId}/recon-rules/active`, RAW),
+
+  createReconRuleSet: (engagementId: string, req: CreateReconRuleSetRequest) =>
+    postAPI<ReconRuleSet>(`${BASE}/engagements/${engagementId}/recon-rules`, req, RAW),
+
+  updateReconRuleSet: (engagementId: string, rulesetId: string, req: UpdateReconRuleSetRequest) =>
+    patchAPI<ReconRuleSet>(
+      `${BASE}/engagements/${engagementId}/recon-rules/${rulesetId}`,
+      req,
+      RAW,
+    ),
+
+  // ─── Rollback ─────────────────────────────────────────────────────────────
+  getRollback: (engagementId: string) =>
+    fetchAPI<RollbackAction>(`${BASE}/engagements/${engagementId}/rollback`, RAW),
+
+  initiateRollback: (engagementId: string, req: InitiateRollbackRequest) =>
+    postAPI<RollbackAction>(`${BASE}/engagements/${engagementId}/rollback`, req, RAW),
+
+  // ─── Go-Live ──────────────────────────────────────────────────────────────
+  getGoLiveStatus: (engagementId: string) =>
+    fetchAPI<GoLiveStatus>(`${BASE}/engagements/${engagementId}/go-live`, RAW),
+
+  confirmGoLive: (engagementId: string, req: ConfirmGoLiveRequest) =>
+    postAPI<GoLiveStatus>(`${BASE}/engagements/${engagementId}/go-live`, req, RAW),
+
+  activateReconRuleSet: (engagementId: string, rulesetId: string) =>
+    postAPI<ReconRuleSet>(
+      `${BASE}/engagements/${engagementId}/recon-rules/${rulesetId}/activate`,
+      {},
+      RAW,
+    ),
+
+  archiveReconRuleSet: (engagementId: string, rulesetId: string) =>
+    postAPI<ReconRuleSet>(
+      `${BASE}/engagements/${engagementId}/recon-rules/${rulesetId}/archive`,
+      {},
+      RAW,
+    ),
+
+  getReconRuleSetDiff: (engagementId: string, rulesetId: string, compareToId: string) =>
+    fetchAPI<ReconRuleDiff>(
+      `${BASE}/engagements/${engagementId}/recon-rules/${rulesetId}/diff${toQueryString({ compare_to: compareToId })}`,
+      RAW,
+    ),
+
+  // ─── Reconciliation Execution ─────────────────────────────────────────────
+  listReconExecutions: (engagementId: string, params?: { page?: number }) =>
+    fetchAPI<ReconExecution[]>(
+      `${BASE}/engagements/${engagementId}/recon-executions${params ? toQueryString(params) : ''}`,
+      RAW,
+    ),
+
+  getReconExecution: (engagementId: string, execId: string) =>
+    fetchAPI<ReconExecution>(`${BASE}/engagements/${engagementId}/recon-executions/${execId}`, RAW),
+
+  getReconExecutionMismatches: (
+    engagementId: string,
+    execId: string,
+    params?: { priority?: string; entity?: string; page?: number },
+  ) =>
+    fetchAPI<ReconMismatchPage>(
+      `${BASE}/engagements/${engagementId}/recon-executions/${execId}/mismatches${params ? toQueryString(params) : ''}`,
+      RAW,
+    ),
+
+  triggerReconExecution: (engagementId: string, req: TriggerReconExecutionRequest) =>
+    postAPI<ReconExecution>(`${BASE}/engagements/${engagementId}/recon-executions`, req, RAW),
+
+  // ─── Drift Detection ─────────────────────────────────────────────────────
+  getDriftRuns: (engagementId: string, params?: { page?: number; per_page?: number }) =>
+    fetchAPI<{ runs: DriftRun[]; total: number }>(
+      `${BASE}/engagements/${engagementId}/drift/runs${params ? toQueryString(params) : ''}`,
+      RAW,
+    ),
+
+  getDriftRecords: (
+    engagementId: string,
+    runId: string,
+    params?: { severity?: string; page?: number; per_page?: number },
+  ) =>
+    fetchAPI<{ records: DriftRecord[]; total: number }>(
+      `${BASE}/engagements/${engagementId}/drift/runs/${runId}/records${params ? toQueryString(params) : ''}`,
+      RAW,
+    ),
+
+  getDriftSummary: (engagementId: string) =>
+    fetchAPI<DriftSummary>(`${BASE}/engagements/${engagementId}/drift/summary`, RAW),
+
+  triggerDriftDetection: (engagementId: string) =>
+    postAPI<DriftRun>(`${BASE}/engagements/${engagementId}/drift/detect`, {}, RAW),
+
+  getDriftSchedule: (engagementId: string) =>
+    fetchAPI<DriftSchedule>(`${BASE}/engagements/${engagementId}/drift/schedule`, RAW),
+
+  updateDriftSchedule: (engagementId: string, req: UpdateDriftScheduleRequest) =>
+    patchAPI<DriftSchedule>(`${BASE}/engagements/${engagementId}/drift/schedule`, req, RAW),
+
+  // ─── Schema Versioning ────────────────────────────────────────────────────
+  getSchemaVersions: (tenantId: string) =>
+    fetchAPI<SchemaVersion[]>(`${BASE}/tenants/${tenantId}/schema-versions`, RAW),
+
+  getSchemaVersion: (versionId: string) =>
+    fetchAPI<SchemaVersion>(`${BASE}/schema-versions/${versionId}`, RAW),
+
+  createSchemaVersion: (tenantId: string, req: CreateSchemaVersionRequest) =>
+    postAPI<SchemaVersion>(`${BASE}/tenants/${tenantId}/schema-versions`, req, RAW),
+
+  activateSchemaVersion: (versionId: string) =>
+    postAPI<SchemaVersion>(`${BASE}/schema-versions/${versionId}/activate`, {}, RAW),
+
+  getSchemaVersionDiff: (versionId1: string, versionId2: string) =>
+    fetchAPI<SchemaVersionDiff>(
+      `${BASE}/schema-versions/diff?v1=${versionId1}&v2=${versionId2}`,
+      RAW,
+    ),
+
+  // ─── Audit Trail ──────────────────────────────────────────────────────────
+  getAuditLog: (engagementId: string, filters?: AuditLogFilters) =>
+    fetchAPI<{ entries: AuditLogEntry[]; total: number }>(
+      `${BASE}/engagements/${engagementId}/audit${filters ? toQueryString(filters as Record<string, string | number | undefined>) : ''}`,
+      RAW,
+    ),
+
+  exportAuditUrl: (engagementId: string, filters: AuditExportFilters, format: 'csv' | 'json') =>
+    `${BASE}/engagements/${engagementId}/audit/export${toQueryString({ ...filters, format } as Record<string, string | undefined>)}`,
+
+  getAuditExportCount: (engagementId: string, filters: AuditExportFilters) =>
+    fetchAPI<AuditExportCountResult>(
+      `${BASE}/engagements/${engagementId}/audit/export-count${toQueryString(filters as Record<string, string | undefined>)}`,
+      RAW,
+    ),
+
+  getRetentionPolicy: (engagementId: string) =>
+    fetchAPI<RetentionPolicy>(`${BASE}/engagements/${engagementId}/retention-policy`, RAW),
+
+  setRetentionPolicy: (engagementId: string, req: SetRetentionPolicyRequest) =>
+    putAPI<RetentionPolicy>(`${BASE}/engagements/${engagementId}/retention-policy`, req, RAW),
+
+  // ─── Reports ──────────────────────────────────────────────────────────────
+  generateReport: (engagementId: string, reportType: ReportType) =>
+    postAPI<MigrationReport>(
+      `${BASE}/engagements/${engagementId}/reports`,
+      { report_type: reportType },
+      RAW,
+    ),
+
+  getReportStatus: (engagementId: string, reportId: string) =>
+    fetchAPI<MigrationReport>(`${BASE}/engagements/${engagementId}/reports/${reportId}`, RAW),
+
+  listReports: (engagementId: string) =>
+    fetchAPI<MigrationReport[]>(`${BASE}/engagements/${engagementId}/reports`, RAW),
+
+  downloadReportUrl: (engagementId: string, reportId: string) =>
+    `${BASE}/engagements/${engagementId}/reports/${reportId}/download`,
 };
