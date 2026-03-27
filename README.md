@@ -2,23 +2,33 @@
 
 AI-composed workspace software for benefits administration. Connects to legacy systems, discovers schemas, monitors data quality, and provides intelligent workspace composition for staff and members.
 
+**21 services** across four layers: Data Connector, Platform Services, Migration Pipeline, and Frontend.
+
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────┐
-│  Frontend (React/Vite/Tailwind)     :3000   │
-├─────────────────────────────────────────────┤
-│  Platform Services (Go)                     │
-│  dataaccess :8081  intelligence :8082       │
-│  crm :8083         correspondence :8085     │
-│  dataquality :8086 knowledgebase :8087      │
-├─────────────────────────────────────────────┤
-│  Connector (Go)                             │
-│  introspect → tagger → monitor → dashboard  │
-├─────────────────────────────────────────────┤
-│  Domains                                    │
-│  pension        │ [future domains]          │
-└─────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│  Frontend (React/Vite/Tailwind)         :3000   │
+├─────────────────────────────────────────────────┤
+│  Platform Services (Go)                         │
+│  dataaccess :8081   intelligence :8082          │
+│  crm :8083          correspondence :8085        │
+│  dataquality :8086  knowledgebase :8087          │
+│  casemanagement :8088  preferences :8089        │
+│  healthagg :8091    issues :8092                │
+│  security :8093     employer-* :8094-8099       │
+├─────────────────────────────────────────────────┤
+│  Migration Pipeline (Go + Python)               │
+│  migration :8100    migration-intelligence :8101│
+│  profiler → mapper → transformer → reconciler   │
+│  → parallel → cutover → go-live                 │
+├─────────────────────────────────────────────────┤
+│  Connector (Go)                                 │
+│  introspect → tagger → monitor → dashboard      │
+├─────────────────────────────────────────────────┤
+│  Domains                                        │
+│  pension        │ [future domains]              │
+└─────────────────────────────────────────────────┘
 ```
 
 ## Quick Start
@@ -56,7 +66,9 @@ cd frontend && npm test -- --run
 | Directory | Purpose |
 |-----------|---------|
 | `connector/` | Generic schema introspection, concept tagging, monitoring (Go 1.26) |
-| `platform/` | Shared backend services (Go 1.22) |
+| `platform/` | Shared backend services — 19 Go services (ports 8081–8099) |
+| `platform/migration/` | Migration pipeline — 15 packages, 38 contracts (port 8100) |
+| `migration-intelligence/` | Migration ML service — Python (port 8101) |
 | `domains/pension/` | Pension schemas, rules, seed data, test cases |
 | `frontend/` | React UI with Tailwind CSS |
 | `targets/` | Test target databases (ERPNext, PostgreSQL, MSSQL) |
