@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { C, BODY, DISPLAY } from '@/lib/designSystem';
-import { PANEL_HEADING, SECTION_HEADING, PANEL_CARD } from '../panelStyles';
+import { PANEL_HEADING, SECTION_HEADING, PANEL_CARD, PanelEmptyState } from '../panelStyles';
 import { useJobs, useJobSummary, useCancelJob, useRetryJob } from '@/hooks/useMigrationApi';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Job, JobStatus, JobType } from '@/types/Migration';
@@ -173,18 +173,7 @@ export default function JobQueuePanel({ engagementId }: Props) {
 
       {/* Empty state */}
       {sortedJobs.length === 0 && (
-        <div
-          style={{
-            padding: '32px 16px',
-            textAlign: 'center',
-            color: C.textSecondary,
-            fontSize: 14,
-            border: `1px dashed ${C.border}`,
-            borderRadius: 8,
-          }}
-        >
-          No jobs yet for this engagement.
-        </div>
+        <PanelEmptyState message="No jobs yet for this engagement." icon="📋" />
       )}
 
       {/* Job rows */}

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { C, BODY, MONO } from '@/lib/designSystem';
-import { PANEL_HEADING } from '../panelStyles';
+import { PANEL_HEADING, PanelEmptyState } from '../panelStyles';
 import {
   useDriftRuns,
   useDriftRecords,
@@ -293,18 +293,10 @@ export default function DriftPanel({ engagementId }: Props) {
             style={{ height: 120, borderRadius: 8, background: C.border }}
           />
         ) : !runsData?.runs?.length ? (
-          <div
-            style={{
-              padding: 32,
-              textAlign: 'center',
-              color: C.textSecondary,
-              fontSize: 13,
-              border: `1px solid ${C.border}`,
-              borderRadius: 8,
-            }}
-          >
-            No drift detection runs yet. Click "Run Detection" to start.
-          </div>
+          <PanelEmptyState
+            message='No drift detection runs yet. Click "Run Detection" to start.'
+            icon="🔍"
+          />
         ) : (
           <div
             style={{

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { C, BODY, MONO } from '@/lib/designSystem';
+import { PanelEmptyState } from '../panelStyles';
 import { useRisks, useUpdateRisk } from '@/hooks/useMigrationApi';
 import AddRiskDialog from '../dialogs/AddRiskDialog';
 import type { MigrationRisk, RiskSeverity, RiskStatus, RiskSource } from '@/types/Migration';
@@ -263,16 +264,7 @@ export default function RiskPanel({ engagementId }: Props) {
 
       {/* Risk table */}
       {filteredRisks.length === 0 ? (
-        <div
-          style={{
-            padding: '48px 24px',
-            textAlign: 'center',
-            color: C.textTertiary,
-            fontSize: 14,
-          }}
-        >
-          No risks match the current filters.
-        </div>
+        <PanelEmptyState message="No risks match the current filters." icon="🛡️" />
       ) : (
         <table
           data-testid="risk-table"

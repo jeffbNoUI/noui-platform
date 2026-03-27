@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import { C, BODY } from '@/lib/designSystem';
-import { PANEL_HEADING, SECTION_HEADING, PANEL_CARD, PanelSkeleton } from '../panelStyles';
+import {
+  PANEL_HEADING,
+  SECTION_HEADING,
+  PANEL_CARD,
+  PanelSkeleton,
+  PanelEmptyState,
+} from '../panelStyles';
 import {
   useGenerateReport,
   useReportStatus,
@@ -178,11 +184,7 @@ function ReportHistory({ engagementId }: { engagementId: string }) {
 
   if (isLoading) return <PanelSkeleton />;
   if (!reports || reports.length === 0) {
-    return (
-      <div style={{ color: C.textSecondary, fontSize: 13, padding: 16 }}>
-        No reports generated yet.
-      </div>
-    );
+    return <PanelEmptyState message="No reports generated yet." icon="📄" />;
   }
 
   return (

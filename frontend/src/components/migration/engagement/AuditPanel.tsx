@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { C, BODY, MONO } from '@/lib/designSystem';
-import { PANEL_HEADING, PanelSkeleton } from '../panelStyles';
+import { PANEL_HEADING, PanelSkeleton, PanelEmptyState } from '../panelStyles';
 import { useAuditLog, useAuditExportCount, useExportAuditUrl } from '@/hooks/useMigrationApi';
 import type { AuditLogEntry, AuditLogFilters, AuditExportFilters } from '@/types/Migration';
 
@@ -583,9 +583,7 @@ export default function AuditPanel({ engagementId }: Props) {
       {isLoading ? (
         <PanelSkeleton />
       ) : entries.length === 0 ? (
-        <div style={{ padding: 48, textAlign: 'center', color: C.textSecondary, fontSize: 14 }}>
-          No audit entries found for the selected filters.
-        </div>
+        <PanelEmptyState message="No audit entries found for the selected filters." icon="📋" />
       ) : (
         <>
           <div style={{ overflowX: 'auto', borderRadius: 8, border: `1px solid ${C.border}` }}>
