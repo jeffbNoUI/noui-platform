@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { C, BODY, MONO } from '@/lib/designSystem';
-import { PANEL_HEADING } from '../panelStyles';
+import { PANEL_HEADING, PANEL_CARD } from '../panelStyles';
 import {
   useEngagement,
   useConfigureSource,
@@ -181,10 +181,7 @@ export default function DiscoveryPanel({ engagementId, onAdvance }: Props) {
       {!isConnected || showForm ? (
         <div
           style={{
-            background: C.cardBg,
-            borderRadius: 10,
-            border: `1px solid ${C.border}`,
-            padding: 20,
+            ...PANEL_CARD,
             marginBottom: 20,
           }}
         >
@@ -387,10 +384,9 @@ export default function DiscoveryPanel({ engagementId, onAdvance }: Props) {
       {isConnected && !showForm && (
         <div
           style={{
-            background: C.cardBg,
-            borderRadius: 10,
-            border: `1px solid ${C.border}`,
+            ...PANEL_CARD,
             overflow: 'hidden',
+            padding: 0,
           }}
         >
           <div

@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { C, BODY, MONO } from '@/lib/designSystem';
+import { PANEL_CARD } from '../panelStyles';
 import {
   useMappings,
   useCodeMappings,
@@ -268,10 +269,9 @@ export default function MappingPanel({ engagementId }: Props) {
       {/* Mapping table */}
       <div
         style={{
-          background: C.cardBg,
-          borderRadius: 10,
-          border: `1px solid ${C.border}`,
+          ...PANEL_CARD,
           overflow: 'hidden',
+          padding: 0,
           marginBottom: 20,
         }}
       >

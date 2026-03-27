@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { C, BODY, MONO } from '@/lib/designSystem';
-import { PANEL_HEADING } from '../panelStyles';
+import { PANEL_HEADING, PANEL_CARD } from '../panelStyles';
 import {
   useReconciliationSummary,
   useP1Issues,
@@ -140,10 +140,7 @@ export default function ParallelRunPanel({ engagementId, onCertifyComplete }: Pr
       {/* Status card */}
       <div
         style={{
-          background: C.cardBg,
-          borderRadius: 10,
-          border: `1px solid ${C.border}`,
-          padding: 20,
+          ...PANEL_CARD,
           marginBottom: 20,
           display: 'flex',
           alignItems: 'center',
@@ -187,10 +184,9 @@ export default function ParallelRunPanel({ engagementId, onCertifyComplete }: Pr
       {/* Go/No-Go Checklist */}
       <div
         style={{
-          background: C.cardBg,
-          borderRadius: 10,
-          border: `1px solid ${C.border}`,
+          ...PANEL_CARD,
           overflow: 'hidden',
+          padding: 0,
           marginBottom: 20,
         }}
       >

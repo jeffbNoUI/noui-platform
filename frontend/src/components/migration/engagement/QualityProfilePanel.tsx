@@ -29,7 +29,7 @@ class ChartErrorBoundary extends Component<
   }
 }
 import { C, BODY, MONO } from '@/lib/designSystem';
-import { PANEL_HEADING } from '../panelStyles';
+import { PANEL_HEADING, PANEL_CARD } from '../panelStyles';
 import {
   useEngagement,
   useProfiles,
@@ -284,9 +284,7 @@ export default function QualityProfilePanel({ engagementId }: Props) {
       {radarData.length > 0 && (
         <div
           style={{
-            background: C.cardBg,
-            borderRadius: 10,
-            border: `1px solid ${C.border}`,
+            ...PANEL_CARD,
             padding: 16,
             marginBottom: 20,
           }}
@@ -332,10 +330,9 @@ export default function QualityProfilePanel({ engagementId }: Props) {
       {profiles.length > 0 && (
         <div
           style={{
-            background: C.cardBg,
-            borderRadius: 10,
-            border: `1px solid ${C.border}`,
+            ...PANEL_CARD,
             overflow: 'hidden',
+            padding: 0,
           }}
         >
           <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.border}` }}>

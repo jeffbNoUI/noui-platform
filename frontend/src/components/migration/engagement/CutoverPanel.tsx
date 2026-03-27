@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
-import { PANEL_HEADING, SECTION_HEADING } from '../panelStyles';
+import { PANEL_HEADING, SECTION_HEADING, PANEL_CARD } from '../panelStyles';
 import {
   useCutoverPlan,
   useCreateCutoverPlan,
@@ -88,9 +88,7 @@ function PlanCreator({ engagementId, onCreated }: { engagementId: string; onCrea
   return (
     <div
       style={{
-        background: C.cardBg,
-        borderRadius: 10,
-        border: `1px solid ${C.border}`,
+        ...PANEL_CARD,
         padding: 24,
       }}
     >
@@ -510,9 +508,7 @@ function RollbackControls({ engagementId }: { engagementId: string }) {
   return (
     <div
       style={{
-        background: C.cardBg,
-        borderRadius: 10,
-        border: `1px solid ${C.border}`,
+        ...PANEL_CARD,
         padding: 16,
       }}
     >
@@ -701,10 +697,7 @@ function GoLiveDisplay({ engagementId }: { engagementId: string }) {
   return (
     <div
       style={{
-        background: C.cardBg,
-        borderRadius: 10,
-        border: `1px solid ${C.border}`,
-        padding: 20,
+        ...PANEL_CARD,
       }}
     >
       <h4 style={SECTION_HEADING}>Go-Live Confirmation</h4>

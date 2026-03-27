@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { C, BODY, MONO } from '@/lib/designSystem';
-import { PANEL_HEADING } from '../panelStyles';
+import { PANEL_HEADING, PANEL_CARD } from '../panelStyles';
 import { useEngagement, useBatchSizingRecommendation, useBatches } from '@/hooks/useMigrationApi';
 import AIRecommendationCard from '../ai/AIRecommendationCard';
 import CreateBatchDialog from '../dialogs/CreateBatchDialog';
@@ -164,10 +164,9 @@ export default function TransformationPanel({ engagementId, onSelectBatch }: Pro
       {/* Batch table */}
       <div
         style={{
-          background: C.cardBg,
-          borderRadius: 10,
-          border: `1px solid ${C.border}`,
+          ...PANEL_CARD,
           overflow: 'hidden',
+          padding: 0,
         }}
       >
         {batchesLoading ? (

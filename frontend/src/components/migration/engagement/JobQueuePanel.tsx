@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { C, BODY, DISPLAY } from '@/lib/designSystem';
-import { PANEL_HEADING, SECTION_HEADING } from '../panelStyles';
+import { PANEL_HEADING, SECTION_HEADING, PANEL_CARD } from '../panelStyles';
 import { useJobs, useJobSummary, useCancelJob, useRetryJob } from '@/hooks/useMigrationApi';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Job, JobStatus, JobType } from '@/types/Migration';
@@ -154,10 +154,8 @@ export default function JobQueuePanel({ engagementId }: Props) {
           <div
             key={stat.label}
             style={{
+              ...PANEL_CARD,
               padding: '16px 20px',
-              borderRadius: 10,
-              border: `1px solid ${C.border}`,
-              background: C.cardBg,
             }}
           >
             <div style={{ fontSize: 24, fontWeight: 700, color: stat.color, fontFamily: DISPLAY }}>
@@ -296,10 +294,8 @@ function JobRow({
         display: 'flex',
         alignItems: 'center',
         gap: 12,
+        ...PANEL_CARD,
         padding: '12px 16px',
-        borderRadius: 8,
-        border: `1px solid ${C.border}`,
-        background: C.cardBg,
         marginBottom: 8,
       }}
     >

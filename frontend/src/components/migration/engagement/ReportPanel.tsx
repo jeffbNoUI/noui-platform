@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { C, BODY } from '@/lib/designSystem';
-import { PANEL_HEADING, SECTION_HEADING } from '../panelStyles';
+import { PANEL_HEADING, SECTION_HEADING, PANEL_CARD } from '../panelStyles';
 import {
   useGenerateReport,
   useReportStatus,
@@ -68,10 +68,7 @@ function ReportCard({
     <div
       data-testid={`report-card-${reportType.key}`}
       style={{
-        padding: 20,
-        borderRadius: 10,
-        border: `1px solid ${C.border}`,
-        background: C.cardBg,
+        ...PANEL_CARD,
       }}
     >
       <h3 style={{ ...SECTION_HEADING, margin: '0 0 8px' }}>{reportType.label}</h3>
@@ -335,10 +332,7 @@ function RetentionPolicySection({ engagementId }: { engagementId: string }) {
     <div
       data-testid="retention-policy-section"
       style={{
-        padding: 20,
-        borderRadius: 10,
-        border: `1px solid ${C.border}`,
-        background: C.cardBg,
+        ...PANEL_CARD,
       }}
     >
       <div
