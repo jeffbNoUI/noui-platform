@@ -605,3 +605,65 @@ export interface DetectedPattern {
   match_rate: number;
   sample_size: number;
 }
+
+// ─── Audit Trail Types ──────────────────────────────────────────────────────
+
+export interface AuditLogEntry {
+  log_id: string;
+  engagement_id: string;
+  actor: string;
+  action: 'CREATE' | 'UPDATE' | 'DELETE' | 'phase_transition';
+  entity_type: string;
+  entity_id: string;
+  before_state: Record<string, unknown> | null;
+  after_state: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export interface AuditLogFilters {
+  entity_type?: string;
+  entity_id?: string;
+  actor?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  per_page?: number;
+}
+
+export interface AuditExportFilters {
+  from?: string;
+  to?: string;
+  entity_type?: string;
+  actor?: string;
+}
+
+export interface AuditExportCountResult {
+  count: number;
+}
+
+export interface RetentionPolicy {
+  engagement_id: string;
+  event_retention_days: number;
+  audit_retention_days: number;
+  updated_at: string;
+}
+
+export interface SetRetentionPolicyRequest {
+  event_retention_days: number;
+  audit_retention_days: number;
+}
+
+// ─── Report Types ───────────────────────────────────────────────────────────
+
+export type ReportType = 'lineage_traceability' | 'reconciliation_summary';
+export type ReportStatus = 'PENDING' | 'GENERATING' | 'COMPLETED' | 'FAILED';
+
+export interface MigrationReport {
+  report_id: string;
+  engagement_id: string;
+  report_type: ReportType;
+  status: ReportStatus;
+  generated_at: string | null;
+  error_message: string | null;
+  created_at: string;
+}

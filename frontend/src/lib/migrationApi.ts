@@ -48,6 +48,14 @@ import type {
   ReconciliationPattern,
   Job,
   JobSummary,
+  AuditLogEntry,
+  AuditLogFilters,
+  AuditExportFilters,
+  AuditExportCountResult,
+  RetentionPolicy,
+  SetRetentionPolicyRequest,
+  MigrationReport,
+  ReportType,
 } from '@/types/Migration';
 
 const BASE = '/api/v1/migration';
@@ -312,4 +320,43 @@ export const migrationAPI = {
 
   retryJob: (engagementId: string, jobId: string) =>
     postAPI<Job>(`${BASE}/engagements/${engagementId}/jobs/${jobId}/retry`, {}, RAW),
+
+  // ─── Audit Trail ──────────────────────────────────────────────────────────
+  getAuditLog: (engagementId: string, filters?: AuditLogFilters) =>
+    fetchAPI<{ entries: AuditLogEntry[]; total: number }>(
+      `${BASE}/engagements/${engagementId}/audit${filters ? toQueryString(filters as Record<string, string | number | undefined>) : ''}`,
+      RAW,
+    ),
+
+  exportAuditUrl: (engagementId: string, filters: AuditExportFilters, format: 'csv' | 'json') =>
+    `${BASE}/engagements/${engagementId}/audit/export${toQueryString({ ...filters, format } as Record<string, string | undefined>)}`,
+
+  getAuditExportCount: (engagementId: string, filters: AuditExportFilters) =>
+    fetchAPI<AuditExportCountResult>(
+      `${BASE}/engagements/${engagementId}/audit/export-count${toQueryString(filters as Record<string, string | undefined>)}`,
+      RAW,
+    ),
+
+  getRetentionPolicy: (engagementId: string) =>
+    fetchAPI<RetentionPolicy>(`${BASE}/engagements/${engagementId}/retention-policy`, RAW),
+
+  setRetentionPolicy: (engagementId: string, req: SetRetentionPolicyRequest) =>
+    putAPI<RetentionPolicy>(`${BASE}/engagements/${engagementId}/retention-policy`, req, RAW),
+
+  // ─── Reports ──────────────────────────────────────────────────────────────
+  generateReport: (engagementId: string, reportType: ReportType) =>
+    postAPI<MigrationReport>(
+      `${BASE}/engagements/${engagementId}/reports`,
+      { report_type: reportType },
+      RAW,
+    ),
+
+  getReportStatus: (engagementId: string, reportId: string) =>
+    fetchAPI<MigrationReport>(`${BASE}/engagements/${engagementId}/reports/${reportId}`, RAW),
+
+  listReports: (engagementId: string) =>
+    fetchAPI<MigrationReport[]>(`${BASE}/engagements/${engagementId}/reports`, RAW),
+
+  downloadReportUrl: (engagementId: string, reportId: string) =>
+    `${BASE}/engagements/${engagementId}/reports/${reportId}/download`,
 };

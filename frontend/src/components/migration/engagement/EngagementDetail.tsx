@@ -63,6 +63,8 @@ import ParallelRunPanel from './ParallelRunPanel';
 import PhaseGateDialog from './PhaseGateDialog';
 import AttentionQueue from '../attention/AttentionQueue';
 import JobQueuePanel from './JobQueuePanel';
+import AuditPanel from './AuditPanel';
+import ReportPanel from './ReportPanel';
 import ActivityLog from './ActivityLog';
 
 type Tab =
@@ -73,6 +75,8 @@ type Tab =
   | 'reconciliation'
   | 'parallel-run'
   | 'risks'
+  | 'audit'
+  | 'reports'
   | 'attention'
   | 'jobs';
 
@@ -84,6 +88,8 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'reconciliation', label: 'Reconciliation' },
   { key: 'parallel-run', label: 'Parallel Run' },
   { key: 'risks', label: 'Risks' },
+  { key: 'audit', label: 'Audit' },
+  { key: 'reports', label: 'Reports' },
   { key: 'attention', label: 'Attention' },
   { key: 'jobs', label: 'Jobs' },
 ];
@@ -444,6 +450,8 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
             {activeTab === 'reconciliation' && <ReconciliationPanel engagementId={engagementId} />}
             {activeTab === 'parallel-run' && <ParallelRunPanel engagementId={engagementId} />}
             {activeTab === 'risks' && <RisksPlaceholder engagementId={engagementId} />}
+            {activeTab === 'audit' && <AuditPanel engagementId={engagementId} />}
+            {activeTab === 'reports' && <ReportPanel engagementId={engagementId} />}
             {activeTab === 'attention' && <AttentionQueue engagementId={engagementId} />}
             {activeTab === 'jobs' && <JobQueuePanel engagementId={engagementId} />}
           </TabErrorBoundary>
