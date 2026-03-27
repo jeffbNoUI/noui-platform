@@ -334,4 +334,48 @@ describe('PhaseGateDialog', () => {
     fireEvent.click(screen.getByTestId('override-metric_b'));
     expect(screen.getByText('Confirm Transition')).not.toBeDisabled();
   });
+
+  it('calls regressPhase on confirm for regress', async () => {
+    const mutateAsyncFn = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(useRegressPhase).mockReturnValue({
+      ...baseMutation,
+      mutateAsync: mutateAsyncFn,
+    } as unknown as ReturnType<typeof useRegressPhase>);
+
+    renderWithProviders(
+      <PhaseGateDialog {...defaultProps} direction="REGRESS" targetPhase="PROFILING" />,
+    );
+
+    const textarea = screen.getByPlaceholderText(/Explain the reason/);
+    fireEvent.change(textarea, { target: { value: 'Data issues found' } });
+    fireEvent.click(screen.getByText('Confirm Transition'));
+
+    expect(mutateAsyncFn).toHaveBeenCalledWith({
+      engagementId: 'eng-1',
+      req: { targetPhase: 'PROFILING', notes: 'Data issues found' },
+    });
+  });
+
+  it('shows loading skeleton when gate evaluation is loading', () => {
+    vi.mocked(useGateEvaluation).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+    } as unknown as ReturnType<typeof useGateEvaluation>);
+
+    const { container } = renderWithProviders(<PhaseGateDialog {...defaultProps} />);
+
+    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+  });
+
+  it('shows error message when advance fails', () => {
+    vi.mocked(useAdvancePhase).mockReturnValue({
+      ...baseMutation,
+      isError: true,
+      error: new Error('Transition failed'),
+    } as unknown as ReturnType<typeof useAdvancePhase>);
+
+    renderWithProviders(<PhaseGateDialog {...defaultProps} />);
+
+    expect(screen.getByText('Transition failed')).toBeInTheDocument();
+  });
 });
