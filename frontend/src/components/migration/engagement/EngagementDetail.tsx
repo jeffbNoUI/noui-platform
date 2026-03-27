@@ -470,33 +470,37 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
 
         {/* Tab content */}
         <div className="p-4 lg:p-6" style={{ flex: 1, overflowY: 'auto' }}>
-          <TabErrorBoundary tabName={activeTab}>
-            {activeTab === 'discovery' && (
-              <DiscoveryPanel
-                engagementId={engagementId}
-                onAdvance={() =>
-                  setGateDialog({ open: true, targetPhase: 'PROFILING', direction: 'ADVANCE' })
-                }
-              />
-            )}
-            {activeTab === 'quality' && <QualityProfilePanel engagementId={engagementId} />}
-            {activeTab === 'mappings' && <MappingPanel engagementId={engagementId} />}
-            {activeTab === 'transformation' && (
-              <TransformationPanel engagementId={engagementId} onSelectBatch={onSelectBatch} />
-            )}
-            {activeTab === 'reconciliation' && <ReconciliationPanel engagementId={engagementId} />}
-            {activeTab === 'parallel-run' && <ParallelRunPanel engagementId={engagementId} />}
-            {activeTab === 'cutover' && <CutoverPanel engagementId={engagementId} />}
-            {activeTab === 'recon-rules' && <ReconRulesPanel engagementId={engagementId} />}
-            {activeTab === 'drift' && <DriftPanel engagementId={engagementId} />}
-            {activeTab === 'schema' && <SchemaVersionPanel engagementId={engagementId} />}
-            {activeTab === 'risks' && <RiskPanel engagementId={engagementId} />}
-            {activeTab === 'audit' && <AuditPanel engagementId={engagementId} />}
-            {activeTab === 'reports' && <ReportPanel engagementId={engagementId} />}
-            {activeTab === 'certification' && <CertificationPanel engagementId={engagementId} />}
-            {activeTab === 'attention' && <AttentionQueue engagementId={engagementId} />}
-            {activeTab === 'jobs' && <JobQueuePanel engagementId={engagementId} />}
-          </TabErrorBoundary>
+          <div key={activeTab} style={{ animation: 'panelFadeIn 0.15s ease-in' }}>
+            <TabErrorBoundary tabName={activeTab}>
+              {activeTab === 'discovery' && (
+                <DiscoveryPanel
+                  engagementId={engagementId}
+                  onAdvance={() =>
+                    setGateDialog({ open: true, targetPhase: 'PROFILING', direction: 'ADVANCE' })
+                  }
+                />
+              )}
+              {activeTab === 'quality' && <QualityProfilePanel engagementId={engagementId} />}
+              {activeTab === 'mappings' && <MappingPanel engagementId={engagementId} />}
+              {activeTab === 'transformation' && (
+                <TransformationPanel engagementId={engagementId} onSelectBatch={onSelectBatch} />
+              )}
+              {activeTab === 'reconciliation' && (
+                <ReconciliationPanel engagementId={engagementId} />
+              )}
+              {activeTab === 'parallel-run' && <ParallelRunPanel engagementId={engagementId} />}
+              {activeTab === 'cutover' && <CutoverPanel engagementId={engagementId} />}
+              {activeTab === 'recon-rules' && <ReconRulesPanel engagementId={engagementId} />}
+              {activeTab === 'drift' && <DriftPanel engagementId={engagementId} />}
+              {activeTab === 'schema' && <SchemaVersionPanel engagementId={engagementId} />}
+              {activeTab === 'risks' && <RiskPanel engagementId={engagementId} />}
+              {activeTab === 'audit' && <AuditPanel engagementId={engagementId} />}
+              {activeTab === 'reports' && <ReportPanel engagementId={engagementId} />}
+              {activeTab === 'certification' && <CertificationPanel engagementId={engagementId} />}
+              {activeTab === 'attention' && <AttentionQueue engagementId={engagementId} />}
+              {activeTab === 'jobs' && <JobQueuePanel engagementId={engagementId} />}
+            </TabErrorBoundary>
+          </div>
         </div>
       </div>
 

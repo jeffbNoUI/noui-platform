@@ -104,6 +104,7 @@ export const BTN_PRIMARY: React.CSSProperties = {
   borderRadius: 6,
   padding: '8px 16px',
   cursor: 'pointer',
+  transition: 'background 0.15s ease, box-shadow 0.15s ease',
 };
 
 export const BTN_SECONDARY: React.CSSProperties = {
@@ -116,6 +117,7 @@ export const BTN_SECONDARY: React.CSSProperties = {
   borderRadius: 6,
   padding: '8px 16px',
   cursor: 'pointer',
+  transition: 'background 0.15s ease, border-color 0.15s ease',
 };
 
 // ── Skeleton Helpers ──────────────────────────────────
