@@ -204,6 +204,19 @@ export const migrationAPI = {
       RAW,
     ),
 
+  listCertifications: (engagementId: string, page = 1) =>
+    fetchAPI<import('@/types/Migration').Certification[]>(
+      `${BASE}/engagements/${engagementId}/certifications${toQueryString({ page })}`,
+      RAW,
+    ),
+
+  // ─── Gate Evaluation ─────────────────────────────────────────────────────
+  evaluateGate: (engagementId: string, targetPhase: string) =>
+    fetchAPI<import('@/types/Migration').GateEvaluationResult>(
+      `${BASE}/engagements/${engagementId}/gate-evaluation${toQueryString({ target_phase: targetPhase })}`,
+      RAW,
+    ),
+
   // ─── Risks ──────────────────────────────────────────────────────────────
   listRisks: (engagementId?: string) =>
     fetchAPI<MigrationRisk[]>(

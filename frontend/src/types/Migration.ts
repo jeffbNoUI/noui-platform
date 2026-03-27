@@ -34,7 +34,7 @@ export interface MappingWarning {
   warning: string;
   risk: WarningRisk;
 }
-export type RiskSource = 'DYNAMIC' | 'STATIC';
+export type RiskSource = 'DYNAMIC' | 'STATIC' | 'PROFILER' | 'TRANSFORMER' | 'DRIFT' | 'ANALYST';
 export type RiskSeverity = 'P1' | 'P2' | 'P3';
 export type RiskStatus = 'OPEN' | 'ACKNOWLEDGED' | 'MITIGATED' | 'CLOSED';
 export type ReconciliationCategory = 'MATCH' | 'MINOR' | 'MAJOR' | 'ERROR';
@@ -357,9 +357,45 @@ export interface AttentionSummary {
   byEngagement: Record<string, number>;
 }
 
+export interface GateMetric {
+  metric_name: string;
+  current_value: number;
+  threshold: number;
+  passing: boolean;
+  display_type: 'percentage' | 'count';
+}
+
 export interface GateStatusResponse {
   metrics: Record<string, number>;
   recommendation: AIRecommendation | null;
+  detailed_metrics?: GateMetric[];
+}
+
+export interface GateEvaluationResult {
+  passed: boolean;
+  target_phase: EngagementStatus;
+  metrics: GateMetric[];
+  blocking_failures: string[];
+  evaluated_at: string;
+}
+
+export interface Certification {
+  certification_id: string;
+  engagement_id: string;
+  certified_by: string;
+  certified_at: string;
+  gate_score: number;
+  p1_count: number;
+  checklist: Record<string, boolean>;
+  notes?: string;
+  phase: EngagementStatus;
+}
+
+export interface CreateCertificationRequest {
+  gate_score: number;
+  p1_count: number;
+  checklist: Record<string, boolean>;
+  notes?: string;
 }
 
 export interface RootCauseResponse {
