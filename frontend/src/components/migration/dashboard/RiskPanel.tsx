@@ -43,16 +43,16 @@ export default function RiskPanel({ risks, isLoading, onAddRisk }: RiskPanelProp
 
   return (
     <div
+      className="migration-risk-sidebar"
       style={{
-        width: collapsed ? 48 : 320,
         flexShrink: 0,
-        borderLeft: `1px solid ${C.border}`,
         background: C.cardBg,
         transition: 'width 0.2s',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
       }}
+      data-collapsed={collapsed ? 'true' : undefined}
     >
       {/* Header */}
       <div
