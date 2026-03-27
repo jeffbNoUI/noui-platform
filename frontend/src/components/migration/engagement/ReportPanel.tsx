@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { C, BODY } from '@/lib/designSystem';
-import { PANEL_HEADING, SECTION_HEADING, PANEL_CARD } from '../panelStyles';
+import { PANEL_HEADING, SECTION_HEADING, PANEL_CARD, PanelSkeleton } from '../panelStyles';
 import {
   useGenerateReport,
   useReportStatus,
@@ -176,10 +176,7 @@ function ReportDownloadButton({
 function ReportHistory({ engagementId }: { engagementId: string }) {
   const { data: reports, isLoading } = useReports(engagementId);
 
-  if (isLoading)
-    return (
-      <div style={{ color: C.textSecondary, fontSize: 13, padding: 16 }}>Loading reports...</div>
-    );
+  if (isLoading) return <PanelSkeleton />;
   if (!reports || reports.length === 0) {
     return (
       <div style={{ color: C.textSecondary, fontSize: 13, padding: 16 }}>
@@ -321,12 +318,7 @@ function RetentionPolicySection({ engagementId }: { engagementId: string }) {
     );
   };
 
-  if (isLoading)
-    return (
-      <div style={{ color: C.textSecondary, fontSize: 13, padding: 16 }}>
-        Loading retention policy...
-      </div>
-    );
+  if (isLoading) return <PanelSkeleton />;
 
   return (
     <div

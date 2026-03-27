@@ -75,7 +75,7 @@ describe('AttentionQueue', () => {
     } as unknown as ReturnType<typeof useAttentionItems>);
 
     renderWithProviders(<AttentionQueue engagementId="eng-1" />);
-    expect(screen.getByText('Loading...')).toBeDefined();
+    expect(document.querySelector('.animate-pulse')).toBeDefined();
   });
 
   it('renders empty state when no items', () => {

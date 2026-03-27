@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { C, BODY } from '@/lib/designSystem';
-import { PANEL_HEADING } from '../panelStyles';
+import { PANEL_HEADING, PanelSkeleton } from '../panelStyles';
 import { useAttentionItems } from '@/hooks/useMigrationApi';
 import { migrationAPI } from '@/lib/migrationApi';
 import CorpusIndicator from '../ai/CorpusIndicator';
@@ -451,16 +451,7 @@ export default function AttentionQueue({ engagementId }: Props) {
 
       {/* Item list */}
       {isLoading ? (
-        <div
-          style={{
-            textAlign: 'center',
-            padding: '32px 0',
-            fontSize: 13,
-            color: C.textTertiary,
-          }}
-        >
-          Loading...
-        </div>
+        <PanelSkeleton />
       ) : activeItems.length === 0 ? (
         <div
           style={{

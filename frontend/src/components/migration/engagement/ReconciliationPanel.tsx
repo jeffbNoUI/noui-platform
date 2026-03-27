@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { C, BODY, MONO } from '@/lib/designSystem';
-import { SECTION_HEADING } from '../panelStyles';
+import { SECTION_HEADING, PanelSkeleton } from '../panelStyles';
 import {
   useReconciliationSummary,
   useP1Issues,
@@ -115,14 +115,7 @@ export default function ReconciliationPanel({ engagementId }: Props) {
   }, [p1Issues, domainFilter]);
 
   if (summaryLoading) {
-    return (
-      <div style={{ padding: 24 }}>
-        <div
-          className="animate-pulse"
-          style={{ height: 200, borderRadius: 8, background: C.border }}
-        />
-      </div>
-    );
+    return <PanelSkeleton />;
   }
 
   if (summaryError) {

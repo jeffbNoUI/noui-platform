@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { C, BODY, MONO } from '@/lib/designSystem';
-import { PANEL_HEADING, PANEL_CARD } from '../panelStyles';
+import { PANEL_HEADING, PANEL_CARD, PanelSkeleton } from '../panelStyles';
 import {
   useReconciliationSummary,
   useP1Issues,
@@ -28,7 +28,7 @@ const CHECKLIST: ChecklistItem[] = [
 ];
 
 export default function ParallelRunPanel({ engagementId, onCertifyComplete }: Props) {
-  const { data: reconSummary } = useReconciliationSummary(engagementId);
+  const { data: reconSummary, isLoading: summaryLoading } = useReconciliationSummary(engagementId);
   const { data: p1Issues } = useP1Issues(engagementId);
   const { data: existingCert } = useCertification(engagementId);
   const certifyMutation = useCertifyEngagement();
@@ -103,6 +103,8 @@ export default function ParallelRunPanel({ engagementId, onCertifyComplete }: Pr
       },
     );
   };
+
+  if (summaryLoading) return <PanelSkeleton />;
 
   return (
     <div style={{ fontFamily: BODY }}>
