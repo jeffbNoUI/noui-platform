@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { C, BODY, DISPLAY } from '@/lib/designSystem';
+import { C, BODY } from '@/lib/designSystem';
+import { PANEL_HEADING } from '../panelStyles';
 import { useAttentionItems } from '@/hooks/useMigrationApi';
 import { migrationAPI } from '@/lib/migrationApi';
 import CorpusIndicator from '../ai/CorpusIndicator';
@@ -195,7 +196,9 @@ function AttentionItemCard({
             placeholder={showNoteInput === 'resolve' ? 'Resolution note...' : 'Deferral reason...'}
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleConfirm(); }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleConfirm();
+            }}
             aria-label="resolution note"
             style={{
               width: '100%',
@@ -219,7 +222,13 @@ function AttentionItemCard({
               onClick={handleConfirm}
               disabled={isLoading}
             />
-            <ActionButton label="Cancel" color={C.textTertiary} filled={false} onClick={handleCancel} disabled={isLoading} />
+            <ActionButton
+              label="Cancel"
+              color={C.textTertiary}
+              filled={false}
+              onClick={handleCancel}
+              disabled={isLoading}
+            />
           </div>
         </div>
       )}
@@ -229,14 +238,44 @@ function AttentionItemCard({
         <div style={{ display: 'flex', gap: 8 }}>
           {item.priority === 'P1' ? (
             <>
-              <ActionButton label="Resolve" color={C.sage} filled onClick={() => setShowNoteInput('resolve')} disabled={isLoading} />
-              <ActionButton label="Defer" color={C.textTertiary} filled={false} onClick={() => setShowNoteInput('defer')} disabled={isLoading} />
+              <ActionButton
+                label="Resolve"
+                color={C.sage}
+                filled
+                onClick={() => setShowNoteInput('resolve')}
+                disabled={isLoading}
+              />
+              <ActionButton
+                label="Defer"
+                color={C.textTertiary}
+                filled={false}
+                onClick={() => setShowNoteInput('defer')}
+                disabled={isLoading}
+              />
             </>
           ) : (
             <>
-              <ActionButton label="Apply to All" color={C.sage} filled onClick={() => setShowNoteInput('resolve')} disabled={isLoading} />
-              <ActionButton label="Review" color={C.sky} filled={false} onClick={() => {}} disabled={isLoading} />
-              <ActionButton label="Defer" color={C.textTertiary} filled={false} onClick={() => setShowNoteInput('defer')} disabled={isLoading} />
+              <ActionButton
+                label="Apply to All"
+                color={C.sage}
+                filled
+                onClick={() => setShowNoteInput('resolve')}
+                disabled={isLoading}
+              />
+              <ActionButton
+                label="Review"
+                color={C.sky}
+                filled={false}
+                onClick={() => {}}
+                disabled={isLoading}
+              />
+              <ActionButton
+                label="Defer"
+                color={C.textTertiary}
+                filled={false}
+                onClick={() => setShowNoteInput('defer')}
+                disabled={isLoading}
+              />
             </>
           )}
         </div>
@@ -310,7 +349,12 @@ export default function AttentionQueue({ engagementId }: Props) {
     setMutatingItemId(itemId);
 
     // Optimistic update: remove the item from the list immediately.
-    const queryKey = ['migration', 'attention', engagementId, filter === 'ALL' ? undefined : { priority: filter }];
+    const queryKey = [
+      'migration',
+      'attention',
+      engagementId,
+      filter === 'ALL' ? undefined : { priority: filter },
+    ];
     const previousItems = queryClient.getQueryData<AttentionItem[]>(queryKey);
 
     queryClient.setQueryData<AttentionItem[]>(queryKey, (old) =>
@@ -345,17 +389,7 @@ export default function AttentionQueue({ engagementId }: Props) {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <h3
-            style={{
-              fontFamily: DISPLAY,
-              fontSize: 16,
-              fontWeight: 600,
-              color: C.navy,
-              margin: 0,
-            }}
-          >
-            Attention
-          </h3>
+          <h3 style={{ ...PANEL_HEADING, margin: 0 }}>Attention</h3>
           {totalCount > 0 && (
             <span
               style={{
@@ -382,10 +416,7 @@ export default function AttentionQueue({ engagementId }: Props) {
       <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
         {FILTER_OPTIONS.map((opt) => {
           const isActive = filter === opt.key;
-          const pillColor =
-            opt.key === 'ALL'
-              ? C.navy
-              : PRIORITY_COLORS[opt.key] || C.navy;
+          const pillColor = opt.key === 'ALL' ? C.navy : PRIORITY_COLORS[opt.key] || C.navy;
 
           return (
             <button

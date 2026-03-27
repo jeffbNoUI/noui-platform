@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
+import { C, BODY, MONO } from '@/lib/designSystem';
+import { PANEL_HEADING, SECTION_HEADING } from '../panelStyles';
 import {
   useGateEvaluation,
   useCreateCertification,
@@ -89,17 +90,7 @@ export default function CertificationPanel({ engagementId }: Props) {
 
   return (
     <div style={{ fontFamily: BODY }}>
-      <h2
-        style={{
-          fontFamily: DISPLAY,
-          fontSize: 20,
-          fontWeight: 600,
-          color: C.navy,
-          margin: '0 0 20px',
-        }}
-      >
-        Certification
-      </h2>
+      <h2 style={{ ...PANEL_HEADING, margin: '0 0 20px' }}>Certification</h2>
 
       {/* Gate Status Cards */}
       {gateResult && (
@@ -279,17 +270,7 @@ export default function CertificationPanel({ engagementId }: Props) {
             background: C.cardBg,
           }}
         >
-          <h3
-            style={{
-              fontFamily: DISPLAY,
-              fontSize: 16,
-              fontWeight: 600,
-              color: C.navy,
-              margin: '0 0 16px',
-            }}
-          >
-            Certification Checklist
-          </h3>
+          <h3 style={SECTION_HEADING}>Certification Checklist</h3>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
             {CHECKLIST_ITEMS.map((item) => (

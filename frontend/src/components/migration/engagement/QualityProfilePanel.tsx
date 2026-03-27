@@ -28,7 +28,8 @@ class ChartErrorBoundary extends Component<
     return this.props.children;
   }
 }
-import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
+import { C, BODY, MONO } from '@/lib/designSystem';
+import { PANEL_HEADING } from '../panelStyles';
 import {
   useEngagement,
   useProfiles,
@@ -128,17 +129,7 @@ export default function QualityProfilePanel({ engagementId }: Props) {
               </svg>
             </div>
             <div style={{ textAlign: 'center' }}>
-              <h3
-                style={{
-                  fontFamily: DISPLAY,
-                  fontSize: 18,
-                  fontWeight: 600,
-                  color: C.navy,
-                  margin: '0 0 8px',
-                }}
-              >
-                Connect to Source Database
-              </h3>
+              <h3 style={{ ...PANEL_HEADING, margin: '0 0 8px' }}>Connect to Source Database</h3>
               <p
                 style={{
                   fontSize: 13,
@@ -231,17 +222,7 @@ export default function QualityProfilePanel({ engagementId }: Props) {
             )}
 
             <div style={{ textAlign: 'center' }}>
-              <h3
-                style={{
-                  fontFamily: DISPLAY,
-                  fontSize: 18,
-                  fontWeight: 600,
-                  color: C.navy,
-                  margin: '0 0 8px',
-                }}
-              >
-                Ready to Profile
-              </h3>
+              <h3 style={{ ...PANEL_HEADING, margin: '0 0 8px' }}>Ready to Profile</h3>
               <p
                 style={{
                   fontSize: 13,
@@ -312,10 +293,7 @@ export default function QualityProfilePanel({ engagementId }: Props) {
         >
           <h3
             style={{
-              fontFamily: DISPLAY,
-              fontSize: 16,
-              fontWeight: 600,
-              color: C.navy,
+              ...PANEL_HEADING,
               margin: '0 0 12px',
             }}
           >
@@ -361,17 +339,7 @@ export default function QualityProfilePanel({ engagementId }: Props) {
           }}
         >
           <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.border}` }}>
-            <h3
-              style={{
-                fontFamily: DISPLAY,
-                fontSize: 16,
-                fontWeight: 600,
-                color: C.navy,
-                margin: 0,
-              }}
-            >
-              Per-Table Scores
-            </h3>
+            <h3 style={{ ...PANEL_HEADING, margin: 0 }}>Per-Table Scores</h3>
           </div>
           <div style={{ overflowX: 'auto' }}>
             <table
@@ -484,10 +452,7 @@ export default function QualityProfilePanel({ engagementId }: Props) {
         <div style={{ marginTop: 20 }}>
           <h3
             style={{
-              fontFamily: DISPLAY,
-              fontSize: 16,
-              fontWeight: 600,
-              color: C.navy,
+              ...PANEL_HEADING,
               margin: '0 0 12px',
             }}
           >

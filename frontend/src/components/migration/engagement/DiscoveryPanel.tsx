@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
+import { C, BODY, MONO } from '@/lib/designSystem';
+import { PANEL_HEADING } from '../panelStyles';
 import {
   useEngagement,
   useConfigureSource,
@@ -123,11 +124,7 @@ export default function DiscoveryPanel({ engagementId, onAdvance }: Props) {
       >
         <h3
           style={{
-            fontFamily: DISPLAY,
-            fontSize: 16,
-            fontWeight: 600,
-            color: C.navy,
-            margin: '0 0 16px',
+            ...PANEL_HEADING,
           }}
         >
           Engagement Settings
@@ -191,17 +188,7 @@ export default function DiscoveryPanel({ engagementId, onAdvance }: Props) {
             marginBottom: 20,
           }}
         >
-          <h3
-            style={{
-              fontFamily: DISPLAY,
-              fontSize: 16,
-              fontWeight: 600,
-              color: C.navy,
-              margin: '0 0 16px',
-            }}
-          >
-            Configure Source Connection
-          </h3>
+          <h3 style={PANEL_HEADING}>Configure Source Connection</h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             {/* Driver */}
@@ -415,17 +402,7 @@ export default function DiscoveryPanel({ engagementId, onAdvance }: Props) {
               justifyContent: 'space-between',
             }}
           >
-            <h3
-              style={{
-                fontFamily: DISPLAY,
-                fontSize: 16,
-                fontWeight: 600,
-                color: C.navy,
-                margin: 0,
-              }}
-            >
-              Discovered Tables
-            </h3>
+            <h3 style={{ ...PANEL_HEADING, margin: 0 }}>Discovered Tables</h3>
             {tables && tables.length > 0 && (
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={selectAll} style={linkButtonStyle}>

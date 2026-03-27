@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
+import { PANEL_HEADING, SECTION_HEADING } from '../panelStyles';
 import {
   useCutoverPlan,
   useCreateCutoverPlan,
@@ -93,17 +94,7 @@ function PlanCreator({ engagementId, onCreated }: { engagementId: string; onCrea
         padding: 24,
       }}
     >
-      <h3
-        style={{
-          fontFamily: DISPLAY,
-          fontSize: 18,
-          fontWeight: 600,
-          color: C.navy,
-          margin: '0 0 16px',
-        }}
-      >
-        Create Cutover Plan
-      </h3>
+      <h3 style={PANEL_HEADING}>Create Cutover Plan</h3>
 
       <div style={{ marginBottom: 16 }}>
         <label
@@ -526,17 +517,7 @@ function RollbackControls({ engagementId }: { engagementId: string }) {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h4
-          style={{
-            fontFamily: DISPLAY,
-            fontSize: 15,
-            fontWeight: 600,
-            color: C.navy,
-            margin: 0,
-          }}
-        >
-          Rollback Controls
-        </h4>
+        <h4 style={{ ...SECTION_HEADING, margin: 0 }}>Rollback Controls</h4>
         {!showForm && (
           <button
             onClick={() => setShowForm(true)}
@@ -726,17 +707,7 @@ function GoLiveDisplay({ engagementId }: { engagementId: string }) {
         padding: 20,
       }}
     >
-      <h4
-        style={{
-          fontFamily: DISPLAY,
-          fontSize: 15,
-          fontWeight: 600,
-          color: C.navy,
-          margin: '0 0 12px',
-        }}
-      >
-        Go-Live Confirmation
-      </h4>
+      <h4 style={SECTION_HEADING}>Go-Live Confirmation</h4>
       <p style={{ fontSize: 13, color: C.textSecondary, margin: '0 0 16px', lineHeight: 1.5 }}>
         Confirm that the migration cutover is complete and the system is ready for production use.
         This action will mark the engagement as live.
@@ -867,17 +838,7 @@ export default function CutoverPanel({ engagementId }: Props) {
           padding: 20,
         }}
       >
-        <h3
-          style={{
-            fontFamily: DISPLAY,
-            fontSize: 18,
-            fontWeight: 600,
-            color: C.navy,
-            margin: '0 0 4px',
-          }}
-        >
-          {plan.name}
-        </h3>
+        <h3 style={{ ...PANEL_HEADING, margin: '0 0 4px' }}>{plan.name}</h3>
         <p style={{ fontSize: 12, color: C.textTertiary, margin: 0, fontFamily: MONO }}>
           Plan ID: {plan.plan_id.slice(0, 8)}...
         </p>
@@ -898,17 +859,7 @@ export default function CutoverPanel({ engagementId }: Props) {
           padding: 20,
         }}
       >
-        <h4
-          style={{
-            fontFamily: DISPLAY,
-            fontSize: 15,
-            fontWeight: 600,
-            color: C.navy,
-            margin: '0 0 16px',
-          }}
-        >
-          Cutover Steps
-        </h4>
+        <h4 style={{ ...SECTION_HEADING, margin: '0 0 16px' }}>Cutover Steps</h4>
         <StepTracker engagementId={engagementId} steps={plan.steps} />
       </div>
 

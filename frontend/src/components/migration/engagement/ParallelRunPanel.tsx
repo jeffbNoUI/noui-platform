@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
+import { C, BODY, MONO } from '@/lib/designSystem';
+import { PANEL_HEADING } from '../panelStyles';
 import {
   useReconciliationSummary,
   useP1Issues,
@@ -169,10 +170,7 @@ export default function ParallelRunPanel({ engagementId, onCertifyComplete }: Pr
         <div>
           <h3
             style={{
-              fontFamily: DISPLAY,
-              fontSize: 16,
-              fontWeight: 600,
-              color: C.navy,
+              ...PANEL_HEADING,
               margin: 0,
             }}
           >
@@ -204,10 +202,7 @@ export default function ParallelRunPanel({ engagementId, onCertifyComplete }: Pr
         >
           <h3
             style={{
-              fontFamily: DISPLAY,
-              fontSize: 16,
-              fontWeight: 600,
-              color: C.navy,
+              ...PANEL_HEADING,
               margin: 0,
             }}
           >

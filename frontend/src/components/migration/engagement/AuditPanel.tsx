@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
-import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
+import { C, BODY, MONO } from '@/lib/designSystem';
+import { PANEL_HEADING } from '../panelStyles';
 import { useAuditLog, useAuditExportCount, useExportAuditUrl } from '@/hooks/useMigrationApi';
 import type { AuditLogEntry, AuditLogFilters, AuditExportFilters } from '@/types/Migration';
 
@@ -239,9 +240,7 @@ function ExportDialog({
           boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
         }}
       >
-        <h3 style={{ fontFamily: DISPLAY, fontSize: 18, color: C.navy, margin: '0 0 16px' }}>
-          Export Audit Log
-        </h3>
+        <h3 style={PANEL_HEADING}>Export Audit Log</h3>
 
         <div style={{ marginBottom: 16 }}>
           <label
@@ -422,11 +421,7 @@ export default function AuditPanel({ engagementId }: Props) {
           marginBottom: 20,
         }}
       >
-        <h2
-          style={{ fontFamily: DISPLAY, fontSize: 20, fontWeight: 700, color: C.navy, margin: 0 }}
-        >
-          Audit Trail
-        </h2>
+        <h2 style={{ ...PANEL_HEADING, margin: 0 }}>Audit Trail</h2>
         <button
           onClick={() => setShowExport(true)}
           data-testid="export-btn"

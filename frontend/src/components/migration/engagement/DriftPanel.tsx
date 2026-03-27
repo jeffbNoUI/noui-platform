@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
+import { C, BODY, MONO } from '@/lib/designSystem';
+import { PANEL_HEADING } from '../panelStyles';
 import {
   useDriftRuns,
   useDriftRecords,
@@ -284,17 +285,7 @@ export default function DriftPanel({ engagementId }: Props) {
 
       {/* Run list */}
       <div>
-        <h3
-          style={{
-            fontFamily: DISPLAY,
-            fontSize: 16,
-            fontWeight: 600,
-            color: C.navy,
-            margin: '0 0 12px',
-          }}
-        >
-          Detection Runs
-        </h3>
+        <h3 style={{ ...PANEL_HEADING, margin: '0 0 12px' }}>Detection Runs</h3>
 
         {runsLoading ? (
           <div

@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
-import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
+import { C, BODY, MONO } from '@/lib/designSystem';
+import { PANEL_HEADING, SECTION_HEADING } from '../panelStyles';
 import {
   useSchemaVersions,
   useSchemaVersion,
@@ -96,18 +97,7 @@ export default function SchemaVersionPanel({ engagementId }: Props) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24, fontFamily: BODY }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <h3
-          style={{
-            fontFamily: DISPLAY,
-            fontSize: 18,
-            fontWeight: 600,
-            color: C.navy,
-            margin: 0,
-            flex: 1,
-          }}
-        >
-          Schema Versions
-        </h3>
+        <h3 style={{ ...PANEL_HEADING, margin: 0, flex: 1 }}>Schema Versions</h3>
 
         {selectedVersions.length === 2 && (
           <button
@@ -383,17 +373,7 @@ function FieldInventory({
         borderBottom: `1px solid ${C.border}`,
       }}
     >
-      <h4
-        style={{
-          fontFamily: DISPLAY,
-          fontSize: 14,
-          fontWeight: 600,
-          color: C.navy,
-          margin: '0 0 8px',
-        }}
-      >
-        Field Inventory
-      </h4>
+      <h4 style={{ ...SECTION_HEADING, margin: '0 0 8px' }}>Field Inventory</h4>
 
       {entities.length === 0 ? (
         <div style={{ fontSize: 12, color: C.textSecondary }}>No fields defined.</div>
@@ -511,15 +491,7 @@ function DiffViewer({ diff }: { diff: import('@/types/Migration').SchemaVersionD
           gap: 12,
         }}
       >
-        <h4
-          style={{
-            fontFamily: DISPLAY,
-            fontSize: 15,
-            fontWeight: 600,
-            color: C.navy,
-            margin: 0,
-          }}
-        >
+        <h4 style={{ ...SECTION_HEADING, margin: 0 }}>
           Schema Diff: {diff.version1.label} vs {diff.version2.label}
         </h4>
         <div style={{ flex: 1 }} />
@@ -725,17 +697,7 @@ function CreateVersionDialog({
           boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
         }}
       >
-        <h3
-          style={{
-            fontFamily: DISPLAY,
-            fontSize: 18,
-            fontWeight: 600,
-            color: C.navy,
-            margin: '0 0 16px',
-          }}
-        >
-          Create Schema Version
-        </h3>
+        <h3 style={PANEL_HEADING}>Create Schema Version</h3>
 
         {/* Label + Description */}
         <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
@@ -1090,17 +1052,7 @@ function ConfirmDialog({
           boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
         }}
       >
-        <h3
-          style={{
-            fontFamily: DISPLAY,
-            fontSize: 16,
-            fontWeight: 600,
-            color: C.navy,
-            margin: '0 0 12px',
-          }}
-        >
-          {title}
-        </h3>
+        <h3 style={SECTION_HEADING}>{title}</h3>
         <p style={{ fontSize: 13, color: C.textSecondary, margin: '0 0 20px', lineHeight: 1.5 }}>
           {message}
         </p>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { C, BODY, DISPLAY } from '@/lib/designSystem';
+import { C, BODY } from '@/lib/designSystem';
+import { PANEL_HEADING, SECTION_HEADING } from '../panelStyles';
 import {
   useGenerateReport,
   useReportStatus,
@@ -73,17 +74,7 @@ function ReportCard({
         background: C.cardBg,
       }}
     >
-      <h3
-        style={{
-          fontFamily: DISPLAY,
-          fontSize: 16,
-          fontWeight: 600,
-          color: C.navy,
-          margin: '0 0 8px',
-        }}
-      >
-        {reportType.label}
-      </h3>
+      <h3 style={{ ...SECTION_HEADING, margin: '0 0 8px' }}>{reportType.label}</h3>
       <p style={{ fontSize: 13, color: C.textSecondary, lineHeight: 1.5, margin: '0 0 16px' }}>
         {reportType.description}
       </p>
@@ -358,11 +349,7 @@ function RetentionPolicySection({ engagementId }: { engagementId: string }) {
           marginBottom: 12,
         }}
       >
-        <h3
-          style={{ fontFamily: DISPLAY, fontSize: 16, fontWeight: 600, color: C.navy, margin: 0 }}
-        >
-          Retention Policy
-        </h3>
+        <h3 style={{ ...SECTION_HEADING, margin: 0 }}>Retention Policy</h3>
         {!editing && (
           <button
             onClick={startEdit}
@@ -515,9 +502,7 @@ interface Props {
 export default function ReportPanel({ engagementId }: Props) {
   return (
     <div style={{ fontFamily: BODY, display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <h2 style={{ fontFamily: DISPLAY, fontSize: 20, fontWeight: 700, color: C.navy, margin: 0 }}>
-        Reports
-      </h2>
+      <h2 style={{ ...PANEL_HEADING, margin: 0 }}>Reports</h2>
 
       {/* Report generation cards */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -528,17 +513,7 @@ export default function ReportPanel({ engagementId }: Props) {
 
       {/* Report history */}
       <div>
-        <h3
-          style={{
-            fontFamily: DISPLAY,
-            fontSize: 16,
-            fontWeight: 600,
-            color: C.navy,
-            margin: '0 0 12px',
-          }}
-        >
-          Report History
-        </h3>
+        <h3 style={SECTION_HEADING}>Report History</h3>
         <ReportHistory engagementId={engagementId} />
       </div>
 

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
+import { C, BODY, MONO } from '@/lib/designSystem';
+import { PANEL_HEADING } from '../panelStyles';
 import { useEngagement, useBatchSizingRecommendation, useBatches } from '@/hooks/useMigrationApi';
 import AIRecommendationCard from '../ai/AIRecommendationCard';
 import CreateBatchDialog from '../dialogs/CreateBatchDialog';
@@ -87,17 +88,7 @@ export default function TransformationPanel({ engagementId, onSelectBatch }: Pro
             />
           </svg>
         </div>
-        <h3
-          style={{
-            fontFamily: DISPLAY,
-            fontSize: 18,
-            fontWeight: 600,
-            color: C.navy,
-            margin: 0,
-          }}
-        >
-          Batch Management
-        </h3>
+        <h3 style={{ ...PANEL_HEADING, margin: 0 }}>Batch Management</h3>
         <p
           style={{
             fontSize: 13,
@@ -150,17 +141,7 @@ export default function TransformationPanel({ engagementId, onSelectBatch }: Pro
           marginBottom: 16,
         }}
       >
-        <h3
-          style={{
-            fontFamily: DISPLAY,
-            fontSize: 18,
-            fontWeight: 600,
-            color: C.navy,
-            margin: 0,
-          }}
-        >
-          Transformation Batches
-        </h3>
+        <h3 style={{ ...PANEL_HEADING, margin: 0 }}>Transformation Batches</h3>
         <button
           onClick={() => setShowCreateDialog(true)}
           style={{

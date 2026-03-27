@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
+import { C, BODY, MONO } from '@/lib/designSystem';
+import { SECTION_HEADING } from '../panelStyles';
 import {
   useReconciliationSummary,
   useP1Issues,
@@ -416,17 +417,7 @@ export default function ReconciliationPanel({ engagementId }: Props) {
               marginBottom: 12,
             }}
           >
-            <h4
-              style={{
-                fontFamily: DISPLAY,
-                fontSize: 14,
-                fontWeight: 600,
-                color: C.navy,
-                margin: '0 0 8px',
-              }}
-            >
-              {section.label}
-            </h4>
+            <h4 style={{ ...SECTION_HEADING, margin: '0 0 8px' }}>{section.label}</h4>
             <div style={{ display: 'flex', gap: 16 }}>
               {(['MATCH', 'MINOR', 'MAJOR', 'ERROR'] as ReconciliationCategory[]).map((cat) => (
                 <span
@@ -684,17 +675,7 @@ export default function ReconciliationPanel({ engagementId }: Props) {
               gap: 8,
             }}
           >
-            <h4
-              style={{
-                fontFamily: DISPLAY,
-                fontSize: 14,
-                fontWeight: 600,
-                color: C.coral,
-                margin: 0,
-              }}
-            >
-              P1 Issues
-            </h4>
+            <h4 style={{ ...SECTION_HEADING, color: C.coral, margin: 0 }}>P1 Issues</h4>
             <span
               style={{
                 fontSize: 11,
@@ -982,17 +963,7 @@ function VarianceDetailTable({
         >
           &#9654;
         </span>
-        <h4
-          style={{
-            fontFamily: DISPLAY,
-            fontSize: 14,
-            fontWeight: 600,
-            color: C.navy,
-            margin: 0,
-          }}
-        >
-          All Reconciliation Records
-        </h4>
+        <h4 style={{ ...SECTION_HEADING, margin: 0 }}>All Reconciliation Records</h4>
         <span
           style={{
             fontSize: 11,
@@ -1344,17 +1315,7 @@ function ReconExecutionSection({
           justifyContent: 'space-between',
         }}
       >
-        <h4
-          style={{
-            fontFamily: DISPLAY,
-            fontSize: 14,
-            fontWeight: 600,
-            color: C.navy,
-            margin: 0,
-          }}
-        >
-          Rule-Based Execution
-        </h4>
+        <h4 style={{ ...SECTION_HEADING, margin: 0 }}>Rule-Based Execution</h4>
         <button
           onClick={() => setRunDialogOpen(true)}
           style={{
@@ -1473,17 +1434,7 @@ function ReconExecutionSection({
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h4
-              style={{
-                fontFamily: DISPLAY,
-                fontSize: 16,
-                fontWeight: 600,
-                color: C.navy,
-                margin: '0 0 16px',
-              }}
-            >
-              Run Recon Execution
-            </h4>
+            <h4 style={SECTION_HEADING}>Run Recon Execution</h4>
 
             <div style={{ marginBottom: 12 }}>
               <label

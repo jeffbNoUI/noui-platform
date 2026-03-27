@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { C, BODY, DISPLAY } from '@/lib/designSystem';
+import { PANEL_HEADING, SECTION_HEADING } from '../panelStyles';
 import { useJobs, useJobSummary, useCancelJob, useRetryJob } from '@/hooks/useMigrationApi';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Job, JobStatus, JobType } from '@/types/Migration';
@@ -170,17 +171,7 @@ export default function JobQueuePanel({ engagementId }: Props) {
       </div>
 
       {/* Job list header */}
-      <h3
-        style={{
-          fontFamily: DISPLAY,
-          fontSize: 16,
-          fontWeight: 600,
-          color: C.navy,
-          margin: '0 0 12px',
-        }}
-      >
-        Job Queue
-      </h3>
+      <h3 style={{ ...PANEL_HEADING, margin: '0 0 12px' }}>Job Queue</h3>
 
       {/* Empty state */}
       {sortedJobs.length === 0 && (
@@ -234,17 +225,7 @@ export default function JobQueuePanel({ engagementId }: Props) {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h4
-              style={{
-                fontFamily: DISPLAY,
-                fontSize: 16,
-                fontWeight: 600,
-                color: C.navy,
-                margin: '0 0 12px',
-              }}
-            >
-              Are you sure?
-            </h4>
+            <h4 style={SECTION_HEADING}>Are you sure?</h4>
             <p
               style={{ fontSize: 14, color: C.textSecondary, margin: '0 0 20px', lineHeight: 1.5 }}
             >
