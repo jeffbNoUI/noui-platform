@@ -67,6 +67,8 @@ import SchemaVersionPanel from './SchemaVersionPanel';
 import AttentionQueue from '../attention/AttentionQueue';
 import JobQueuePanel from './JobQueuePanel';
 import ReconRulesPanel from './ReconRulesPanel';
+import AuditPanel from './AuditPanel';
+import ReportPanel from './ReportPanel';
 import ActivityLog from './ActivityLog';
 
 type Tab =
@@ -81,6 +83,8 @@ type Tab =
   | 'drift'
   | 'schema'
   | 'risks'
+  | 'audit'
+  | 'reports'
   | 'attention'
   | 'jobs';
 
@@ -96,6 +100,8 @@ const TABS: { key: Tab; label: string; statusFilter?: EngagementStatus[] }[] = [
   { key: 'drift', label: 'Drift', statusFilter: ['GO_LIVE', 'CUTOVER_IN_PROGRESS'] },
   { key: 'schema', label: 'Schema' },
   { key: 'risks', label: 'Risks' },
+  { key: 'audit', label: 'Audit' },
+  { key: 'reports', label: 'Reports' },
   { key: 'attention', label: 'Attention' },
   { key: 'jobs', label: 'Jobs' },
 ];
@@ -472,6 +478,8 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
             {activeTab === 'drift' && <DriftPanel engagementId={engagementId} />}
             {activeTab === 'schema' && <SchemaVersionPanel engagementId={engagementId} />}
             {activeTab === 'risks' && <RisksPlaceholder engagementId={engagementId} />}
+            {activeTab === 'audit' && <AuditPanel engagementId={engagementId} />}
+            {activeTab === 'reports' && <ReportPanel engagementId={engagementId} />}
             {activeTab === 'attention' && <AttentionQueue engagementId={engagementId} />}
             {activeTab === 'jobs' && <JobQueuePanel engagementId={engagementId} />}
           </TabErrorBoundary>
