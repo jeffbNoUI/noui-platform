@@ -63,6 +63,14 @@ import type {
   ReconExecution,
   ReconMismatchPage,
   TriggerReconExecutionRequest,
+  DriftRun,
+  DriftRecord,
+  DriftSummary,
+  DriftSchedule,
+  UpdateDriftScheduleRequest,
+  SchemaVersion,
+  CreateSchemaVersionRequest,
+  SchemaVersionDiff,
 } from '@/types/Migration';
 
 const BASE = '/api/v1/migration';
@@ -421,4 +429,52 @@ export const migrationAPI = {
 
   triggerReconExecution: (engagementId: string, req: TriggerReconExecutionRequest) =>
     postAPI<ReconExecution>(`${BASE}/engagements/${engagementId}/recon-executions`, req, RAW),
+
+  // ─── Drift Detection ─────────────────────────────────────────────────────
+  getDriftRuns: (engagementId: string, params?: { page?: number; per_page?: number }) =>
+    fetchAPI<{ runs: DriftRun[]; total: number }>(
+      `${BASE}/engagements/${engagementId}/drift/runs${params ? toQueryString(params) : ''}`,
+      RAW,
+    ),
+
+  getDriftRecords: (
+    engagementId: string,
+    runId: string,
+    params?: { severity?: string; page?: number; per_page?: number },
+  ) =>
+    fetchAPI<{ records: DriftRecord[]; total: number }>(
+      `${BASE}/engagements/${engagementId}/drift/runs/${runId}/records${params ? toQueryString(params) : ''}`,
+      RAW,
+    ),
+
+  getDriftSummary: (engagementId: string) =>
+    fetchAPI<DriftSummary>(`${BASE}/engagements/${engagementId}/drift/summary`, RAW),
+
+  triggerDriftDetection: (engagementId: string) =>
+    postAPI<DriftRun>(`${BASE}/engagements/${engagementId}/drift/detect`, {}, RAW),
+
+  getDriftSchedule: (engagementId: string) =>
+    fetchAPI<DriftSchedule>(`${BASE}/engagements/${engagementId}/drift/schedule`, RAW),
+
+  updateDriftSchedule: (engagementId: string, req: UpdateDriftScheduleRequest) =>
+    patchAPI<DriftSchedule>(`${BASE}/engagements/${engagementId}/drift/schedule`, req, RAW),
+
+  // ─── Schema Versioning ────────────────────────────────────────────────────
+  getSchemaVersions: (tenantId: string) =>
+    fetchAPI<SchemaVersion[]>(`${BASE}/tenants/${tenantId}/schema-versions`, RAW),
+
+  getSchemaVersion: (versionId: string) =>
+    fetchAPI<SchemaVersion>(`${BASE}/schema-versions/${versionId}`, RAW),
+
+  createSchemaVersion: (tenantId: string, req: CreateSchemaVersionRequest) =>
+    postAPI<SchemaVersion>(`${BASE}/tenants/${tenantId}/schema-versions`, req, RAW),
+
+  activateSchemaVersion: (versionId: string) =>
+    postAPI<SchemaVersion>(`${BASE}/schema-versions/${versionId}/activate`, {}, RAW),
+
+  getSchemaVersionDiff: (versionId1: string, versionId2: string) =>
+    fetchAPI<SchemaVersionDiff>(
+      `${BASE}/schema-versions/diff?v1=${versionId1}&v2=${versionId2}`,
+      RAW,
+    ),
 };

@@ -62,6 +62,8 @@ import DiscoveryPanel from './DiscoveryPanel';
 import ParallelRunPanel from './ParallelRunPanel';
 import PhaseGateDialog from './PhaseGateDialog';
 import CutoverPanel from './CutoverPanel';
+import DriftPanel from './DriftPanel';
+import SchemaVersionPanel from './SchemaVersionPanel';
 import AttentionQueue from '../attention/AttentionQueue';
 import JobQueuePanel from './JobQueuePanel';
 import ReconRulesPanel from './ReconRulesPanel';
@@ -76,11 +78,13 @@ type Tab =
   | 'parallel-run'
   | 'cutover'
   | 'recon-rules'
+  | 'drift'
+  | 'schema'
   | 'risks'
   | 'attention'
   | 'jobs';
 
-const TABS: { key: Tab; label: string }[] = [
+const TABS: { key: Tab; label: string; statusFilter?: EngagementStatus[] }[] = [
   { key: 'discovery', label: 'Discovery' },
   { key: 'quality', label: 'Quality Profile' },
   { key: 'mappings', label: 'Mappings' },
@@ -89,6 +93,8 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'parallel-run', label: 'Parallel Run' },
   { key: 'cutover', label: 'Cutover' },
   { key: 'recon-rules', label: 'Recon Rules' },
+  { key: 'drift', label: 'Drift', statusFilter: ['GO_LIVE', 'CUTOVER_IN_PROGRESS'] },
+  { key: 'schema', label: 'Schema' },
   { key: 'risks', label: 'Risks' },
   { key: 'attention', label: 'Attention' },
   { key: 'jobs', label: 'Jobs' },
@@ -134,8 +140,9 @@ function defaultTab(status: EngagementStatus): Tab {
     case 'PARALLEL_RUN':
       return 'parallel-run';
     case 'CUTOVER_IN_PROGRESS':
-    case 'GO_LIVE':
       return 'cutover';
+    case 'GO_LIVE':
+      return 'drift';
     case 'COMPLETE':
       return 'reconciliation';
     default:
@@ -399,7 +406,9 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
             padding: '0 24px',
           }}
         >
-          {TABS.map((tab) => (
+          {TABS.filter(
+            (tab) => !tab.statusFilter || tab.statusFilter.includes(engagement.status),
+          ).map((tab) => (
             <button
               key={tab.key}
               onClick={() => handleTabChange(tab.key)}
@@ -460,6 +469,8 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
             {activeTab === 'parallel-run' && <ParallelRunPanel engagementId={engagementId} />}
             {activeTab === 'cutover' && <CutoverPanel engagementId={engagementId} />}
             {activeTab === 'recon-rules' && <ReconRulesPanel engagementId={engagementId} />}
+            {activeTab === 'drift' && <DriftPanel engagementId={engagementId} />}
+            {activeTab === 'schema' && <SchemaVersionPanel engagementId={engagementId} />}
             {activeTab === 'risks' && <RisksPlaceholder engagementId={engagementId} />}
             {activeTab === 'attention' && <AttentionQueue engagementId={engagementId} />}
             {activeTab === 'jobs' && <JobQueuePanel engagementId={engagementId} />}

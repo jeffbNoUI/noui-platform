@@ -490,7 +490,9 @@ export type WSEventType =
   | 'job_failed'
   | 'job_cancelled'
   | 'recon_rules_activated'
-  | 'recon_execution_completed';
+  | 'recon_execution_completed'
+  | 'drift_detection_completed'
+  | 'drift_detection_started';
 
 export interface WSEvent {
   type: WSEventType;
@@ -780,4 +782,110 @@ export interface ReconMismatchPage {
 export interface TriggerReconExecutionRequest {
   parallel_run_id: string;
   ruleset_id?: string;
+}
+
+// ─── Drift Detection Types ──────────────────────────────────────────────────
+
+export type DriftStatus = 'CLEAN' | 'DRIFTED' | 'CRITICAL';
+export type DriftSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+export type DriftChangeType = 'ADDED' | 'REMOVED' | 'MODIFIED' | 'TYPE_CHANGED';
+export type DriftType = 'SCHEMA' | 'DATA' | 'BOTH';
+export type DriftRunStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+
+export interface DriftRun {
+  run_id: string;
+  engagement_id: string;
+  drift_type: DriftType;
+  status: DriftRunStatus;
+  detected_changes: number;
+  critical_changes: number;
+  started_at: string;
+  completed_at: string | null;
+}
+
+export interface DriftRecord {
+  record_id: string;
+  run_id: string;
+  severity: DriftSeverity;
+  change_type: DriftChangeType;
+  entity_name: string;
+  field_name: string | null;
+  old_value: unknown;
+  new_value: unknown;
+  detail: Record<string, unknown>;
+  detected_at: string;
+}
+
+export interface DriftSummary {
+  engagement_id: string;
+  status: DriftStatus;
+  last_run_at: string | null;
+  total_changes: number;
+  critical_count: number;
+  high_count: number;
+  medium_count: number;
+  low_count: number;
+}
+
+export interface DriftSchedule {
+  engagement_id: string;
+  interval_hours: number;
+  enabled: boolean;
+  next_run_at: string | null;
+}
+
+export interface UpdateDriftScheduleRequest {
+  interval_hours?: number;
+  enabled?: boolean;
+}
+
+// ─── Schema Versioning Types ────────────────────────────────────────────────
+
+export interface SchemaVersionField {
+  entity: string;
+  field_name: string;
+  data_type: string;
+  is_required: boolean;
+  description: string;
+}
+
+export interface SchemaVersion {
+  version_id: string;
+  tenant_id: string;
+  label: string;
+  description: string;
+  is_active: boolean;
+  fields: SchemaVersionField[];
+  field_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateSchemaVersionRequest {
+  label: string;
+  description: string;
+  fields: Omit<SchemaVersionField, 'version_id'>[];
+}
+
+export type DiffChangeType = 'ADDED' | 'REMOVED' | 'CHANGED';
+
+export interface SchemaFieldDiff {
+  entity: string;
+  field_name: string;
+  change_type: DiffChangeType;
+  old_data_type?: string;
+  new_data_type?: string;
+  old_required?: boolean;
+  new_required?: boolean;
+  old_description?: string;
+  new_description?: string;
+}
+
+export interface SchemaVersionDiff {
+  version1: { version_id: string; label: string };
+  version2: { version_id: string; label: string };
+  changes: SchemaFieldDiff[];
+  added_count: number;
+  removed_count: number;
+  changed_count: number;
 }

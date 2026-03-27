@@ -69,6 +69,11 @@ export function useMigrationEvents(engagementId: string | null, token?: string) 
           queryClient.invalidateQueries({ queryKey: ['migration', 'recon-execution'] });
           queryClient.invalidateQueries({ queryKey: ['migration', 'recon-mismatches'] });
           break;
+        case 'drift_detection_completed':
+        case 'drift_detection_started':
+          queryClient.invalidateQueries({ queryKey: ['migration', 'drift-runs'] });
+          queryClient.invalidateQueries({ queryKey: ['migration', 'drift-summary'] });
+          break;
       }
     },
     [queryClient],
