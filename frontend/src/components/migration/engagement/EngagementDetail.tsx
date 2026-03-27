@@ -277,21 +277,23 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
 
   return (
     <div
+      className="flex flex-col lg:flex-row"
       style={{
-        display: 'flex',
         minHeight: '100%',
         fontFamily: BODY,
       }}
     >
       {/* Main content */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div className="flex-1 min-w-0 flex flex-col" style={{ overflow: 'hidden' }}>
         {/* Header */}
         <div
+          className="px-4 lg:px-6"
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: 12,
-            padding: '16px 24px',
+            paddingTop: 16,
+            paddingBottom: 16,
             borderBottom: `1px solid ${C.border}`,
             background: C.cardBg,
           }}
@@ -390,6 +392,8 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
           style={{
             borderBottom: `1px solid ${C.border}`,
             background: C.cardBg,
+            overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch',
           }}
         >
           <PhaseStepper
@@ -413,8 +417,11 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
             gap: 0,
             borderBottom: `1px solid ${C.border}`,
             background: C.cardBg,
-            padding: '0 24px',
+            overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'none',
           }}
+          className="px-4 lg:px-6"
         >
           {TABS.filter(
             (tab) => !tab.statusFilter || tab.statusFilter.includes(engagement.status),
@@ -433,10 +440,12 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
                 borderBottom:
                   activeTab === tab.key ? `2px solid ${C.sage}` : '2px solid transparent',
                 cursor: 'pointer',
-                transition: 'color 0.15s, border-color 0.15s',
+                transition: 'all 0.15s ease',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
+                flexShrink: 0,
+                whiteSpace: 'nowrap',
               }}
             >
               {tab.label}
@@ -460,7 +469,7 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
         </div>
 
         {/* Tab content */}
-        <div style={{ flex: 1, padding: 24, overflowY: 'auto' }}>
+        <div className="p-4 lg:p-6" style={{ flex: 1, overflowY: 'auto' }}>
           <TabErrorBoundary tabName={activeTab}>
             {activeTab === 'discovery' && (
               <DiscoveryPanel
@@ -492,7 +501,9 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
       </div>
 
       {/* Activity Log sidebar */}
-      <ActivityLog engagementId={engagementId} events={events} connected={connected} />
+      <div className="migration-activity-sidebar" style={{ flexShrink: 0 }}>
+        <ActivityLog engagementId={engagementId} events={events} connected={connected} />
+      </div>
 
       {/* Phase Gate Dialog */}
       <PhaseGateDialog
