@@ -351,8 +351,8 @@ describe('CertificationPanel', () => {
     const passingCard = screen.getByTestId('gate-card-passing_metric');
     const failingCard = screen.getByTestId('gate-card-failing_metric');
 
-    expect(passingCard.style.borderColor).toBe('rgb(34, 197, 94)');
-    expect(failingCard.style.borderColor).toBe('rgb(239, 68, 68)');
+    expect(passingCard.style.borderColor).toBe('rgb(91, 138, 114)');
+    expect(failingCard.style.borderColor).toBe('rgb(212, 114, 92)');
   });
 
   it('disables evaluate button when engagement is COMPLETE', () => {

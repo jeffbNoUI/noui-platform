@@ -1,5 +1,12 @@
 import { useState, useMemo } from 'react';
-import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
+import { C, BODY, MONO } from '@/lib/designSystem';
+import {
+  PANEL_HEADING,
+  SECTION_HEADING,
+  PANEL_CARD,
+  TABLE_HEADER,
+  TABLE_CELL,
+} from '../panelStyles';
 import {
   useGateEvaluation,
   useCreateCertification,
@@ -89,17 +96,7 @@ export default function CertificationPanel({ engagementId }: Props) {
 
   return (
     <div style={{ fontFamily: BODY }}>
-      <h2
-        style={{
-          fontFamily: DISPLAY,
-          fontSize: 20,
-          fontWeight: 600,
-          color: C.navy,
-          margin: '0 0 20px',
-        }}
-      >
-        Certification
-      </h2>
+      <h2 style={{ ...PANEL_HEADING, margin: '0 0 20px' }}>Certification</h2>
 
       {/* Gate Status Cards */}
       {gateResult && (
@@ -162,7 +159,7 @@ export default function CertificationPanel({ engagementId }: Props) {
             marginBottom: 24,
             padding: 16,
             borderRadius: 8,
-            border: `2px solid ${gateResult.passed ? '#22C55E' : '#EF4444'}`,
+            border: `2px solid ${gateResult.passed ? C.sage : C.coral}`,
             background: gateResult.passed ? '#F0FDF4' : '#FEF2F2',
           }}
         >
@@ -174,7 +171,7 @@ export default function CertificationPanel({ engagementId }: Props) {
                 fontWeight: 700,
                 padding: '4px 12px',
                 borderRadius: 6,
-                background: gateResult.passed ? '#22C55E' : '#EF4444',
+                background: gateResult.passed ? C.sage : C.coral,
                 color: 'white',
               }}
             >
@@ -197,7 +194,7 @@ export default function CertificationPanel({ engagementId }: Props) {
                   fontSize: 13,
                 }}
               >
-                <span style={{ color: m.passing ? '#22C55E' : '#EF4444', fontWeight: 600 }}>
+                <span style={{ color: m.passing ? C.sage : C.coral, fontWeight: 600 }}>
                   {m.passing ? '\u2713' : '\u2717'}
                 </span>
                 <span style={{ color: C.text, fontWeight: 500 }}>
@@ -225,7 +222,7 @@ export default function CertificationPanel({ engagementId }: Props) {
                 style={{
                   fontSize: 12,
                   fontWeight: 600,
-                  color: '#EF4444',
+                  color: C.coral,
                   margin: '0 0 6px',
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
@@ -273,23 +270,10 @@ export default function CertificationPanel({ engagementId }: Props) {
           data-testid="certification-form"
           style={{
             marginBottom: 24,
-            padding: 20,
-            borderRadius: 8,
-            border: `1px solid ${C.border}`,
-            background: C.cardBg,
+            ...PANEL_CARD,
           }}
         >
-          <h3
-            style={{
-              fontFamily: DISPLAY,
-              fontSize: 16,
-              fontWeight: 600,
-              color: C.navy,
-              margin: '0 0 16px',
-            }}
-          >
-            Certification Checklist
-          </h3>
+          <h3 style={SECTION_HEADING}>Certification Checklist</h3>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
             {CHECKLIST_ITEMS.map((item) => (
@@ -362,7 +346,7 @@ export default function CertificationPanel({ engagementId }: Props) {
                 padding: '8px 12px',
                 borderRadius: 6,
                 background: '#FEE2E2',
-                color: '#EF4444',
+                color: C.coral,
                 fontSize: 12,
                 fontWeight: 500,
               }}
@@ -416,10 +400,7 @@ export default function CertificationPanel({ engagementId }: Props) {
           data-testid="latest-certification"
           style={{
             marginBottom: 24,
-            padding: 16,
-            borderRadius: 8,
-            border: `1px solid ${C.border}`,
-            background: C.cardBg,
+            ...PANEL_CARD,
           }}
         >
           <h3
@@ -459,7 +440,7 @@ export default function CertificationPanel({ engagementId }: Props) {
                 style={{
                   fontFamily: MONO,
                   fontWeight: 600,
-                  color: latestCert.p1_count > 0 ? '#EF4444' : C.sage,
+                  color: latestCert.p1_count > 0 ? C.coral : C.sage,
                 }}
               >
                 {latestCert.p1_count}
@@ -476,7 +457,7 @@ export default function CertificationPanel({ engagementId }: Props) {
                     padding: '2px 8px',
                     borderRadius: 4,
                     background: val ? '#DCFCE7' : '#FEE2E2',
-                    color: val ? '#22C55E' : '#EF4444',
+                    color: val ? C.sage : C.coral,
                     fontWeight: 500,
                   }}
                 >
@@ -557,7 +538,7 @@ function GateStatusCard({ metric }: { metric: GateMetric }) {
       style={{
         padding: 14,
         borderRadius: 8,
-        border: `2px solid ${metric.passing ? '#22C55E' : '#EF4444'}`,
+        border: `2px solid ${metric.passing ? C.sage : C.coral}`,
         background: C.cardBg,
       }}
     >
@@ -579,7 +560,7 @@ function GateStatusCard({ metric }: { metric: GateMetric }) {
             padding: '2px 8px',
             borderRadius: 4,
             background: metric.passing ? '#DCFCE7' : '#FEE2E2',
-            color: metric.passing ? '#22C55E' : '#EF4444',
+            color: metric.passing ? C.sage : C.coral,
           }}
         >
           {metric.passing ? 'PASS' : 'FAIL'}
@@ -608,7 +589,7 @@ function GateStatusCard({ metric }: { metric: GateMetric }) {
               height: '100%',
               borderRadius: 3,
               width: `${progressPct}%`,
-              background: metric.passing ? '#22C55E' : '#EF4444',
+              background: metric.passing ? C.sage : C.coral,
               transition: 'width 0.3s',
             }}
           />
@@ -639,16 +620,11 @@ function formatThreshold(m: GateMetric): string {
 }
 
 const certThStyle: React.CSSProperties = {
+  ...TABLE_HEADER,
   padding: '8px 12px',
-  fontSize: 11,
-  fontWeight: 600,
-  color: C.textSecondary,
-  textTransform: 'uppercase',
-  letterSpacing: '0.05em',
-  fontFamily: BODY,
 };
 
 const certTdStyle: React.CSSProperties = {
-  padding: '10px 12px',
+  ...TABLE_CELL,
   verticalAlign: 'middle',
 };

@@ -256,6 +256,72 @@ Summary of levels:
 
 **Critical:** All benefit calculations, eligibility determinations, and rule evaluations work correctly without any AI service. AI affects workspace composition and orchestration only.
 
+## Service Inventory
+
+All services are Docker-internal only — no host port mappings. All access goes through nginx at `localhost:3000`. See `infrastructure/ports.env` for the full port registry.
+
+| Service | Port | Directory | Purpose |
+|---------|------|-----------|---------|
+| Frontend (nginx) | 3000 | `frontend/` | React UI + reverse proxy |
+| DataAccess | 8081 | `platform/dataaccess/` | Member/salary/benefit queries |
+| Intelligence | 8082 | `platform/intelligence/` | Eligibility, benefit calculation, DRO |
+| CRM | 8083 | `platform/crm/` | Contact management, interaction history |
+| Correspondence | 8085 | `platform/correspondence/` | Template rendering, merge fields |
+| Data Quality | 8086 | `platform/dataquality/` | Data quality checks, scoring |
+| Knowledge Base | 8087 | `platform/knowledgebase/` | Articles, stage help, rule references |
+| Case Management | 8088 | `platform/casemanagement/` | Case tracking, stage workflow |
+| Preferences | 8089 | `platform/preferences/` | User preferences |
+| Connector | 8090 | `connector/` | Schema introspection, concept tagging, monitoring |
+| Health Aggregator | 8091 | `platform/healthagg/` | Health aggregation dashboard |
+| Issues | 8092 | `platform/issues/` | Error self-reporting |
+| Security | 8093 | `platform/security/` | Security events |
+| Employer Portal | 8094 | `platform/employer-portal/` | Employer portal, divisions, alerts |
+| Employer Reporting | 8095 | `platform/employer-reporting/` | File uploads, reporting |
+| Employer Enrollment | 8096 | `platform/employer-enrollment/` | Member enrollment submissions |
+| Employer Terminations | 8097 | `platform/employer-terminations/` | Termination certifications, refunds |
+| Employer WARET | 8098 | `platform/employer-waret/` | WARET designations |
+| Employer SCP | 8099 | `platform/employer-scp/` | Service credit purchase |
+| Migration | 8100 | `platform/migration/` | Migration engine (profiling, mapping, loading) |
+| Migration Intelligence | 8101 | `migration-intelligence/` | Migration ML service (Python) |
+
+## Migration Service Layer
+
+The migration pipeline (`platform/migration/`) provides end-to-end legacy system migration capabilities across 15 packages with 38 service contracts. The pipeline is designed for pension administration system migrations where data integrity is paramount — all monetary reconciliation uses `math/big.Rat` for exact arithmetic.
+
+### Pipeline Data Flow
+
+```
+Profiling → Mapping → Transformation → Reconciliation → Parallel Run → Cutover → Go-Live
+```
+
+### Packages
+
+| Package | Purpose |
+|---------|---------|
+| `profiler/` | 5-level progressive profiling (L1 inventory → L5 rules extraction) |
+| `mapper/` | AI-assisted field + code mapping with acknowledgment workflow |
+| `transformer/` | Batch ETL with exception handling + AI clustering |
+| `reconciler/` | Tier-based scoring + rule-based execution engine (`math/big.Rat`) |
+| `parallel/` | Full-dataset comparison with variance tracking |
+| `cutover/` | Plan/step/rollback/go-live lifecycle management |
+| `drift/` | Schema + data monitoring with scheduled runs |
+| `schema_version/` | Immutable schema versions with diff capabilities |
+| `phase_gate/` | Server-side metric evaluation with notification triggers |
+| `audit/` | Immutable log with retention policies + PDF reports |
+| `job_queue/` | Background execution with stale recovery |
+| `recon_rules/` | Configurable reconciliation rules with versioning |
+| `risk/` | Risk register with severity tracking |
+| `certification/` | Gate certification workflow |
+| `reports/` | Report generation and management |
+
+### AI Boundaries in Migration
+
+AI assists with schema mapping proposals and exception clustering during transformation. All AI-proposed mappings require human acknowledgment before use. Reconciliation and benefit calculations remain fully deterministic — no AI in the monetary path.
+
+### Migration Intelligence Service
+
+A separate Python service (`migration-intelligence/`, port 8101) provides ML-based signal scoring for schema mapping confidence and transformation exception clustering. It communicates with the Go migration service via REST API.
+
 ## Technology Stack
 - **Backend:** Go for performance-critical services
 - **Frontend:** React + TypeScript + Tailwind + shadcn/ui

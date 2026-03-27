@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { C, BODY, DISPLAY } from '@/lib/designSystem';
+import { PANEL_HEADING, SECTION_HEADING, PANEL_CARD, PanelEmptyState } from '../panelStyles';
 import { useJobs, useJobSummary, useCancelJob, useRetryJob } from '@/hooks/useMigrationApi';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Job, JobStatus, JobType } from '@/types/Migration';
@@ -153,10 +154,8 @@ export default function JobQueuePanel({ engagementId }: Props) {
           <div
             key={stat.label}
             style={{
+              ...PANEL_CARD,
               padding: '16px 20px',
-              borderRadius: 10,
-              border: `1px solid ${C.border}`,
-              background: C.cardBg,
             }}
           >
             <div style={{ fontSize: 24, fontWeight: 700, color: stat.color, fontFamily: DISPLAY }}>
@@ -170,32 +169,11 @@ export default function JobQueuePanel({ engagementId }: Props) {
       </div>
 
       {/* Job list header */}
-      <h3
-        style={{
-          fontFamily: DISPLAY,
-          fontSize: 16,
-          fontWeight: 600,
-          color: C.navy,
-          margin: '0 0 12px',
-        }}
-      >
-        Job Queue
-      </h3>
+      <h3 style={{ ...PANEL_HEADING, margin: '0 0 12px' }}>Job Queue</h3>
 
       {/* Empty state */}
       {sortedJobs.length === 0 && (
-        <div
-          style={{
-            padding: '32px 16px',
-            textAlign: 'center',
-            color: C.textSecondary,
-            fontSize: 14,
-            border: `1px dashed ${C.border}`,
-            borderRadius: 8,
-          }}
-        >
-          No jobs yet for this engagement.
-        </div>
+        <PanelEmptyState message="No jobs yet for this engagement." icon="📋" />
       )}
 
       {/* Job rows */}
@@ -234,17 +212,7 @@ export default function JobQueuePanel({ engagementId }: Props) {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h4
-              style={{
-                fontFamily: DISPLAY,
-                fontSize: 16,
-                fontWeight: 600,
-                color: C.navy,
-                margin: '0 0 12px',
-              }}
-            >
-              Are you sure?
-            </h4>
+            <h4 style={SECTION_HEADING}>Are you sure?</h4>
             <p
               style={{ fontSize: 14, color: C.textSecondary, margin: '0 0 20px', lineHeight: 1.5 }}
             >
@@ -315,10 +283,8 @@ function JobRow({
         display: 'flex',
         alignItems: 'center',
         gap: 12,
+        ...PANEL_CARD,
         padding: '12px 16px',
-        borderRadius: 8,
-        border: `1px solid ${C.border}`,
-        background: C.cardBg,
         marginBottom: 8,
       }}
     >

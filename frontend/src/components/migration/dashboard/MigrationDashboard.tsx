@@ -34,11 +34,14 @@ export default function MigrationDashboard({ onSelectEngagement }: MigrationDash
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 49px)' }}>
       {/* Main content area */}
-      <div style={{ flex: 1, display: 'flex' }}>
+      <div className="flex flex-col lg:flex-row" style={{ flex: 1 }}>
         {/* Left: main content */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        <div className="flex-1 min-w-0 flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-5" style={{ fontFamily: BODY }}>
+          <div
+            className="flex items-center justify-between px-4 lg:px-6 py-5"
+            style={{ fontFamily: BODY }}
+          >
             <h1
               style={{
                 fontFamily: DISPLAY,
@@ -79,12 +82,12 @@ export default function MigrationDashboard({ onSelectEngagement }: MigrationDash
           </div>
 
           {/* Summary cards */}
-          <div className="px-6 pb-5">
+          <div className="px-4 lg:px-6 pb-5">
             <SummaryCards summary={summary} isLoading={summaryLoading} />
           </div>
 
           {/* Engagement list */}
-          <div className="px-6 pb-6" style={{ flex: 1 }}>
+          <div className="px-4 lg:px-6 pb-6" style={{ flex: 1 }}>
             <EngagementList
               engagements={engagements}
               isLoading={engagementsLoading}

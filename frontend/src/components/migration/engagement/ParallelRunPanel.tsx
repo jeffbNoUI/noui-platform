@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
+import { C, BODY, MONO } from '@/lib/designSystem';
+import { PANEL_HEADING, PANEL_CARD, PanelSkeleton } from '../panelStyles';
 import {
   useReconciliationSummary,
   useP1Issues,
@@ -27,7 +28,7 @@ const CHECKLIST: ChecklistItem[] = [
 ];
 
 export default function ParallelRunPanel({ engagementId, onCertifyComplete }: Props) {
-  const { data: reconSummary } = useReconciliationSummary(engagementId);
+  const { data: reconSummary, isLoading: summaryLoading } = useReconciliationSummary(engagementId);
   const { data: p1Issues } = useP1Issues(engagementId);
   const { data: existingCert } = useCertification(engagementId);
   const certifyMutation = useCertifyEngagement();
@@ -103,6 +104,8 @@ export default function ParallelRunPanel({ engagementId, onCertifyComplete }: Pr
     );
   };
 
+  if (summaryLoading) return <PanelSkeleton />;
+
   return (
     <div style={{ fontFamily: BODY }}>
       {/* Already-certified banner */}
@@ -139,10 +142,7 @@ export default function ParallelRunPanel({ engagementId, onCertifyComplete }: Pr
       {/* Status card */}
       <div
         style={{
-          background: C.cardBg,
-          borderRadius: 10,
-          border: `1px solid ${C.border}`,
-          padding: 20,
+          ...PANEL_CARD,
           marginBottom: 20,
           display: 'flex',
           alignItems: 'center',
@@ -169,10 +169,7 @@ export default function ParallelRunPanel({ engagementId, onCertifyComplete }: Pr
         <div>
           <h3
             style={{
-              fontFamily: DISPLAY,
-              fontSize: 16,
-              fontWeight: 600,
-              color: C.navy,
+              ...PANEL_HEADING,
               margin: 0,
             }}
           >
@@ -189,10 +186,9 @@ export default function ParallelRunPanel({ engagementId, onCertifyComplete }: Pr
       {/* Go/No-Go Checklist */}
       <div
         style={{
-          background: C.cardBg,
-          borderRadius: 10,
-          border: `1px solid ${C.border}`,
+          ...PANEL_CARD,
           overflow: 'hidden',
+          padding: 0,
           marginBottom: 20,
         }}
       >
@@ -204,10 +200,7 @@ export default function ParallelRunPanel({ engagementId, onCertifyComplete }: Pr
         >
           <h3
             style={{
-              fontFamily: DISPLAY,
-              fontSize: 16,
-              fontWeight: 600,
-              color: C.navy,
+              ...PANEL_HEADING,
               margin: 0,
             }}
           >

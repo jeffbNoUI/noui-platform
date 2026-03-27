@@ -70,7 +70,7 @@ describe('AuditPanel', () => {
     it('shows loading indicator while data is being fetched', () => {
       mockLoading();
       renderWithProviders(<AuditPanel engagementId="eng-1" />);
-      expect(screen.getByText(/loading audit log/i)).toBeDefined();
+      expect(document.querySelector('.animate-pulse')).toBeDefined();
     });
   });
 

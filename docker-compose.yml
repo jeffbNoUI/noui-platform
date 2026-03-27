@@ -460,6 +460,8 @@ services:
     depends_on:
       pgbouncer:
         condition: service_healthy
+      migration-intelligence:
+        condition: service_healthy
 
   migration-intelligence:
     build:
@@ -468,6 +470,11 @@ services:
       - "8101:8101"
     environment:
       PORT: "8101"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8101/healthz')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   healthagg:
     build:

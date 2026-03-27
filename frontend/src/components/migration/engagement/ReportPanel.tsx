@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { C, BODY, DISPLAY } from '@/lib/designSystem';
+import { C, BODY } from '@/lib/designSystem';
+import {
+  PANEL_HEADING,
+  SECTION_HEADING,
+  PANEL_CARD,
+  PanelSkeleton,
+  PanelEmptyState,
+  TABLE_HEADER,
+  TABLE_CELL,
+} from '../panelStyles';
 import {
   useGenerateReport,
   useReportStatus,
@@ -67,23 +76,10 @@ function ReportCard({
     <div
       data-testid={`report-card-${reportType.key}`}
       style={{
-        padding: 20,
-        borderRadius: 10,
-        border: `1px solid ${C.border}`,
-        background: C.cardBg,
+        ...PANEL_CARD,
       }}
     >
-      <h3
-        style={{
-          fontFamily: DISPLAY,
-          fontSize: 16,
-          fontWeight: 600,
-          color: C.navy,
-          margin: '0 0 8px',
-        }}
-      >
-        {reportType.label}
-      </h3>
+      <h3 style={{ ...SECTION_HEADING, margin: '0 0 8px' }}>{reportType.label}</h3>
       <p style={{ fontSize: 13, color: C.textSecondary, lineHeight: 1.5, margin: '0 0 16px' }}>
         {reportType.description}
       </p>
@@ -188,16 +184,9 @@ function ReportDownloadButton({
 function ReportHistory({ engagementId }: { engagementId: string }) {
   const { data: reports, isLoading } = useReports(engagementId);
 
-  if (isLoading)
-    return (
-      <div style={{ color: C.textSecondary, fontSize: 13, padding: 16 }}>Loading reports...</div>
-    );
+  if (isLoading) return <PanelSkeleton />;
   if (!reports || reports.length === 0) {
-    return (
-      <div style={{ color: C.textSecondary, fontSize: 13, padding: 16 }}>
-        No reports generated yet.
-      </div>
-    );
+    return <PanelEmptyState message="No reports generated yet." icon="📄" />;
   }
 
   return (
@@ -207,48 +196,32 @@ function ReportHistory({ engagementId }: { engagementId: string }) {
           <tr style={{ background: C.pageBg, borderBottom: `1px solid ${C.border}` }}>
             <th
               style={{
-                padding: '10px 12px',
+                ...TABLE_HEADER,
                 textAlign: 'left',
-                fontSize: 11,
-                fontWeight: 600,
-                color: C.textSecondary,
-                textTransform: 'uppercase',
               }}
             >
               Type
             </th>
             <th
               style={{
-                padding: '10px 12px',
+                ...TABLE_HEADER,
                 textAlign: 'left',
-                fontSize: 11,
-                fontWeight: 600,
-                color: C.textSecondary,
-                textTransform: 'uppercase',
               }}
             >
               Generated
             </th>
             <th
               style={{
-                padding: '10px 12px',
+                ...TABLE_HEADER,
                 textAlign: 'left',
-                fontSize: 11,
-                fontWeight: 600,
-                color: C.textSecondary,
-                textTransform: 'uppercase',
               }}
             >
               Status
             </th>
             <th
               style={{
-                padding: '10px 12px',
+                ...TABLE_HEADER,
                 textAlign: 'left',
-                fontSize: 11,
-                fontWeight: 600,
-                color: C.textSecondary,
-                textTransform: 'uppercase',
               }}
             >
               Actions
@@ -262,11 +235,11 @@ function ReportHistory({ engagementId }: { engagementId: string }) {
             const style = STATUS_STYLES[r.status];
             return (
               <tr key={r.report_id} style={{ borderBottom: `1px solid ${C.borderLight}` }}>
-                <td style={{ padding: '10px 12px', fontSize: 13 }}>{typeLabel}</td>
-                <td style={{ padding: '10px 12px', fontSize: 12, color: C.textSecondary }}>
+                <td style={TABLE_CELL}>{typeLabel}</td>
+                <td style={{ ...TABLE_CELL, fontSize: 12, color: C.textSecondary }}>
                   {r.generated_at ? new Date(r.generated_at).toLocaleString() : '-'}
                 </td>
-                <td style={{ padding: '10px 12px' }}>
+                <td style={TABLE_CELL}>
                   <span
                     style={{
                       display: 'inline-block',
@@ -281,7 +254,7 @@ function ReportHistory({ engagementId }: { engagementId: string }) {
                     {style.label}
                   </span>
                 </td>
-                <td style={{ padding: '10px 12px' }}>
+                <td style={TABLE_CELL}>
                   {r.status === 'COMPLETED' && (
                     <ReportDownloadButton
                       engagementId={engagementId}
@@ -333,21 +306,13 @@ function RetentionPolicySection({ engagementId }: { engagementId: string }) {
     );
   };
 
-  if (isLoading)
-    return (
-      <div style={{ color: C.textSecondary, fontSize: 13, padding: 16 }}>
-        Loading retention policy...
-      </div>
-    );
+  if (isLoading) return <PanelSkeleton />;
 
   return (
     <div
       data-testid="retention-policy-section"
       style={{
-        padding: 20,
-        borderRadius: 10,
-        border: `1px solid ${C.border}`,
-        background: C.cardBg,
+        ...PANEL_CARD,
       }}
     >
       <div
@@ -358,11 +323,7 @@ function RetentionPolicySection({ engagementId }: { engagementId: string }) {
           marginBottom: 12,
         }}
       >
-        <h3
-          style={{ fontFamily: DISPLAY, fontSize: 16, fontWeight: 600, color: C.navy, margin: 0 }}
-        >
-          Retention Policy
-        </h3>
+        <h3 style={{ ...SECTION_HEADING, margin: 0 }}>Retention Policy</h3>
         {!editing && (
           <button
             onClick={startEdit}
@@ -515,9 +476,7 @@ interface Props {
 export default function ReportPanel({ engagementId }: Props) {
   return (
     <div style={{ fontFamily: BODY, display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <h2 style={{ fontFamily: DISPLAY, fontSize: 20, fontWeight: 700, color: C.navy, margin: 0 }}>
-        Reports
-      </h2>
+      <h2 style={{ ...PANEL_HEADING, margin: 0 }}>Reports</h2>
 
       {/* Report generation cards */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -528,17 +487,7 @@ export default function ReportPanel({ engagementId }: Props) {
 
       {/* Report history */}
       <div>
-        <h3
-          style={{
-            fontFamily: DISPLAY,
-            fontSize: 16,
-            fontWeight: 600,
-            color: C.navy,
-            margin: '0 0 12px',
-          }}
-        >
-          Report History
-        </h3>
+        <h3 style={SECTION_HEADING}>Report History</h3>
         <ReportHistory engagementId={engagementId} />
       </div>
 

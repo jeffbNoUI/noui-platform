@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
-import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
+import { C, BODY, MONO } from '@/lib/designSystem';
+import { PANEL_HEADING, PanelSkeleton, PanelEmptyState, TABLE_HEADER } from '../panelStyles';
 import { useAuditLog, useAuditExportCount, useExportAuditUrl } from '@/hooks/useMigrationApi';
 import type { AuditLogEntry, AuditLogFilters, AuditExportFilters } from '@/types/Migration';
 
@@ -239,9 +240,7 @@ function ExportDialog({
           boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
         }}
       >
-        <h3 style={{ fontFamily: DISPLAY, fontSize: 18, color: C.navy, margin: '0 0 16px' }}>
-          Export Audit Log
-        </h3>
+        <h3 style={PANEL_HEADING}>Export Audit Log</h3>
 
         <div style={{ marginBottom: 16 }}>
           <label
@@ -422,11 +421,7 @@ export default function AuditPanel({ engagementId }: Props) {
           marginBottom: 20,
         }}
       >
-        <h2
-          style={{ fontFamily: DISPLAY, fontSize: 20, fontWeight: 700, color: C.navy, margin: 0 }}
-        >
-          Audit Trail
-        </h2>
+        <h2 style={{ ...PANEL_HEADING, margin: 0 }}>Audit Trail</h2>
         <button
           onClick={() => setShowExport(true)}
           data-testid="export-btn"
@@ -586,91 +581,21 @@ export default function AuditPanel({ engagementId }: Props) {
 
       {/* Results table */}
       {isLoading ? (
-        <div style={{ padding: 32, textAlign: 'center', color: C.textSecondary }}>
-          Loading audit log...
-        </div>
+        <PanelSkeleton />
       ) : entries.length === 0 ? (
-        <div style={{ padding: 48, textAlign: 'center', color: C.textSecondary, fontSize: 14 }}>
-          No audit entries found for the selected filters.
-        </div>
+        <PanelEmptyState message="No audit entries found for the selected filters." icon="📋" />
       ) : (
         <>
           <div style={{ overflowX: 'auto', borderRadius: 8, border: `1px solid ${C.border}` }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: C.pageBg, borderBottom: `1px solid ${C.border}` }}>
-                  <th
-                    style={{
-                      padding: '10px 12px',
-                      textAlign: 'left',
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: C.textSecondary,
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    ID
-                  </th>
-                  <th
-                    style={{
-                      padding: '10px 12px',
-                      textAlign: 'left',
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: C.textSecondary,
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Actor
-                  </th>
-                  <th
-                    style={{
-                      padding: '10px 12px',
-                      textAlign: 'left',
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: C.textSecondary,
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Action
-                  </th>
-                  <th
-                    style={{
-                      padding: '10px 12px',
-                      textAlign: 'left',
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: C.textSecondary,
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Entity Type
-                  </th>
-                  <th
-                    style={{
-                      padding: '10px 12px',
-                      textAlign: 'left',
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: C.textSecondary,
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Entity ID
-                  </th>
-                  <th
-                    style={{
-                      padding: '10px 12px',
-                      textAlign: 'left',
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: C.textSecondary,
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Time
-                  </th>
+                  <th style={{ ...TABLE_HEADER, textAlign: 'left' }}>ID</th>
+                  <th style={{ ...TABLE_HEADER, textAlign: 'left' }}>Actor</th>
+                  <th style={{ ...TABLE_HEADER, textAlign: 'left' }}>Action</th>
+                  <th style={{ ...TABLE_HEADER, textAlign: 'left' }}>Entity Type</th>
+                  <th style={{ ...TABLE_HEADER, textAlign: 'left' }}>Entity ID</th>
+                  <th style={{ ...TABLE_HEADER, textAlign: 'left' }}>Time</th>
                   <th style={{ padding: '10px 12px', width: 32 }}></th>
                 </tr>
               </thead>

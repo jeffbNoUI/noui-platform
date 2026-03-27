@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { C, BODY, MONO } from '@/lib/designSystem';
+import { PANEL_CARD, TABLE_HEADER } from '../panelStyles';
 import {
   useMappings,
   useCodeMappings,
@@ -30,6 +31,9 @@ const AGREEMENT_BG: Record<AgreementStatus, string> = {
 type SortField = 'source' | 'canonical' | 'template' | 'signal' | 'agreement' | 'approval';
 type SortDir = 'asc' | 'desc';
 
+const PAGE_SIZE = 50;
+const CODE_PAGE_SIZE = 50;
+
 interface Props {
   engagementId: string;
 }
@@ -47,6 +51,8 @@ export default function MappingPanel({ engagementId }: Props) {
   const [filterAgreement, setFilterAgreement] = useState<AgreementStatus | ''>('');
   const [sortField, setSortField] = useState<SortField>('source');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [codeVisibleCount, setCodeVisibleCount] = useState(CODE_PAGE_SIZE);
 
   const handleAcknowledge = useCallback(
     (mappingId: string) => {
@@ -118,6 +124,10 @@ export default function MappingPanel({ engagementId }: Props) {
     });
     return list;
   }, [mappings, filterAgreement, sortField, sortDir]);
+
+  // Reset visible count when filter changes
+  const visibleMappings = useMemo(() => sorted.slice(0, visibleCount), [sorted, visibleCount]);
+  const remainingCount = sorted.length - visibleCount;
 
   const handleApprove = (mapping: FieldMapping) => {
     updateMapping.mutate({
@@ -268,10 +278,9 @@ export default function MappingPanel({ engagementId }: Props) {
       {/* Mapping table */}
       <div
         style={{
-          background: C.cardBg,
-          borderRadius: 10,
-          border: `1px solid ${C.border}`,
+          ...PANEL_CARD,
           overflow: 'hidden',
+          padding: 0,
           marginBottom: 20,
         }}
       >
@@ -304,7 +313,7 @@ export default function MappingPanel({ engagementId }: Props) {
               </tr>
             </thead>
             <tbody>
-              {sorted.map((m) => {
+              {visibleMappings.map((m) => {
                 const isAgreed = m.agreement_status === 'AGREED';
                 return (
                   <tr key={m.mapping_id} style={{ borderBottom: `1px solid ${C.borderLight}` }}>
@@ -445,6 +454,32 @@ export default function MappingPanel({ engagementId }: Props) {
             </tbody>
           </table>
         </div>
+        {remainingCount > 0 && (
+          <div
+            style={{
+              padding: '12px 16px',
+              textAlign: 'center',
+              borderTop: `1px solid ${C.borderLight}`,
+            }}
+          >
+            <button
+              onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+              style={{
+                padding: '6px 16px',
+                borderRadius: 6,
+                border: `1px solid ${C.border}`,
+                background: C.cardBg,
+                color: C.navy,
+                fontSize: 12,
+                fontWeight: 500,
+                fontFamily: BODY,
+                cursor: 'pointer',
+              }}
+            >
+              Show more ({remainingCount} remaining)
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Code mappings toggle */}
@@ -494,7 +529,7 @@ export default function MappingPanel({ engagementId }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {codeMappings.map((cm) => (
+                {codeMappings.slice(0, codeVisibleCount).map((cm) => (
                   <tr
                     key={cm.code_mapping_id}
                     style={{ borderBottom: `1px solid ${C.borderLight}` }}
@@ -534,6 +569,32 @@ export default function MappingPanel({ engagementId }: Props) {
               </tbody>
             </table>
           </div>
+          {codeMappings.length > codeVisibleCount && (
+            <div
+              style={{
+                padding: '12px 16px',
+                textAlign: 'center',
+                borderTop: `1px solid ${C.borderLight}`,
+              }}
+            >
+              <button
+                onClick={() => setCodeVisibleCount((c) => c + CODE_PAGE_SIZE)}
+                style={{
+                  padding: '6px 16px',
+                  borderRadius: 6,
+                  border: `1px solid ${C.border}`,
+                  background: C.cardBg,
+                  color: C.navy,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  fontFamily: BODY,
+                  cursor: 'pointer',
+                }}
+              >
+                Show more ({codeMappings.length - codeVisibleCount} remaining)
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -555,11 +616,9 @@ function Th({
     <th
       onClick={onClick}
       style={{
+        ...TABLE_HEADER,
         padding: '10px 16px',
         textAlign: align,
-        fontWeight: 600,
-        color: C.textSecondary,
-        fontFamily: BODY,
         cursor: onClick ? 'pointer' : 'default',
         userSelect: 'none',
         whiteSpace: 'nowrap',

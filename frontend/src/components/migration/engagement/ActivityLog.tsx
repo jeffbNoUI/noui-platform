@@ -156,9 +156,7 @@ export default function ActivityLog({ engagementId, events, connected }: Props) 
   return (
     <div
       style={{
-        width: 320,
-        flexShrink: 0,
-        borderLeft: `1px solid ${C.border}`,
+        width: '100%',
         background: C.cardBg,
         display: 'flex',
         flexDirection: 'column',
