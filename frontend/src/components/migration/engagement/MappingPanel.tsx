@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { C, BODY, MONO } from '@/lib/designSystem';
-import { PANEL_CARD } from '../panelStyles';
+import { PANEL_CARD, TABLE_HEADER } from '../panelStyles';
 import {
   useMappings,
   useCodeMappings,
@@ -555,11 +555,9 @@ function Th({
     <th
       onClick={onClick}
       style={{
+        ...TABLE_HEADER,
         padding: '10px 16px',
         textAlign: align,
-        fontWeight: 600,
-        color: C.textSecondary,
-        fontFamily: BODY,
         cursor: onClick ? 'pointer' : 'default',
         userSelect: 'none',
         whiteSpace: 'nowrap',

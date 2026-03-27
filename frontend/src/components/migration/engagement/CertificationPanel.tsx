@@ -1,6 +1,12 @@
 import { useState, useMemo } from 'react';
 import { C, BODY, MONO } from '@/lib/designSystem';
-import { PANEL_HEADING, SECTION_HEADING, PANEL_CARD } from '../panelStyles';
+import {
+  PANEL_HEADING,
+  SECTION_HEADING,
+  PANEL_CARD,
+  TABLE_HEADER,
+  TABLE_CELL,
+} from '../panelStyles';
 import {
   useGateEvaluation,
   useCreateCertification,
@@ -614,16 +620,11 @@ function formatThreshold(m: GateMetric): string {
 }
 
 const certThStyle: React.CSSProperties = {
+  ...TABLE_HEADER,
   padding: '8px 12px',
-  fontSize: 11,
-  fontWeight: 600,
-  color: C.textSecondary,
-  textTransform: 'uppercase',
-  letterSpacing: '0.05em',
-  fontFamily: BODY,
 };
 
 const certTdStyle: React.CSSProperties = {
-  padding: '10px 12px',
+  ...TABLE_CELL,
   verticalAlign: 'middle',
 };

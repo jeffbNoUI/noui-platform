@@ -6,6 +6,8 @@ import {
   PANEL_CARD,
   PanelSkeleton,
   PanelEmptyState,
+  TABLE_HEADER,
+  TABLE_CELL,
 } from '../panelStyles';
 import {
   useGenerateReport,
@@ -194,48 +196,32 @@ function ReportHistory({ engagementId }: { engagementId: string }) {
           <tr style={{ background: C.pageBg, borderBottom: `1px solid ${C.border}` }}>
             <th
               style={{
-                padding: '10px 12px',
+                ...TABLE_HEADER,
                 textAlign: 'left',
-                fontSize: 11,
-                fontWeight: 600,
-                color: C.textSecondary,
-                textTransform: 'uppercase',
               }}
             >
               Type
             </th>
             <th
               style={{
-                padding: '10px 12px',
+                ...TABLE_HEADER,
                 textAlign: 'left',
-                fontSize: 11,
-                fontWeight: 600,
-                color: C.textSecondary,
-                textTransform: 'uppercase',
               }}
             >
               Generated
             </th>
             <th
               style={{
-                padding: '10px 12px',
+                ...TABLE_HEADER,
                 textAlign: 'left',
-                fontSize: 11,
-                fontWeight: 600,
-                color: C.textSecondary,
-                textTransform: 'uppercase',
               }}
             >
               Status
             </th>
             <th
               style={{
-                padding: '10px 12px',
+                ...TABLE_HEADER,
                 textAlign: 'left',
-                fontSize: 11,
-                fontWeight: 600,
-                color: C.textSecondary,
-                textTransform: 'uppercase',
               }}
             >
               Actions
@@ -249,11 +235,11 @@ function ReportHistory({ engagementId }: { engagementId: string }) {
             const style = STATUS_STYLES[r.status];
             return (
               <tr key={r.report_id} style={{ borderBottom: `1px solid ${C.borderLight}` }}>
-                <td style={{ padding: '10px 12px', fontSize: 13 }}>{typeLabel}</td>
-                <td style={{ padding: '10px 12px', fontSize: 12, color: C.textSecondary }}>
+                <td style={TABLE_CELL}>{typeLabel}</td>
+                <td style={{ ...TABLE_CELL, fontSize: 12, color: C.textSecondary }}>
                   {r.generated_at ? new Date(r.generated_at).toLocaleString() : '-'}
                 </td>
-                <td style={{ padding: '10px 12px' }}>
+                <td style={TABLE_CELL}>
                   <span
                     style={{
                       display: 'inline-block',
@@ -268,7 +254,7 @@ function ReportHistory({ engagementId }: { engagementId: string }) {
                     {style.label}
                   </span>
                 </td>
-                <td style={{ padding: '10px 12px' }}>
+                <td style={TABLE_CELL}>
                   {r.status === 'COMPLETED' && (
                     <ReportDownloadButton
                       engagementId={engagementId}

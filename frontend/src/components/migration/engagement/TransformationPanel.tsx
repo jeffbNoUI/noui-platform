@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { C, BODY, MONO } from '@/lib/designSystem';
-import { PANEL_HEADING, PANEL_CARD } from '../panelStyles';
+import { PANEL_HEADING, PANEL_CARD, TABLE_HEADER } from '../panelStyles';
 import { useEngagement, useBatchSizingRecommendation, useBatches } from '@/hooks/useMigrationApi';
 import AIRecommendationCard from '../ai/AIRecommendationCard';
 import CreateBatchDialog from '../dialogs/CreateBatchDialog';
@@ -214,12 +214,7 @@ export default function TransformationPanel({ engagementId, onSelectBatch }: Pro
                     <th
                       key={col}
                       style={{
-                        fontFamily: BODY,
-                        fontSize: 11,
-                        fontWeight: 600,
-                        color: C.textTertiary,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
+                        ...TABLE_HEADER,
                         padding: '10px 14px',
                         textAlign: col === 'Scope' ? 'left' : 'right',
                       }}

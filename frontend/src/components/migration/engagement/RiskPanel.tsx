@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { C, BODY, MONO } from '@/lib/designSystem';
-import { PanelEmptyState } from '../panelStyles';
+import { PanelEmptyState, TABLE_HEADER, TABLE_CELL } from '../panelStyles';
 import { useRisks, useUpdateRisk } from '@/hooks/useMigrationApi';
 import AddRiskDialog from '../dialogs/AddRiskDialog';
 import type { MigrationRisk, RiskSeverity, RiskStatus, RiskSource } from '@/types/Migration';
@@ -329,13 +329,8 @@ export default function RiskPanel({ engagementId }: Props) {
 }
 
 const thStyle: React.CSSProperties = {
+  ...TABLE_HEADER,
   padding: '8px 12px',
-  fontSize: 11,
-  fontWeight: 600,
-  color: C.textSecondary,
-  textTransform: 'uppercase',
-  letterSpacing: '0.05em',
-  fontFamily: BODY,
 };
 
 interface RiskRowProps {
@@ -664,6 +659,6 @@ function RiskRow({
 }
 
 const tdStyle: React.CSSProperties = {
-  padding: '10px 12px',
+  ...TABLE_CELL,
   verticalAlign: 'middle',
 };

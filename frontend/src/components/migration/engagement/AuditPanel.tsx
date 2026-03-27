@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { C, BODY, MONO } from '@/lib/designSystem';
-import { PANEL_HEADING, PanelSkeleton, PanelEmptyState } from '../panelStyles';
+import { PANEL_HEADING, PanelSkeleton, PanelEmptyState, TABLE_HEADER } from '../panelStyles';
 import { useAuditLog, useAuditExportCount, useExportAuditUrl } from '@/hooks/useMigrationApi';
 import type { AuditLogEntry, AuditLogFilters, AuditExportFilters } from '@/types/Migration';
 
@@ -590,78 +590,12 @@ export default function AuditPanel({ engagementId }: Props) {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: C.pageBg, borderBottom: `1px solid ${C.border}` }}>
-                  <th
-                    style={{
-                      padding: '10px 12px',
-                      textAlign: 'left',
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: C.textSecondary,
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    ID
-                  </th>
-                  <th
-                    style={{
-                      padding: '10px 12px',
-                      textAlign: 'left',
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: C.textSecondary,
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Actor
-                  </th>
-                  <th
-                    style={{
-                      padding: '10px 12px',
-                      textAlign: 'left',
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: C.textSecondary,
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Action
-                  </th>
-                  <th
-                    style={{
-                      padding: '10px 12px',
-                      textAlign: 'left',
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: C.textSecondary,
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Entity Type
-                  </th>
-                  <th
-                    style={{
-                      padding: '10px 12px',
-                      textAlign: 'left',
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: C.textSecondary,
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Entity ID
-                  </th>
-                  <th
-                    style={{
-                      padding: '10px 12px',
-                      textAlign: 'left',
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: C.textSecondary,
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Time
-                  </th>
+                  <th style={{ ...TABLE_HEADER, textAlign: 'left' }}>ID</th>
+                  <th style={{ ...TABLE_HEADER, textAlign: 'left' }}>Actor</th>
+                  <th style={{ ...TABLE_HEADER, textAlign: 'left' }}>Action</th>
+                  <th style={{ ...TABLE_HEADER, textAlign: 'left' }}>Entity Type</th>
+                  <th style={{ ...TABLE_HEADER, textAlign: 'left' }}>Entity ID</th>
+                  <th style={{ ...TABLE_HEADER, textAlign: 'left' }}>Time</th>
                   <th style={{ padding: '10px 12px', width: 32 }}></th>
                 </tr>
               </thead>
