@@ -60,6 +60,15 @@ export function useMigrationEvents(engagementId: string | null, token?: string) 
           queryClient.invalidateQueries({ queryKey: ['migration', 'jobs'] });
           queryClient.invalidateQueries({ queryKey: ['migration', 'job-summary'] });
           break;
+        case 'recon_rules_activated':
+          queryClient.invalidateQueries({ queryKey: ['migration', 'recon-rules'] });
+          queryClient.invalidateQueries({ queryKey: ['migration', 'recon-rule'] });
+          break;
+        case 'recon_execution_completed':
+          queryClient.invalidateQueries({ queryKey: ['migration', 'recon-executions'] });
+          queryClient.invalidateQueries({ queryKey: ['migration', 'recon-execution'] });
+          queryClient.invalidateQueries({ queryKey: ['migration', 'recon-mismatches'] });
+          break;
       }
     },
     [queryClient],

@@ -56,6 +56,13 @@ import type {
   UpdateCutoverStepRequest,
   InitiateRollbackRequest,
   ConfirmGoLiveRequest,
+  ReconRuleSet,
+  CreateReconRuleSetRequest,
+  UpdateReconRuleSetRequest,
+  ReconRuleDiff,
+  ReconExecution,
+  ReconMismatchPage,
+  TriggerReconExecutionRequest,
 } from '@/types/Migration';
 
 const BASE = '/api/v1/migration';
@@ -335,6 +342,29 @@ export const migrationAPI = {
       RAW,
     ),
 
+  // ─── Reconciliation Rules ─────────────────────────────────────────────────
+  listReconRuleSets: (engagementId: string, params?: { status?: string }) =>
+    fetchAPI<ReconRuleSet[]>(
+      `${BASE}/engagements/${engagementId}/recon-rules${params ? toQueryString(params) : ''}`,
+      RAW,
+    ),
+
+  getReconRuleSet: (engagementId: string, rulesetId: string) =>
+    fetchAPI<ReconRuleSet>(`${BASE}/engagements/${engagementId}/recon-rules/${rulesetId}`, RAW),
+
+  getActiveReconRuleSet: (engagementId: string) =>
+    fetchAPI<ReconRuleSet>(`${BASE}/engagements/${engagementId}/recon-rules/active`, RAW),
+
+  createReconRuleSet: (engagementId: string, req: CreateReconRuleSetRequest) =>
+    postAPI<ReconRuleSet>(`${BASE}/engagements/${engagementId}/recon-rules`, req, RAW),
+
+  updateReconRuleSet: (engagementId: string, rulesetId: string, req: UpdateReconRuleSetRequest) =>
+    patchAPI<ReconRuleSet>(
+      `${BASE}/engagements/${engagementId}/recon-rules/${rulesetId}`,
+      req,
+      RAW,
+    ),
+
   // ─── Rollback ─────────────────────────────────────────────────────────────
   getRollback: (engagementId: string) =>
     fetchAPI<RollbackAction>(`${BASE}/engagements/${engagementId}/rollback`, RAW),
@@ -348,4 +378,47 @@ export const migrationAPI = {
 
   confirmGoLive: (engagementId: string, req: ConfirmGoLiveRequest) =>
     postAPI<GoLiveStatus>(`${BASE}/engagements/${engagementId}/go-live`, req, RAW),
+
+  activateReconRuleSet: (engagementId: string, rulesetId: string) =>
+    postAPI<ReconRuleSet>(
+      `${BASE}/engagements/${engagementId}/recon-rules/${rulesetId}/activate`,
+      {},
+      RAW,
+    ),
+
+  archiveReconRuleSet: (engagementId: string, rulesetId: string) =>
+    postAPI<ReconRuleSet>(
+      `${BASE}/engagements/${engagementId}/recon-rules/${rulesetId}/archive`,
+      {},
+      RAW,
+    ),
+
+  getReconRuleSetDiff: (engagementId: string, rulesetId: string, compareToId: string) =>
+    fetchAPI<ReconRuleDiff>(
+      `${BASE}/engagements/${engagementId}/recon-rules/${rulesetId}/diff${toQueryString({ compare_to: compareToId })}`,
+      RAW,
+    ),
+
+  // ─── Reconciliation Execution ─────────────────────────────────────────────
+  listReconExecutions: (engagementId: string, params?: { page?: number }) =>
+    fetchAPI<ReconExecution[]>(
+      `${BASE}/engagements/${engagementId}/recon-executions${params ? toQueryString(params) : ''}`,
+      RAW,
+    ),
+
+  getReconExecution: (engagementId: string, execId: string) =>
+    fetchAPI<ReconExecution>(`${BASE}/engagements/${engagementId}/recon-executions/${execId}`, RAW),
+
+  getReconExecutionMismatches: (
+    engagementId: string,
+    execId: string,
+    params?: { priority?: string; entity?: string; page?: number },
+  ) =>
+    fetchAPI<ReconMismatchPage>(
+      `${BASE}/engagements/${engagementId}/recon-executions/${execId}/mismatches${params ? toQueryString(params) : ''}`,
+      RAW,
+    ),
+
+  triggerReconExecution: (engagementId: string, req: TriggerReconExecutionRequest) =>
+    postAPI<ReconExecution>(`${BASE}/engagements/${engagementId}/recon-executions`, req, RAW),
 };
