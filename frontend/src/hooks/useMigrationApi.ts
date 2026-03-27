@@ -538,6 +538,38 @@ export function useCertification(engagementId: string) {
   });
 }
 
+export function useCertifications(engagementId: string, page = 1) {
+  return useQuery<import('@/types/Migration').Certification[]>({
+    queryKey: ['migration', 'certifications', engagementId, page],
+    queryFn: () => migrationAPI.listCertifications(engagementId, page),
+    enabled: !!engagementId,
+  });
+}
+
+export function useCreateCertification() {
+  const queryClient = useQueryClient();
+  return useMutation<
+    void,
+    Error,
+    {
+      engagementId: string;
+      body: {
+        gate_score: number;
+        p1_count: number;
+        checklist: Record<string, boolean>;
+        notes?: string;
+      };
+    }
+  >({
+    mutationFn: ({ engagementId, body }) => migrationAPI.certifyEngagement(engagementId, body),
+    onSuccess: (_, { engagementId }) => {
+      queryClient.invalidateQueries({ queryKey: ['migration', 'certification', engagementId] });
+      queryClient.invalidateQueries({ queryKey: ['migration', 'certifications', engagementId] });
+      queryClient.invalidateQueries({ queryKey: ['migration', 'engagement', engagementId] });
+    },
+  });
+}
+
 export function useCertifyEngagement() {
   const queryClient = useQueryClient();
   return useMutation<
@@ -556,8 +588,23 @@ export function useCertifyEngagement() {
     mutationFn: ({ engagementId, body }) => migrationAPI.certifyEngagement(engagementId, body),
     onSuccess: (_, { engagementId }) => {
       queryClient.invalidateQueries({ queryKey: ['migration', 'certification', engagementId] });
+      queryClient.invalidateQueries({ queryKey: ['migration', 'certifications', engagementId] });
       queryClient.invalidateQueries({ queryKey: ['migration', 'engagement', engagementId] });
     },
+  });
+}
+
+// ─── Gate Evaluation hooks ───────────────────────────────────────────────────
+
+export function useGateEvaluation(
+  engagementId: string | undefined,
+  targetPhase: string | undefined,
+) {
+  return useQuery<import('@/types/Migration').GateEvaluationResult>({
+    queryKey: ['migration', 'gate-evaluation', engagementId, targetPhase],
+    queryFn: () => migrationAPI.evaluateGate(engagementId!, targetPhase!),
+    enabled: !!engagementId && !!targetPhase,
+    staleTime: 30_000,
   });
 }
 

@@ -1,8 +1,13 @@
 import { useState } from 'react';
 import { C, BODY, DISPLAY, MONO } from '@/lib/designSystem';
-import { useGateStatus, useAdvancePhase, useRegressPhase } from '@/hooks/useMigrationApi';
+import {
+  useGateStatus,
+  useGateEvaluation,
+  useAdvancePhase,
+  useRegressPhase,
+} from '@/hooks/useMigrationApi';
 import AIRecommendationCard from '../ai/AIRecommendationCard';
-import type { EngagementStatus } from '@/types/Migration';
+import type { EngagementStatus, GateMetric } from '@/types/Migration';
 
 interface Props {
   open: boolean;
@@ -42,6 +47,10 @@ export default function PhaseGateDialog({
   const { data: gateStatus, isLoading: gateLoading } = useGateStatus(
     open ? engagementId : undefined,
   );
+  const { data: gateEvaluation, isLoading: evalLoading } = useGateEvaluation(
+    open && direction === 'ADVANCE' ? engagementId : undefined,
+    open && direction === 'ADVANCE' ? targetPhase : undefined,
+  );
   const advancePhase = useAdvancePhase();
   const regressPhase = useRegressPhase();
 
@@ -53,12 +62,30 @@ export default function PhaseGateDialog({
   const metrics = gateStatus?.metrics ?? {};
   const recommendation = gateStatus?.recommendation ?? null;
 
-  // Determine which metrics are failing (below 0.85 threshold)
-  const failingMetrics = Object.entries(metrics).filter(([, v]) => v < 0.85);
-  const hasFailingMetrics = failingMetrics.length > 0;
+  const isRegress = direction === 'REGRESS';
+
+  // Use gate evaluation result for blocking determination when available
+  const evalBlockingFailures = gateEvaluation?.blocking_failures ?? [];
+  const evalPassed = gateEvaluation?.passed ?? false;
+
+  // For advance: use gate evaluation result if available, otherwise fall back to metrics
+  let failingMetrics: [string, number][];
+  let hasFailingMetrics: boolean;
+
+  if (!isRegress && gateEvaluation) {
+    // Use evaluation result
+    failingMetrics = gateEvaluation.metrics
+      .filter((m) => !m.passing)
+      .map((m) => [m.metric_name, m.current_value]);
+    hasFailingMetrics = !evalPassed;
+  } else {
+    // Fallback to raw metrics
+    failingMetrics = Object.entries(metrics).filter(([, v]) => v < 0.85);
+    hasFailingMetrics = failingMetrics.length > 0;
+  }
+
   const allFailingOverridden = failingMetrics.every(([k]) => overrides.has(k));
 
-  const isRegress = direction === 'REGRESS';
   const canSubmit = isRegress
     ? notes.trim().length > 0
     : !hasFailingMetrics || allFailingOverridden;
@@ -115,7 +142,7 @@ export default function PhaseGateDialog({
         style={{
           background: C.cardBg,
           borderRadius: 12,
-          maxWidth: 560,
+          maxWidth: 600,
           width: '90vw',
           maxHeight: '85vh',
           overflowY: 'auto',
@@ -156,13 +183,109 @@ export default function PhaseGateDialog({
 
         {/* Body */}
         <div style={{ padding: '16px 24px 20px' }}>
-          {/* Gate Metrics */}
+          {/* Gate Evaluation Result (AC-3: shown inline for advance) */}
+          {!isRegress &&
+            (evalLoading ? (
+              <div
+                className="animate-pulse"
+                data-testid="gate-eval-loading"
+                style={{ height: 80, borderRadius: 8, background: C.border, marginBottom: 16 }}
+              />
+            ) : gateEvaluation ? (
+              <div
+                data-testid="gate-evaluation-inline"
+                style={{
+                  marginBottom: 16,
+                  padding: 14,
+                  borderRadius: 8,
+                  border: `2px solid ${evalPassed ? '#22C55E' : '#EF4444'}`,
+                  background: evalPassed ? '#F0FDF4' : '#FEF2F2',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <span
+                    data-testid="gate-eval-badge"
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      padding: '3px 10px',
+                      borderRadius: 6,
+                      background: evalPassed ? '#22C55E' : '#EF4444',
+                      color: 'white',
+                    }}
+                  >
+                    {evalPassed ? 'GATE PASSED' : 'GATE FAILED'}
+                  </span>
+                </div>
+
+                {/* Per-metric summary */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {gateEvaluation.metrics.map((m: GateMetric) => (
+                    <div
+                      key={m.metric_name}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        fontSize: 13,
+                      }}
+                    >
+                      <span style={{ color: m.passing ? '#22C55E' : '#EF4444', fontWeight: 600 }}>
+                        {m.passing ? '\u2713' : '\u2717'}
+                      </span>
+                      <span style={{ color: C.text, fontWeight: 500 }}>
+                        {formatMetricName(m.metric_name)}
+                      </span>
+                      <span style={{ fontFamily: MONO, fontSize: 12, color: C.textSecondary }}>
+                        {m.display_type === 'percentage'
+                          ? `${(m.current_value * 100).toFixed(1)}%`
+                          : m.current_value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Blocking failures list */}
+                {evalBlockingFailures.length > 0 && (
+                  <div
+                    data-testid="gate-blocking-failures"
+                    style={{
+                      marginTop: 10,
+                      padding: 10,
+                      borderRadius: 6,
+                      background: '#FEE2E2',
+                      border: '1px solid #FECACA',
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: '#EF4444',
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      Blocking failures
+                    </span>
+                    <ul style={{ margin: '4px 0 0', paddingLeft: 16 }}>
+                      {evalBlockingFailures.map((f) => (
+                        <li key={f} style={{ fontSize: 12, color: '#991B1B', lineHeight: 1.5 }}>
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ) : null)}
+
+          {/* Legacy Gate Metrics (still shown as reference) */}
           {gateLoading ? (
             <div
               className="animate-pulse"
               style={{ height: 80, borderRadius: 8, background: C.border, marginBottom: 16 }}
             />
-          ) : Object.keys(metrics).length > 0 ? (
+          ) : Object.keys(metrics).length > 0 && !gateEvaluation ? (
             <div style={{ marginBottom: 16 }}>
               <h4
                 style={{
@@ -225,6 +348,7 @@ export default function PhaseGateDialog({
           {/* Override section for failing metrics */}
           {!isRegress && hasFailingMetrics && (
             <div
+              data-testid="override-section"
               style={{
                 background: C.goldLight,
                 borderRadius: 8,
@@ -260,6 +384,7 @@ export default function PhaseGateDialog({
                 >
                   <input
                     type="checkbox"
+                    data-testid={`override-${key}`}
                     checked={overrides.has(key)}
                     onChange={() => toggleOverride(key)}
                     style={{ width: 16, height: 16, accentColor: C.gold }}
@@ -267,13 +392,37 @@ export default function PhaseGateDialog({
                   <span style={{ fontWeight: 500 }}>
                     I understand the risk:{' '}
                     <span style={{ fontFamily: MONO, color: C.coral }}>
-                      {formatMetricName(key)} = {typeof value === 'number' && value <= 1
+                      {formatMetricName(key)} ={' '}
+                      {typeof value === 'number' && value <= 1
                         ? `${(value * 100).toFixed(1)}%`
                         : value}
                     </span>
                   </span>
                 </label>
               ))}
+            </div>
+          )}
+
+          {/* Green confirmation when gate passes */}
+          {!isRegress && gateEvaluation && evalPassed && (
+            <div
+              data-testid="gate-passed-confirmation"
+              style={{
+                marginBottom: 16,
+                padding: 12,
+                borderRadius: 8,
+                background: '#F0FDF4',
+                border: '1px solid #BBF7D0',
+                fontSize: 13,
+                color: '#166534',
+                fontWeight: 500,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              <span style={{ fontSize: 16 }}>{'\u2713'}</span>
+              All gate metrics are passing. Ready to advance.
             </div>
           )}
 
@@ -383,7 +532,5 @@ export default function PhaseGateDialog({
 }
 
 function formatMetricName(key: string): string {
-  return key
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }

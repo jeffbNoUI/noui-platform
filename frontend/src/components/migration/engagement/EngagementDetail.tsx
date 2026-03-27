@@ -61,6 +61,8 @@ import ReconciliationPanel from './ReconciliationPanel';
 import DiscoveryPanel from './DiscoveryPanel';
 import ParallelRunPanel from './ParallelRunPanel';
 import PhaseGateDialog from './PhaseGateDialog';
+import RiskPanel from './RiskPanel';
+import CertificationPanel from './CertificationPanel';
 import AttentionQueue from '../attention/AttentionQueue';
 import JobQueuePanel from './JobQueuePanel';
 import ActivityLog from './ActivityLog';
@@ -73,6 +75,7 @@ type Tab =
   | 'reconciliation'
   | 'parallel-run'
   | 'risks'
+  | 'certification'
   | 'attention'
   | 'jobs';
 
@@ -84,6 +87,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'reconciliation', label: 'Reconciliation' },
   { key: 'parallel-run', label: 'Parallel Run' },
   { key: 'risks', label: 'Risks' },
+  { key: 'certification', label: 'Certification' },
   { key: 'attention', label: 'Attention' },
   { key: 'jobs', label: 'Jobs' },
 ];
@@ -443,7 +447,8 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
             )}
             {activeTab === 'reconciliation' && <ReconciliationPanel engagementId={engagementId} />}
             {activeTab === 'parallel-run' && <ParallelRunPanel engagementId={engagementId} />}
-            {activeTab === 'risks' && <RisksPlaceholder engagementId={engagementId} />}
+            {activeTab === 'risks' && <RiskPanel engagementId={engagementId} />}
+            {activeTab === 'certification' && <CertificationPanel engagementId={engagementId} />}
             {activeTab === 'attention' && <AttentionQueue engagementId={engagementId} />}
             {activeTab === 'jobs' && <JobQueuePanel engagementId={engagementId} />}
           </TabErrorBoundary>
@@ -465,66 +470,6 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
           setGateDialog((prev) => ({ ...prev, open: false }));
         }}
       />
-    </div>
-  );
-}
-
-// ─── Risks tab placeholder ──────────────────────────────────────────────────
-
-function RisksPlaceholder({ engagementId }: { engagementId: string }) {
-  // Risks panel will be built as a separate component
-  return (
-    <div
-      style={{
-        padding: '48px 24px',
-        textAlign: 'center',
-        fontFamily: BODY,
-      }}
-    >
-      <div
-        style={{
-          width: 56,
-          height: 56,
-          borderRadius: 14,
-          background: C.coralLight,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          margin: '0 auto 16px',
-        }}
-      >
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-          <path
-            d="M12 9V13M12 17H12.01M5.07 19H18.93C20.6 19 21.6 17.17 20.75 15.74L13.82 4.02C12.97 2.59 11.03 2.59 10.18 4.02L3.25 15.74C2.4 17.17 3.4 19 5.07 19Z"
-            stroke={C.coral}
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </div>
-      <h3
-        style={{
-          fontFamily: DISPLAY,
-          fontSize: 18,
-          fontWeight: 600,
-          color: C.navy,
-          margin: '0 0 8px',
-        }}
-      >
-        Risk Register
-      </h3>
-      <p
-        style={{
-          fontSize: 13,
-          color: C.textSecondary,
-          margin: 0,
-          lineHeight: 1.5,
-        }}
-      >
-        Risk management panel for engagement {engagementId.slice(0, 8)}... is being built as a
-        separate component.
-      </p>
     </div>
   );
 }
