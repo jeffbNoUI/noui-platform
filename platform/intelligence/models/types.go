@@ -3,7 +3,11 @@
 // AI does NOT execute business rules — per Governing Principle 1.
 package models
 
-import "time"
+import (
+	"time"
+
+	"github.com/noui/platform/intelligence/money"
+)
 
 // MemberData represents the member information needed for calculations.
 // Fetched from the connector service, not directly from the database.
@@ -21,6 +25,7 @@ type MemberData struct {
 }
 
 // ServiceCreditData contains service credit summary from connector.
+// These are year counts (not dollars), so they stay as float64.
 type ServiceCreditData struct {
 	EarnedYears      float64 `json:"earned_years"`
 	PurchasedYears   float64 `json:"purchased_years"`
@@ -32,12 +37,12 @@ type ServiceCreditData struct {
 
 // AMSData contains AMS calculation result from connector.
 type AMSData struct {
-	WindowMonths    int     `json:"window_months"`
-	WindowStart     string  `json:"window_start"`
-	WindowEnd       string  `json:"window_end"`
-	Amount          float64 `json:"amount"`
-	LeavePayoutIncl bool    `json:"leave_payout_included"`
-	LeavePayoutAmt  float64 `json:"leave_payout_amount"`
+	WindowMonths    int         `json:"window_months"`
+	WindowStart     string      `json:"window_start"`
+	WindowEnd       string      `json:"window_end"`
+	Amount          money.Money `json:"amount"`
+	LeavePayoutIncl bool        `json:"leave_payout_included"`
+	LeavePayoutAmt  money.Money `json:"leave_payout_amount"`
 }
 
 // DROData contains DRO information from connector.
@@ -46,7 +51,7 @@ type DROData struct {
 	MarriageDate   time.Time  `json:"marriage_date"`
 	DivorceDate    time.Time  `json:"divorce_date"`
 	DivisionMethod string     `json:"division_method"`
-	DivisionValue  float64    `json:"division_value"`
+	DivisionValue  float64    `json:"division_value"` // Percentage (e.g., 40.0), not dollars
 	AltPayeeFirst  string     `json:"alt_payee_first"`
 	AltPayeeLast   string     `json:"alt_payee_last"`
 	AltPayeeDOB    *time.Time `json:"alt_payee_dob,omitempty"`
@@ -101,9 +106,9 @@ type EligibilityResult struct {
 	ServiceCredit   ServiceCreditData `json:"service_credit"`
 	Evaluations     []RuleEvaluation  `json:"evaluations"`
 	BestEligible    string            `json:"best_eligible_type"` // NORMAL, RULE_OF_75, RULE_OF_85, EARLY, DEFERRED, NONE
-	RuleOfNSum      float64           `json:"rule_of_n_sum"`
-	ReductionPct    float64           `json:"reduction_pct"`
-	ReductionFactor float64           `json:"reduction_factor"`
+	RuleOfNSum      float64           `json:"rule_of_n_sum"`      // Sum of age + service (not dollars)
+	ReductionPct    float64           `json:"reduction_pct"`      // Percentage (not dollars)
+	ReductionFactor float64           `json:"reduction_factor"`   // Multiplier (not dollars)
 }
 
 // AgeAtRetirement breaks down the member's age at retirement.
@@ -111,7 +116,7 @@ type AgeAtRetirement struct {
 	Years          int     `json:"years"`
 	Months         int     `json:"months"`
 	CompletedYears int     `json:"completed_years"`
-	Decimal        float64 `json:"decimal"`
+	Decimal        float64 `json:"decimal"` // Age as decimal (not dollars)
 }
 
 // RuleEvaluation records the result of evaluating a single rule.
@@ -132,7 +137,7 @@ type BenefitCalcResult struct {
 	AMS            AMSCalcDetail      `json:"ams"`
 	Formula        FormulaDetail      `json:"formula"`
 	Reduction      ReductionDetail    `json:"reduction"`
-	MaximumBenefit float64            `json:"maximum_benefit"`
+	MaximumBenefit money.Money        `json:"maximum_benefit"`
 	PaymentOptions PaymentOptions     `json:"payment_options"`
 	DRO            *DROCalcResult     `json:"dro,omitempty"`
 	DeathBenefit   DeathBenefitDetail `json:"death_benefit"`
@@ -141,88 +146,88 @@ type BenefitCalcResult struct {
 
 // AMSCalcDetail provides full AMS calculation transparency.
 type AMSCalcDetail struct {
-	WindowMonths      int     `json:"window_months"`
-	WindowStart       string  `json:"window_start"`
-	WindowEnd         string  `json:"window_end"`
-	Amount            float64 `json:"amount"`
-	LeavePayoutIncl   bool    `json:"leave_payout_included"`
-	LeavePayoutAmt    float64 `json:"leave_payout_amount"`
-	LeavePayoutImpact float64 `json:"leave_payout_ams_impact"`
+	WindowMonths      int         `json:"window_months"`
+	WindowStart       string      `json:"window_start"`
+	WindowEnd         string      `json:"window_end"`
+	Amount            money.Money `json:"amount"`
+	LeavePayoutIncl   bool        `json:"leave_payout_included"`
+	LeavePayoutAmt    money.Money `json:"leave_payout_amount"`
+	LeavePayoutImpact money.Money `json:"leave_payout_ams_impact"`
 }
 
 // FormulaDetail shows the benefit formula applied.
 type FormulaDetail struct {
-	AMS            float64 `json:"ams"`
-	Multiplier     float64 `json:"multiplier"`
-	MultiplierPct  string  `json:"multiplier_pct"`
-	ServiceYears   float64 `json:"service_years"`
-	ServiceType    string  `json:"service_type"`
-	GrossBenefit   float64 `json:"gross_benefit"`
-	FormulaDisplay string  `json:"formula_display"`
+	AMS            money.Money `json:"ams"`
+	Multiplier     float64     `json:"multiplier"` // Factor (not dollars)
+	MultiplierPct  string      `json:"multiplier_pct"`
+	ServiceYears   float64     `json:"service_years"` // Year count (not dollars)
+	ServiceType    string      `json:"service_type"`
+	GrossBenefit   money.Money `json:"gross_benefit"`
+	FormulaDisplay string      `json:"formula_display"`
 }
 
 // ReductionDetail shows early retirement reduction calculation.
 type ReductionDetail struct {
-	Applies         bool    `json:"applies"`
-	RetirementType  string  `json:"retirement_type"`
-	AgeAtRetirement int     `json:"age_at_retirement"`
-	YearsUnder65    int     `json:"years_under_65"`
-	RatePerYear     float64 `json:"rate_per_year"`
-	TotalReduction  float64 `json:"total_reduction_pct"`
-	ReductionFactor float64 `json:"reduction_factor"`
-	ReducedBenefit  float64 `json:"reduced_benefit"`
-	SourceReference string  `json:"source_reference"`
+	Applies         bool        `json:"applies"`
+	RetirementType  string      `json:"retirement_type"`
+	AgeAtRetirement int         `json:"age_at_retirement"`
+	YearsUnder65    int         `json:"years_under_65"`
+	RatePerYear     float64     `json:"rate_per_year"`       // Percentage (not dollars)
+	TotalReduction  float64     `json:"total_reduction_pct"` // Percentage (not dollars)
+	ReductionFactor float64     `json:"reduction_factor"`    // Multiplier (not dollars)
+	ReducedBenefit  money.Money `json:"reduced_benefit"`
+	SourceReference string      `json:"source_reference"`
 }
 
 // PaymentOptions contains all four payment option amounts.
 type PaymentOptions struct {
-	BaseAmount float64  `json:"base_amount"`
-	Maximum    float64  `json:"maximum"`
-	JS100      JSOption `json:"js_100"`
-	JS75       JSOption `json:"js_75"`
-	JS50       JSOption `json:"js_50"`
-	Disclaimer string   `json:"disclaimer"`
+	BaseAmount money.Money `json:"base_amount"`
+	Maximum    money.Money `json:"maximum"`
+	JS100      JSOption    `json:"js_100"`
+	JS75       JSOption    `json:"js_75"`
+	JS50       JSOption    `json:"js_50"`
+	Disclaimer string      `json:"disclaimer"`
 }
 
 // JSOption represents a Joint & Survivor payment option.
 type JSOption struct {
-	MemberAmount   float64 `json:"member_amount"`
-	SurvivorAmount float64 `json:"survivor_amount"`
-	SurvivorPct    int     `json:"survivor_pct"`
-	Factor         float64 `json:"factor"`
+	MemberAmount   money.Money `json:"member_amount"`
+	SurvivorAmount money.Money `json:"survivor_amount"`
+	SurvivorPct    int         `json:"survivor_pct"`
+	Factor         float64     `json:"factor"` // Actuarial factor (not dollars)
 }
 
 // DROCalcResult contains DRO impact calculation.
 type DROCalcResult struct {
-	HasDRO              bool    `json:"has_dro"`
-	MarriageDate        string  `json:"marriage_date"`
-	DivorceDate         string  `json:"divorce_date"`
-	MaritalServiceYears float64 `json:"marital_service_years"`
-	TotalServiceYears   float64 `json:"total_service_years"`
-	MaritalFraction     float64 `json:"marital_fraction"`
-	GrossBenefit        float64 `json:"gross_benefit"`
-	MaritalShare        float64 `json:"marital_share"`
-	AltPayeePct         float64 `json:"alt_payee_pct"`
-	AltPayeeAmount      float64 `json:"alt_payee_amount"`
-	MemberAfterDRO      float64 `json:"member_benefit_after_dro"`
-	DivisionMethod      string  `json:"division_method"`
+	HasDRO              bool        `json:"has_dro"`
+	MarriageDate        string      `json:"marriage_date"`
+	DivorceDate         string      `json:"divorce_date"`
+	MaritalServiceYears float64     `json:"marital_service_years"` // Year count (not dollars)
+	TotalServiceYears   float64     `json:"total_service_years"`   // Year count (not dollars)
+	MaritalFraction     float64     `json:"marital_fraction"`      // Ratio (not dollars)
+	GrossBenefit        money.Money `json:"gross_benefit"`
+	MaritalShare        money.Money `json:"marital_share"`
+	AltPayeePct         float64     `json:"alt_payee_pct"` // Percentage (not dollars)
+	AltPayeeAmount      money.Money `json:"alt_payee_amount"`
+	MemberAfterDRO      money.Money `json:"member_benefit_after_dro"`
+	DivisionMethod      string      `json:"division_method"`
 }
 
 // DeathBenefitDetail shows lump-sum death benefit calculation.
 type DeathBenefitDetail struct {
-	Amount         float64 `json:"amount"`
-	Installment50  float64 `json:"installment_50"`
-	Installment100 float64 `json:"installment_100"`
-	RetirementType string  `json:"retirement_type"`
-	SourceRef      string  `json:"source_reference"`
+	Amount         money.Money `json:"amount"`
+	Installment50  money.Money `json:"installment_50"`
+	Installment100 money.Money `json:"installment_100"`
+	RetirementType string      `json:"retirement_type"`
+	SourceRef      string      `json:"source_reference"`
 }
 
 // IPRDetail shows Insurance Premium Reimbursement calculation.
 type IPRDetail struct {
-	EarnedServiceYears float64 `json:"earned_service_years"`
-	NonMedicareMonthly float64 `json:"non_medicare_monthly"`
-	MedicareMonthly    float64 `json:"medicare_monthly"`
-	SourceRef          string  `json:"source_reference"`
+	EarnedServiceYears float64     `json:"earned_service_years"` // Year count (not dollars)
+	NonMedicareMonthly money.Money `json:"non_medicare_monthly"`
+	MedicareMonthly    money.Money `json:"medicare_monthly"`
+	SourceRef          string      `json:"source_reference"`
 }
 
 // ScenarioResult contains comparison across multiple retirement dates.
@@ -233,13 +238,13 @@ type ScenarioResult struct {
 
 // ScenarioEntry is one retirement date scenario.
 type ScenarioEntry struct {
-	RetirementDate  string  `json:"retirement_date"`
-	Age             int     `json:"age"`
-	EarnedService   float64 `json:"earned_service"`
-	TotalService    float64 `json:"total_service"`
-	EligibilityType string  `json:"eligibility_type"`
-	RuleOfNSum      float64 `json:"rule_of_n_sum"`
-	RuleOfNMet      bool    `json:"rule_of_n_met"`
-	ReductionPct    float64 `json:"reduction_pct"`
-	MonthlyBenefit  float64 `json:"monthly_benefit"`
+	RetirementDate  string      `json:"retirement_date"`
+	Age             int         `json:"age"`
+	EarnedService   float64     `json:"earned_service"` // Year count (not dollars)
+	TotalService    float64     `json:"total_service"`  // Year count (not dollars)
+	EligibilityType string      `json:"eligibility_type"`
+	RuleOfNSum      float64     `json:"rule_of_n_sum"` // Sum (not dollars)
+	RuleOfNMet      bool        `json:"rule_of_n_met"`
+	ReductionPct    float64     `json:"reduction_pct"` // Percentage (not dollars)
+	MonthlyBenefit  money.Money `json:"monthly_benefit"`
 }

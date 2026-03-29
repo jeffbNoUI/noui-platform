@@ -27,7 +27,7 @@ var ValidTransitions = map[EngagementStatus][]EngagementStatus{
 	StatusProfiling:         {StatusMapping},
 	StatusMapping:           {StatusTransforming},
 	StatusTransforming:      {StatusReconciling},
-	StatusReconciling:       {StatusParallelRun, StatusComplete},
+	StatusReconciling:       {StatusParallelRun},
 	StatusParallelRun:       {StatusComplete},
 	StatusComplete:          {StatusCutoverInProgress},
 	StatusCutoverInProgress: {StatusGoLive, StatusComplete},

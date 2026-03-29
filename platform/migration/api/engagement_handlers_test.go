@@ -159,26 +159,19 @@ func TestGetEngagement_NotFound(t *testing.T) {
 
 // --- UpdateEngagement ---
 
-func TestUpdateEngagement_ValidTransition(t *testing.T) {
+func TestUpdateEngagement_ContributionModelSuccess(t *testing.T) {
 	h, mock := newTestHandler(t)
 	now := time.Now().UTC()
 
-	// First: GET current state (PROFILING)
-	mock.ExpectQuery("SELECT .+ FROM migration.engagement").
-		WithArgs("eng-001").
-		WillReturnRows(sqlmock.NewRows(engagementCols).AddRow(
-			"eng-001", "tenant-1", "LegacyPAS", "1.0",
-			"PROFILING", nil, nil, nil, "standard", now, now,
-		))
-	// Then: UPDATE to MAPPING
+	cm := "DEFINED_BENEFIT"
 	mock.ExpectQuery("UPDATE migration.engagement").
-		WithArgs("eng-001", "MAPPING").
+		WithArgs("eng-001", cm).
 		WillReturnRows(sqlmock.NewRows(engagementCols).AddRow(
 			"eng-001", "tenant-1", "LegacyPAS", "1.0",
-			"MAPPING", nil, nil, nil, "standard", now, now,
+			"PROFILING", nil, nil, nil, cm, now, now,
 		))
 
-	body, _ := json.Marshal(map[string]string{"status": "MAPPING"})
+	body, _ := json.Marshal(map[string]any{"contribution_model": cm})
 	w := serve(h, "PATCH", "/api/v1/migration/engagements/eng-001", body)
 
 	if w.Code != http.StatusOK {
@@ -189,23 +182,15 @@ func TestUpdateEngagement_ValidTransition(t *testing.T) {
 	}
 }
 
-func TestUpdateEngagement_InvalidTransition(t *testing.T) {
-	h, mock := newTestHandler(t)
-	now := time.Now().UTC()
+func TestUpdateEngagement_StatusFieldReturns400(t *testing.T) {
+	h, _ := newTestHandler(t)
 
-	// Current state is PROFILING, trying to jump to TRANSFORMING
-	mock.ExpectQuery("SELECT .+ FROM migration.engagement").
-		WithArgs("eng-001").
-		WillReturnRows(sqlmock.NewRows(engagementCols).AddRow(
-			"eng-001", "tenant-1", "LegacyPAS", "1.0",
-			"PROFILING", nil, nil, nil, "standard", now, now,
-		))
-
-	body, _ := json.Marshal(map[string]string{"status": "TRANSFORMING"})
+	// Sending only status (no contribution_model) must be rejected.
+	body, _ := json.Marshal(map[string]string{"status": "PARALLEL_RUN"})
 	w := serve(h, "PATCH", "/api/v1/migration/engagements/eng-001", body)
 
-	if w.Code != http.StatusConflict {
-		t.Fatalf("status = %d, want %d; body: %s", w.Code, http.StatusConflict, w.Body.String())
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d; body: %s", w.Code, http.StatusBadRequest, w.Body.String())
 	}
 
 	var resp map[string]any
@@ -216,15 +201,12 @@ func TestUpdateEngagement_InvalidTransition(t *testing.T) {
 	if !ok {
 		t.Fatal("response missing error field")
 	}
-	if errObj["code"] != "INVALID_TRANSITION" {
-		t.Errorf("error code = %v, want INVALID_TRANSITION", errObj["code"])
-	}
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("unmet expectations: %v", err)
+	if errObj["code"] != "VALIDATION_ERROR" {
+		t.Errorf("error code = %v, want VALIDATION_ERROR", errObj["code"])
 	}
 }
 
-func TestUpdateEngagement_MissingStatus(t *testing.T) {
+func TestUpdateEngagement_MissingContributionModel(t *testing.T) {
 	h, _ := newTestHandler(t)
 
 	body, _ := json.Marshal(map[string]string{})
