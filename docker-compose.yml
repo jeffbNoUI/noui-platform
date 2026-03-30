@@ -60,6 +60,10 @@ services:
       - ./domains/pension/schema/028_security_schema.sql:/docker-entrypoint-initdb.d/051_security_schema.sql
       - ./domains/pension/seed/017_security_seed.sql:/docker-entrypoint-initdb.d/052_security_seed.sql
       - ./domains/pension/seed/018_member_portal_seed.sql:/docker-entrypoint-initdb.d/053_member_portal_seed.sql
+      - ./db/migrations/031_warning_acknowledgment.sql:/docker-entrypoint-initdb.d/054_warning_acknowledgment.sql
+      - ./db/migrations/032_contribution_model.sql:/docker-entrypoint-initdb.d/055_contribution_model.sql
+      - ./db/migrations/033_job_table.sql:/docker-entrypoint-initdb.d/056_job_table.sql
+      - ./db/migrations/034_fk_indexes.sql:/docker-entrypoint-initdb.d/057_fk_indexes.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U noui"]
       interval: 5s
