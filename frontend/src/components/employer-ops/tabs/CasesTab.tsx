@@ -182,7 +182,7 @@ export default function CasesTab({ orgId }: CasesTabProps) {
                 </tr>
               </thead>
               <tbody>
-                {casesData!.items.map((c) => (
+                {(casesData?.items ?? []).map((c) => (
                   <tr
                     key={c.caseId}
                     style={{ transition: 'background 0.1s' }}

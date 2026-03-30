@@ -53,7 +53,7 @@ export default function ConfigureSourceDialog({
     const conn: SourceConnection = {
       driver,
       host: host.trim(),
-      port: port.trim() || DRIVERS.find((d) => d.value === driver)!.defaultPort,
+      port: port.trim() || (DRIVERS.find((d) => d.value === driver)?.defaultPort ?? '5432'),
       user: user.trim(),
       password,
       dbname: dbname.trim(),

@@ -72,10 +72,10 @@ export default function IssueManagementPanel() {
           </>
         ) : (
           <>
-            <StatCard label="Open Issues" value={stats!.openCount} />
-            <StatCard label="Critical" value={stats!.criticalCount} />
-            <StatCard label="Avg Resolution" value={`${Math.round(stats!.avgResolution)}d`} />
-            <StatCard label="Resolved (30d)" value={stats!.resolvedCount} />
+            <StatCard label="Open Issues" value={stats?.openCount ?? 0} />
+            <StatCard label="Critical" value={stats?.criticalCount ?? 0} />
+            <StatCard label="Avg Resolution" value={`${Math.round(stats?.avgResolution ?? 0)}d`} />
+            <StatCard label="Resolved (30d)" value={stats?.resolvedCount ?? 0} />
           </>
         )}
       </div>

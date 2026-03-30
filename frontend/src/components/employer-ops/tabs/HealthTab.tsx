@@ -167,7 +167,7 @@ export default function HealthTab({ orgId }: HealthTabProps) {
                 </tr>
               </thead>
               <tbody>
-                {issuesData!.items.map((issue) => (
+                {(issuesData?.items ?? []).map((issue) => (
                   <tr
                     key={issue.issueId}
                     style={{ transition: 'background 0.1s' }}
@@ -244,7 +244,7 @@ export default function HealthTab({ orgId }: HealthTabProps) {
                 </tr>
               </thead>
               <tbody>
-                {checksData!.items.map((check) => {
+                {(checksData?.items ?? []).map((check) => {
                   const lr = check.latestResult;
                   const rate = lr?.passRate ?? null;
                   return (

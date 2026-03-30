@@ -4,8 +4,7 @@ package domain
 
 import (
 	"fmt"
-	"math"
-	"strconv"
+	"math/big"
 )
 
 // ValidationResult captures per-record validation output.
@@ -53,8 +52,8 @@ type RecordInput struct {
 func ValidateRecord(record RecordInput, rates RateInput) []ValidationError {
 	var errors []ValidationError
 
-	grossSalary, err := strconv.ParseFloat(record.GrossSalary, 64)
-	if err != nil || grossSalary < 0 {
+	grossSalary := parseRat(record.GrossSalary)
+	if grossSalary == nil || grossSalary.Sign() < 0 {
 		errors = append(errors, ValidationError{
 			Code:        "INVALID_SALARY",
 			Field:       "gross_salary",
@@ -63,7 +62,7 @@ func ValidateRecord(record RecordInput, rates RateInput) []ValidationError {
 		return errors // can't validate amounts without valid salary
 	}
 
-	if grossSalary == 0 {
+	if grossSalary.Sign() == 0 {
 		return errors // zero salary row is valid (e.g. leave without pay)
 	}
 
@@ -90,9 +89,9 @@ func ValidateRecord(record RecordInput, rates RateInput) []ValidationError {
 }
 
 // validateAmount checks that a submitted amount matches salary × rate within $0.01 tolerance.
-func validateAmount(field, submittedStr string, grossSalary float64, rateStr string) []ValidationError {
-	submitted, err := strconv.ParseFloat(submittedStr, 64)
-	if err != nil {
+func validateAmount(field, submittedStr string, grossSalary *big.Rat, rateStr string) []ValidationError {
+	submitted := parseRat(submittedStr)
+	if submitted == nil {
 		return []ValidationError{{
 			Code:        "INVALID_AMOUNT",
 			Field:       field,
@@ -100,20 +99,20 @@ func validateAmount(field, submittedStr string, grossSalary float64, rateStr str
 		}}
 	}
 
-	rate, err := strconv.ParseFloat(rateStr, 64)
-	if err != nil {
+	rate := parseRat(rateStr)
+	if rate == nil {
 		return nil // no rate to compare against (gap data)
 	}
 
-	expected := grossSalary * rate
+	expected := ratMul(grossSalary, rate)
 	// Tolerance: $0.01 (one penny) to accommodate rounding differences.
-	if math.Abs(submitted-expected) > 0.01 {
+	if !withinPenny(submitted, expected) {
 		return []ValidationError{{
 			Code:           "RATE_MISMATCH",
 			Field:          field,
 			Description:    fmt.Sprintf("%s does not match expected rate", field),
-			ExpectedValue:  fmt.Sprintf("%.2f", expected),
-			SubmittedValue: fmt.Sprintf("%.2f", submitted),
+			ExpectedValue:  ratFmt(expected),
+			SubmittedValue: ratFmt(submitted),
 		}}
 	}
 
@@ -122,17 +121,25 @@ func validateAmount(field, submittedStr string, grossSalary float64, rateStr str
 
 // validateTotal checks that the total amount is the sum of all components.
 func validateTotal(record RecordInput) []ValidationError {
-	member, _ := strconv.ParseFloat(record.MemberContribution, 64)
-	employer, _ := strconv.ParseFloat(record.EmployerContribution, 64)
-	aed, _ := strconv.ParseFloat(record.AEDAmount, 64)
-	saed, _ := strconv.ParseFloat(record.SAEDAmount, 64)
-	aap, _ := strconv.ParseFloat(record.AAPAmount, 64)
-	dcSupp, _ := strconv.ParseFloat(record.DCSupplementAmount, 64)
+	components := []string{
+		record.MemberContribution,
+		record.EmployerContribution,
+		record.AEDAmount,
+		record.SAEDAmount,
+		record.AAPAmount,
+		record.DCSupplementAmount,
+	}
 
-	expectedTotal := member + employer + aed + saed + aap + dcSupp
+	expectedTotal := new(big.Rat)
+	for _, s := range components {
+		r := parseRat(s)
+		if r != nil {
+			expectedTotal = ratAdd(expectedTotal, r)
+		}
+	}
 
-	total, err := strconv.ParseFloat(record.TotalAmount, 64)
-	if err != nil {
+	total := parseRat(record.TotalAmount)
+	if total == nil {
 		return []ValidationError{{
 			Code:        "INVALID_TOTAL",
 			Field:       "total_amount",
@@ -140,13 +147,13 @@ func validateTotal(record RecordInput) []ValidationError {
 		}}
 	}
 
-	if math.Abs(total-expectedTotal) > 0.01 {
+	if !withinPenny(total, expectedTotal) {
 		return []ValidationError{{
 			Code:           "TOTAL_MISMATCH",
 			Field:          "total_amount",
 			Description:    "Total does not match sum of components",
-			ExpectedValue:  fmt.Sprintf("%.2f", expectedTotal),
-			SubmittedValue: fmt.Sprintf("%.2f", total),
+			ExpectedValue:  ratFmt(expectedTotal),
+			SubmittedValue: ratFmt(total),
 		}}
 	}
 
@@ -167,8 +174,8 @@ func ValidateNegativeAmounts(record RecordInput) []ValidationError {
 	}
 
 	for field, valStr := range fields {
-		val, err := strconv.ParseFloat(valStr, 64)
-		if err == nil && val < 0 {
+		r := parseRat(valStr)
+		if r != nil && r.Sign() < 0 {
 			errors = append(errors, ValidationError{
 				Code:        "NEGATIVE_AMOUNT",
 				Field:       field,

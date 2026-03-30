@@ -56,10 +56,10 @@ export function DetailOverlay({
         handleClose();
       } else if (e.key === 'ArrowLeft' && hasPrev) {
         e.preventDefault();
-        onNavigate!(currentIndex! - 1);
+        onNavigate?.((currentIndex ?? 0) - 1);
       } else if (e.key === 'ArrowRight' && hasNext) {
         e.preventDefault();
-        onNavigate!(currentIndex! + 1);
+        onNavigate?.((currentIndex ?? 0) + 1);
       }
     };
     window.addEventListener('keydown', handler);
@@ -101,7 +101,7 @@ export function DetailOverlay({
             {canNavigate && (
               <div className="flex items-center gap-1">
                 <button
-                  onClick={() => hasPrev && onNavigate!(currentIndex! - 1)}
+                  onClick={() => hasPrev && onNavigate?.((currentIndex ?? 0) - 1)}
                   disabled={!hasPrev}
                   className="p-1.5 rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors disabled:opacity-30 disabled:cursor-default disabled:hover:bg-transparent"
                   title="Previous (←)"
@@ -116,10 +116,10 @@ export function DetailOverlay({
                   </svg>
                 </button>
                 <span className="text-xs text-gray-400 tabular-nums min-w-[4rem] text-center">
-                  {currentIndex! + 1} of {totalItems}
+                  {(currentIndex ?? 0) + 1} of {totalItems}
                 </span>
                 <button
-                  onClick={() => hasNext && onNavigate!(currentIndex! + 1)}
+                  onClick={() => hasNext && onNavigate?.((currentIndex ?? 0) + 1)}
                   disabled={!hasNext}
                   className="p-1.5 rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors disabled:opacity-30 disabled:cursor-default disabled:hover:bg-transparent"
                   title="Next (→)"

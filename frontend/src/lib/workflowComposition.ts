@@ -209,7 +209,7 @@ export function deriveCaseFlags(
   const hasCaseContext = !!caseFlags;
 
   return {
-    hasDRO: hasCaseContext ? caseFlags!.includes('dro') : !!calculation?.dro?.has_dro,
+    hasDRO: hasCaseContext ? (caseFlags?.includes('dro') ?? false) : !!calculation?.dro?.has_dro,
     hasPurchasedService:
       (serviceCredit?.summary?.purchased_years || 0) > 0 ||
       (caseFlags || []).includes('purchased-service'),

@@ -31,7 +31,7 @@ export default function ExecutiveDashboard() {
 
   // Derive On-Time Rate from SLA stats
   const slaTotal = sla ? sla.onTrack + sla.atRisk + sla.overdue : 0;
-  const onTimeRate = slaTotal > 0 ? ((sla!.onTrack / slaTotal) * 100).toFixed(1) : '--';
+  const onTimeRate = slaTotal > 0 && sla ? ((sla.onTrack / slaTotal) * 100).toFixed(1) : '--';
   const avgProcessing = sla ? `${sla.avgProcessingDays.toFixed(1)}d` : '--';
 
   const KPIS = [

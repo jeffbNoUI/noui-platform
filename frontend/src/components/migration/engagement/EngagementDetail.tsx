@@ -210,7 +210,7 @@ export default function EngagementDetail({ engagementId, onBack, onSelectBatch }
   const engagementKey = engagement ? `${engagementId}:${engagement.status}` : null;
   if (engagementKey && engagementKey !== prevEngagementKey) {
     setPrevEngagementKey(engagementKey);
-    setActiveTab(defaultTab(engagement!.status));
+    setActiveTab(defaultTab(engagement?.status ?? 'DISCOVERY'));
   }
 
   const connectionDot = useMemo(() => {
