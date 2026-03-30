@@ -598,6 +598,8 @@ services:
       PORT: "8091"
       HEALTH_SERVICES: "dataaccess:http://dataaccess:8081,intelligence:http://intelligence:8082,crm:http://crm:8083,correspondence:http://correspondence:8085,dataquality:http://dataquality:8086,knowledgebase:http://knowledgebase:8087,casemanagement:http://casemanagement:8088,preferences:http://preferences:8089,connector:http://connector:8090:/healthz,issues:http://issues:8092,security:http://security:8093,employer-portal:http://employer-portal:8094,employer-reporting:http://employer-reporting:8095,employer-enrollment:http://employer-enrollment:8096,employer-terminations:http://employer-terminations:8097,employer-waret:http://employer-waret:8098,employer-scp:http://employer-scp:8099,migration:http://migration:8100,migration-intelligence:http://migration-intelligence:8101"
       CORS_ORIGIN: "http://localhost:3000"
+    ports:
+      - "8091:8091"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8091/healthz || exit 1"]
       interval: 15s
