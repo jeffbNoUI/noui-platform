@@ -312,7 +312,4 @@ func TestEarlyRetReduction_StatutoryTable(t *testing.T) {
 	}
 }
 
-func parseDate(s string) time.Time {
-	t, _ := time.Parse("2006-01-02", s)
-	return t
-}
+// parseDate is defined in benefit_calculator_test.go

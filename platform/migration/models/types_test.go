@@ -15,7 +15,7 @@ func TestCanTransitionTo(t *testing.T) {
 		{"MAPPING to PROFILING not allowed (no backward)", StatusMapping, StatusProfiling, false},
 		{"TRANSFORMING to RECONCILING allowed", StatusTransforming, StatusReconciling, true},
 		{"RECONCILING to PARALLEL_RUN allowed", StatusReconciling, StatusParallelRun, true},
-		{"RECONCILING to COMPLETE allowed", StatusReconciling, StatusComplete, true},
+		{"RECONCILING to COMPLETE blocked (must go through PARALLEL_RUN)", StatusReconciling, StatusComplete, false},
 		{"PARALLEL_RUN to COMPLETE allowed", StatusParallelRun, StatusComplete, true},
 		{"COMPLETE to PROFILING not allowed", StatusComplete, StatusProfiling, false},
 		{"COMPLETE to COMPLETE not allowed", StatusComplete, StatusComplete, false},

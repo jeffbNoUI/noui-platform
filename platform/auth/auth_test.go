@@ -22,6 +22,7 @@ func testToken(t *testing.T, tenantID, role, memberID string) string {
 		"tenant_id": tenantID,
 		"role":      role,
 		"member_id": memberID,
+		"exp":       time.Now().Add(1 * time.Hour).Unix(),
 	})
 }
 
@@ -214,7 +215,7 @@ func TestContextHelpers_BareContext_ReturnEmptyStrings(t *testing.T) {
 func TestMiddleware_MissingTenantInToken_Returns401(t *testing.T) {
 	// Build a token with empty tenant_id — should be rejected
 	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"HS256","typ":"JWT"}`))
-	claims, _ := json.Marshal(map[string]string{"sub": "u1", "tenant_id": "", "role": "staff"})
+	claims, _ := json.Marshal(map[string]interface{}{"sub": "u1", "tenant_id": "", "role": "staff", "exp": time.Now().Add(1 * time.Hour).Unix()})
 	payload := base64.RawURLEncoding.EncodeToString(claims)
 	secret := "dev-secret-do-not-use-in-production"
 	mac := hmac.New(sha256.New, []byte(secret))
@@ -236,7 +237,7 @@ func TestMiddleware_MissingTenantInToken_Returns401(t *testing.T) {
 
 func TestMiddleware_MissingRoleInToken_Returns401(t *testing.T) {
 	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"HS256","typ":"JWT"}`))
-	claims, _ := json.Marshal(map[string]string{"sub": "u1", "tenant_id": "t1", "role": ""})
+	claims, _ := json.Marshal(map[string]interface{}{"sub": "u1", "tenant_id": "t1", "role": "", "exp": time.Now().Add(1 * time.Hour).Unix()})
 	payload := base64.RawURLEncoding.EncodeToString(claims)
 	secret := "dev-secret-do-not-use-in-production"
 	mac := hmac.New(sha256.New, []byte(secret))
@@ -300,7 +301,7 @@ func TestMiddleware_FutureExpToken_Returns200(t *testing.T) {
 	}
 }
 
-func TestMiddleware_NoExpClaim_StillAccepted(t *testing.T) {
+func TestMiddleware_NoExpClaim_Returns401(t *testing.T) {
 	secret := []byte(testSecret)
 	token := signToken(t, secret, `{"alg":"HS256","typ":"JWT"}`, map[string]interface{}{
 		"sub":       "user-123",
@@ -316,8 +317,8 @@ func TestMiddleware_NoExpClaim_StillAccepted(t *testing.T) {
 
 	handler.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200 for token without exp (backwards compat), got %d", rec.Code)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for token missing exp claim, got %d", rec.Code)
 	}
 }
 
@@ -349,6 +350,7 @@ func TestNewMiddleware_UsesProvidedSecret(t *testing.T) {
 		"tenant_id": "tenant-abc",
 		"role":      "staff",
 		"member_id": "m1",
+		"exp":       time.Now().Add(1 * time.Hour).Unix(),
 	})
 
 	// Should work with matching secret

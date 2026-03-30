@@ -310,10 +310,11 @@ func (h *Handler) CalculateDRO(w http.ResponseWriter, r *http.Request) {
 	// Calculate gross benefit using the case's actual retirement date
 	eligibility := rules.EvaluateEligibility(*member, *svcCredit, retDate)
 	multiplier := rules.TierMultiplier[eligibility.Tier]
-	grossBenefit := ams.Amount * multiplier * svcCredit.BenefitYears
+	grossBenefit := ams.Amount.Mul(multiplier).Mul(svcCredit.BenefitYears)
 	if eligibility.ReductionFactor > 0 {
-		grossBenefit *= eligibility.ReductionFactor
+		grossBenefit = grossBenefit.Mul(eligibility.ReductionFactor)
 	}
+	grossBenefit = grossBenefit.Round()
 
 	result := rules.CalculateDRO(*droData, member.HireDate, retDate, *svcCredit, grossBenefit)
 	apiresponse.WriteSuccess(w, http.StatusOK, "intelligence", result)

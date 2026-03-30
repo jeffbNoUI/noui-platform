@@ -49,12 +49,10 @@ func getSecret() []byte {
 
 // bypassPaths are health/readiness endpoints that skip authentication.
 var bypassPaths = map[string]bool{
-	"/healthz":              true,
-	"/health":               true,
-	"/health/detail":        true,
-	"/ready":                true,
-	"/metrics":              true,
-	"/api/v1/errors/report": true,
+	"/healthz": true,
+	"/health":  true,
+	"/ready":   true,
+	"/metrics": true,
 }
 
 // NewMiddleware returns an HTTP middleware that validates JWT bearer tokens using the
@@ -182,8 +180,11 @@ func validateTokenWithSecret(token string, secret []byte) (*tokenClaims, error) 
 		return nil, errInvalidToken("invalid payload JSON")
 	}
 
-	// Validate expiration if present
-	if claims.Exp != 0 && claims.Exp < time.Now().Unix() {
+	// Require exp claim and validate expiration
+	if claims.Exp == 0 {
+		return nil, errInvalidToken("token missing exp claim")
+	}
+	if claims.Exp < time.Now().Unix() {
 		return nil, errInvalidToken("token expired")
 	}
 

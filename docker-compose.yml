@@ -5,8 +5,6 @@ services:
       POSTGRES_DB: noui
       POSTGRES_USER: noui
       POSTGRES_PASSWORD: noui
-    ports:
-      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./domains/pension/schema/001_legacy_schema.sql:/docker-entrypoint-initdb.d/001_legacy_schema.sql
@@ -54,6 +52,12 @@ services:
       - ./platform/migration/db/migrations/038_source_plan_code.sql:/docker-entrypoint-initdb.d/043_source_plan_code.sql
       - ./platform/migration/db/migrations/039_reconciliation_patterns.sql:/docker-entrypoint-initdb.d/044_reconciliation_patterns.sql
       - ./platform/migration/db/migrations/040_certification_record.sql:/docker-entrypoint-initdb.d/045_certification_record.sql
+      - ./domains/pension/schema/016_member_portal.sql:/docker-entrypoint-initdb.d/046_member_portal.sql
+      - ./domains/pension/schema/026_dq_suppression.sql:/docker-entrypoint-initdb.d/047_dq_suppression.sql
+      - ./domains/pension/seed/006_dq_suppression_seed.sql:/docker-entrypoint-initdb.d/048_dq_suppression_seed.sql
+      - ./domains/pension/seed/016_issues_seed.sql:/docker-entrypoint-initdb.d/049_issues_seed.sql
+      - ./domains/pension/seed/017_security_seed.sql:/docker-entrypoint-initdb.d/050_security_seed.sql
+      - ./domains/pension/seed/018_member_portal_seed.sql:/docker-entrypoint-initdb.d/051_member_portal_seed.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U noui"]
       interval: 5s
@@ -62,8 +66,6 @@ services:
 
   pgbouncer:
     image: edoburu/pgbouncer:latest
-    ports:
-      - "6432:6432"
     volumes:
       - ./infrastructure/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
       - ./infrastructure/pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt:ro
@@ -123,6 +125,12 @@ services:
       DB_MAX_OPEN_CONNS: "8"
       DB_MAX_IDLE_CONNS: "3"
       CORS_ORIGIN: "http://localhost:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       pgbouncer:
         condition: service_healthy
@@ -145,6 +153,12 @@ services:
       DB_SSLMODE: disable
       DB_MAX_OPEN_CONNS: "3"
       DB_MAX_IDLE_CONNS: "1"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8082/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       pgbouncer:
         condition: service_healthy
@@ -166,6 +180,12 @@ services:
       DB_MAX_OPEN_CONNS: "8"
       DB_MAX_IDLE_CONNS: "3"
       CORS_ORIGIN: "http://localhost:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8083/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       pgbouncer:
         condition: service_healthy
@@ -194,6 +214,12 @@ services:
       TEST_REPORT_PATH: /data/test-results/intelligence-report.json
       TEST_MAPPING_PATH: /data/test-results/test-rule-mapping.json
       RULES_CACHE_TTL_MIN: "5"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8087/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       pgbouncer:
         condition: service_healthy
@@ -213,6 +239,12 @@ services:
       DB_MAX_OPEN_CONNS: "5"
       DB_MAX_IDLE_CONNS: "2"
       CORS_ORIGIN: "http://localhost:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8086/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       pgbouncer:
         condition: service_healthy
@@ -232,6 +264,12 @@ services:
       DB_MAX_OPEN_CONNS: "5"
       DB_MAX_IDLE_CONNS: "2"
       CORS_ORIGIN: "http://localhost:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8085/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       pgbouncer:
         condition: service_healthy
@@ -251,6 +289,12 @@ services:
       DB_MAX_OPEN_CONNS: "8"
       DB_MAX_IDLE_CONNS: "3"
       CORS_ORIGIN: "http://localhost:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8088/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       pgbouncer:
         condition: service_healthy
@@ -270,6 +314,12 @@ services:
       DB_MAX_OPEN_CONNS: "5"
       DB_MAX_IDLE_CONNS: "2"
       CORS_ORIGIN: "http://localhost:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8089/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       pgbouncer:
         condition: service_healthy
@@ -289,6 +339,12 @@ services:
       DB_MAX_OPEN_CONNS: "5"
       DB_MAX_IDLE_CONNS: "2"
       CORS_ORIGIN: "http://localhost:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8092/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       pgbouncer:
         condition: service_healthy
@@ -308,6 +364,12 @@ services:
       DB_MAX_OPEN_CONNS: "5"
       DB_MAX_IDLE_CONNS: "2"
       CORS_ORIGIN: "http://localhost:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8093/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       pgbouncer:
         condition: service_healthy
@@ -327,6 +389,12 @@ services:
       DB_MAX_OPEN_CONNS: "5"
       DB_MAX_IDLE_CONNS: "2"
       CORS_ORIGIN: "http://localhost:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8094/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       pgbouncer:
         condition: service_healthy
@@ -346,6 +414,12 @@ services:
       DB_MAX_OPEN_CONNS: "5"
       DB_MAX_IDLE_CONNS: "2"
       CORS_ORIGIN: "http://localhost:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8095/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       pgbouncer:
         condition: service_healthy
@@ -365,6 +439,12 @@ services:
       DB_MAX_OPEN_CONNS: "5"
       DB_MAX_IDLE_CONNS: "2"
       CORS_ORIGIN: "http://localhost:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8096/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       pgbouncer:
         condition: service_healthy
@@ -384,6 +464,12 @@ services:
       DB_MAX_OPEN_CONNS: "5"
       DB_MAX_IDLE_CONNS: "2"
       CORS_ORIGIN: "http://localhost:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8097/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       pgbouncer:
         condition: service_healthy
@@ -403,6 +489,12 @@ services:
       DB_MAX_OPEN_CONNS: "5"
       DB_MAX_IDLE_CONNS: "2"
       CORS_ORIGIN: "http://localhost:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8098/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       pgbouncer:
         condition: service_healthy
@@ -422,6 +514,12 @@ services:
       DB_MAX_OPEN_CONNS: "5"
       DB_MAX_IDLE_CONNS: "2"
       CORS_ORIGIN: "http://localhost:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8099/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       pgbouncer:
         condition: service_healthy
@@ -433,6 +531,12 @@ services:
     environment:
       PORT: "8090"
       CORS_ORIGIN: "http://localhost:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8090/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   migration:
     build:
@@ -457,6 +561,12 @@ services:
       RATE_LIMIT_IP_BURST: "100"
       RATE_LIMIT_TENANT_RATE: "20"
       RATE_LIMIT_TENANT_BURST: "100"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8100/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       pgbouncer:
         condition: service_healthy
@@ -466,8 +576,6 @@ services:
   migration-intelligence:
     build:
       context: ./migration-intelligence
-    ports:
-      - "8101:8101"
     environment:
       PORT: "8101"
     healthcheck:
@@ -484,6 +592,12 @@ services:
       PORT: "8091"
       HEALTH_SERVICES: "dataaccess:http://dataaccess:8081,intelligence:http://intelligence:8082,crm:http://crm:8083,correspondence:http://correspondence:8085,dataquality:http://dataquality:8086,knowledgebase:http://knowledgebase:8087,casemanagement:http://casemanagement:8088,preferences:http://preferences:8089,connector:http://connector:8090:/healthz,issues:http://issues:8092,security:http://security:8093,employer-portal:http://employer-portal:8094,employer-reporting:http://employer-reporting:8095,employer-enrollment:http://employer-enrollment:8096,employer-terminations:http://employer-terminations:8097,employer-waret:http://employer-waret:8098,employer-scp:http://employer-scp:8099,migration:http://migration:8100,migration-intelligence:http://migration-intelligence:8101"
       CORS_ORIGIN: "http://localhost:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8091/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       - dataaccess
       - intelligence
@@ -511,6 +625,12 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3000:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:80/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       - dataaccess
       - intelligence

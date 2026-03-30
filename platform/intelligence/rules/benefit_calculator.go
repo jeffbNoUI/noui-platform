@@ -2,10 +2,10 @@ package rules
 
 import (
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/noui/platform/intelligence/models"
+	"github.com/noui/platform/intelligence/money"
 )
 
 // CalculateBenefit performs the complete benefit calculation for a member.
@@ -29,8 +29,8 @@ func CalculateBenefit(
 	// Purchased service counts for BENEFIT CALCULATION but NOT eligibility
 	serviceYears := svcCredit.BenefitYears
 
-	// Gross (unreduced) benefit — carry full precision
-	grossBenefit := ams.Amount * multiplier * serviceYears
+	// Gross (unreduced) benefit — carry full precision through big.Rat
+	grossBenefit := ams.Amount.Mul(multiplier).Mul(serviceYears)
 
 	// Apply early retirement reduction if applicable
 	reduction := models.ReductionDetail{
@@ -39,7 +39,7 @@ func CalculateBenefit(
 		AgeAtRetirement: eligibility.Age.CompletedYears,
 	}
 
-	var maximumBenefit float64
+	var maximumBenefit money.Money
 	if reduction.Applies {
 		yearsUnder65 := NormalRetAge - eligibility.Age.CompletedYears
 		ratePerYear := 3.0
@@ -50,15 +50,14 @@ func CalculateBenefit(
 		reduction.RatePerYear = ratePerYear
 		reduction.TotalReduction = eligibility.ReductionPct
 		reduction.ReductionFactor = eligibility.ReductionFactor
-		reduction.ReducedBenefit = grossBenefit * eligibility.ReductionFactor
+		reduction.ReducedBenefit = grossBenefit.Mul(eligibility.ReductionFactor).Round()
 		reduction.SourceReference = "RMC §18-409(b) — Statutory table lookup"
 
-		// RULE-ROUNDING: Round only the final monthly benefit to cents
-		// ASSUMPTION: [Q-CALC-01] Using banker's rounding.
-		maximumBenefit = roundToCents(reduction.ReducedBenefit)
+		// Round only the final monthly benefit
+		maximumBenefit = grossBenefit.Mul(eligibility.ReductionFactor).Round()
 	} else {
 		reduction.ReductionFactor = 1.0
-		maximumBenefit = roundToCents(grossBenefit)
+		maximumBenefit = grossBenefit.Round()
 	}
 
 	// Payment options — apply J&S factors to the maximum benefit
@@ -81,9 +80,11 @@ func CalculateBenefit(
 	ipr := CalculateIPR(svcCredit.EligibilityYears)
 
 	multiplierPct := fmt.Sprintf("%.1f%%", multiplier*100)
-	formulaDisplay := fmt.Sprintf("$%.2f × %s × %.2f years = $%.2f", ams.Amount, multiplierPct, serviceYears, grossBenefit)
+	formulaDisplay := fmt.Sprintf("%s × %s × %.2f years = %s",
+		ams.Amount.Round(), multiplierPct, serviceYears, grossBenefit.Round())
 	if reduction.Applies {
-		formulaDisplay += fmt.Sprintf(" × %.4f (reduction) = $%.2f", reduction.ReductionFactor, maximumBenefit)
+		formulaDisplay += fmt.Sprintf(" × %.4f (reduction) = %s",
+			reduction.ReductionFactor, maximumBenefit)
 	}
 
 	return models.BenefitCalcResult{
@@ -105,7 +106,7 @@ func CalculateBenefit(
 			MultiplierPct:  multiplierPct,
 			ServiceYears:   serviceYears,
 			ServiceType:    "earned + purchased (RULE-SVC-PURCHASED: purchased counts for benefit formula)",
-			GrossBenefit:   grossBenefit,
+			GrossBenefit:   grossBenefit.Round(),
 			FormulaDisplay: formulaDisplay,
 		},
 		Reduction:      reduction,
@@ -119,25 +120,25 @@ func CalculateBenefit(
 
 // CalculatePaymentOptions computes all four payment option amounts.
 // ASSUMPTION: [Q-CALC-04] Using illustrative J&S factors.
-func CalculatePaymentOptions(baseAmount float64) models.PaymentOptions {
+func CalculatePaymentOptions(baseAmount money.Money) models.PaymentOptions {
 	return models.PaymentOptions{
 		BaseAmount: baseAmount,
 		Maximum:    baseAmount,
 		JS100: models.JSOption{
-			MemberAmount:   roundToCents(baseAmount * JSFactors[100]),
-			SurvivorAmount: roundToCents(baseAmount * JSFactors[100]),
+			MemberAmount:   baseAmount.Mul(JSFactors[100]).Round(),
+			SurvivorAmount: baseAmount.Mul(JSFactors[100]).Round(),
 			SurvivorPct:    100,
 			Factor:         JSFactors[100],
 		},
 		JS75: models.JSOption{
-			MemberAmount:   roundToCents(baseAmount * JSFactors[75]),
-			SurvivorAmount: roundToCents(baseAmount * JSFactors[75] * 0.75),
+			MemberAmount:   baseAmount.Mul(JSFactors[75]).Round(),
+			SurvivorAmount: baseAmount.Mul(JSFactors[75]).Mul(0.75).Round(),
 			SurvivorPct:    75,
 			Factor:         JSFactors[75],
 		},
 		JS50: models.JSOption{
-			MemberAmount:   roundToCents(baseAmount * JSFactors[50]),
-			SurvivorAmount: roundToCents(baseAmount * JSFactors[50] * 0.50),
+			MemberAmount:   baseAmount.Mul(JSFactors[50]).Round(),
+			SurvivorAmount: baseAmount.Mul(JSFactors[50]).Mul(0.50).Round(),
 			SurvivorPct:    50,
 			Factor:         JSFactors[50],
 		},
@@ -152,7 +153,7 @@ func CalculateDRO(
 	dro models.DROData,
 	hireDate, retirementDate time.Time,
 	svcCredit models.ServiceCreditData,
-	grossBenefit float64,
+	grossBenefit money.Money,
 ) models.DROCalcResult {
 	// Calculate marital service: from later of (hire date, marriage date) to divorce date
 	maritalStart := hireDate
@@ -166,11 +167,11 @@ func CalculateDRO(
 
 	// Marital fraction
 	maritalFraction := maritalServiceYears / totalServiceYears
-	maritalShare := grossBenefit * maritalFraction
+	maritalShare := grossBenefit.Mul(maritalFraction)
 
 	// Apply division percentage
-	altPayeeAmount := maritalShare * (dro.DivisionValue / 100.0)
-	memberAfterDRO := grossBenefit - altPayeeAmount
+	altPayeeAmount := maritalShare.Mul(dro.DivisionValue / 100.0)
+	memberAfterDRO := grossBenefit.Sub(altPayeeAmount.Round())
 
 	return models.DROCalcResult{
 		HasDRO:              true,
@@ -180,10 +181,10 @@ func CalculateDRO(
 		TotalServiceYears:   totalServiceYears,
 		MaritalFraction:     maritalFraction,
 		GrossBenefit:        grossBenefit,
-		MaritalShare:        roundToCents(maritalShare),
+		MaritalShare:        maritalShare.Round(),
 		AltPayeePct:         dro.DivisionValue,
-		AltPayeeAmount:      roundToCents(altPayeeAmount),
-		MemberAfterDRO:      roundToCents(memberAfterDRO),
+		AltPayeeAmount:      altPayeeAmount.Round(),
+		MemberAfterDRO:      memberAfterDRO.Round(),
 		DivisionMethod:      dro.DivisionMethod,
 	}
 }
@@ -191,27 +192,27 @@ func CalculateDRO(
 // CalculateDeathBenefit looks up the lump-sum death benefit from statutory tables.
 // Source: RMC §18-411(d)
 func CalculateDeathBenefit(tier, age int, retirementType string) models.DeathBenefitDetail {
-	var amount float64
+	var amount money.Money
 	sourceRef := "RMC §18-411(d)"
 
 	if retirementType == "NORMAL" || retirementType == "RULE_OF_75" || retirementType == "RULE_OF_85" {
-		amount = 5000.00
+		amount = money.FromInt(5000)
 	} else if retirementType == "EARLY" {
 		if tier == 3 {
 			if val, ok := DeathBenefitT3[age]; ok {
-				amount = val
+				amount = money.FromFloat64(val)
 			}
 		} else {
 			if val, ok := DeathBenefitT12[age]; ok {
-				amount = val
+				amount = money.FromFloat64(val)
 			}
 		}
 	}
 
 	return models.DeathBenefitDetail{
 		Amount:         amount,
-		Installment50:  roundToCents(amount / 50.0),
-		Installment100: roundToCents(amount / 100.0),
+		Installment50:  amount.Div(50.0).Round(),
+		Installment100: amount.Div(100.0).Round(),
 		RetirementType: retirementType,
 		SourceRef:      sourceRef,
 	}
@@ -221,10 +222,13 @@ func CalculateDeathBenefit(tier, age int, retirementType string) models.DeathBen
 // CRITICAL: Uses earned service years ONLY — purchased service excluded.
 // Source: RMC §18-412
 func CalculateIPR(earnedServiceYears float64) models.IPRDetail {
+	nonMedicare := money.FromFloat64(IPRNonMedicare).Mul(earnedServiceYears)
+	medicare := money.FromFloat64(IPRMedicare).Mul(earnedServiceYears)
+
 	return models.IPRDetail{
 		EarnedServiceYears: earnedServiceYears,
-		NonMedicareMonthly: roundToCents(IPRNonMedicare * earnedServiceYears),
-		MedicareMonthly:    roundToCents(IPRMedicare * earnedServiceYears),
+		NonMedicareMonthly: nonMedicare.Round(),
+		MedicareMonthly:    medicare.Round(),
 		SourceRef:          "RMC §18-412 — IPR uses earned service only; purchased service excluded",
 	}
 }
@@ -255,8 +259,8 @@ func CalculateScenarios(
 
 		tier := eligibility.Tier
 		multiplier := TierMultiplier[tier]
-		grossBenefit := ams.Amount * multiplier * projectedSvc.BenefitYears
-		monthlyBenefit := roundToCents(grossBenefit * eligibility.ReductionFactor)
+		grossBenefit := ams.Amount.Mul(multiplier).Mul(projectedSvc.BenefitYears)
+		monthlyBenefit := grossBenefit.Mul(eligibility.ReductionFactor).Round()
 
 		ruleOfNSum := age.Decimal + projectedSvc.EligibilityYears
 
@@ -275,12 +279,6 @@ func CalculateScenarios(
 	}
 
 	return result
-}
-
-// roundToCents rounds a float64 to 2 decimal places using banker's rounding.
-// ASSUMPTION: [Q-CALC-01] Using banker's rounding. The plan's actual method unconfirmed.
-func roundToCents(amount float64) float64 {
-	return math.Round(amount*100) / 100
 }
 
 func monthsBetween(from, to time.Time) int {
