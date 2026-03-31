@@ -1,5 +1,70 @@
 # noui-platform — Build History
 
+## Session 42: P2/P3 Audit Remediation (2026-03-30)
+
+**Branch:** `claude/admiring-wescoff` → **PR #203**
+
+### What Was Done
+
+**1. Merged PR #202** (frontend decomposition — 9 panel files decomposed into focused sub-components)
+
+**2. employer-reporting: float64 → big.Rat monetary arithmetic (P2 — correctness)**
+- New `platform/employer-reporting/domain/money.go` — shared Rat helpers: `parseRat()`, `ratFmt()`, `withinPenny()`, `SumContributions()`
+- `validator.go`: `strconv.ParseFloat` → `parseRat()`, `math.Abs(a-b) > 0.01` → `!withinPenny()`
+- `payment.go`: removed all float64 arithmetic for discrepancy calculations
+- `handlers.go`: `sumAmounts()` delegates to `domain.SumContributions()`
+- All 38 employer-reporting tests pass including penny-tolerance edge case
+
+**3. FK indexes migration (P2 — performance)**
+- New `db/migrations/034_fk_indexes.sql` — 22 indexes on FK columns
+- Covers CRM (5), employer-shared (3), employer-reporting (9), employer-enrollment (3), SLA tracking (1)
+- Nullable FKs use partial indexes (`WHERE col IS NOT NULL`)
+
+**4. Non-null assertion → optional chaining (P3 — type safety)**
+- 11 frontend files updated: `IssueManagementPanel.tsx`, `ExecutiveDashboard.tsx`, `OperationalMetricsPanel.tsx`, `DetailOverlay.tsx`, `HealthTab.tsx`, `ConfigureSourceDialog.tsx`, `CalculationTrace.tsx`, `workflowComposition.ts`, `useIssues.ts`, `CasesTab.tsx`, `EngagementDetail.tsx`
+- TypeScript clean; 2,094 frontend tests passing
+
+**5. Docker E2E infrastructure fixes (3 successive CI failures diagnosed and fixed)**
+- Created `027_issues_schema.sql` and `028_security_schema.sql` — schema files were missing from Docker init ordering
+- Fixed initdb.d mount ordering: schema files precede seed files
+- Mounted missing `031_warning_acknowledgment.sql`, `032_contribution_model.sql`, `033_job_table.sql`, `034_fk_indexes.sql` in docker-compose initdb.d (migrations existed on disk but were never mounted)
+- Added `ports: - "8091:8091"` to healthagg service — CI curl was hitting connection refused because port wasn't host-exposed
+- Added `/health/detail` to auth bypass paths — healthagg aggregator calls this endpoint without JWT; services were returning 401 JSON which silently decoded to empty ServiceHealth structs, causing all 8 core services to show empty status in the health aggregate E2E test
+
+**6. Cleaned stale worktree**
+- Removed `trusting-wright` (was at same commit as main, only had benign starter prompt change)
+
+### Commits (7 total)
+- `[audit] P2/P3: float64→big.Rat, FK indexes, non-null assertions`
+- `[docker] Fix E2E: add missing issues and security schema files`
+- `[docker] Fix E2E: mount missing db/migrations 031-034 in initdb.d`
+- `[docker] Expose healthagg port 8091 to host for E2E CI`
+- `[platform/auth] Add /health/detail to auth bypass paths`
+
+### Verification
+- employer-reporting: 38 tests passing (`go test ./...`)
+- auth: all tests passing including new `/health/detail` bypass test
+- Frontend: TypeScript clean, 2,094 tests passing
+- E2E: all infrastructure blockers resolved (healthagg port, schema ordering, migration mounts, auth bypass)
+
+### Files Changed
+- `platform/employer-reporting/domain/money.go` (new)
+- `platform/employer-reporting/domain/validator.go`
+- `platform/employer-reporting/domain/payment.go`
+- `platform/employer-reporting/api/handlers.go`
+- `db/migrations/034_fk_indexes.sql` (new)
+- 11 frontend `.tsx`/`.ts` files (non-null assertions)
+- `domains/pension/schema/027_issues_schema.sql` (new)
+- `domains/pension/schema/028_security_schema.sql` (new)
+- `docker-compose.yml` (schema ordering, migration mounts, healthagg port)
+- `platform/auth/auth.go` (bypass paths)
+- `platform/auth/auth_test.go` (test updated)
+
+### Next Session Should Start With
+- Verify PR #203 E2E passes with the auth bypass fix (latest push d90e168)
+- Merge PR #203 to main
+- Deferred items: Helm hardening (securityContext, NetworkPolicy, readinessProbe), Helm charts for 16+ services, unify test mocking (40 files hook→fetch-mock), migration numbering scheme
+
 ## Session 41: Frontend Polish + Performance + Docs (2026-03-26)
 
 **Branch:** `claude/mystifying-lamarr`
