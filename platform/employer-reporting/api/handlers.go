@@ -609,12 +609,12 @@ func userIDOrDefault(r *http.Request) string {
 }
 
 func sumAmounts(entry erdb.ManualEntryRecord) string {
-	member, _ := strconv.ParseFloat(entry.MemberContribution, 64)
-	employer, _ := strconv.ParseFloat(entry.EmployerContribution, 64)
-	aed, _ := strconv.ParseFloat(entry.AEDAmount, 64)
-	saed, _ := strconv.ParseFloat(entry.SAEDAmount, 64)
-	aap, _ := strconv.ParseFloat(entry.AAPAmount, 64)
-	dcSupp, _ := strconv.ParseFloat(entry.DCSupplementAmount, 64)
-	total := member + employer + aed + saed + aap + dcSupp
-	return strconv.FormatFloat(total, 'f', 2, 64)
+	return domain.SumContributions(
+		entry.MemberContribution,
+		entry.EmployerContribution,
+		entry.AEDAmount,
+		entry.SAEDAmount,
+		entry.AAPAmount,
+		entry.DCSupplementAmount,
+	)
 }

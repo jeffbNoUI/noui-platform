@@ -28,7 +28,7 @@ export default function CalculationTrace({ demoCase, onNavigateToRule }: Calcula
             <h4 className="text-sm font-semibold text-gray-900">{step.title}</h4>
             {step.ruleId && (
               <button
-                onClick={() => onNavigateToRule?.(step.ruleId!)}
+                onClick={() => step.ruleId && onNavigateToRule?.(step.ruleId)}
                 className="text-xs text-iw-sage hover:underline"
               >
                 {step.ruleId}

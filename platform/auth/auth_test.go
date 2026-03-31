@@ -80,7 +80,7 @@ func TestMiddleware_NoAuthHeader_Returns401(t *testing.T) {
 }
 
 func TestMiddleware_HealthEndpoint_BypassesAuth(t *testing.T) {
-	paths := []string{"/healthz", "/health", "/ready", "/metrics"}
+	paths := []string{"/healthz", "/health", "/health/detail", "/ready", "/metrics"}
 	for _, path := range paths {
 		t.Run(path, func(t *testing.T) {
 			handler := Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

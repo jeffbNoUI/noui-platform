@@ -25,7 +25,7 @@ export function useIssueStats() {
 export function useIssueComments(issueId: number | null) {
   return useQuery<IssueComment[]>({
     queryKey: ['issues', issueId, 'comments'],
-    queryFn: () => issuesAPI.listComments(issueId!),
+    queryFn: () => issuesAPI.listComments(issueId as number),
     enabled: issueId !== null,
   });
 }

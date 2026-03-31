@@ -41,7 +41,8 @@ export default function OperationalMetricsPanel() {
   // KPI values
   const activeCases = caseStats ? String(caseStats.totalActive) : dash;
   const slaTotal = slaStats ? slaStats.onTrack + slaStats.atRisk + slaStats.overdue : 0;
-  const slaOnTrackPct = slaTotal > 0 ? ((slaStats!.onTrack / slaTotal) * 100).toFixed(1) : null;
+  const slaOnTrackPct =
+    slaTotal > 0 && slaStats ? ((slaStats.onTrack / slaTotal) * 100).toFixed(1) : null;
   const slaOnTrack = slaOnTrackPct ? `${slaOnTrackPct}%` : dash;
   const avgProcessing = slaStats ? `${slaStats.avgProcessingDays} days` : dash;
   const dqValue = dqScore ? `${dqScore.overallScore.toFixed(1)}%` : dash;
@@ -53,8 +54,10 @@ export default function OperationalMetricsPanel() {
   const maxStageCount = stages.length > 0 ? Math.max(...stages.map((s) => s.count)) : 1;
 
   // SLA percentages
-  const atRiskPct = slaTotal > 0 ? ((slaStats!.atRisk / slaTotal) * 100).toFixed(1) : '0';
-  const overduePct = slaTotal > 0 ? ((slaStats!.overdue / slaTotal) * 100).toFixed(1) : '0';
+  const atRiskPct =
+    slaTotal > 0 && slaStats ? ((slaStats.atRisk / slaTotal) * 100).toFixed(1) : '0';
+  const overduePct =
+    slaTotal > 0 && slaStats ? ((slaStats.overdue / slaTotal) * 100).toFixed(1) : '0';
 
   return (
     <div className="space-y-6">

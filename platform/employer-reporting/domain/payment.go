@@ -1,10 +1,6 @@
 package domain
 
-import (
-	"fmt"
-	"math"
-	"strconv"
-)
+import "fmt"
 
 // PaymentMethod constants.
 const (
@@ -29,21 +25,21 @@ func ValidatePaymentMethod(method string) error {
 // CalculateDiscrepancy computes the difference between validated amount and payment amount.
 // Returns nil if amounts match within $0.01.
 func CalculateDiscrepancy(validatedAmount, paymentAmount string) (*string, error) {
-	validated, err := strconv.ParseFloat(validatedAmount, 64)
-	if err != nil {
-		return nil, fmt.Errorf("invalid validated amount: %w", err)
+	validated := parseRat(validatedAmount)
+	if validated == nil {
+		return nil, fmt.Errorf("invalid validated amount: %q", validatedAmount)
 	}
 
-	payment, err := strconv.ParseFloat(paymentAmount, 64)
-	if err != nil {
-		return nil, fmt.Errorf("invalid payment amount: %w", err)
+	payment := parseRat(paymentAmount)
+	if payment == nil {
+		return nil, fmt.Errorf("invalid payment amount: %q", paymentAmount)
 	}
 
-	diff := payment - validated
-	if math.Abs(diff) <= 0.01 {
+	diff := ratSub(payment, validated)
+	if withinPenny(payment, validated) {
 		return nil, nil
 	}
 
-	s := fmt.Sprintf("%.2f", diff)
+	s := ratFmt(diff)
 	return &s, nil
 }

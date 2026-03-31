@@ -1,54 +1,53 @@
-# Starter Prompt: P2 Frontend Decomposition Complete
+# Starter Prompt: P2/P3 Audit Remediation Complete
 
-## What was completed last session
-- **Split `useMigrationApi.ts`** (1,149 → 20 lines barrel) into 16 domain-specific hook files under `hooks/migration/`
-  - 95 hooks organized by domain: dashboard, engagement, discovery, mapping, reconciliation, reconExecution, batch, risk, phaseGate, cutover, intelligence, drift, auditReport, schemaVersion, certification, jobs
-  - Original file preserved as barrel re-export — zero import path changes, all `vi.mock()` targets work
-- **Decomposed `ReconciliationPanel.tsx`** (1,912 → 843 lines) into 4 sub-files:
-  - `reconUtils.tsx` (77 lines): shared constants, `fmtCurrency`, `GateGauge`
-  - `VarianceDetailTable.tsx` (343 lines): filterable detail table with named Props
-  - `ReconExecutionSection.tsx` (316 lines): execution list + run dialog
-  - `ExecutionRow.tsx` (356 lines): expandable row + `PriorityPill`
-- Design doc + implementation plan written to `docs/plans/`
-- PR #202 created and pushed
+## What was completed last session (Session 42 — 2026-03-30)
 
-## Files changed (24 files, +3,015/-2,232)
-- NEW: 16 files in `frontend/src/hooks/migration/` (domain hook files)
-- NEW: `frontend/src/components/migration/engagement/reconUtils.tsx`
-- NEW: `frontend/src/components/migration/engagement/VarianceDetailTable.tsx`
-- NEW: `frontend/src/components/migration/engagement/ReconExecutionSection.tsx`
-- NEW: `frontend/src/components/migration/engagement/ExecutionRow.tsx`
-- MODIFIED: `frontend/src/hooks/useMigrationApi.ts` (1,149 → 20 lines barrel)
-- MODIFIED: `frontend/src/components/migration/engagement/ReconciliationPanel.tsx` (1,912 → 843 lines)
-- NEW: `docs/plans/2026-03-29-p2-frontend-decomposition-design.md`
-- NEW: `docs/plans/2026-03-29-p2-frontend-decomposition-plan.md`
+**Merged PR #202** (frontend decomposition — ReconciliationPanel + useMigrationApi barrel)
+
+**employer-reporting float64 → big.Rat (P2 — correctness):**
+- New `platform/employer-reporting/domain/money.go` — `parseRat()`, `ratFmt()`, `withinPenny()`, `SumContributions()`
+- `validator.go`, `payment.go`, `handlers.go` — all float64 monetary arithmetic replaced
+- 38 tests pass including penny-tolerance edge case
+
+**FK indexes (P2 — performance):**
+- `db/migrations/034_fk_indexes.sql` — 22 indexes on FK columns across CRM, employer-shared, employer-reporting, employer-enrollment, SLA tracking
+
+**Non-null assertions → optional chaining (P3 — type safety):**
+- 11 frontend files updated. TypeScript clean, 2,094 frontend tests passing.
+
+**Docker E2E infrastructure fixes (4 successive CI issues fixed):**
+- Created missing `027_issues_schema.sql` and `028_security_schema.sql` for initdb.d ordering
+- Mounted missing `db/migrations/031-034` in docker-compose initdb.d
+- Added `ports: - "8091:8091"` to healthagg (CI curl was hitting connection refused)
+- Added `/health/detail` to `platform/auth/auth.go` bypass paths — healthagg calls this without JWT; services were returning 401 which decoded silently to empty ServiceHealth structs
 
 ## Current project state
-- PR #202 open (not yet merged): P2 frontend decomposition
-- Frontend: 251 test files, 2,094 tests passing
-- All prior test suites unaffected
+
+- PR #203 open on `claude/admiring-wescoff` — **all CI except E2E should pass**
+- E2E was failing with 8 health-aggregate status checks showing empty string (auth bypass fix is the latest commit `d90e168`)
+- The E2E job has `continue-on-error: true` — PR is mergeable even if E2E is unstable
 
 ## What needs to happen next
-1. **Merge PR #202** after review
-2. **Remaining P2 audit items:**
-   - Unify test mocking: migrate 40 test files from hook-mock (`vi.mock('@/hooks/useMigrationApi')`) to fetch-mock pattern
-   - Fix employer-reporting float64 monetary parsing (backend: `platform/employer-reporting/`)
-   - Add FK indexes in CRM and employer schemas
-   - Helm: add securityContext, NetworkPolicy, fix CRM DB_NAME, add readinessProbe
-3. **P3 audit items:**
-   - Replace non-null assertions with optional chaining in 7 frontend files
-   - Unify migration numbering scheme
-   - Complete .env.example documentation
-   - Generate Helm charts for remaining 16+ services
+
+1. **Check E2E CI result for PR #203** (`gh pr checks 203`). If passing, merge.
+2. **Deferred audit items (lower priority):**
+   - Unify test mocking: 40 test files hook→fetch-mock (large mechanical change, separate session)
+   - Helm hardening: securityContext, NetworkPolicy, readinessProbe for existing charts
+   - Helm charts for remaining 16+ services without charts
+   - Unify migration numbering scheme (connector vs platform use different numbering)
+   - .env.example documentation
 
 ## Key architecture notes
-- `useMigrationApi.ts` is now a barrel file — consumers import from `@/hooks/useMigrationApi`, domain files live in `hooks/migration/*.ts`
-- `vi.mock('@/hooks/useMigrationApi')` still works because the barrel file is at the same path (NOT a directory/index.ts)
-- ReconciliationPanel sub-components each export named Props interfaces (`VarianceDetailTableProps`, `ExecutionRowProps`, `ReconExecutionSectionProps`)
-- `GateGauge` lives in `reconUtils.tsx` (shared by main panel), `PriorityPill` lives in `ExecutionRow.tsx` (private to execution)
+
+- `platform/auth/auth.go` `bypassPaths` uses **exact path matching** — every new diagnostic endpoint needs an explicit entry
+- `healthagg` aggregator calls `/health/detail` (not `/healthz`) — this returns the full `ServiceHealth` struct with counters, DB pool stats, runtime stats
+- docker-compose initdb.d ordering: files execute lexicographically; schema files must sort before seed files
+- `db/migrations/` files are NOT automatically mounted — each new migration needs an explicit volume entry in docker-compose
 
 ## Verification baseline
 ```bash
-cd frontend && npx tsc --noEmit          # zero errors
-cd frontend && npm test -- --run          # 251 files, 2,094 tests
+cd platform/auth && go test ./... -short          # auth bypass tests
+cd platform/employer-reporting && go test ./...   # 38 tests
+cd frontend && npx tsc --noEmit && npm test -- --run  # 251 files, 2,094 tests
+gh pr checks 203                                   # CI status
 ```
