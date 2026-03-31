@@ -181,11 +181,11 @@ func (h *Handler) GetContact(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	contact, err := h.store.GetContact(r.Context(), id)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			apiresponse.WriteError(w, http.StatusNotFound, "crm", "NOT_FOUND", "Contact not found")
-			return
-		}
 		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
+		return
+	}
+	if contact == nil {
+		apiresponse.WriteError(w, http.StatusNotFound, "crm", "NOT_FOUND", "Contact not found")
 		return
 	}
 
@@ -197,11 +197,11 @@ func (h *Handler) UpdateContact(w http.ResponseWriter, r *http.Request) {
 
 	existing, err := h.store.GetContact(r.Context(), id)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			apiresponse.WriteError(w, http.StatusNotFound, "crm", "NOT_FOUND", "Contact not found")
-			return
-		}
 		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
+		return
+	}
+	if existing == nil {
+		apiresponse.WriteError(w, http.StatusNotFound, "crm", "NOT_FOUND", "Contact not found")
 		return
 	}
 
@@ -253,11 +253,11 @@ func (h *Handler) GetContactByLegacyID(w http.ResponseWriter, r *http.Request) {
 
 	contact, err := h.store.GetContactByLegacyID(r.Context(), tenantID, legacyID)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			apiresponse.WriteError(w, http.StatusNotFound, "crm", "NOT_FOUND", "Contact not found for legacy ID")
-			return
-		}
 		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
+		return
+	}
+	if contact == nil {
+		apiresponse.WriteError(w, http.StatusNotFound, "crm", "NOT_FOUND", "Contact not found for legacy ID")
 		return
 	}
 
