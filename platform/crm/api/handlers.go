@@ -349,11 +349,11 @@ func (h *Handler) GetConversation(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	conv, err := h.store.GetConversation(r.Context(), id)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			apiresponse.WriteError(w, http.StatusNotFound, "crm", "NOT_FOUND", "Conversation not found")
-			return
-		}
 		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
+		return
+	}
+	if conv == nil {
+		apiresponse.WriteError(w, http.StatusNotFound, "crm", "NOT_FOUND", "Conversation not found")
 		return
 	}
 
@@ -365,11 +365,11 @@ func (h *Handler) UpdateConversation(w http.ResponseWriter, r *http.Request) {
 
 	existing, err := h.store.GetConversation(r.Context(), id)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			apiresponse.WriteError(w, http.StatusNotFound, "crm", "NOT_FOUND", "Conversation not found")
-			return
-		}
 		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
+		return
+	}
+	if existing == nil {
+		apiresponse.WriteError(w, http.StatusNotFound, "crm", "NOT_FOUND", "Conversation not found")
 		return
 	}
 
@@ -517,11 +517,11 @@ func (h *Handler) GetInteraction(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	interaction, err := h.store.GetInteraction(r.Context(), id)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			apiresponse.WriteError(w, http.StatusNotFound, "crm", "NOT_FOUND", "Interaction not found")
-			return
-		}
 		apiresponse.WriteError(w, http.StatusInternalServerError, "crm", "DB_ERROR", err.Error())
+		return
+	}
+	if interaction == nil {
+		apiresponse.WriteError(w, http.StatusNotFound, "crm", "NOT_FOUND", "Interaction not found")
 		return
 	}
 
